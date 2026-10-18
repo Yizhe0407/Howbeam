@@ -94,6 +94,57 @@ function groupEntry(): StepEntry {
   } as StepEntry;
 }
 
+/**
+ * A Mark entry as recording really stores it: the base image has no
+ * description of its own (the editor offers no field for one), only its
+ * annotations carry text.
+ */
+function markEntry(id: string, order: number, notes: string[]): StepEntry {
+  return {
+    kind: 'group',
+    anchor: {
+      id,
+      sessionId: 'session-1',
+      order,
+      screenshotBlob: new Blob(['source'], { type: 'image/jpeg' }),
+      bounds: null,
+      devicePixelRatio: 1,
+      description: '',
+      url: 'https://example.com/mark',
+      timestamp: order,
+      groupId: id,
+      numbered: true,
+    },
+    annotations: notes.map((description, index) => ({
+      id: `${id}-note-${index + 1}`,
+      sessionId: 'session-1',
+      order: order + index + 1,
+      bounds: { x: 1, y: 1, width: 2, height: 2 },
+      devicePixelRatio: 1,
+      description,
+      url: 'https://example.com/mark',
+      timestamp: order + index + 1,
+      groupId: id,
+      numbered: true,
+    })),
+  } as StepEntry;
+}
+
+/** Steps and Mark entries interleaved, the way most real projects are recorded. */
+function mixedProject(): StepEntry[] {
+  return [
+    entry({ id: 'step-1', order: 1, description: 'Open settings' }),
+    markEntry('mark-1', 10, ['Search box', 'Language menu', 'History tab']),
+    entry({ id: 'step-2', order: 20, description: 'Click history' }),
+    markEntry('mark-2', 30, ['A long note that keeps going so the list has to wrap across lines', 'Edit']),
+  ];
+}
+
+const MIXED_SECTIONS = [
+  { id: 'find', title: 'Find the page', startEntryId: 'step-1' },
+  { id: 'tour', title: 'Tour the page', startEntryId: 'mark-1' },
+];
+
 /** Renders the project's Markdown archive and returns its Markdown document. */
 async function archiveMarkdown(entries: StepEntry[], metadata: ProjectExportMetadata = {}): Promise<string> {
   const archive = await generateProjectMarkdownArchive(entries, metadata);
@@ -587,4 +638,54 @@ describe('project export', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 
+
+  describe('projects that mix Steps and Mark entries', () => {
+    it('gives a Mark entry its number and annotations in HTML, never the missing-description placeholder', async () => {
+      const html = await generateProjectHtml(mixedProject(), { title: 'Mixed', sections: MIXED_SECTIONS });
+
+      expect(html).not.toContain('（未填寫說明）');
+      expect(html).toContain('<h3 class="step-title"><span class="step-number">1.</span><span>Open settings</span></h3>');
+      expect(html).toContain('<h3 class="step-title"><span class="step-number">2.</span></h3>');
+      expect(html).toContain('<h3 class="step-title"><span class="step-number">3.</span><span>Click history</span></h3>');
+      expect(html).toContain('<h3 class="step-title"><span class="step-number">4.</span></h3>');
+      expect(html.match(/<ol class="annotations">/g)).toHaveLength(2);
+      // A section may begin at a Mark entry; its heading precedes that entry.
+      expect(html.indexOf('Tour the page')).toBeLessThan(html.indexOf('<span class="step-number">2.</span>'));
+      expect(html.indexOf('<span class="step-number">2.</span>')).toBeLessThan(html.indexOf('Search box'));
+      expect(html.indexOf('Search box')).toBeLessThan(html.indexOf('Language menu'));
+    });
+
+    it('prints a Mark entry as a number then its annotation list in the PDF', async () => {
+      const { fillText } = stubPdfCanvas();
+
+      await generateProjectPdf(mixedProject(), { title: 'Mixed', sections: MIXED_SECTIONS });
+      const drawnText = fillText.mock.calls.map(([text]) => String(text));
+
+      expect(drawnText).not.toContain('（未填寫說明）');
+      for (const number of ['1.', '2.', '3.', '4.']) expect(drawnText).toContain(number);
+      expect(drawnText).toContain('Tour the page');
+      expect(drawnText.indexOf('Search box')).toBeLessThan(drawnText.indexOf('History tab'));
+      expect(drawnText.indexOf('History tab')).toBeLessThan(drawnText.indexOf('Click history'));
+    });
+
+    it('leaves the Mark entry without a placeholder line in Markdown', async () => {
+      const markdown = await archiveMarkdown(mixedProject(), { title: 'Mixed', sections: MIXED_SECTIONS });
+
+      expect(markdown).not.toContain('（未填寫說明）');
+      expect(markdown).toContain('Open settings');
+      expect(markdown).toContain('1. Search box');
+    });
+
+    it('still flags a step that has no description at all', async () => {
+      const blank = [entry({ id: 'blank', description: '' })];
+      const html = await generateProjectHtml(blank, { title: 'Blank' });
+      const markdown = await archiveMarkdown(blank, { title: 'Blank' });
+      const { fillText } = stubPdfCanvas();
+      await generateProjectPdf(blank, { title: 'Blank' });
+
+      expect(html).toContain('<span>（未填寫說明）</span>');
+      expect(markdown).toContain('（未填寫說明）');
+      expect(fillText.mock.calls.map(([text]) => String(text))).toContain('（未填寫說明）');
+    });
+  });
 });

@@ -422,7 +422,6 @@ export const zhTW = {
       actionsLabel: '章節操作',
       inputHint: 'Enter 確認 · Esc 取消',
       delete: '刪除章節',
-      startHere: '從這步開始新章節',
       current: (title: string) => `所屬章節：${title}`,
     },
 

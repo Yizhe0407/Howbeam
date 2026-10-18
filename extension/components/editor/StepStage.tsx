@@ -172,21 +172,24 @@ export default function StepStage({
             ? recordingModeCopy('steps').label
             : `${recordingModeCopy('snapshot').label} · ${recordingItemCountLabel('snapshot', entry.annotations.length)}`}
         </span>
+        {/* Sits with the section chip: a section is where this step stands in the document, not an image action. */}
+        {onStartSection && (
+          <Badge asChild variant="tagAction" className="shrink-0 disabled:opacity-50">
+            <button
+              type="button"
+              onClick={onStartSection}
+              disabled={editingDisabled}
+              title={t().editor.rail.addSectionAt(index + 1)}
+            >
+              <DashedOutline radius="full" outset={2} hideOnHover />
+              <Plus className="size-3.5 stroke-[2.5]" />
+              {t().editor.rail.addSectionHere}
+            </button>
+          </Badge>
+        )}
       </div>
       <div className="flex items-center gap-3">
         {numberingPending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-label={t().editor.stage.savingNumbering} />}
-        {onStartSection && (
-          <button
-            type="button"
-            onClick={onStartSection}
-            disabled={editingDisabled}
-            aria-label={t().editor.sections.startHere}
-            className="flex h-10 items-center gap-1.5 rounded-md border-2 border-border bg-matcha px-3 text-xs font-bold text-on-accent outline-none transition-colors focus-ring hover:brightness-95 disabled:pointer-events-none disabled:opacity-40"
-          >
-            <Bookmark className="size-4" aria-hidden="true" />
-            <span className="hidden xl:inline">{t().editor.sections.startHere}</span>
-          </button>
-        )}
         {/* Also the way out of a pending mask review: the editor is where masks are checked and confirmed. */}
         <button
           type="button"

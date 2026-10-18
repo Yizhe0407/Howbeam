@@ -425,7 +425,6 @@ export const en: Messages = {
       actionsLabel: 'Section actions',
       inputHint: 'Enter to save · Esc to cancel',
       delete: 'Delete section',
-      startHere: 'Start a section here',
       current: (title: string) => `Section: ${title}`,
     },
 

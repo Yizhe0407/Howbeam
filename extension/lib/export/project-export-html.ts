@@ -15,7 +15,7 @@ import {
   type ProjectExportOptions,
 } from './project-export-contract';
 import { encodeBase64Parts } from './base64';
-import { renderEntryImages, type RenderedEntryContent } from './project-export-render';
+import { entryHeading, renderEntryImages, type RenderedEntryContent } from './project-export-render';
 import { documentLang, t } from '@/lib/shared/i18n';
 
 /**
@@ -105,13 +105,13 @@ function renderHtmlSectionHeading(section: ProjectSection): string {
 }
 
 function renderHtmlEntry(entry: RenderedEntryContent, imageSrc: string): string {
-  const heading = htmlText(textOrDefault(entry.description, t().export.missingDescription));
+  const heading = entryHeading(entry);
   const alt = escapeProjectHtml(textOrDefault(entry.description, t().export.imageAlt));
   const annotations = entry.annotations.length > 0 ? renderHtmlAnnotations(entry) : '';
 
   return [
     `<section class="step">`,
-    `<h3 class="step-title"><span class="step-number">${entry.ordinal}.</span><span>${heading}</span></h3>`,
+    `<h3 class="step-title"><span class="step-number">${entry.ordinal}.</span>${heading ? `<span>${htmlText(heading)}</span>` : ''}</h3>`,
     `<figure><img src="${imageSrc}" alt="${alt}"></figure>`,
     annotations,
     `</section>`,

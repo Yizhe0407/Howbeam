@@ -14,7 +14,7 @@ import {
   type ProjectExportMetadata,
   type ProjectExportOptions,
 } from './project-export-contract';
-import { renderEntryImages } from './project-export-render';
+import { entryHeading, renderEntryImages } from './project-export-render';
 import { truncatePdfText, wrapPdfText } from './pdf-text-layout';
 import { t } from '@/lib/shared/i18n';
 
@@ -86,7 +86,7 @@ export async function generateProjectPdf(
     }
     await paginator.addStepHeading(
       rendered.content.ordinal,
-      textOrDefault(rendered.content.description, t().export.missingDescription),
+      entryHeading(rendered.content),
     );
     await paginator.addImage(rendered.imageBytes);
     // 標題已包含項目說明。

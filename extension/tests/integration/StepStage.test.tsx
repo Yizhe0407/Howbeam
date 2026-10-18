@@ -268,13 +268,15 @@ describe('StepStage sections', () => {
   it('offers to start a section here only when the owner allows it, and not while editing is disabled', () => {
     const onStartSection = vi.fn();
     const { rerender } = renderStage({ entry: singleEntry(), onStartSection });
-    fireEvent.click(screen.getByRole('button', { name: '從這步開始新章節' }));
+    const button = screen.getByRole('button', { name: '新增章節' });
+    expect(button.getAttribute('title')).toBe('從第 1 步開始新章節');
+    fireEvent.click(button);
     expect(onStartSection).toHaveBeenCalledOnce();
 
     rerender(stage({ entry: singleEntry(), onStartSection, editingDisabled: true }));
-    expect((screen.getByRole('button', { name: '從這步開始新章節' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: '新增章節' }) as HTMLButtonElement).disabled).toBe(true);
 
     rerender(stage({ entry: singleEntry() }));
-    expect(screen.queryByRole('button', { name: '從這步開始新章節' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '新增章節' })).toBeNull();
   });
 });

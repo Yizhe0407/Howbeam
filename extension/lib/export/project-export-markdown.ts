@@ -14,6 +14,7 @@ import {
   type ProjectMarkdownArchive,
 } from './project-export-contract';
 import {
+  entryHeading,
   renderEntryImages,
   type RenderedEntryContent,
   type RenderedMarkdownEntry,
@@ -73,10 +74,8 @@ function renderProjectMarkdown<T extends RenderedEntryContent>(
     }
     // Text-first reading order matches the HTML and PDF publications: the step
     // description leads, its screenshot follows, then any group annotations.
-    const description = textValue(entry.description);
-    if (description || entry.annotations.length === 0) {
-      lines.push('', escapeProjectMarkdown(textOrDefault(description, t().export.missingDescription)));
-    }
+    const heading = entryHeading(entry);
+    if (heading) lines.push('', escapeProjectMarkdown(heading));
     const alt = textOrDefault(entry.description, t().export.imageAlt);
     lines.push('', `![${escapeProjectMarkdown(alt)}](${imageReference(entry)})`);
     if (entry.annotations.length > 0) {
