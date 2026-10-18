@@ -87,6 +87,7 @@ describe('runtime response contracts', () => {
     ['focus recapture source', isFocusStepRecaptureSourceResult, { ok: true }],
     ['cancel recapture', isCancelStepRecaptureResult, { ok: true, status: 'already-completed' }],
     ['click capture', isClickCaptureResult, { ok: false, error: 'wrong-phase' }],
+    ['reported click capture failure', isClickCaptureResult, { ok: false, error: 'capture-failed', reported: true }],
     ['recapture target', isStepRecaptureTargetResult, { ok: false, status: 'rejected', error: 'retry' }],
     ['readiness boolean', isRuntimeBoolean, true],
   ] as const)('accepts a complete %s response', (_name, guard, value) => {
@@ -129,6 +130,7 @@ describe('runtime response contracts', () => {
     ['cancel recapture with an unknown status', isCancelStepRecaptureResult, { ok: true, status: 'pending' }],
     ['click capture with undeclared payload', isClickCaptureResult, { ok: true, captured: true }],
     ['click capture failure without a reason', isClickCaptureResult, { ok: false }],
+    ['click capture with a non-true reported flag', isClickCaptureResult, { ok: false, error: 'x', reported: false }],
     ['recapture target with mismatched success status', isStepRecaptureTargetResult, { ok: true, status: 'failed' }],
     ['truthy non-boolean readiness', isRuntimeBoolean, 1],
   ] as const)('rejects %s', (_name, guard, value) => {

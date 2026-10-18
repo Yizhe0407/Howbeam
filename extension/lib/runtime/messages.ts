@@ -188,8 +188,11 @@ export interface StepmarkSnapshotActiveMessage {
 /** `error` is a short diagnostic reason code/message, not user-facing copy —
  * the content script only ever surfaces it in a console.warn. User-facing
  * failures go through the separate recordingState.error/recoverableError
- * path (setRunError), which this result type does not touch. */
-export type ClickCaptureResult = { ok: true } | { ok: false; error: string };
+ * path (setRunError), which this result type does not touch. `reported`
+ * marks a rejection the background already told the user about (a run
+ * error, an invalidated snapshot, a run it ended or moved); any other
+ * rejection leaves the recorder to say the click went unrecorded. */
+export type ClickCaptureResult = { ok: true } | { ok: false; error: string; reported?: true };
 
 /**
  * Child-frame step gestures use an extension-authenticated runtime handshake

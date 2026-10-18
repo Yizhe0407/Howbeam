@@ -11,11 +11,11 @@ export type CaptureSender = ReturnType<typeof createCaptureSender>;
 /**
  * How a step capture request ended, from the page's point of view:
  * - `saved`: the background stored the step.
- * - `rejected`: the background answered and declined it (stale run, paused,
- *   guard failure — anything worth telling the user it reports itself).
- * - `lost`: no usable answer (the service worker died or restarted mid-request)
- *   and the recording state shows no new step: the click was not recorded and
- *   nobody else will say so.
+ * - `rejected`: the background declined it and has told the user why.
+ * - `lost`: the click was not recorded and nobody else will say so — the
+ *   background declined it without a notice of its own, or no usable answer
+ *   came back (the service worker died mid-request) and the recording state
+ *   shows no new step.
  */
 export type CaptureDelivery = 'saved' | 'rejected' | 'lost';
 
@@ -93,7 +93,7 @@ export function createCaptureSender(runId: string) {
       if (result.ok) return 'saved';
       if (result.error !== CAPTURE_REQUEST_FAILED) {
         console.warn('[stepmark] step was not captured:', result.error);
-        return 'rejected';
+        return result.reported ? 'rejected' : 'lost';
       }
       failure = result.error;
     } catch (error) {

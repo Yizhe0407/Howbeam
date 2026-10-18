@@ -39,10 +39,16 @@ describe('deliverStepCapture', () => {
     expect(mocks.getRecordingState).not.toHaveBeenCalled();
   });
 
-  it('reports a background rejection as rejected (the background explains it itself)', async () => {
+  it('reports a rejection the background already told the user about as rejected', async () => {
     silenceIntentionalErrorLogs();
-    mocks.sendMessage.mockResolvedValue({ ok: false, error: 'wrong-phase' });
+    mocks.sendMessage.mockResolvedValue({ ok: false, error: 'capture-failed', reported: true });
     await expect(deliver()).resolves.toBe('rejected');
+  });
+
+  it('reports a rejection nobody explained as lost', async () => {
+    silenceIntentionalErrorLogs();
+    mocks.sendMessage.mockResolvedValue({ ok: false, error: 'not-accepting-clicks' });
+    await expect(deliver()).resolves.toBe('lost');
   });
 
   it('reports a click as lost when the worker died mid-request and no step landed', async () => {

@@ -1773,6 +1773,7 @@ async function handleClick(
     return { ok: true };
   } catch (err) {
     let reason = 'capture-failed';
+    let reported = false;
     try {
       if (err instanceof SnapshotViewportChangedError) {
         reason = 'snapshot-viewport-changed';
@@ -1782,6 +1783,7 @@ async function handleClick(
           message.devicePixelRatio,
           expectedControlVersion,
         );
+        reported = true;
       } else if (err instanceof SnapshotAnchorMissingError) {
         // The run can never accept another annotation; settle it once with a
         // recoverable error instead of failing every subsequent click.
@@ -1793,8 +1795,11 @@ async function handleClick(
           expectedControlVersion,
           snapshotAnchorMissingError(),
         );
+        reported = true;
       } else if (isMissingTabError(err)) {
+        // The page that would show a notice is gone.
         reason = 'tab-closed';
+        reported = true;
         // Not awaited: this runs inside the click queue, and the lifecycle
         // queue it enters can be waiting for queued clicks.
         void handleRecordedTabGone(tabId).catch((error) => {
@@ -1813,6 +1818,7 @@ async function handleClick(
         // The toolbar shows state.error verbatim: localized copy only, never
         // the raw browser diagnostic or its "Error: " rendering.
         await setRunError(message.runId, userFacingErrorMessage(err, t().background.captureFailed));
+        reported = true;
       }
     } catch (recoveryError) {
       control.acceptingClicks = false;
@@ -1822,7 +1828,7 @@ async function handleClick(
         recoveryError,
       );
     }
-    return { ok: false, error: reason };
+    return reported ? { ok: false, error: reason, reported: true } : { ok: false, error: reason };
   } finally {
     releaseCapture(message.captureId);
   }

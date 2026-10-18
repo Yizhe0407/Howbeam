@@ -97,9 +97,8 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
   const reportUnrecordedClick = () => session.toolbar?.showNotice(t().toolbar.stepNotRecorded);
 
   /** Decides, once a capture attempt has finished, whether its click went
-   * unrecorded in a way nobody else reports. A background that answered with
-   * a rejection explains itself (run error, paused run); a lost answer or an
-   * attempt cut off by the failsafe does not. */
+   * unrecorded in a way nobody else reports: a lost delivery, or an attempt
+   * cut off by the failsafe. */
   const reportStepDelivery = (outcome: StepCaptureOutcome, delivery: Promise<StepDelivery> | null): void => {
     if (outcome === 'captured' || outcome === 'cancelled') return;
     if (outcome === 'failed') {
