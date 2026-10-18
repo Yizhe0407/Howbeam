@@ -413,7 +413,7 @@ describe('專案庫', () => {
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');
     expect(input).toBeTruthy();
     await waitFor(() => expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false));
-    const file = new File(['archive'], 'fallback.stepmark', { type: 'application/vnd.stepmark.project+json' });
+    const file = new File(['archive'], 'fallback.stepmark', { type: 'application/vnd.stepmark.project+zip' });
     fireEvent.change(input!, { target: { files: [file] } });
 
     await waitFor(() => expect(archive.importProjectArchive).toHaveBeenCalledWith(file));

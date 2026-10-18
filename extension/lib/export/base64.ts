@@ -1,7 +1,7 @@
 import { throwIfAborted } from '../shared/abort';
 
-/** Standard (RFC 4648) alphabet, shared with the archive decoder's value table. */
-export const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+/** Standard (RFC 4648) alphabet. */
+const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 const OUTPUT_CHUNK_SIZE = 32_768;
 
 /** Multiple of three, so every native chunk encodes without padding and the
@@ -16,21 +16,14 @@ const nativeToBase64: ((this: Uint8Array) => string) | undefined = (
 ).toBase64;
 
 /**
- * Encodes bytes to standard base64 with padding.
+ * Encodes bytes to standard base64 with padding, returned as consecutive
+ * pieces whose concatenation is the full base64 text. Lets a caller hand each
+ * piece to a Blob instead of ever materialising one multi-MB string.
  *
  * Prefers the native `Uint8Array.prototype.toBase64` (about three orders of
- * magnitude faster than any JS loop for multi-MB screenshots — this dominated
- * archive export wall-clock time), chunked so large inputs still poll the
- * abort signal. Falls back to the chunked JS encoder on runtimes without it.
- */
-export function encodeBase64(bytes: Uint8Array, signal?: AbortSignal): string {
-  return encodeBase64Parts(bytes, signal).join('');
-}
-
-/**
- * Same encoding as {@link encodeBase64}, returned as consecutive pieces whose
- * concatenation is the full base64 text. Lets a caller hand each piece to a
- * Blob instead of ever materialising one multi-MB string.
+ * magnitude faster than any JS loop for multi-MB screenshots), chunked so
+ * large inputs still poll the abort signal. Falls back to the chunked JS
+ * encoder on runtimes without it.
  */
 export function encodeBase64Parts(bytes: Uint8Array, signal?: AbortSignal): string[] {
   throwIfAborted(signal);

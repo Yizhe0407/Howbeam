@@ -4,7 +4,7 @@ import { addStepsAfter, deleteStep, deleteStepsForRun, getSteps, replaceStepCapt
 import { buildStepEntries, getEffectiveBounds, getOrderedAnnotations, STEP_STORAGE_LIMITS, StepStorageValidationError, type Step } from '@/lib/storage/models';
 import { closeDatabase, ProjectNotFoundError, summarizeSteps } from '@/lib/storage/database';
 import { PROJECT_TAG_LIMITS } from '@/lib/storage/project-tag-model';
-import { serializeProjectArchive } from '@/lib/export/project-archive-serialize';
+import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
 import { jpegBlob, pngBlob } from '../setup/raster-fixtures';
 import { seedSteps } from '../setup/step-fixtures';
 import { createProject, createProjectFromSteps, deleteProjectPermanently, duplicateProject, ensureProject, getProject, getProjectSummaries, ProjectTagLimitError, resetProject, updateProject } from '@/lib/storage/project-repository';
@@ -715,9 +715,9 @@ describe('stored text and screenshots match the archive rules', () => {
     await updateProject(step.sessionId, { title: '標題\u0085', description: '說明\u0080' });
     const project = (await getProject(step.sessionId))!;
     expect(project).toMatchObject({ title: '標題', description: '說明' });
-    await expect(serializeProjectArchive(await getSteps(step.sessionId), {
+    await expect(exportProjectArchive(await getSteps(step.sessionId), {
       metadata: { title: project.title, description: project.description },
-    })).resolves.toEqual(expect.any(String));
+    })).resolves.toEqual(expect.any(Blob));
   });
 
   it.each([

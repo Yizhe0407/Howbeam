@@ -1,4 +1,3 @@
-import { BASE64_ALPHABET } from './base64';
 import type { Bounds, ImageEdit, Redaction, Step } from '../storage/models';
 import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
 import { PROJECT_SECTION_LIMITS, type ProjectSection } from '../storage/project-section-model';
@@ -6,10 +5,18 @@ import { PROJECT_TAG_LIMITS } from '../storage/project-tag-model';
 import { SCREENSHOT_MEDIA_TYPES } from '../storage/screenshot-rules';
 
 export const PROJECT_ARCHIVE_FORMAT = 'stepmark-project';
-/** Version 3 adds `imageEdits` (text, arrows, rectangles) and `crop` to steps. Version 2 files stay importable. */
-export const PROJECT_ARCHIVE_VERSION = 3;
-export const SUPPORTED_ARCHIVE_VERSIONS: readonly number[] = [2, 3];
-export const PROJECT_ARCHIVE_MIME_TYPE = 'application/vnd.stepmark.project+json';
+/** Version 4 is a ZIP: `manifest.json` plus each distinct screenshot stored
+ * once, as its original bytes, under `screenshots/` named by its SHA-256. */
+export const PROJECT_ARCHIVE_VERSION = 4;
+export const PROJECT_ARCHIVE_MIME_TYPE = 'application/vnd.stepmark.project+zip';
+export const ARCHIVE_MANIFEST_PATH = 'manifest.json';
+
+const SCREENSHOT_EXTENSIONS: Readonly<Record<string, string>> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+
+/** Where a screenshot lives inside the ZIP. Its id is the SHA-256 of its bytes. */
+export function archiveScreenshotPath(id: string, mediaType: string): string {
+  return `screenshots/${id}.${SCREENSHOT_EXTENSIONS[mediaType]}`;
+}
 
 /** Public limits are exported so callers can explain rejected imports before retrying. */
 export const PROJECT_ARCHIVE_LIMITS = Object.freeze({
@@ -60,7 +67,7 @@ export class ProjectArchiveError extends Error {
 
 export interface ProjectArchiveOptions {
   signal?: AbortSignal;
-  /** Safe project metadata included in newly-created v2 archives. */
+  /** Safe project metadata included in the archive. */
   metadata?: ProjectArchiveMetadataInput;
 }
 
@@ -89,7 +96,7 @@ export interface ImportedProjectArchive {
   metadata: ProjectArchiveMetadata;
 }
 
-export type ProjectArchiveSource = string | Blob | ArrayBuffer | ArrayBufferView;
+export type ProjectArchiveSource = Blob | ArrayBuffer | ArrayBufferView;
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -101,7 +108,7 @@ export interface ArchiveStep {
   sessionId: string;
   runId?: string;
   order: number;
-  screenshotBlobId?: string;
+  screenshotId?: string;
   bounds: ArchiveBounds | null;
   manualBounds?: ArchiveBounds | null;
   redactions?: ArchiveRedaction[];
@@ -120,20 +127,18 @@ export interface ArchiveStep {
   numbered?: boolean;
 }
 
-export interface ArchiveBlob {
+export interface ArchiveScreenshot {
   id: string;
   mediaType: string;
   size: number;
-  encoding: 'base64';
-  data: string;
 }
 
-interface ArchiveManifest {
+export interface ArchiveManifest {
   format: typeof PROJECT_ARCHIVE_FORMAT;
   version: typeof PROJECT_ARCHIVE_VERSION;
   stepCount: number;
-  blobCount: number;
   steps: ArchiveStep[];
+  screenshots: ArchiveScreenshot[];
   metadata: ArchiveMetadata;
 }
 
@@ -144,16 +149,10 @@ export interface ArchiveMetadata {
   tags: string[];
 }
 
-export interface ArchiveEnvelope {
-  manifest: ArchiveManifest;
-  blobs: ArchiveBlob[];
-}
-
-export const ENVELOPE_KEYS = ['manifest', 'blobs'] as const;
-export const MANIFEST_KEYS = ['format', 'version', 'stepCount', 'blobCount', 'steps', 'metadata'] as const;
+export const MANIFEST_KEYS = ['format', 'version', 'stepCount', 'steps', 'screenshots', 'metadata'] as const;
 export const METADATA_KEYS = ['title', 'description', 'sections', 'tags'] as const;
 export const SECTION_KEYS = ['id', 'title', 'startEntryId'] as const;
-export const BLOB_KEYS = ['id', 'mediaType', 'size', 'encoding', 'data'] as const;
+export const SCREENSHOT_KEYS = ['id', 'mediaType', 'size'] as const;
 export const BOUNDS_KEYS = ['x', 'y', 'width', 'height'] as const;
 export const REDACTION_KEYS = ['id', 'bounds', 'kind'] as const;
 export const IMAGE_EDIT_KEYS = {
@@ -169,7 +168,7 @@ export const STEP_KEYS = [
   'sessionId',
   'runId',
   'order',
-  'screenshotBlobId',
+  'screenshotId',
   'bounds',
   'manualBounds',
   'redactions',
@@ -187,10 +186,13 @@ export const STEP_KEYS = [
   'groupId',
   'numbered',
 ] as const;
-export const RUNTIME_STEP_KEYS = STEP_KEYS.map((key) => (key === 'screenshotBlobId' ? 'screenshotBlob' : key));
+export const RUNTIME_STEP_KEYS = STEP_KEYS.map((key) => (key === 'screenshotId' ? 'screenshotBlob' : key));
 /** The storage screenshot rule's media types: archives carry exactly what storage accepts. */
 export const SAFE_SCREENSHOT_MEDIA_TYPES = SCREENSHOT_MEDIA_TYPES;
-export const BASE64_VALUES = new Int16Array(128).fill(-1);
-for (let index = 0; index < BASE64_ALPHABET.length; index += 1) {
-  BASE64_VALUES[BASE64_ALPHABET.charCodeAt(index)] = index;
+
+/** A screenshot's archive id: the hex SHA-256 of its bytes, so identical
+ * screenshots share one file. */
+export async function screenshotId(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

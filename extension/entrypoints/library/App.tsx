@@ -211,7 +211,7 @@ export default function App() {
               // the accessibility tree it would be an unlabeled first stop.
               tabIndex={-1}
               aria-hidden="true"
-              accept=".stepmark,application/vnd.stepmark.project+json"
+              accept=".stepmark,application/vnd.stepmark.project+zip"
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.currentTarget.value = '';

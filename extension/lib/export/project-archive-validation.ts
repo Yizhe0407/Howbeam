@@ -1,4 +1,3 @@
-import { throwIfAborted } from '../shared/abort';
 import { isRecord } from '../shared/validation';
 import { buildStepEntries, stepRole, type Bounds, type ImageEdit, type Redaction, type Step } from '../storage/models';
 import {
@@ -20,7 +19,6 @@ import {
 import { sanitizeProjectTag } from '../storage/project-tag-model';
 import { isStoredText } from '../storage/stored-text';
 import {
-  BASE64_VALUES,
   BOUNDS_KEYS,
   IMAGE_EDIT_KEYS,
   METADATA_KEYS,
@@ -544,63 +542,4 @@ function validateScreenshotBlob(blob: Blob, path: string): void {
 export async function validateScreenshotRaster(blob: Blob, path: string): Promise<void> {
   const problem = await screenshotProblem(blob);
   if (problem) fail('INVALID_BLOB', `${path}: ${problem}`);
-}
-
-function decodedBase64Size(data: string, path: string): number {
-  if (data.length === 0 || data.length % 4 !== 0) fail('INVALID_BLOB', `${path} is not canonical base64.`);
-  const padding = data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0;
-  const size = (data.length / 4) * 3 - padding;
-  if (size <= 0 || size > PROJECT_ARCHIVE_LIMITS.maxScreenshotBytes) {
-    fail('INVALID_BLOB', `${path} decodes to an invalid screenshot size.`);
-  }
-  return size;
-}
-
-export function base64ToBytes(
-  data: string,
-  expectedSize: number,
-  path: string,
-  signal?: AbortSignal,
-): Uint8Array<ArrayBuffer> {
-  const size = decodedBase64Size(data, path);
-  if (size !== expectedSize) fail('INVALID_BLOB', `${path} does not match its declared size.`);
-
-  const output = new Uint8Array(size);
-  let outputIndex = 0;
-  for (let index = 0; index < data.length; index += 4) {
-    if ((index & 0xffff) === 0) throwIfAborted(signal);
-    const isLast = index + 4 === data.length;
-    const c0 = data.charCodeAt(index);
-    const c1 = data.charCodeAt(index + 1);
-    const c2 = data.charCodeAt(index + 2);
-    const c3 = data.charCodeAt(index + 3);
-    const v0 = c0 < 128 ? BASE64_VALUES[c0] : -1;
-    const v1 = c1 < 128 ? BASE64_VALUES[c1] : -1;
-    const v2 = c2 === 61 ? 0 : c2 < 128 ? BASE64_VALUES[c2] : -1;
-    const v3 = c3 === 61 ? 0 : c3 < 128 ? BASE64_VALUES[c3] : -1;
-    if (
-      v0 < 0 ||
-      v1 < 0 ||
-      v2 < 0 ||
-      v3 < 0 ||
-      (!isLast && (c2 === 61 || c3 === 61)) ||
-      (c2 === 61 && c3 !== 61)
-    ) {
-      fail('INVALID_BLOB', `${path} is not canonical base64.`);
-    }
-    const combined = (v0 << 18) | (v1 << 12) | (v2 << 6) | v3;
-    if (outputIndex < size) output[outputIndex++] = (combined >>> 16) & 255;
-    if (outputIndex < size) output[outputIndex++] = (combined >>> 8) & 255;
-    if (outputIndex < size) output[outputIndex++] = combined & 255;
-  }
-
-  // Canonical padding bits must be zero, preventing multiple encodings of the same bytes.
-  const finalQuartet = data.slice(-4);
-  if (
-    (finalQuartet.endsWith('==') && (BASE64_VALUES[finalQuartet.charCodeAt(1)] & 15) !== 0) ||
-    (finalQuartet.endsWith('=') && !finalQuartet.endsWith('==') && (BASE64_VALUES[finalQuartet.charCodeAt(2)] & 3) !== 0)
-  ) {
-    fail('INVALID_BLOB', `${path} has non-canonical padding bits.`);
-  }
-  return output;
 }

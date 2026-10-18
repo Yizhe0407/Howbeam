@@ -1,15 +1,18 @@
+import { unzipSync } from 'fflate';
 import { throwIfAborted } from '../shared/abort';
 import { type Step } from '../storage/models';
 import {
-  BLOB_KEYS,
-  ENVELOPE_KEYS,
+  ARCHIVE_MANIFEST_PATH,
   MANIFEST_KEYS,
   PROJECT_ARCHIVE_FORMAT,
   PROJECT_ARCHIVE_LIMITS,
   PROJECT_ARCHIVE_VERSION,
+  ProjectArchiveError,
   SAFE_SCREENSHOT_MEDIA_TYPES,
-  SUPPORTED_ARCHIVE_VERSIONS,
+  SCREENSHOT_KEYS,
   STEP_KEYS,
+  archiveScreenshotPath,
+  screenshotId,
   type ImportedProjectArchive,
   type JsonRecord,
   type ProjectArchiveImportOptions,
@@ -18,7 +21,6 @@ import {
 import {
   assertUniqueStepIds,
   assertExactKeys,
-  base64ToBytes,
   canonicalStepComparator,
   expectArray,
   expectIdentifier,
@@ -34,17 +36,12 @@ import {
   validateScreenshotRaster,
 } from './project-archive-validation';
 
-async function sourceToText(source: ProjectArchiveSource, signal?: AbortSignal): Promise<string> {
+const SCREENSHOT_ID = /^[0-9a-f]{64}$/;
+
+async function sourceToBytes(source: ProjectArchiveSource, signal?: AbortSignal): Promise<Uint8Array> {
   throwIfAborted(signal);
   let bytes: Uint8Array;
-  if (typeof source === 'string') {
-    // Every UTF-16 code unit needs at least one UTF-8 byte, so this cheap check
-    // avoids allocating another huge buffer for an obviously oversized string.
-    if (source.length > PROJECT_ARCHIVE_LIMITS.maxArchiveBytes) {
-      fail('ARCHIVE_TOO_LARGE', 'The project archive is too large.');
-    }
-    bytes = new TextEncoder().encode(source);
-  } else if (source instanceof Blob) {
+  if (source instanceof Blob) {
     if (source.size > PROJECT_ARCHIVE_LIMITS.maxArchiveBytes) {
       fail('ARCHIVE_TOO_LARGE', 'The project archive is too large.');
     }
@@ -52,11 +49,7 @@ async function sourceToText(source: ProjectArchiveSource, signal?: AbortSignal):
   } else if (source instanceof ArrayBuffer) {
     bytes = new Uint8Array(source);
   } else if (ArrayBuffer.isView(source)) {
-    if (source.byteLength > PROJECT_ARCHIVE_LIMITS.maxArchiveBytes) {
-      fail('ARCHIVE_TOO_LARGE', 'The project archive is too large.');
-    }
-    bytes = new Uint8Array(source.byteLength);
-    bytes.set(new Uint8Array(source.buffer as ArrayBuffer, source.byteOffset, source.byteLength));
+    bytes = new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
   } else {
     fail('INVALID_ARCHIVE', 'The project archive source has an unsupported type.');
   }
@@ -64,32 +57,72 @@ async function sourceToText(source: ProjectArchiveSource, signal?: AbortSignal):
   if (bytes.byteLength > PROJECT_ARCHIVE_LIMITS.maxArchiveBytes) {
     fail('ARCHIVE_TOO_LARGE', 'The project archive is too large.');
   }
-  try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  } catch {
-    fail('INVALID_JSON', 'The project archive is not valid UTF-8.');
-  }
+  return bytes;
 }
 
-function parseArchiveStep(recordValue: unknown, path: string, blobs: Map<string, Blob>, usedBlobs: Set<string>): Step {
+/** Reads the ZIP's entries. Only stored (uncompressed) entries are accepted,
+ * so no entry can expand beyond the archive's own size limit. */
+function readEntries(bytes: Uint8Array): Map<string, Uint8Array> {
+  const names = new Set<string>();
+  let files: Record<string, Uint8Array>;
+  try {
+    files = unzipSync(bytes, {
+      filter: (file) => {
+        if (names.has(file.name)) fail('INVALID_ARCHIVE', `The archive contains ${JSON.stringify(file.name)} twice.`);
+        names.add(file.name);
+        if (file.compression !== 0 || file.size !== file.originalSize) {
+          fail('INVALID_ARCHIVE', `${JSON.stringify(file.name)} must be stored uncompressed.`);
+        }
+        return true;
+      },
+    });
+  } catch (error) {
+    if (error instanceof ProjectArchiveError) throw error;
+    fail('INVALID_ARCHIVE', 'The project archive is not a valid Stepmark file.');
+  }
+  return new Map(Object.entries(files));
+}
+
+function parseManifest(bytes: Uint8Array | undefined): JsonRecord {
+  if (!bytes) fail('INVALID_ARCHIVE', `The archive has no ${ARCHIVE_MANIFEST_PATH}.`);
+  let text: string;
+  try {
+    text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    fail('INVALID_JSON', 'The project manifest is not valid UTF-8.');
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text) as unknown;
+  } catch {
+    fail('INVALID_JSON', 'The project manifest is not valid JSON.');
+  }
+  return expectRecord(parsed, 'manifest');
+}
+
+function parseArchiveStep(recordValue: unknown, path: string, screenshots: Map<string, Blob>, used: Set<string>): Step {
   const record = expectRecord(recordValue, path);
   assertExactKeys(record, STEP_KEYS, path);
 
   const runtime: JsonRecord = { ...record };
-  delete runtime.screenshotBlobId;
-  if (hasOwn(record, 'screenshotBlobId')) {
-    const blobId = expectIdentifier(record.screenshotBlobId, `${path}.screenshotBlobId`);
-    const blob = blobs.get(blobId);
-    if (!blob) fail('INVALID_BLOB', `${path} references missing screenshot ${JSON.stringify(blobId)}.`);
+  delete runtime.screenshotId;
+  if (hasOwn(record, 'screenshotId')) {
+    const id = expectIdentifier(record.screenshotId, `${path}.screenshotId`);
+    const blob = screenshots.get(id);
+    if (!blob) fail('INVALID_BLOB', `${path} references missing screenshot ${JSON.stringify(id)}.`);
     runtime.screenshotBlob = blob;
-    usedBlobs.add(blobId);
+    used.add(id);
   }
   return validateRuntimeStep(runtime, path);
 }
 
-async function parseBlobRecords(value: unknown, expectedCount: number, signal?: AbortSignal): Promise<Map<string, Blob>> {
-  const records = expectArray(value, 'blobs');
-  if (records.length !== expectedCount) fail('INVALID_ARCHIVE', 'manifest.blobCount does not match blobs.length.');
+/** Every screenshot the manifest lists must be the file its id names, byte for byte. */
+async function parseScreenshots(
+  value: unknown,
+  entries: Map<string, Uint8Array>,
+  signal?: AbortSignal,
+): Promise<Map<string, Blob>> {
+  const records = expectArray(value, 'manifest.screenshots');
   if (records.length > PROJECT_ARCHIVE_LIMITS.maxScreenshots) {
     fail('LIMIT_EXCEEDED', `An archive may contain at most ${PROJECT_ARCHIVE_LIMITS.maxScreenshots} screenshots.`);
   }
@@ -98,10 +131,11 @@ async function parseBlobRecords(value: unknown, expectedCount: number, signal?: 
   let totalSize = 0;
   for (let index = 0; index < records.length; index += 1) {
     throwIfAborted(signal);
-    const path = `blobs[${index}]`;
+    const path = `manifest.screenshots[${index}]`;
     const record = expectRecord(records[index], path);
-    assertExactKeys(record, BLOB_KEYS, path);
-    const id = expectIdentifier(record.id, `${path}.id`);
+    assertExactKeys(record, SCREENSHOT_KEYS, path);
+    const id = expectString(record.id, `${path}.id`, 64, false);
+    if (!SCREENSHOT_ID.test(id)) fail('INVALID_BLOB', `${path}.id must be a SHA-256 hex digest.`);
     if (result.has(id)) fail('DUPLICATE_ID', `Duplicate screenshot id ${JSON.stringify(id)}.`);
     const mediaType = expectString(record.mediaType, `${path}.mediaType`, 64, false);
     if (!SAFE_SCREENSHOT_MEDIA_TYPES.has(mediaType)) {
@@ -112,14 +146,14 @@ async function parseBlobRecords(value: unknown, expectedCount: number, signal?: 
     if (totalSize > PROJECT_ARCHIVE_LIMITS.maxTotalScreenshotBytes) {
       fail('LIMIT_EXCEEDED', 'The screenshots exceed the total archive byte limit.');
     }
-    if (record.encoding !== 'base64') fail('INVALID_BLOB', `${path}.encoding must be "base64".`);
-    const data = expectString(
-      record.data,
-      `${path}.data`,
-      Math.ceil(PROJECT_ARCHIVE_LIMITS.maxScreenshotBytes / 3) * 4,
-      false,
-    );
-    const blob = new Blob([base64ToBytes(data, size, `${path}.data`, signal)], { type: mediaType });
+
+    const bytes = entries.get(archiveScreenshotPath(id, mediaType));
+    if (!bytes) fail('INVALID_BLOB', `${path} has no file in the archive.`);
+    if (bytes.byteLength !== size) fail('INVALID_BLOB', `${path} does not match its declared size.`);
+    const owned = new Uint8Array(bytes);
+    if (await screenshotId(owned) !== id) fail('INVALID_BLOB', `${path} does not match its SHA-256 id.`);
+    throwIfAborted(signal);
+    const blob = new Blob([owned], { type: mediaType });
     await validateScreenshotRaster(blob, path);
     throwIfAborted(signal);
     result.set(id, blob);
@@ -133,52 +167,34 @@ export async function importProjectArchive(
   options: ProjectArchiveImportOptions = {},
 ): Promise<ImportedProjectArchive> {
   const { signal } = options;
-  const text = await sourceToText(source, signal);
+  const entries = readEntries(await sourceToBytes(source, signal));
   throwIfAborted(signal);
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text) as unknown;
-  } catch {
-    fail('INVALID_JSON', 'The project archive is not valid JSON.');
-  }
-
-  const envelope = expectRecord(parsed, 'archive');
-  const manifest = expectRecord(envelope.manifest, 'manifest');
+  const manifest = parseManifest(entries.get(ARCHIVE_MANIFEST_PATH));
 
   // Read format/version before applying a concrete schema so future versions
   // fail explicitly instead of being misreported as an unknown-field error.
   if (manifest.format !== PROJECT_ARCHIVE_FORMAT) fail('INVALID_ARCHIVE', 'Unrecognized project archive format.');
   if (!Number.isSafeInteger(manifest.version)) fail('INVALID_ARCHIVE', 'manifest.version must be an integer.');
-  if (!SUPPORTED_ARCHIVE_VERSIONS.includes(manifest.version as number)) {
+  if (manifest.version !== PROJECT_ARCHIVE_VERSION) {
     fail('UNSUPPORTED_VERSION', `Project archive version ${String(manifest.version)} is not supported.`);
   }
-  assertExactKeys(envelope, ENVELOPE_KEYS, 'archive');
   assertExactKeys(manifest, MANIFEST_KEYS, 'manifest');
 
   const stepCount = expectSafeInteger(manifest.stepCount, 'manifest.stepCount', 0, PROJECT_ARCHIVE_LIMITS.maxSteps);
-  const blobCount = expectSafeInteger(
-    manifest.blobCount,
-    'manifest.blobCount',
-    0,
-    PROJECT_ARCHIVE_LIMITS.maxScreenshots,
-  );
   const rawSteps = expectArray(manifest.steps, 'manifest.steps');
   if (rawSteps.length !== stepCount) fail('INVALID_ARCHIVE', 'manifest.stepCount does not match manifest.steps.length.');
-  if (rawSteps.length > PROJECT_ARCHIVE_LIMITS.maxSteps) {
-    fail('LIMIT_EXCEEDED', `An archive may contain at most ${PROJECT_ARCHIVE_LIMITS.maxSteps} steps.`);
-  }
 
-  const blobs = await parseBlobRecords(envelope.blobs, blobCount, signal);
-  const usedBlobs = new Set<string>();
+  const screenshots = await parseScreenshots(manifest.screenshots, entries, signal);
+  if (entries.size !== screenshots.size + 1) fail('INVALID_ARCHIVE', 'The archive contains files the manifest does not list.');
+  const used = new Set<string>();
   const steps = rawSteps.map((step, index) => {
     throwIfAborted(signal);
-    return parseArchiveStep(step, `manifest.steps[${index}]`, blobs, usedBlobs);
+    return parseArchiveStep(step, `manifest.steps[${index}]`, screenshots, used);
   });
 
   assertUniqueStepIds(steps);
-  for (const blobId of blobs.keys()) {
-    if (!usedBlobs.has(blobId)) fail('INVALID_BLOB', `Screenshot ${JSON.stringify(blobId)} is not referenced by a step.`);
+  for (const id of screenshots.keys()) {
+    if (!used.has(id)) fail('INVALID_BLOB', `Screenshot ${JSON.stringify(id)} is not referenced by a step.`);
   }
   validateGroups(steps);
   steps.sort(canonicalStepComparator);
