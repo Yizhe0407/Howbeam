@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ArrowDownToLine, ArrowUpToLine, Copy, Minus, Plus, Trash2 } from 'lucide-react';
 import {
   IMAGE_EDIT_FONT_SIZES,
@@ -13,6 +13,8 @@ import type { ImageEditStyle, StyleField, StylePatch } from '@/lib/editor/image-
 import { cn } from '@/lib/shared/utils';
 import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { DashedOutline } from '@/components/ui/dashed-outline';
+import ImageEditColorPicker from './ImageEditColorPicker';
 
 interface Props {
   fields: readonly StyleField[];
@@ -80,44 +82,39 @@ function Segmented<V extends string | number>({ label, value, options, onSelect 
 
 function ColorControl({ color, onChange }: { color: string; onChange: (color: string) => void }) {
   const copy = t().editor.imageEdit;
-  const inputId = useId();
-  const isPreset = (IMAGE_EDIT_PRESET_COLORS as readonly string[]).includes(color);
+  // A picked colour gets a swatch of its own, so the picker button never changes look.
+  const swatches = (IMAGE_EDIT_PRESET_COLORS as readonly string[]).includes(color)
+    ? IMAGE_EDIT_PRESET_COLORS
+    : [...IMAGE_EDIT_PRESET_COLORS, color];
   return (
     <div className="flex items-center gap-1.5" role="radiogroup" aria-label={copy.colorLabel}>
-      {IMAGE_EDIT_PRESET_COLORS.map((preset) => (
+      {swatches.map((swatch) => (
         <button
-          key={preset}
+          key={swatch}
           type="button"
           role="radio"
-          aria-checked={color === preset}
-          aria-label={preset}
-          title={preset}
-          onClick={() => onChange(preset)}
+          aria-checked={color === swatch}
+          aria-label={swatch}
+          title={swatch}
+          onClick={() => onChange(swatch)}
           className={cn(
             'size-6 rounded-full border-2 outline-none transition-transform focus-ring',
-            color === preset ? 'scale-110 border-foreground ring-2 ring-card' : 'border-border-soft hover:scale-105',
+            color === swatch ? 'scale-110 border-foreground ring-2 ring-card' : 'border-border-soft hover:scale-105',
           )}
-          style={{ backgroundColor: preset }}
+          style={{ backgroundColor: swatch }}
         />
       ))}
-      <label
-        htmlFor={inputId}
-        title={copy.customColor}
-        className={cn(
-          'relative size-6 cursor-pointer overflow-hidden rounded-full border-2 transition-transform focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus',
-          !isPreset ? 'scale-110 border-foreground ring-2 ring-card' : 'border-border-soft hover:scale-105',
-        )}
-        style={{ background: isPreset ? 'conic-gradient(#ff4747, #ffc800, #22a559, #2f6fed, #b04bff, #ff4747)' : color }}
-      >
-        <input
-          id={inputId}
-          type="color"
+      <ImageEditColorPicker color={color} onChange={onChange}>
+        <button
+          type="button"
           aria-label={copy.customColor}
-          value={color}
-          onChange={(event) => onChange(event.target.value.toLowerCase())}
-          className="absolute inset-0 size-full cursor-pointer opacity-0"
-        />
-      </label>
+          title={copy.customColor}
+          className="group relative flex size-6 items-center justify-center rounded-full border-2 border-transparent text-muted-foreground outline-none transition-colors focus-ring hover:border-foreground hover:text-foreground data-[state=open]:border-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground"
+        >
+          <DashedOutline radius="full" outset={2} hideOnHover className="group-data-[state=open]:hidden" />
+          <Plus className="size-3.5" strokeWidth={2.5} />
+        </button>
+      </ImageEditColorPicker>
     </div>
   );
 }
@@ -130,11 +127,50 @@ function NumberStepper({ value, onChange }: { value: number; onChange: (value: n
       <button type="button" aria-label={copy.numberDown} disabled={value <= 1} onClick={() => onChange(value - 1)} className={cn(pillButton, 'w-8 px-0 text-muted-foreground hover:bg-secondary disabled:opacity-40')}>
         <Minus className="size-3.5" />
       </button>
-      <span className="min-w-8 text-center text-xs font-bold tabular-nums" aria-live="polite">{value}</span>
+      <NumberField value={value} max={max} onChange={onChange} />
       <button type="button" aria-label={copy.numberUp} disabled={value >= max} onClick={() => onChange(value + 1)} className={cn(pillButton, 'w-8 px-0 text-muted-foreground hover:bg-secondary disabled:opacity-40')}>
         <Plus className="size-3.5" />
       </button>
     </div>
+  );
+}
+
+/** The marker number, typed directly; committed on Enter or blur, clamped to 1…max. Arrow keys step it. */
+function NumberField({ value, max, onChange }: { value: number; max: number; onChange: (value: number) => void }) {
+  const copy = t().editor.imageEdit;
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
+  const commit = () => {
+    const typed = Number.parseInt(draft, 10);
+    if (!Number.isFinite(typed)) {
+      setDraft(String(value));
+      return;
+    }
+    const next = Math.min(max, Math.max(1, typed));
+    setDraft(String(next));
+    if (next !== value) onChange(next);
+  };
+  return (
+    <input
+      value={draft}
+      inputMode="numeric"
+      aria-label={copy.numberLabel}
+      maxLength={String(max).length}
+      onChange={(event) => setDraft(event.target.value.replace(/\D/g, ''))}
+      onBlur={commit}
+      onFocus={(event) => event.target.select()}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          commit();
+        } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+          event.preventDefault();
+          const next = Math.min(max, Math.max(1, value + (event.key === 'ArrowUp' ? 1 : -1)));
+          if (next !== value) onChange(next);
+        }
+      }}
+      className="h-7 w-10 rounded-sm bg-transparent text-center text-xs font-bold tabular-nums text-foreground outline-none transition-colors focus:bg-secondary"
+    />
   );
 }
 
