@@ -1,8 +1,7 @@
 import { browser, type Browser } from 'wxt/browser';
 import { StaleCaptureError, waitForQueuedClicks } from '../background-queues';
 import { getRecordingState } from '../../storage/storage';
-import { getEffectiveBounds, stepRole } from '../../storage/models';
-import { getStep, getSteps, replaceStepCaptureAtomically, StepRecaptureError, type StepRecaptureTarget as DbStepRecaptureTarget } from '../../storage/step-repository';
+import { replaceStepCaptureAtomically, StepRecaptureError } from '../../storage/step-repository';
 import { isTrustedRecaptureSourceSender } from '../../capture/recapture-guards';
 import { focusTab } from '../../runtime/navigation';
 import {
@@ -19,6 +18,13 @@ import {
   markCaptureCommitting,
   releaseCapture,
 } from './capture-registry';
+import { createRecaptureSettlement } from './recapture-settlement';
+import {
+  recaptureTargetErrorMessage,
+  StepRecaptureStartError,
+  validateRecaptureTarget,
+  type ValidatedRecaptureTarget,
+} from './recapture-target';
 import type { ControlPlane } from './control-plane';
 import type { RecorderRuntime } from './recorder-runtime';
 import type {
@@ -30,55 +36,21 @@ import type {
   FocusStepRecaptureSourceResult,
   StepmarkRecaptureReadyMessage,
   StepmarkRecaptureTargetMessage,
-  PreflightStepRecaptureSourcePermissionErrorCode,
   PreflightStepRecaptureSourcePermissionMessage,
   PreflightStepRecaptureSourcePermissionResult,
   StartStepRecaptureMessage,
   StartStepRecaptureResult,
   StepRecaptureTargetResult,
 } from '../../runtime/messages';
-import type { RecordingState, StepRecaptureResult } from '../../storage/recording-state';
+import type { RecordingState } from '../../storage/recording-state';
 import { t } from '@/lib/shared/i18n';
 import { UserFacingError, userFacingErrorMessage } from '../../runtime/user-facing-errors';
-
-type ValidatedRecaptureTarget = {
-  target: DbStepRecaptureTarget;
-  entryId: string;
-  sourceUrl: string;
-};
-
-type StepRecaptureValidationErrorCode = Exclude<
-  PreflightStepRecaptureSourcePermissionErrorCode,
-  'INVALID_EDITOR' | 'RESTRICTED_SOURCE'
->;
-
-class StepRecaptureStartError extends Error {
-  constructor(
-    readonly code: StepRecaptureValidationErrorCode,
-    message: string,
-  ) {
-    super(message);
-    this.name = 'StepRecaptureStartError';
-  }
-}
 
 function recaptureFailure(
   code: Exclude<StartStepRecaptureResult, { ok: true }>['code'],
   error: string,
 ): StartStepRecaptureResult {
   return { ok: false, code, error };
-}
-
-/** Localized copy for a replacement the repository refused; its own messages
- * are English diagnostics for the console. */
-function recaptureTargetErrorMessage(
-  code: StepRecaptureError['code'],
-  kind: DbStepRecaptureTarget['kind'],
-): string {
-  const single = kind === 'single';
-  if (code === 'TARGET_NOT_FOUND') return single ? t().recaptureFlow.stepNotFound : t().recaptureFlow.snapshotNotFound;
-  if (code === 'TARGET_CHANGED') return single ? t().recaptureFlow.stepChanged : t().recaptureFlow.snapshotChanged;
-  return t().recaptureFlow.multiAnnotation;
 }
 
 function isRecaptureSourceSender(
@@ -93,69 +65,6 @@ function recapturePreflightFailure(
   message: string,
 ): PreflightStepRecaptureSourcePermissionResult {
   return { ok: false, code, message };
-}
-
-async function validateRecaptureTarget(
-  sessionId: string,
-  target: StartStepRecaptureMessage['target'],
-): Promise<ValidatedRecaptureTarget> {
-  if (target.kind === 'single') {
-    const step = await getStep(target.stepId);
-    if (!step || step.sessionId !== sessionId) {
-      throw new StepRecaptureStartError('TARGET_NOT_FOUND', t().recaptureFlow.stepNotFound);
-    }
-    if (step.groupId || !step.screenshotBlob || !getEffectiveBounds(step)) {
-      throw new StepRecaptureStartError('TARGET_CHANGED', t().recaptureFlow.stepChanged);
-    }
-    return { target, entryId: step.id, sourceUrl: step.url };
-  }
-
-  const [anchor, annotation, steps] = await Promise.all([
-    getStep(target.anchorId),
-    getStep(target.annotationId),
-    getSteps(sessionId),
-  ]);
-  if (!anchor || !annotation || anchor.sessionId !== sessionId || annotation.sessionId !== sessionId) {
-    throw new StepRecaptureStartError('TARGET_NOT_FOUND', t().recaptureFlow.snapshotNotFound);
-  }
-  if (
-    stepRole(anchor) !== 'anchor' ||
-    annotation.groupId !== anchor.id ||
-    stepRole(annotation) !== 'annotation' ||
-    !anchor.screenshotBlob ||
-    !getEffectiveBounds(annotation)
-  ) {
-    throw new StepRecaptureStartError('TARGET_CHANGED', t().recaptureFlow.snapshotChanged);
-  }
-  const annotations = steps.filter(
-    (step) => step.groupId === anchor.id && stepRole(step) === 'annotation' && getEffectiveBounds(step),
-  );
-  if (annotations.length !== 1 || annotations[0].id !== annotation.id) {
-    throw new StepRecaptureStartError(
-      'UNSUPPORTED_SNAPSHOT_GROUP',
-      t().recaptureFlow.multiAnnotation,
-    );
-  }
-  return { target, entryId: anchor.id, sourceUrl: anchor.url };
-}
-
-async function wasRecaptureCommitted(context: NonNullable<RecordingState['recapture']>): Promise<boolean> {
-  const ownerId = context.target.kind === 'single' ? context.target.stepId : context.target.anchorId;
-  const owner = await getStep(ownerId);
-  return owner?.sessionId === context.sessionId && owner.lastCaptureRunId === context.runId;
-}
-
-async function isRecaptureSourceTabIntact(
-  context: NonNullable<RecordingState['recapture']>,
-): Promise<boolean> {
-  try {
-    const tab = await browser.tabs.get(context.sourceTabId);
-    // Recapture required a host permission grant for the source origin, so the
-    // URL is readable whenever the tab still shows the page selection armed on.
-    return tab.url === context.sourceUrl;
-  } catch {
-    return false;
-  }
 }
 
 export interface RecaptureFlowDeps {
@@ -176,13 +85,15 @@ export interface RecaptureFlowDeps {
 }
 
 /**
- * The one-shot step/snapshot recapture flow: preflight, start, target capture,
- * settle, and its startup/interruption recovery. All persisted state lives in
- * RecordingState.recapture; this module privately owns only the start mutex
- * and the id of the capture currently in flight.
+ * The one-shot step/snapshot recapture flow: preflight, start, target capture
+ * and cancel; how it ends lives in recapture-settlement. All persisted state
+ * lives in RecordingState.recapture; this module privately owns only the start
+ * mutex.
  */
 export function createRecaptureFlow(deps: RecaptureFlowDeps) {
   const { control, runtime } = deps;
+  const settlement = createRecaptureSettlement(deps);
+  const { settle: settleStepRecapture, fail: failStepRecapture } = settlement;
 
   // A dedicated start mutex instead of queueLifecycle: the recapture start
   // holds it across a ready-gate wait of up to RECORDER_READY_TIMEOUT_MS, and
@@ -190,118 +101,6 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
   // lifecycle control. The mutex only needs to serialize concurrent recapture
   // starts — everything else is guarded by the persisted single-owner state.
   let startingRecapture = false;
-  let activeRecaptureCaptureId: string | null = null;
-
-  async function settleStepRecapture(
-    runId: string,
-    status: StepRecaptureResult['status'],
-    version: number,
-    errorCode?: string,
-    message?: string,
-  ): Promise<boolean> {
-    const settled = await control.writeStateIf(
-      version,
-      (current) => current.operation === 'recapture' && current.recapture?.runId === runId,
-      (current) => {
-        const recapture = current.recapture!;
-        const result: StepRecaptureResult = {
-          runId,
-          status,
-          sessionId: recapture.sessionId,
-          entryId: recapture.entryId,
-          ...(errorCode ? { errorCode } : {}),
-          ...(message ? { message } : {}),
-          completedAt: Date.now(),
-        };
-        // Not resetRunStateToIdle: settling a recapture deliberately leaves the
-        // run-scoped counters it never owned (itemCount &c.) untouched — state
-        // normalization already governs how they read outside a recording run.
-        return {
-          ...current,
-          operation: null,
-          isRecording: false,
-          phase: 'idle',
-          tabId: null,
-          runId: null,
-          recapture: null,
-          recaptureResult: result,
-          error: status === 'failed' ? message ?? t().recaptureFlow.failed : null,
-          recoverableError: null,
-        };
-      },
-    );
-    if (!settled) return false;
-    const context = settled.previous.recapture!;
-    activeRecaptureCaptureId = null;
-    await runtime.stopRecorderInTab(context.sourceTabId);
-    if (context.sourceTabCreated) {
-      await browser.tabs.remove(context.sourceTabId).catch((error) => {
-        console.warn('[stepmark] failed to close temporary recapture tab', error);
-      });
-    }
-    try {
-      // Back to the single editor tab, at the entry this recapture worked on.
-      await deps.openEditor({ sessionId: context.sessionId, entryId: context.entryId });
-    } catch (error) {
-      console.error('[stepmark] failed to return to editor after recapture', error);
-    }
-    return true;
-  }
-
-  function failStepRecapture(
-    runId: string,
-    errorCode: string,
-    message: string,
-    expectedControlVersion: number,
-  ): Promise<boolean> {
-    if (expectedControlVersion !== control.controlVersion) return Promise.resolve(false);
-    if (activeRecaptureCaptureId) cancelCapture(activeRecaptureCaptureId);
-    const version = control.claimControl({ cancelRecaptureGate: true });
-    return settleStepRecapture(runId, 'failed', version, errorCode, message);
-  }
-
-  /**
-   * MV3 may terminate the service worker between capture and durable result
-   * handoff. A persisted capture marker lets startup distinguish a committed
-   * replacement from abandoned in-flight work instead of leaving the editor
-   * permanently locked in recapture mode.
-   */
-  async function recoverInterruptedRecapture(): Promise<void> {
-    const state = await getRecordingState();
-    const context = state.recapture;
-    if (state.operation !== 'recapture' || !context) return;
-
-    if (context.phase === 'awaiting-target') {
-      // Selection mode survives ordinary worker restarts — the injected recorder
-      // lives on in the source tab. A browser restart, however, reissues tab
-      // ids: the persisted sourceTabId then names nothing or an unrelated page,
-      // and the claimed single-owner slot would block every future operation.
-      if (await isRecaptureSourceTabIntact(context)) return;
-      const version = control.claimControl({});
-      await settleStepRecapture(
-        context.runId,
-        'failed',
-        version,
-        'SOURCE_TAB_CLOSED',
-        t().recaptureFlow.sourceTabChanged,
-      );
-      return;
-    }
-
-    const committed = context.phase === 'capturing' && await wasRecaptureCommitted(context);
-    const version = control.claimControl({});
-    if (committed) {
-      await settleStepRecapture(context.runId, 'replaced', version);
-      return;
-    }
-    await settleStepRecapture(
-      context.runId,
-      'failed',
-      version,
-      'WORKER_RESTARTED',
-      t().recaptureFlow.interrupted,
-    );
-  }
 
   /**
    * Recapture leg of the tabs.onUpdated listener (which stays wired in the
@@ -573,7 +372,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     if (!isEditorSenderForSession(sender, context.sessionId) && !isRecaptureSourceSender(sender, context)) {
       return { ok: false, error: t().recaptureFlow.invalidSource };
     }
-    const captureId = activeRecaptureCaptureId;
+    const captureId = settlement.activeCaptureId();
     if (captureId && isCaptureCommitting(captureId)) {
       await waitForQueuedClicks();
       return { ok: true, status: 'already-completed' };
@@ -673,7 +472,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     ) {
       return reject('rejected');
     }
-    if (!control.acceptingClicks || activeRecaptureCaptureId) return reject('rejected');
+    if (!control.acceptingClicks || settlement.activeCaptureId()) return reject('rejected');
     const claimed = await control.writeStateIf(
       expectedControlVersion,
       (current) =>
@@ -689,7 +488,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     // Claim globals only after both sender and persisted context validation. An
     // old or forged content-script message must not consume the one-shot slot.
     control.acceptingClicks = false;
-    activeRecaptureCaptureId = message.captureId;
+    settlement.trackCapture(message.captureId);
 
     try {
       const captured = await deps.captureScreenshotWithGuard(
@@ -753,7 +552,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
       return reject('failed', errorMessage);
     } finally {
       releaseCapture(message.captureId);
-      if (activeRecaptureCaptureId === message.captureId) activeRecaptureCaptureId = null;
+      settlement.releaseCapture(message.captureId);
     }
   }
 
@@ -771,7 +570,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     handleSourceTabUpdated,
     handleSourceTabRemoved,
     failStepRecapture,
-    recoverInterruptedRecapture,
+    recoverInterruptedRecapture: settlement.recoverInterrupted,
   };
 }
 
