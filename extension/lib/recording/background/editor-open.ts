@@ -194,3 +194,5 @@ export function createEditorOpen(deps: { control: ControlPlane }) {
   return { openEditor, openEditorForStoredSession };
 }
 
+
+export type EditorOpen = ReturnType<typeof createEditorOpen>;

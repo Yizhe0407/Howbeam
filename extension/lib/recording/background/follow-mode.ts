@@ -238,3 +238,5 @@ export function createFollowMode(deps: { control: ControlPlane; runtime: Recorde
   return { scheduleRecordingFollow, scheduleFollowForLoadedTab, continueAfterRecordedTabClosed };
 }
 
+
+export type FollowMode = ReturnType<typeof createFollowMode>;
