@@ -31,8 +31,8 @@ function fakeDirectory(failOn?: string, asciiOnly = false) {
 }
 
 /** updatedAt is deliberately constant: the backup must follow the revisions, not the clock. */
-function project(id: string, title: string, contentRevision: number, metadataRevision = 0): ProjectSummary {
-  return { id, title, description: '', sections: [], tags: [], createdAt: 0, updatedAt: 0, contentRevision, metadataRevision, stepCount: 0, entryCount: 0, storageBytes: 0 };
+function project(id: string, title: string, contentRevision: number, metadataRevision = 0, stepEditRevision = 0): ProjectSummary {
+  return { id, title, description: '', sections: [], tags: [], createdAt: 0, updatedAt: 0, contentRevision, stepEditRevision, metadataRevision, stepCount: 0, entryCount: 0, storageBytes: 0 };
 }
 
 function setup(projects: ProjectSummary[], failOn?: string, asciiOnly = false) {
@@ -85,6 +85,14 @@ describe('runBackup', () => {
     const { deps } = setup(projects);
     await runBackup(deps);
     projects[0] = project('aaaaaaaa-1', 'One', 4, 1);
+    expect(await runBackup(deps)).toMatchObject({ written: 1, skipped: 0 });
+  });
+
+  it('rewrites a project whose only change is a step edited in place', async () => {
+    const projects = [project('aaaaaaaa-1', 'One', 4, 0, 0)];
+    const { deps } = setup(projects);
+    await runBackup(deps);
+    projects[0] = project('aaaaaaaa-1', 'One', 4, 0, 1);
     expect(await runBackup(deps)).toMatchObject({ written: 1, skipped: 0 });
   });
 

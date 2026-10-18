@@ -81,6 +81,7 @@ export async function runBackup(deps: BackupRunDeps): Promise<BackupResult> {
       // A file the user removed by hand counts as "not backed up", not as up to date.
       // Revisions, not updatedAt: the clock can move back or two edits share a millisecond.
       if (previous && previous.contentRevision === project.contentRevision
+        && previous.stepEditRevision === project.stepEditRevision
         && previous.metadataRevision === project.metadataRevision
         && (previous.filename === preferred || previous.filename === fallback)
         && await fileExists(directory, previous.filename)) {
@@ -100,6 +101,7 @@ export async function runBackup(deps: BackupRunDeps): Promise<BackupResult> {
       }
       await deps.putManifestEntry(project.id, {
         contentRevision: project.contentRevision,
+        stepEditRevision: project.stepEditRevision,
         metadataRevision: project.metadataRevision,
         filename,
         backedUpAt: now(),

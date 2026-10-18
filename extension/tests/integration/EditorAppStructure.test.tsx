@@ -193,6 +193,7 @@ const project = {
   createdAt: 1,
   updatedAt: 2,
   contentRevision: 7,
+  stepEditRevision: 0,
   metadataRevision: 3,
 };
 

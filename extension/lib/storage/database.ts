@@ -129,6 +129,7 @@ export function newProject(
     createdAt: now,
     updatedAt: now,
     contentRevision,
+    stepEditRevision: 0,
     metadataRevision: 0,
     ...summary,
   });
@@ -170,9 +171,13 @@ export async function requireWritableProject(tx: ProjectStepsTransaction, id: st
   return sanitizeProject(project);
 }
 
+/** 'structure' adds, removes or moves rows; 'stepEdit' changes rows in place. */
+export type ProjectChange = 'structure' | 'stepEdit';
+
 export async function refreshProjectSummary(
   tx: ProjectStepsTransaction,
   project: Project,
+  change: ProjectChange,
   timestamp = Date.now(),
 ): Promise<Project> {
   const summary = createSummaryAccumulator();
@@ -187,7 +192,9 @@ export async function refreshProjectSummary(
     ...project,
     ...finishedSummary,
     updatedAt: Math.max(project.updatedAt, timestamp, Date.now()),
-    contentRevision: project.contentRevision + 1,
+    ...(change === 'structure'
+      ? { contentRevision: project.contentRevision + 1 }
+      : { stepEditRevision: project.stepEditRevision + 1 }),
   });
   await tx.objectStore('projects').put(updated);
   return updated;

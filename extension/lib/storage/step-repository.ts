@@ -11,6 +11,7 @@ import type { StepRecaptureTarget } from './recording-state';
 import { assertStorableScreenshots } from './screenshot-rules';
 import {
   refreshProjectSummary,
+  type ProjectChange,
   requireWritableProject,
   runProjectStepsWrite,
   runWithDatabase,
@@ -48,7 +49,7 @@ export async function addStepsAfter(steps: readonly Step[], afterStepId: string 
       ordered.splice(at + 1, 0, ...stored.map((step) => step.id));
       await writeDenseOrder(tx, [...existing, ...stored], ordered);
     }
-    await refreshProjectSummary(tx, project, latestTimestamp);
+    await refreshProjectSummary(tx, project, 'structure', latestTimestamp);
   });
 }
 
@@ -68,7 +69,7 @@ export async function addSteps(steps: readonly Step[]): Promise<void> {
       latestTimestamp = Math.max(latestTimestamp, step.timestamp);
       await tx.objectStore('steps').add(sanitizeStepForStorage(step));
     }
-    await refreshProjectSummary(tx, project, latestTimestamp);
+    await refreshProjectSummary(tx, project, 'structure', latestTimestamp);
   });
 }
 
@@ -175,6 +176,17 @@ export class StepImageEditConflictError extends Error {
 
 const IMAGE_EDIT_FIELDS = ['redactions', 'imageEdits', 'crop'] as const;
 
+/** Fields an in-place edit may change without moving the Project's structure. */
+const IN_PLACE_FIELDS: ReadonlySet<string> = new Set<keyof Step>([
+  ...IMAGE_EDIT_FIELDS, 'description', 'manualBounds', 'redactionReviewRequired',
+]);
+
+function changeKind(changes: readonly Partial<Step>[]): ProjectChange {
+  return changes.every((change) => Object.keys(change).every((field) => IN_PLACE_FIELDS.has(field)))
+    ? 'stepEdit'
+    : 'structure';
+}
+
 /** The revision is owned by storage: callers cannot set it, and any write that
  * touches a per-image edit field moves it forward. */
 function applyStepChanges(existing: Step, changes: Partial<Step>): Step {
@@ -227,7 +239,7 @@ export async function updateStepsAtomically(sessionId: string, updates: StepUpda
       }
       await tx.objectStore('steps').put(applyStepChanges(existing, update.changes));
     }
-    await refreshProjectSummary(tx, project);
+    await refreshProjectSummary(tx, project, changeKind(updates.map((update) => update.changes)));
   });
 }
 
@@ -262,7 +274,7 @@ export async function replaceStepCaptureAtomically(
         imageEditRevision: (step.imageEditRevision ?? 0) + 1,
         lastCaptureRunId: recaptureRunId,
       }));
-      await refreshProjectSummary(tx, project, capture.timestamp);
+      await refreshProjectSummary(tx, project, 'structure', capture.timestamp);
       return { entryId: step.id, captureRevision };
     }
 
@@ -314,7 +326,7 @@ export async function replaceStepCaptureAtomically(
       url: capture.url,
       timestamp: capture.timestamp,
     }));
-    await refreshProjectSummary(tx, project, capture.timestamp);
+    await refreshProjectSummary(tx, project, 'structure', capture.timestamp);
     return { entryId: anchor.id, captureRevision };
   });
 }
@@ -330,15 +342,13 @@ export async function updateStep(id: string, changes: Partial<Step>): Promise<vo
     if (!existing) throw new StepNotFoundError(id);
     const project = await requireWritableProject(tx, existing.sessionId);
     await tx.objectStore('steps').put(applyStepChanges(existing, changes));
-    await refreshProjectSummary(tx, project);
+    await refreshProjectSummary(tx, project, changeKind([changes]));
   });
 }
 
-/** Compare-and-set description save for the editor autosave path. Structure
- * mutations CAS on the project's contentRevision, but that revision moves on
- * every unrelated edit; a description save only conflicts when the same row's
- * description itself diverged from what this editor last observed, so the CAS
- * guards exactly that value. Conflicts surface as StepDescriptionConflictError
+/** Compare-and-set description save for the editor autosave path. It only
+ * conflicts when the same row's description diverged from what this editor
+ * last observed, so the CAS guards exactly that value. Conflicts surface as StepDescriptionConflictError
  * (with the winning value) instead of last-write-wins.
  *
  * Resolves with the description as stored (normalized by the stored-text
@@ -357,7 +367,7 @@ export async function saveStepDescription(
     const project = await requireWritableProject(tx, existing.sessionId);
     const stored = applyStepChanges(existing, { description });
     await tx.objectStore('steps').put(stored);
-    await refreshProjectSummary(tx, project);
+    await refreshProjectSummary(tx, project, 'stepEdit');
     return stored.description;
   });
 }
@@ -373,7 +383,7 @@ export async function deleteStep(id: string): Promise<void> {
     await tx.objectStore('steps').delete(id);
     const remaining = await tx.objectStore('steps').index('by-session').getAll(existing.sessionId);
     await writeDenseOrder(tx, remaining, []);
-    await refreshProjectSummary(tx, project);
+    await refreshProjectSummary(tx, project, 'structure');
   });
 }
 
@@ -387,7 +397,7 @@ export async function deleteStepsForRun(sessionId: string, runId: string): Promi
     for (const id of removedIds) await tx.objectStore('steps').delete(id);
     const remaining = sessionSteps.filter((step) => !removedIds.has(step.id));
     await writeDenseOrder(tx, remaining, []);
-    await refreshProjectSummary(tx, project);
+    await refreshProjectSummary(tx, project, 'structure');
   });
 }
 
@@ -398,7 +408,7 @@ export async function reorderSteps(sessionId: string, orderedIds: string[]): Pro
     const project = await requireWritableProject(tx, sessionId);
     const sessionSteps = await tx.objectStore('steps').index('by-session').getAll(sessionId);
     await writeDenseOrder(tx, sessionSteps, orderedIds);
-    await refreshProjectSummary(tx, project);
+    await refreshProjectSummary(tx, project, 'structure');
   });
 }
 
@@ -419,7 +429,7 @@ export async function deleteStepsAndReorder(
     }
     const remaining = await tx.objectStore('steps').index('by-session').getAll(sessionId);
     await writeDenseOrder(tx, remaining, orderedIds);
-    await refreshProjectSummary(tx, project);
+    await refreshProjectSummary(tx, project, 'structure');
   });
 }
 
@@ -439,6 +449,6 @@ export async function restoreStepsAndReorder(
     }
     const sessionSteps = await tx.objectStore('steps').index('by-session').getAll(sessionId);
     await writeDenseOrder(tx, sessionSteps, orderedIds);
-    await refreshProjectSummary(tx, project);
+    await refreshProjectSummary(tx, project, 'structure');
   });
 }

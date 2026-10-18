@@ -26,7 +26,7 @@ import type { Project } from '@/lib/storage/models';
 
 const loaded = {
   id: 'p1', title: '原標題', description: '', sections: [], tags: ['甲'],
-  createdAt: 1, updatedAt: 1, contentRevision: 5, metadataRevision: 2, stepCount: 0, entryCount: 0, storageBytes: 0,
+  createdAt: 1, updatedAt: 1, contentRevision: 5, stepEditRevision: 0, metadataRevision: 2, stepCount: 0, entryCount: 0, storageBytes: 0,
 } satisfies Project;
 const steps: unknown[] = [];
 

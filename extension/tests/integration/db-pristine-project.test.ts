@@ -21,7 +21,7 @@ vi.mock('wxt/browser', () => ({
 
 import { closeDatabase, isPristineProject } from '@/lib/storage/database';
 import { createProject, discardPristineProject, getProject, updateProject } from '@/lib/storage/project-repository';
-import { addStep } from '@/lib/storage/step-repository';
+import { addStep, saveStepDescription, updateStep, updateStepsAtomically } from '@/lib/storage/step-repository';
 import { type Step } from '@/lib/storage/models';
 import { ACTIVE_PROJECT_ID_KEY, getActiveProjectId, setActiveProjectId } from '@/lib/storage/storage';
 import { pngBlob } from '../setup/raster-fixtures';
@@ -111,6 +111,23 @@ describe('discardPristineProject', () => {
     const described = await updateProject(project.id, { description: 'x' });
     expect(described.metadataRevision).toBe(renamed.metadataRevision + 1);
     expect(described.contentRevision).toBe(project.contentRevision);
+  });
+
+  it('bumps stepEditRevision, never contentRevision, when a step is edited in place', async () => {
+    const project = await createProject();
+    const step = makeStep(project.id);
+    await addStep(step);
+    const added = (await getProject(project.id))!;
+    await saveStepDescription(step.id, '新說明', step.description);
+    await updateStepsAtomically(project.id, [{ id: step.id, changes: { crop: null, imageEdits: [] } }]);
+    const edited = (await getProject(project.id))!;
+    expect(edited.contentRevision).toBe(added.contentRevision);
+    expect(edited.stepEditRevision).toBe(added.stepEditRevision + 2);
+
+    await updateStep(step.id, { numbered: true });
+    const regrouped = (await getProject(project.id))!;
+    expect(regrouped.contentRevision).toBe(added.contentRevision + 1);
+    expect(regrouped.stepEditRevision).toBe(edited.stepEditRevision);
   });
 
   it('treats an already-deleted project as a no-op', async () => {

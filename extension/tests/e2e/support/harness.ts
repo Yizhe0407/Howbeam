@@ -18,6 +18,7 @@ const E2E_PROJECT_TEMPLATE = {
   createdAt: 0,
   updatedAt: 0,
   contentRevision: 0,
+  stepEditRevision: 0,
   metadataRevision: 0,
   stepCount: 0,
   entryCount: 0,

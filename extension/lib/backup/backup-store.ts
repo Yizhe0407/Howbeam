@@ -8,6 +8,7 @@ import type { BackupDirectory } from './directory-handle';
 export interface BackupManifestEntry {
   /** The project revisions the file on disk reflects; older entries lack one and never match. */
   contentRevision: number;
+  stepEditRevision: number;
   metadataRevision: number;
   filename: string;
   backedUpAt: number;
