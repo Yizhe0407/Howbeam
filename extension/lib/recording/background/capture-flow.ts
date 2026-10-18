@@ -6,8 +6,7 @@ import {
   waitForCapturePresentationPaint,
   withCapturePresentation,
 } from '../../capture/capture-presentation';
-import { addStepsAfter, deleteStep, getSteps } from '../../storage/step-repository';
-import type { Step } from '../../storage/models';
+import { addStepsAfter, deleteStep, getStep, type NewStep } from '../../storage/step-repository';
 import {
   getCaptureGuardFailure,
   isMatchingSnapshotViewport,
@@ -87,7 +86,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
     if (failure === 'changed-url') throw new UserFacingError(t().background.stepSkippedPageChanged);
   }
 
-  async function persistRecordingSteps(state: RecordingState, steps: Step[]): Promise<void> {
+  async function persistRecordingSteps(state: RecordingState, steps: NewStep[]): Promise<void> {
     if (!state.sessionId || !state.runId) throw new StaleCaptureError('Recording is no longer active.');
     await addStepsAfter(steps, state.insertAfterStepId);
   }
@@ -144,12 +143,10 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
         version,
       );
       anchorId = crypto.randomUUID();
-      const existingSteps = await getSteps(sessionId);
       await persistRecordingSteps(state, [{
         id: anchorId,
         sessionId,
         runId,
-        order: existingSteps.length,
         screenshotBlob: captured.blob,
         bounds: null,
         devicePixelRatio: context.devicePixelRatio,
@@ -275,10 +272,9 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
     // A missing anchor can never accept another annotation; the typed error settles
     // the whole run once instead of surfacing the same per-click error forever.
     if (!anchorId) throw new SnapshotAnchorMissingError('Snapshot anchor id is missing from the run state.');
-    let existingSteps = await getSteps(sessionId);
-    const anchor = existingSteps.find((step) => step.id === anchorId);
+    const anchor = await getStep(anchorId);
 
-    if (!anchor?.screenshotBlob) {
+    if (anchor?.sessionId !== sessionId || !anchor.screenshotBlob) {
       throw new SnapshotAnchorMissingError('Snapshot anchor row or its base image no longer exists.');
     }
     // This throw message surfaces to the user through setRunError, so it is localized.
@@ -292,12 +288,10 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
     if (!current.isRecording || current.runId !== message.runId || current.sessionId !== sessionId) {
       throw new StaleCaptureError('Recording changed while saving the annotation.');
     }
-    existingSteps = await getSteps(sessionId);
     await persistRecordingSteps(state, [{
       id: crypto.randomUUID(),
       sessionId,
       runId: message.runId,
-      order: existingSteps.length,
       bounds: message.rect,
       devicePixelRatio: anchor.devicePixelRatio,
       screenshotScale: anchor.screenshotScale,
@@ -337,7 +331,6 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
         await handleSnapshotClick(message, state.sessionId, state, expectedControlVersion);
       } else {
         const captured = await captureScreenshot(message, state.sessionId, tabId, windowId, expectedControlVersion);
-        const existingSteps = await getSteps(state.sessionId);
         const current = await getRecordingState();
         if (!current.isRecording || current.runId !== message.runId || current.sessionId !== state.sessionId) {
           throw new StaleCaptureError('Recording changed while saving the step.');
@@ -353,7 +346,6 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
           id: crypto.randomUUID(),
           sessionId: state.sessionId,
           runId: message.runId,
-          order: existingSteps.length,
           screenshotBlob: captured.blob,
           bounds: message.rect,
           devicePixelRatio: message.devicePixelRatio,

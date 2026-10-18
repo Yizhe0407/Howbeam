@@ -161,7 +161,7 @@ function createHarness(): Harness {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.getSteps.mockResolvedValue([]);
+  mocks.getStep.mockResolvedValue(undefined);
   mocks.storeStep.mockResolvedValue(undefined);
   mocks.deleteStep.mockResolvedValue(undefined);
   mocks.tabsQuery.mockResolvedValue([{ id: TAB_ID, url: PAGE_URL }]);
@@ -177,7 +177,6 @@ const handle = (message = click(), from = sender()) =>
 describe('handleClick in a steps run', () => {
   it('stores the step and counts it on the run', async () => {
     harness.setState(liveRun({ error: 'old', recoverableError: { code: 'CAPTURE_FAILED', message: 'old' } }));
-    mocks.getSteps.mockResolvedValue([anchor({ id: 'earlier', groupId: undefined })]);
 
     await expect(handle()).resolves.toEqual({ ok: true });
 
@@ -185,7 +184,6 @@ describe('handleClick in a steps run', () => {
     expect(mocks.storeStep).toHaveBeenCalledWith(expect.objectContaining({
       sessionId: SESSION_ID,
       runId: RUN_ID,
-      order: 1,
       bounds: click().rect,
       screenshotScale: 2,
       url: PAGE_URL,
@@ -294,19 +292,19 @@ describe('handleClick in a steps run', () => {
 describe('handleClick in a snapshot run', () => {
   it('stores an annotation on the anchor without taking a screenshot', async () => {
     harness.setState(snapshotRun());
-    mocks.getSteps.mockResolvedValue([anchor()]);
+    mocks.getStep.mockResolvedValue(anchor());
 
     await expect(handle()).resolves.toEqual({ ok: true });
 
     expect(harness.captureVisibleTabWithRetry).not.toHaveBeenCalled();
     expect(mocks.storeStep).toHaveBeenCalledWith(expect.objectContaining({
       groupId: 'anchor-1',
-      order: 1,
       bounds: click().rect,
       screenshotScale: 2,
       numbered: harness.getState().numbered,
     }));
     expect(mocks.storeStep.mock.calls[0][0]).not.toHaveProperty('screenshotBlob');
+    expect(mocks.storeStep.mock.calls[0][0]).not.toHaveProperty('order');
     expect(harness.getState().itemCount).toBe(3);
   });
 
@@ -324,13 +322,14 @@ describe('handleClick in a snapshot run', () => {
   });
 
   it.each([
-    ['the anchor id is gone', () => harness.setState(snapshotRun({ groupAnchorId: null })), [] as Step[]],
-    ['the anchor row is gone', () => harness.setState(snapshotRun()), [] as Step[]],
-    ['the anchor lost its image', () => harness.setState(snapshotRun()), [anchor({ screenshotBlob: undefined })]],
-  ])('settles the run once when %s', async (_label, arrange, steps) => {
+    ['the anchor id is gone', () => harness.setState(snapshotRun({ groupAnchorId: null })), anchor()],
+    ['the anchor row is gone', () => harness.setState(snapshotRun()), undefined],
+    ['the anchor lost its image', () => harness.setState(snapshotRun()), anchor({ screenshotBlob: undefined })],
+    ['the anchor id names another project’s row', () => harness.setState(snapshotRun()), anchor({ sessionId: 'project-b' })],
+  ])('settles the run once when %s', async (_label, arrange, stored) => {
     silenceIntentionalErrorLogs();
     arrange();
-    mocks.getSteps.mockResolvedValue(steps);
+    mocks.getStep.mockResolvedValue(stored);
 
     await expect(handle()).resolves.toEqual({ ok: false, error: 'snapshot-anchor-missing', reported: true });
 
@@ -344,7 +343,7 @@ describe('handleClick in a snapshot run', () => {
 
   it('reports an annotation from a page other than the anchor', async () => {
     harness.setState(snapshotRun());
-    mocks.getSteps.mockResolvedValue([anchor({ url: 'https://site.example/other' })]);
+    mocks.getStep.mockResolvedValue(anchor({ url: 'https://site.example/other' }));
 
     await expect(handle()).resolves.toMatchObject({ ok: false, reported: true });
 

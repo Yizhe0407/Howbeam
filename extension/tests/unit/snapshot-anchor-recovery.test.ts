@@ -233,11 +233,11 @@ describe('annotation clicks against a run whose anchor disappeared mid-run', () 
     // (e.g. deleted through the editor while the run was still live).
     mocks.getRecordingState.mockResolvedValue(snapshotState());
     mocks.getStep.mockResolvedValue(anchorStep());
-    mocks.getSteps.mockResolvedValue([]);
 
     await importBackground();
     await flushAsyncWork();
     mocks.setRecordingState.mockClear();
+    mocks.getStep.mockResolvedValue(undefined);
 
     const result = await mocks.messageListener?.(clickMessage(), recordedPageSender);
 
@@ -296,11 +296,11 @@ describe('annotation failures shown to the user', () => {
     });
     // The anchor was taken on another page than the one the click comes from.
     mocks.getStep.mockResolvedValue(anchorStep());
-    mocks.getSteps.mockResolvedValue([anchorStep({ url: 'https://site.example/other' })]);
     silenceIntentionalErrorLogs();
 
     await importBackground();
     await flushAsyncWork();
+    mocks.getStep.mockResolvedValue(anchorStep({ url: 'https://site.example/other' }));
     const result = await mocks.messageListener?.(clickMessage(), recordedPageSender);
 
     expect(result).toMatchObject({ ok: false });

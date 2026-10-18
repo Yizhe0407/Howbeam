@@ -114,7 +114,6 @@ describe('step storage boundaries', () => {
   });
 
   it.each([
-    { order: -1 },
     { timestamp: Number.MAX_SAFE_INTEGER + 1 },
     { devicePixelRatio: 0 },
     { screenshotScale: STEP_STORAGE_LIMITS.maxPixelRatio + 1 },
@@ -254,6 +253,37 @@ describe('step persistence', () => {
     await addStepsAfter([makeStep({ id: 'solo-b', sessionId, runId: 'r2', order: 2 })], 'missing');
 
     expect((await getSteps(sessionId)).map((step) => step.id)).toEqual(['solo-0', 'solo-a', 'solo-b']);
+  });
+
+  it('assigns order from the rows it reads, never from the caller', async () => {
+    const sessionId = crypto.randomUUID();
+    await ensureProject(sessionId);
+    // Gapped order, as an older build could leave it.
+    await seedSteps([
+      makeStep({ id: 'gap-0', sessionId, order: 0 }),
+      makeStep({ id: 'gap-1', sessionId, order: 4 }),
+    ]);
+
+    await addStepsAfter([makeStep({ id: 'gap-a', sessionId, runId: 'run-1', order: 0 })], null);
+    await addStepsAfter([makeStep({ id: 'gap-b', sessionId, runId: 'run-1', order: 0 })], null);
+
+    const persisted = await getSteps(sessionId);
+    expect(persisted.map((step) => step.id)).toEqual(['gap-0', 'gap-1', 'gap-a', 'gap-b']);
+    expect(persisted.map((step) => step.order)).toEqual([0, 1, 2, 3]);
+  });
+
+  it('puts an undone row back after its run’s last row', async () => {
+    const sessionId = crypto.randomUUID();
+    await ensureProject(sessionId);
+    await seedSteps([
+      makeStep({ id: 'undo-a', sessionId, runId: 'run-1', order: 0 }),
+      makeStep({ id: 'undo-later', sessionId, runId: 'run-0', order: 1 }),
+    ]);
+    const undone = makeStep({ id: 'undo-b', sessionId, runId: 'run-1', order: 7 });
+
+    await addStepsAfter([undone], 'undo-later');
+
+    expect((await getSteps(sessionId)).map((step) => step.id)).toEqual(['undo-a', 'undo-b', 'undo-later']);
   });
 
   it('rejects a cross-project batch atomically', async () => {
