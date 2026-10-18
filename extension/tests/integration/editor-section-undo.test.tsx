@@ -39,6 +39,7 @@ vi.mock('@/lib/storage/project-structure', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/storage/project-structure')>()),
   getProjectStructureSnapshot: database.getProjectStructureSnapshot,
   deleteProjectSectionAtomically: database.deleteProjectSectionAtomically,
+  renameProjectSectionAtomically: database.renameProjectSectionAtomically,
   addProjectSectionAtomically: database.addProjectSectionAtomically,
 }));
 vi.mock('@/lib/recording/use-recording-session', () => ({
@@ -61,9 +62,8 @@ vi.mock('@/components/editor/StepRail', () => ({
       <button type="button" onClick={() => props.onStartSection('entry-2')}>
         從第二步開始新章節
       </button>
-      <output aria-label="命名位置">{props.newSectionAt ?? '無'}</output>
-      <button type="button" onClick={() => void props.onAddSection('entry-2', '操作').catch(() => undefined)}>
-        送出章節名稱
+      <button type="button" onClick={() => props.onRenameSection('section-1')}>
+        重新命名第一個章節
       </button>
     </aside>
   ),
@@ -220,8 +220,14 @@ describe('section delete undo', () => {
   });
 });
 
-describe('section add', () => {
-  it('names the section where it was started, then offers an undo that deletes it again', async () => {
+describe('section dialog', () => {
+  async function nameSection(title: string, submit: string) {
+    const field = await screen.findByRole('textbox', { name: '章節名稱' });
+    fireEvent.change(field, { target: { value: title } });
+    fireEvent.click(screen.getByRole('button', { name: submit }));
+  }
+
+  it('adds the section named in the dialog, then offers an undo that deletes it again', async () => {
     let snapshotSections: any[] = [section];
     let snapshotRevision = 7;
     database.getProjectStructureSnapshot.mockImplementation(async () => ({
@@ -243,18 +249,19 @@ describe('section add', () => {
     render(<EditorApp />);
 
     fireEvent.click(await screen.findByRole('button', { name: '從第二步開始新章節' }));
-    expect(screen.getByRole('status', { name: '命名位置' }).textContent).toBe('entry-2');
+    expect(screen.getByRole('dialog', { name: '新增章節' })).toBeTruthy();
+    expect(screen.getByText('從第 2 步開始新章節')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: '送出章節名稱' }));
+    await nameSection('操作', '建立');
     await waitFor(() => expect(database.addProjectSectionAtomically).toHaveBeenCalledWith('project-1', 'entry-2', '操作', 7));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(await screen.findByText('已新增章節「操作」')).toBeTruthy();
-    expect(screen.getByRole('status', { name: '命名位置' }).textContent).toBe('無');
 
     fireEvent.click(screen.getByRole('button', { name: '還原' }));
     await waitFor(() => expect(database.deleteProjectSectionAtomically).toHaveBeenCalledWith('project-1', 'section-2', 8));
   });
 
-  it('keeps the naming field open when adding fails', async () => {
+  it('keeps the dialog open with the reason when adding fails', async () => {
     silenceIntentionalErrorLogs();
     database.getProjectStructureSnapshot.mockImplementation(async () => ({
       project: makeProject(7, [section]),
@@ -266,9 +273,32 @@ describe('section add', () => {
     render(<EditorApp />);
 
     fireEvent.click(await screen.findByRole('button', { name: '從第二步開始新章節' }));
-    fireEvent.click(screen.getByRole('button', { name: '送出章節名稱' }));
+    await nameSection('操作', '建立');
 
-    expect(await screen.findByText('新增章節失敗，已重新載入目前資料。')).toBeTruthy();
-    expect(screen.getByRole('status', { name: '命名位置' }).textContent).toBe('entry-2');
+    const dialog = await screen.findByRole('dialog', { name: '新增章節' });
+    await waitFor(() => expect(dialog.textContent).toContain('新增章節失敗，已重新載入目前資料。'));
+    expect((screen.getByRole('textbox', { name: '章節名稱' }) as HTMLInputElement).value).toBe('操作');
+  });
+
+  it('renames from the current title through the same dialog', async () => {
+    database.getProjectStructureSnapshot.mockImplementation(async () => ({
+      project: makeProject(7, [section]),
+      entries,
+      entryIds: entries.map(database.entryId),
+    }));
+    database.renameProjectSectionAtomically.mockImplementation(async () => ({
+      project: makeProject(8, [{ ...section, title: '前置作業' }]),
+      entryIds: entries.map(database.entryId),
+    }));
+
+    render(<EditorApp />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '重新命名第一個章節' }));
+    expect(screen.getByRole('dialog', { name: '重新命名章節' })).toBeTruthy();
+    expect((screen.getByRole('textbox', { name: '章節名稱' }) as HTMLInputElement).value).toBe('準備');
+
+    await nameSection('前置作業', '儲存');
+    await waitFor(() => expect(database.renameProjectSectionAtomically).toHaveBeenCalledWith('project-1', 'section-1', '前置作業', 7));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });

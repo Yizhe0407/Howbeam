@@ -394,6 +394,58 @@ test.describe('editor workflows', () => {
     }
   });
 
+  test('names sections in a dialog from the seam, the stage and the menu, across Steps and Mark entries', async ({
+    appPage,
+    popupPage,
+    extensionContext,
+    extensionId,
+    browserErrors: _browserErrors,
+  }) => {
+    await recordStepTargets(appPage, popupPage, ['#plain-text', '#visual-container strong']);
+    await recordSnapshotTargets(appPage, popupPage, ['#action-button', '#plain-text']);
+    const editor = await openEditor(extensionContext, extensionId, popupPage, 3);
+    const nameField = editor.getByRole('textbox', { name: '章節名稱' });
+
+    // From the stage, on the Mark entry: the dialog takes focus, Enter creates.
+    await editor.getByRole('button', { name: '開啟步驟 3' }).click();
+    await editor.getByRole('button', { name: '新增章節' }).click();
+    await expect(editor.getByRole('dialog', { name: '新增章節' })).toContainText('從第 3 步開始新章節');
+    await expect(nameField).toBeFocused();
+    await editor.keyboard.type('標註重點');
+    await editor.keyboard.press('Enter');
+    await expect(editor.getByRole('heading', { name: '標註重點', level: 2 })).toBeVisible();
+    await expect(editor.getByRole('dialog')).toHaveCount(0);
+
+    // From the seam between steps 1 and 2: same dialog, Escape leaves nothing behind.
+    await editor.getByRole('button', { name: '從第 2 步開始新章節' }).click();
+    await expect(nameField).toBeFocused();
+    await editor.keyboard.press('Escape');
+    await expect(editor.getByRole('dialog')).toHaveCount(0);
+    await expect(editor.getByRole('heading', { level: 2 })).toHaveCount(1);
+
+    // Renaming from the heading's menu keeps focus in the field with the old name selected.
+    await editor.getByRole('region', { name: '章節：標註重點' }).getByRole('button', { name: '章節操作' }).click();
+    await editor.getByRole('button', { name: '重新命名' }).click();
+    await expect(nameField).toBeFocused();
+    expect(await nameField.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd])).toEqual([0, 4]);
+    await editor.keyboard.type('畫面重點');
+    await editor.keyboard.press('Enter');
+    await expect(editor.getByRole('heading', { name: '畫面重點', level: 2 })).toBeVisible();
+
+    // The section starts at a Mark entry; the published document says so and has no placeholder heading.
+    await editor.getByRole('button', { name: '匯出', exact: true }).click();
+    const publishDialog = editor.getByRole('dialog', { name: '匯出' });
+    const browserDownload = editor.waitForEvent('download');
+    await publishDialog.getByRole('button', { name: '下載 HTML 網頁' }).click();
+    const htmlPath = await (await browserDownload).path();
+    if (!htmlPath) throw new Error('HTML export has no local path');
+    const html = await readFile(htmlPath, 'utf8');
+    expect(html).toContain('<h2 class="section-heading">畫面重點</h2>');
+    expect(html.indexOf('畫面重點')).toBeLessThan(html.indexOf('<span class="step-number">3.</span>'));
+    expect(html).not.toContain('（未填寫說明）');
+    expect(html).toContain('Made with Stepmark');
+  });
+
   test('keeps the editor usable at 320px and 768px without horizontal overflow', async ({
     appPage,
     popupPage,

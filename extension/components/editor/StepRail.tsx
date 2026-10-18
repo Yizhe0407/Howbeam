@@ -17,7 +17,7 @@ import { t } from '@/lib/shared/i18n';
 import { cn } from '@/lib/shared/utils';
 import EntryThumbnail from './EntryThumbnail';
 import SortableItem from './SortableItem';
-import ProjectSectionHeading, { SectionTitleForm } from './ProjectSectionHeading';
+import ProjectSectionHeading from './ProjectSectionHeading';
 
 
 const SEAM_PILL = 'relative flex h-[18px] scale-90 items-center gap-1 rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
@@ -63,10 +63,10 @@ function SeamActions({
             type="button"
             disabled={disabled}
             onClick={onStartSection}
-            aria-label={t().editor.rail.addSectionAt(afterStep + 1)}
+            aria-label={t().editor.sections.addAt(afterStep + 1)}
             className={cn(SEAM_PILL, 'bg-matcha')}
           >
-            <Plus className="size-3" strokeWidth={3} aria-hidden="true" />{t().editor.rail.addSectionHere}
+            <Plus className="size-3" strokeWidth={3} aria-hidden="true" />{t().editor.sections.add}
           </button>
         )}
       </div>
@@ -114,14 +114,11 @@ interface Props {
   selectedEntryId: string | null;
   sections?: readonly ProjectSection[];
   onSelect: (id: string) => void;
-  onRenameSection?: (sectionId: string, title: string) => Promise<void>;
+  /** Asks for the rename dialog; the rail never edits a title itself. */
+  onRenameSection?: (sectionId: string) => void;
   onDeleteSection?: (sectionId: string) => Promise<void>;
-  /** The entry a section is being named at, shown as a field above that step. */
-  newSectionAt?: string | null;
-  /** Opens the naming field above an entry that does not begin a section yet. */
+  /** Asks for the add-section dialog at an entry that does not begin a section yet. */
   onStartSection?: (startEntryId: string) => void;
-  onAddSection?: (startEntryId: string, title: string) => Promise<void>;
-  onCancelSection?: () => void;
   onReorder: (reordered: StepEntry[]) => Promise<void>;
   /** Starts a continuation; `afterEntryId` inserts after that entry, omitted appends at the end. */
   onContinueRecording?: (afterEntryId?: string) => void;
@@ -135,10 +132,7 @@ export default function StepRail({
   onSelect,
   onRenameSection,
   onDeleteSection,
-  newSectionAt = null,
   onStartSection,
-  onAddSection,
-  onCancelSection,
   onReorder,
   onContinueRecording,
   reorderDisabled = false,
@@ -238,8 +232,7 @@ export default function StepRail({
               const id = entryId(entry);
               const active = id === selectedEntryId;
               const section = sectionByStartId.get(id);
-              const naming = !section && newSectionAt === id && onAddSection && onCancelSection;
-              const labelled = Boolean((section && onRenameSection && onDeleteSection) || naming);
+              const labelled = Boolean(section && onRenameSection && onDeleteSection);
               return (
                 <Fragment key={id}>
                 <SortableItem
@@ -255,22 +248,14 @@ export default function StepRail({
                   {(handle, { isDragging }) => (
                     // The mobile rail is a fixed-height strip, so a section label sits beside its first step there instead of above it.
                     <div className="flex min-w-0 flex-row items-center gap-1 lg:flex-col lg:items-stretch">
-                      {labelled && (
+                      {section && onRenameSection && onDeleteSection && (
                         <div className="w-36 shrink-0 lg:w-auto">
-                          {naming ? (
-                            <SectionTitleForm
-                              disabled={reorderDisabled}
-                              onSubmit={(title) => onAddSection(id, title)}
-                              onCancel={onCancelSection}
-                            />
-                          ) : section && onRenameSection && onDeleteSection && (
-                            <ProjectSectionHeading
-                              section={section}
-                              disabled={reorderDisabled}
-                              onRename={onRenameSection}
-                              onDelete={onDeleteSection}
-                            />
-                          )}
+                          <ProjectSectionHeading
+                            section={section}
+                            disabled={reorderDisabled}
+                            onRename={onRenameSection}
+                            onDelete={onDeleteSection}
+                          />
                         </div>
                       )}
                       <div
@@ -333,14 +318,13 @@ export default function StepRail({
                   )}
                 </SortableItem>
                 {/* The last seam is the 接續錄製 button below the list. */}
-                {/* While a section is being named at the next step, that field occupies this seam. */}
-                {index < entries.length - 1 && (onContinueRecording || onStartSection) && newSectionAt !== entryId(entries[index + 1]) && (
+                {index < entries.length - 1 && (onContinueRecording || onStartSection) && (
                   <SeamActions
                     afterStep={index + 1}
                     disabled={reorderDisabled}
                     onInsert={onContinueRecording && (() => onContinueRecording(id))}
                     onStartSection={
-                      onStartSection && newSectionAt === null && !sectionByStartId.has(entryId(entries[index + 1]))
+                      onStartSection && !sectionByStartId.has(entryId(entries[index + 1]))
                         ? () => onStartSection(entryId(entries[index + 1]))
                         : undefined
                     }

@@ -275,8 +275,6 @@ export const en: Messages = {
       continueRecording: 'Continue recording',
       insertHere: 'Record here',
       insertAfter: (step: number) => `Record after step ${step}`,
-      addSectionHere: 'Add section',
-      addSectionAt: (step: number) => `Start a section at step ${step}`,
     },
 
     imageEdit: {
@@ -421,11 +419,14 @@ export const en: Messages = {
     sections: {
       label: (title: string) => `Section: ${title}`,
       nameLabel: 'Section name',
-      emptyName: 'The section name can’t be empty.',
       actionsLabel: 'Section actions',
-      inputHint: 'Enter to save · Esc to cancel',
       delete: 'Delete section',
       current: (title: string) => `Section: ${title}`,
+      add: 'Add section',
+      addAt: (step: number) => `Start a section at step ${step}`,
+      create: 'Create',
+      rename: 'Rename section',
+      renameHint: 'The name appears in the step list and in exported documents.',
     },
 
     tags: {

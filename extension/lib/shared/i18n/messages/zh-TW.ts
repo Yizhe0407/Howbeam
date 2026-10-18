@@ -275,8 +275,6 @@ export const zhTW = {
       continueRecording: '接續錄製',
       insertHere: '接續錄製',
       insertAfter: (step: number) => `在第 ${step} 步後接續錄製`,
-      addSectionHere: '新增章節',
-      addSectionAt: (step: number) => `從第 ${step} 步開始新章節`,
     },
 
     imageEdit: {
@@ -418,11 +416,14 @@ export const zhTW = {
     sections: {
       label: (title: string) => `章節：${title}`,
       nameLabel: '章節名稱',
-      emptyName: '章節名稱不可為空白。',
       actionsLabel: '章節操作',
-      inputHint: 'Enter 確認 · Esc 取消',
       delete: '刪除章節',
       current: (title: string) => `所屬章節：${title}`,
+      add: '新增章節',
+      addAt: (step: number) => `從第 ${step} 步開始新章節`,
+      create: '建立',
+      rename: '重新命名章節',
+      renameHint: '名稱會顯示在步驟列表與匯出的文件中。',
     },
 
     tags: {

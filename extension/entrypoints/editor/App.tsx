@@ -24,6 +24,7 @@ import RecaptureProgressDialog from '@/components/editor/RecaptureProgressDialog
 import SourcePermissionDialog from '@/components/editor/SourcePermissionDialog';
 import UndoSnackbar from '@/components/editor/UndoSnackbar';
 import PublishProjectDialog from '@/components/editor/PublishProjectDialog';
+import SectionTitleDialog, { type SectionDialogRequest } from '@/components/editor/SectionTitleDialog';
 import { usePermissionFlow } from '@/components/editor/use-permission-flow';
 import { useProjectUndo } from '@/components/editor/use-project-undo';
 import { useProjectMutations } from '@/components/editor/use-project-mutations';
@@ -112,8 +113,8 @@ function EditorApp() {
   });
 
   const [publishOpen, setPublishOpen] = useState(false);
-  /** The entry a new section is being named at; both the rail seam and the stage open it. */
-  const [newSectionAt, setNewSectionAt] = useState<string | null>(null);
+  /** The section being named; the rail seam, the stage and a heading's menu all open the same dialog. */
+  const [sectionDialog, setSectionDialog] = useState<SectionDialogRequest | null>(null);
   const {
     selectedEntry,
     selectedEntryId,
@@ -477,15 +478,16 @@ function EditorApp() {
               selectedEntryId={selectedEntryId}
               sections={project?.sections}
               onSelect={selectEntrySafely}
-              onRenameSection={renameSection}
-              onDeleteSection={deleteSection}
-              newSectionAt={newSectionAt}
-              onStartSection={setNewSectionAt}
-              onAddSection={async (startEntryId, title) => {
-                await addSection(startEntryId, title);
-                setNewSectionAt(null);
+              onRenameSection={(sectionId) => {
+                const section = project?.sections.find((candidate) => candidate.id === sectionId);
+                if (section) setSectionDialog({ kind: 'rename', sectionId, title: section.title });
               }}
-              onCancelSection={() => setNewSectionAt(null)}
+              onDeleteSection={deleteSection}
+              onStartSection={(startEntryId) => setSectionDialog({
+                kind: 'add',
+                startEntryId,
+                step: entries.findIndex((entry) => entryId(entry) === startEntryId) + 1,
+              })}
               onReorder={handleReorderEntries}
               onContinueRecording={(afterEntryId) => void handleContinueRecording(afterEntryId)}
               reorderDisabled={operationActive || editingLocked}
@@ -497,9 +499,9 @@ function EditorApp() {
                 index={selectedIndex}
                 sectionTitle={sectionOfEntry(project?.sections ?? [], entries, selectedIndex)?.title}
                 onStartSection={
-                  newSectionAt === null && !project?.sections.some((section) => section.startEntryId === entryId(selectedEntry))
-                    ? () => setNewSectionAt(entryId(selectedEntry))
-                    : undefined
+                  project?.sections.some((section) => section.startEntryId === entryId(selectedEntry))
+                    ? undefined
+                    : () => setSectionDialog({ kind: 'add', startEntryId: entryId(selectedEntry), step: selectedIndex + 1 })
                 }
                 projectTitle={project?.title}
                 projectTags={project?.tags}
@@ -531,6 +533,20 @@ function EditorApp() {
         index={zoomOpen ? selectedIndex : null}
         onClose={() => setZoomOpen(false)}
         onNavigate={(i) => selectEntrySafely(entryId(entries[i]))}
+      />
+      <SectionTitleDialog
+        request={sectionDialog}
+        onClose={() => setSectionDialog(null)}
+        onSubmit={async (request, title) => {
+          if (request.kind === 'add') {
+            await addSection(request.startEntryId, title);
+            // Selecting the new section's first step scrolls the rail to its heading.
+            selectEntrySafely(request.startEntryId);
+          } else {
+            await renameSection(request.sectionId, title);
+          }
+          setSectionDialog(null);
+        }}
       />
       <PublishProjectDialog
         open={publishOpen}

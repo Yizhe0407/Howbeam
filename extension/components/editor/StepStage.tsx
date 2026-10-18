@@ -179,11 +179,11 @@ export default function StepStage({
               type="button"
               onClick={onStartSection}
               disabled={editingDisabled}
-              title={t().editor.rail.addSectionAt(index + 1)}
+              title={t().editor.sections.addAt(index + 1)}
             >
               <DashedOutline radius="full" outset={2} hideOnHover />
               <Plus className="size-3.5 stroke-[2.5]" />
-              {t().editor.rail.addSectionHere}
+              {t().editor.sections.add}
             </button>
           </Badge>
         )}

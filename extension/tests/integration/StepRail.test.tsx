@@ -195,20 +195,16 @@ describe('StepRail keyboard navigation', () => {
     expect(onContinueRecording).toHaveBeenCalledOnce();
   });
 
-  it('步驟之間可以從下一步開始新章節；已是章節開頭或正在命名時不提供', () => {
+  it('步驟之間可以從下一步開始新章節；已是章節開頭的步驟不提供', () => {
     const onStartSection = vi.fn();
-    const entries = [makeEntry('step-1', 0), makeEntry('step-2', 1), makeEntry('step-3', 2)];
-    const sections: ProjectSection[] = [{ id: 'section-1', title: '準備', startEntryId: 'step-3' }];
-    const { rerender } = render(
+    render(
       <StepRail
-        entries={entries}
+        entries={[makeEntry('step-1', 0), makeEntry('step-2', 1), makeEntry('step-3', 2)]}
         selectedEntryId="step-1"
-        sections={sections}
+        sections={[{ id: 'section-1', title: '準備', startEntryId: 'step-3' }]}
         onSelect={vi.fn()}
         onReorder={vi.fn().mockResolvedValue(undefined)}
         onStartSection={onStartSection}
-        onAddSection={vi.fn()}
-        onCancelSection={vi.fn()}
       />,
     );
 
@@ -216,64 +212,26 @@ describe('StepRail keyboard navigation', () => {
     expect(onStartSection).toHaveBeenCalledWith('step-2');
     // Step 3 already begins a section.
     expect(screen.queryByRole('button', { name: '從第 3 步開始新章節' })).toBeNull();
-
-    rerender(
-      <StepRail
-        entries={entries}
-        selectedEntryId="step-1"
-        sections={sections}
-        newSectionAt="step-2"
-        onSelect={vi.fn()}
-        onReorder={vi.fn().mockResolvedValue(undefined)}
-        onStartSection={onStartSection}
-        onAddSection={vi.fn()}
-        onCancelSection={vi.fn()}
-      />,
-    );
-    expect(screen.queryByRole('button', { name: '從第 2 步開始新章節' })).toBeNull();
   });
 
-  it('正在命名的那個縫隙不再浮出接續錄製，避免蓋住輸入框', () => {
-    render(
-      <StepRail
-        entries={[makeEntry('step-1', 0), makeEntry('step-2', 1), makeEntry('step-3', 2)]}
-        selectedEntryId="step-1"
-        newSectionAt="step-2"
-        onSelect={vi.fn()}
-        onReorder={vi.fn().mockResolvedValue(undefined)}
-        onContinueRecording={vi.fn()}
-        onStartSection={vi.fn()}
-        onAddSection={vi.fn()}
-        onCancelSection={vi.fn()}
-      />,
-    );
-
-    expect(screen.queryByRole('button', { name: '在第 1 步後接續錄製' })).toBeNull();
-    expect(screen.getByRole('button', { name: '在第 2 步後接續錄製' })).toBeTruthy();
-  });
-
-  it('在要開始新章節的步驟上方命名，Enter 新增、Esc 取消', async () => {
-    const onAddSection = vi.fn().mockResolvedValue(undefined);
-    const onCancelSection = vi.fn();
+  it('章節選單的重新命名只請求開啟對話框，列表裡不出現輸入框', async () => {
+    const onRenameSection = vi.fn();
     render(
       <StepRail
         entries={[makeEntry('step-1', 0), makeEntry('step-2', 1)]}
         selectedEntryId="step-1"
-        newSectionAt="step-2"
+        sections={[{ id: 'section-1', title: '準備', startEntryId: 'step-2' }]}
         onSelect={vi.fn()}
         onReorder={vi.fn().mockResolvedValue(undefined)}
-        onStartSection={vi.fn()}
-        onAddSection={onAddSection}
-        onCancelSection={onCancelSection}
+        onRenameSection={onRenameSection}
+        onDeleteSection={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
-    const input = screen.getByRole('textbox', { name: '章節名稱' });
-    expect(input.closest('li')).toBe(screen.getByRole('button', { name: '開啟步驟 2' }).closest('li'));
-    fireEvent.change(input, { target: { value: '條目頁面' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    await waitFor(() => expect(onAddSection).toHaveBeenCalledWith('step-2', '條目頁面'));
-    expect(onCancelSection).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: '章節操作' }));
+    fireEvent.click(await screen.findByRole('button', { name: '重新命名' }));
+    expect(onRenameSection).toHaveBeenCalledWith('section-1');
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 
   it('每張步驟卡常駐顯示拖曳把手，不倚賴 hover 才浮現', () => {
@@ -368,7 +326,7 @@ describe('StepRail keyboard navigation', () => {
         selectedEntryId="step-1"
         sections={sections}
         onSelect={vi.fn()}
-        onRenameSection={vi.fn().mockResolvedValue(undefined)}
+        onRenameSection={vi.fn()}
         onDeleteSection={vi.fn().mockResolvedValue(undefined)}
         onReorder={vi.fn().mockResolvedValue(undefined)}
       />,
