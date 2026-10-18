@@ -63,6 +63,8 @@ export function createControlPlane(hooks: ControlPlaneHooks) {
     pendingRecorderReady: null as RecorderReadyGate | null,
     pendingRecaptureReady: null as RecorderReadyGate | null,
     pendingSnapshotContext: undefined as SnapshotCaptureContext | undefined,
+    /** Settles when the recorder startup in flight, if any, has finished. */
+    startupSettled: null as Promise<void> | null,
 
     bumpVersion(): number {
       return ++plane.controlVersion;
@@ -102,15 +104,23 @@ export function createControlPlane(hooks: ControlPlaneHooks) {
     async withRecorderReadyGate<T>(startup: RecorderReadyStartup<T>): Promise<T> {
       const readyGate = new RecorderReadyGate(startup.identity, RECORDER_READY_TIMEOUT_MS);
       plane[startup.slot] = readyGate;
-      try {
-        const [, recorderReady] = await Promise.all([startup.inject(), readyGate.promise]);
-        if (!recorderReady) throw startup.notReadyError();
-        return await startup.ready();
-      } finally {
-        if (plane[startup.slot] === readyGate) plane[startup.slot] = null;
-        if (startup.slot === 'pendingRecorderReady') plane.pendingSnapshotContext = undefined;
-        readyGate.cancel();
-      }
+      const run = (async () => {
+        try {
+          const [, recorderReady] = await Promise.all([startup.inject(), readyGate.promise]);
+          if (!recorderReady) throw startup.notReadyError();
+          return await startup.ready();
+        } finally {
+          if (plane[startup.slot] === readyGate) plane[startup.slot] = null;
+          if (startup.slot === 'pendingRecorderReady') plane.pendingSnapshotContext = undefined;
+          readyGate.cancel();
+        }
+      })();
+      const settled = run.then(() => undefined, () => undefined);
+      plane.startupSettled = settled;
+      void settled.then(() => {
+        if (plane.startupSettled === settled) plane.startupSettled = null;
+      });
+      return run;
     },
 
     /**

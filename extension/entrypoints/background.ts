@@ -2016,20 +2016,20 @@ export default defineBackground(() => {
           false,
         );
       case 'STEPMARK_RECAPTURE_TARGET':
-        if (!control.acceptingClicks) {
-          return Promise.resolve({ ok: false, status: 'rejected' } satisfies StepRecaptureTargetResult);
-        }
-        {
-          const expectedControlVersion = control.controlVersion;
-          return withMessageFailureFallback(
-            queueClick(async () => {
+        return withMessageFailureFallback(
+          (async () => {
+            // The recorder listens before its startup finishes; a click in between waits for it.
+            if (control.startupSettled) await control.startupSettled;
+            if (!control.acceptingClicks) return { ok: false, status: 'rejected' } satisfies StepRecaptureTargetResult;
+            const expectedControlVersion = control.controlVersion;
+            return queueClick(async () => {
               await startupRecovery;
               return recaptureFlow.handleRecaptureTarget(message, sender, expectedControlVersion);
-            }),
-            'recapture target handling failed',
-            { ok: false, status: 'failed' } satisfies StepRecaptureTargetResult,
-          );
-        }
+            });
+          })(),
+          'recapture target handling failed',
+          { ok: false, status: 'failed' } satisfies StepRecaptureTargetResult,
+        );
       case 'STEPMARK_STEP_FRAME_BEGIN':
         return withMessageFailureFallback(
           (async () => {
@@ -2065,22 +2065,21 @@ export default defineBackground(() => {
       case 'STEPMARK_STEP_FRAME_ABORT':
         return Promise.resolve(stepFrameRelayBroker.abort(message, relaySender(sender)));
       case 'STEPMARK_CLICK':
-        if (!control.acceptingClicks) {
-          return Promise.resolve({ ok: false, error: 'not-accepting-clicks' } satisfies ClickCaptureResult);
-        }
-        {
-          const expectedControlVersion = control.controlVersion;
-          return withMessageFailureFallback(
-            queueClick(async () => {
+        return withMessageFailureFallback(
+          (async () => {
+            if (control.startupSettled) await control.startupSettled;
+            if (!control.acceptingClicks) return { ok: false, error: 'not-accepting-clicks' } satisfies ClickCaptureResult;
+            const expectedControlVersion = control.controlVersion;
+            return queueClick(async () => {
               // Version read before recovery: if this message woke the worker over a
               // stale persisted run, recovery settles it and the bumped version rejects silently.
               await startupRecovery;
               return handleClick(message, sender, expectedControlVersion);
-            }),
-            'capture request failed',
-            { ok: false, error: 'capture-request-failed' } satisfies ClickCaptureResult,
-          );
-        }
+            });
+          })(),
+          'capture request failed',
+          { ok: false, error: 'capture-request-failed' } satisfies ClickCaptureResult,
+        );
       case 'STEPMARK_CANCEL_CAPTURE':
         return withMessageFailureFallback(
           handleCancelCapture(message, sender),
