@@ -184,7 +184,27 @@ export async function refreshProjectSummary(
     addStepToSummary(summary, cursor.value);
     cursor = await cursor.continue();
   }
-  const finishedSummary = finishSummary(summary);
+  return writeProjectSummary(tx, project, finishSummary(summary), timestamp);
+}
+
+/** refreshProjectSummary for a write that already read the Project's rows:
+ * `rows` must be every row the Project holds once this transaction's writes
+ * land, so the rows are not walked a second time. */
+export async function refreshProjectSummaryFromRows(
+  tx: ProjectStepsTransaction,
+  project: Project,
+  rows: Iterable<Step>,
+  timestamp = Date.now(),
+): Promise<Project> {
+  return writeProjectSummary(tx, project, summarizeSteps(rows), timestamp);
+}
+
+async function writeProjectSummary(
+  tx: ProjectStepsTransaction,
+  project: Project,
+  finishedSummary: Pick<Project, 'stepCount' | 'entryCount' | 'storageBytes'>,
+  timestamp: number,
+): Promise<Project> {
   assertProjectStorageLimits(finishedSummary, project);
   const updated = sanitizeProject({
     ...project,

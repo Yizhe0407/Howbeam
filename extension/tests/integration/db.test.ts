@@ -1,8 +1,8 @@
 import 'fake-indexeddb/auto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import { addStepsAfter, deleteStepsForRun, getSteps, replaceStepCaptureAtomically, saveStepDescription, StepNotFoundError, updateStepsAtomically } from '@/lib/storage/step-repository';
+import { addStepsAfter, deleteStep, deleteStepsForRun, getSteps, replaceStepCaptureAtomically, saveStepDescription, StepNotFoundError, updateStepsAtomically } from '@/lib/storage/step-repository';
 import { buildStepEntries, getEffectiveBounds, getOrderedAnnotations, STEP_STORAGE_LIMITS, StepStorageValidationError, type Step } from '@/lib/storage/models';
-import { closeDatabase, ProjectNotFoundError } from '@/lib/storage/database';
+import { closeDatabase, ProjectNotFoundError, summarizeSteps } from '@/lib/storage/database';
 import { PROJECT_TAG_LIMITS } from '@/lib/storage/project-tag-model';
 import { serializeProjectArchive } from '@/lib/export/project-archive-serialize';
 import { jpegBlob, pngBlob } from '../setup/raster-fixtures';
@@ -214,6 +214,50 @@ describe('step storage boundaries', () => {
 });
 
 describe('step persistence', () => {
+  it('keeps the summary equal to a recount of the rows after every write that rereads them', async () => {
+    const sessionId = crypto.randomUUID();
+    await ensureProject(sessionId);
+    const recount = async () => {
+      const project = await getProject(sessionId);
+      expect({
+        stepCount: project?.stepCount,
+        entryCount: project?.entryCount,
+        storageBytes: project?.storageBytes,
+      }).toEqual(summarizeSteps(await getSteps(sessionId)));
+    };
+    const groupId = `${sessionId}-snap`;
+
+    await addStepsAfter([
+      makeStep({ id: `${sessionId}-a`, sessionId, runId: 'run-1' }),
+      makeStep({ id: `${sessionId}-b`, sessionId, runId: 'run-1', screenshotBlob: pngBlob() }),
+    ], null);
+    await recount();
+    await addStepsAfter([
+      makeStep({ id: groupId, sessionId, runId: 'run-2', groupId, bounds: null }),
+      makeStep({ id: `${sessionId}-mark`, sessionId, runId: 'run-2', groupId, screenshotBlob: undefined }),
+    ], `${sessionId}-a`);
+    await recount();
+    await replaceStepCaptureAtomically(
+      sessionId,
+      { kind: 'snapshot-singleton', anchorId: groupId, annotationId: `${sessionId}-mark` },
+      {
+        screenshotBlob: pngBlob(40, 40, 500),
+        bounds: { x: 1, y: 1, width: 5, height: 5 },
+        devicePixelRatio: 1,
+        screenshotScale: 1,
+        url: 'https://example.com',
+        timestamp: 10,
+      },
+      'recapture-1',
+    );
+    await recount();
+    await deleteStep(`${sessionId}-b`);
+    await recount();
+    await deleteStepsForRun(sessionId, 'run-2');
+    await recount();
+    expect((await getProject(sessionId))?.stepCount).toBe(1);
+  });
+
   it('persists a batch in one transaction with a single summary refresh', async () => {
     const sessionId = crypto.randomUUID();
     const project = await ensureProject(sessionId);

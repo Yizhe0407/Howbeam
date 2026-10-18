@@ -12,6 +12,7 @@ import { assertStorableScreenshots } from './screenshot-rules';
 import {
   recordStepEdit,
   refreshProjectSummary,
+  refreshProjectSummaryFromRows,
   requireWritableProject,
   runProjectStepsWrite,
   runWithDatabase,
@@ -48,7 +49,7 @@ export async function addStepsAfter(steps: readonly NewStep[], afterStepId: stri
     const ordered = existing.map((step) => step.id);
     ordered.splice(insertAt, 0, ...stored.map((step) => step.id));
     await writeDenseOrder(tx, [...existing, ...stored], ordered);
-    await refreshProjectSummary(tx, project, latestTimestamp);
+    await refreshProjectSummaryFromRows(tx, project, [...existing, ...stored], latestTimestamp);
   });
 }
 
@@ -279,7 +280,7 @@ export async function replaceStepCaptureAtomically(
       );
     }
     const captureRevision = (anchor.captureRevision ?? 0) + 1;
-    await tx.objectStore('steps').put(sanitizeStepForStorage({
+    const replacedAnchor = sanitizeStepForStorage({
       ...anchor,
       screenshotBlob: capture.screenshotBlob,
       devicePixelRatio: capture.devicePixelRatio,
@@ -293,8 +294,8 @@ export async function replaceStepCaptureAtomically(
       captureRevision,
       imageEditRevision: (anchor.imageEditRevision ?? 0) + 1,
       lastCaptureRunId: recaptureRunId,
-    }));
-    await tx.objectStore('steps').put(sanitizeStepForStorage({
+    });
+    const replacedAnnotation = sanitizeStepForStorage({
       ...annotation,
       bounds: capture.bounds,
       manualBounds: null,
@@ -302,8 +303,16 @@ export async function replaceStepCaptureAtomically(
       screenshotScale: capture.screenshotScale,
       url: capture.url,
       timestamp: capture.timestamp,
-    }));
-    await refreshProjectSummary(tx, project, capture.timestamp);
+    });
+    await tx.objectStore('steps').put(replacedAnchor);
+    await tx.objectStore('steps').put(replacedAnnotation);
+    const replaced = new Map([replacedAnchor, replacedAnnotation].map((step) => [step.id, step]));
+    await refreshProjectSummaryFromRows(
+      tx,
+      project,
+      sessionSteps.map((step) => replaced.get(step.id) ?? step),
+      capture.timestamp,
+    );
     return { entryId: anchor.id, captureRevision };
   });
 }
@@ -344,7 +353,7 @@ export async function deleteStep(id: string): Promise<void> {
     await tx.objectStore('steps').delete(id);
     const remaining = await tx.objectStore('steps').index('by-session').getAll(existing.sessionId);
     await writeDenseOrder(tx, remaining, []);
-    await refreshProjectSummary(tx, project);
+    await refreshProjectSummaryFromRows(tx, project, remaining);
   });
 }
 
@@ -358,6 +367,6 @@ export async function deleteStepsForRun(sessionId: string, runId: string): Promi
     for (const id of removedIds) await tx.objectStore('steps').delete(id);
     const remaining = sessionSteps.filter((step) => !removedIds.has(step.id));
     await writeDenseOrder(tx, remaining, []);
-    await refreshProjectSummary(tx, project);
+    await refreshProjectSummaryFromRows(tx, project, remaining);
   });
 }
