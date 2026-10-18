@@ -104,7 +104,7 @@ beforeEach(() => {
   mocks.setRecordingState.mockResolvedValue(undefined);
   mocks.getStep.mockResolvedValue(undefined);
   mocks.getSteps.mockResolvedValue([]);
-  mocks.addStep.mockResolvedValue(undefined);
+  mocks.storeStep.mockResolvedValue(undefined);
   mocks.deleteStep.mockResolvedValue(undefined);
   mocks.tabsGet.mockResolvedValue({ id: 4, windowId: 2, url: 'https://example.com/flow' });
   mocks.tabsQuery.mockResolvedValue([]);
@@ -241,9 +241,9 @@ describe('undo/restore lost-CAS compensation', () => {
 
     expect(result).toMatchObject({ ok: false });
     expect(mocks.deleteStep).toHaveBeenCalledWith('step-1');
-    expect(mocks.addStep).toHaveBeenCalledWith(removed);
+    expect(mocks.storeStep).toHaveBeenCalledWith(removed);
     const deleteOrder = mocks.deleteStep.mock.invocationCallOrder[0];
-    const addOrder = mocks.addStep.mock.invocationCallOrder[0];
+    const addOrder = mocks.storeStep.mock.invocationCallOrder[0];
     expect(deleteOrder).toBeLessThan(addOrder);
     // The undo window is over: its persisted copy must be hard-deleted.
     expect(mocks.clearPendingUndoRecord).toHaveBeenCalled();
@@ -271,9 +271,9 @@ describe('undo/restore lost-CAS compensation', () => {
     );
 
     expect(result).toMatchObject({ ok: false });
-    expect(mocks.addStep).toHaveBeenCalledWith(record.step);
+    expect(mocks.storeStep).toHaveBeenCalledWith(record.step);
     expect(mocks.deleteStep).toHaveBeenCalledWith('step-1');
-    const addOrder = mocks.addStep.mock.invocationCallOrder[0];
+    const addOrder = mocks.storeStep.mock.invocationCallOrder[0];
     const deleteOrder = mocks.deleteStep.mock.invocationCallOrder[0];
     expect(addOrder).toBeLessThan(deleteOrder);
   });

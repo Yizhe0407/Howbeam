@@ -83,7 +83,7 @@ beforeEach(() => {
   mocks.setRecordingState.mockResolvedValue(undefined);
   mocks.getStep.mockResolvedValue(undefined);
   mocks.getSteps.mockResolvedValue([]);
-  mocks.addStep.mockResolvedValue(undefined);
+  mocks.storeStep.mockResolvedValue(undefined);
   mocks.deleteStep.mockResolvedValue(undefined);
   mocks.tabsGet.mockResolvedValue({ id: 4, windowId: 6, url: PAGE_URL });
   mocks.tabsQuery.mockResolvedValue([]);

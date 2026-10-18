@@ -171,13 +171,11 @@ export async function requireWritableProject(tx: ProjectStepsTransaction, id: st
   return sanitizeProject(project);
 }
 
-/** 'structure' adds, removes or moves rows; 'stepEdit' changes rows in place. */
-export type ProjectChange = 'structure' | 'stepEdit';
-
+/** After rows were added, removed or moved: recomputes the summary and moves
+ * the structure revision. */
 export async function refreshProjectSummary(
   tx: ProjectStepsTransaction,
   project: Project,
-  change: ProjectChange,
   timestamp = Date.now(),
 ): Promise<Project> {
   const summary = createSummaryAccumulator();
@@ -192,12 +190,20 @@ export async function refreshProjectSummary(
     ...project,
     ...finishedSummary,
     updatedAt: Math.max(project.updatedAt, timestamp, Date.now()),
-    ...(change === 'structure'
-      ? { contentRevision: project.contentRevision + 1 }
-      : { stepEditRevision: project.stepEditRevision + 1 }),
+    contentRevision: project.contentRevision + 1,
   });
   await tx.objectStore('projects').put(updated);
   return updated;
+}
+
+/** After a row was edited in place. Such an edit never touches what the
+ * summary counts (roles, screenshots, bounds), so nothing is recomputed. */
+export async function recordStepEdit(tx: ProjectStepsTransaction, project: Project): Promise<void> {
+  await tx.objectStore('projects').put(sanitizeProject({
+    ...project,
+    updatedAt: Math.max(project.updatedAt, Date.now()),
+    stepEditRevision: project.stepEditRevision + 1,
+  }));
 }
 
 async function abortTransaction(tx: ProjectStepsTransaction, error: unknown): Promise<never> {

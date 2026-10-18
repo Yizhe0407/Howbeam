@@ -69,7 +69,7 @@ beforeEach(() => {
   mocks.getRecordingState.mockResolvedValue(makeRecordingState());
   mocks.setRecordingState.mockResolvedValue(undefined);
   mocks.getSteps.mockResolvedValue([]);
-  mocks.addStep.mockResolvedValue(undefined);
+  mocks.storeStep.mockResolvedValue(undefined);
   mocks.deleteStep.mockResolvedValue(undefined);
   mocks.tabsSendMessage.mockResolvedValue(undefined);
   mocks.tabsRemove.mockResolvedValue(undefined);
@@ -321,7 +321,7 @@ describe('undo window persistence across worker restarts', () => {
     );
 
     expect(result).toMatchObject({ ok: true });
-    expect(mocks.addStep).toHaveBeenCalledWith(record.step);
+    expect(mocks.storeStep).toHaveBeenCalledWith(record.step);
     expect(mocks.clearPendingUndoRecord).toHaveBeenCalled();
   });
 
@@ -338,6 +338,6 @@ describe('undo window persistence across worker restarts', () => {
     await importBackground();
 
     await vi.waitFor(() => expect(mocks.clearPendingUndoRecord).toHaveBeenCalled());
-    expect(mocks.addStep).not.toHaveBeenCalled();
+    expect(mocks.storeStep).not.toHaveBeenCalled();
   });
 });

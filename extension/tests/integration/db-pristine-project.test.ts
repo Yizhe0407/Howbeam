@@ -21,7 +21,7 @@ vi.mock('wxt/browser', () => ({
 
 import { closeDatabase, isPristineProject } from '@/lib/storage/database';
 import { createProject, discardPristineProject, getProject, updateProject } from '@/lib/storage/project-repository';
-import { addStep, saveStepDescription, updateStep, updateStepsAtomically } from '@/lib/storage/step-repository';
+import { addStepsAfter, saveStepDescription, updateStepsAtomically } from '@/lib/storage/step-repository';
 import { type Step } from '@/lib/storage/models';
 import { ACTIVE_PROJECT_ID_KEY, getActiveProjectId, setActiveProjectId } from '@/lib/storage/storage';
 import { pngBlob } from '../setup/raster-fixtures';
@@ -65,7 +65,7 @@ describe('isPristineProject', () => {
 
   it('stops matching once anything was recorded into the project', async () => {
     const project = await createProject();
-    await addStep(makeStep(project.id));
+    await addStepsAfter([makeStep(project.id)], null);
 
     expect(isPristineProject((await getProject(project.id))!)).toBe(false);
   });
@@ -116,18 +116,19 @@ describe('discardPristineProject', () => {
   it('bumps stepEditRevision, never contentRevision, when a step is edited in place', async () => {
     const project = await createProject();
     const step = makeStep(project.id);
-    await addStep(step);
+    await addStepsAfter([step], null);
     const added = (await getProject(project.id))!;
     await saveStepDescription(step.id, '新說明', step.description);
     await updateStepsAtomically(project.id, [{ id: step.id, changes: { crop: null, imageEdits: [] } }]);
     const edited = (await getProject(project.id))!;
     expect(edited.contentRevision).toBe(added.contentRevision);
     expect(edited.stepEditRevision).toBe(added.stepEditRevision + 2);
+    expect(edited).toMatchObject({ stepCount: added.stepCount, entryCount: added.entryCount, storageBytes: added.storageBytes });
 
-    await updateStep(step.id, { numbered: true });
-    const regrouped = (await getProject(project.id))!;
-    expect(regrouped.contentRevision).toBe(added.contentRevision + 1);
-    expect(regrouped.stepEditRevision).toBe(edited.stepEditRevision);
+    await addStepsAfter([makeStep(project.id, { order: 1 })], null);
+    const grown = (await getProject(project.id))!;
+    expect(grown.contentRevision).toBe(added.contentRevision + 1);
+    expect(grown.stepEditRevision).toBe(edited.stepEditRevision);
   });
 
   it('treats an already-deleted project as a no-op', async () => {

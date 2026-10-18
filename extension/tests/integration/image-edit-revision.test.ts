@@ -1,18 +1,17 @@
 import 'fake-indexeddb/auto';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
-  addStep as addStepToDatabase,
   getStep,
   getSteps,
   replaceStepCaptureAtomically,
   StepImageEditConflictError,
-  updateStep,
+  saveStepDescription,
   updateStepsAtomically,
 } from '@/lib/storage/step-repository';
 import { buildStepEntries, type Redaction, type Step, type StepEntry } from '@/lib/storage/models';
 import { IMAGE_EDIT_LIMITS, type ImageEdit } from '@/lib/storage/image-edit-model';
 import { closeDatabase } from '@/lib/storage/database';
-import { ensureProject } from '@/lib/storage/project-repository';
+import { seedSteps } from '../setup/step-fixtures';
 import {
   ImageEditsNotStorableError,
   isEntryImageStale,
@@ -44,8 +43,7 @@ function makeStep(overrides: Partial<Step> = {}): Step {
 }
 
 async function addStep(step: Step): Promise<void> {
-  await ensureProject(step.sessionId, step.timestamp);
-  await addStepToDatabase(step);
+  await seedSteps([step]);
 }
 
 /** What an editor tab holds after loading the project. */
@@ -89,17 +87,20 @@ describe('image edit revision', () => {
   it('moves forward on every write of masks, drawings or crop, and on nothing else', async () => {
     const step = makeStep();
     await addStep(step);
-    await updateStep(step.id, { description: 'text only' });
+    await saveStepDescription(step.id, 'text only', step.description);
     expect((await getStep(step.id))?.imageEditRevision).toBeUndefined();
 
-    await updateStep(step.id, { crop: { x: 0, y: 0, width: 1, height: 1 } });
+    await updateStepsAtomically(step.sessionId, [{ id: step.id, changes: { crop: { x: 0, y: 0, width: 1, height: 1 } } }]);
     await updateStepsAtomically(step.sessionId, [{ id: step.id, changes: { imageEdits: [box('box')] } }]);
     await updateStepsAtomically(step.sessionId, [{ id: step.id, changes: { redactions: [] } }]);
     expect((await getStep(step.id))?.imageEditRevision).toBe(3);
 
-    // Storage owns the revision: a caller cannot move it back to sneak past the guard.
-    await updateStep(step.id, { imageEditRevision: 0, description: 'again' });
-    expect((await getStep(step.id))?.imageEditRevision).toBe(3);
+    // Only in-place fields are written: a caller can neither move the revision
+    // back to sneak past the guard nor change the row's structure.
+    await updateStepsAtomically(step.sessionId, [{ id: step.id, changes: { imageEditRevision: 0, groupId: 'other', crop: null } as never }]);
+    const stored = await getStep(step.id);
+    expect(stored?.imageEditRevision).toBe(4);
+    expect(stored?.groupId).toBe(step.groupId);
   });
 
   it('treats rows stored before the revision existed as revision 0', async () => {
@@ -179,7 +180,7 @@ describe('recapture and mask review', () => {
     const anchor = makeStep({ id: anchorId, sessionId, groupId: anchorId, bounds: null, redactions: [mask('old')] });
     const annotation = makeStep({ sessionId, groupId: anchorId, screenshotBlob: undefined, order: 1 });
     await addStep(anchor);
-    await addStepToDatabase(annotation);
+    await seedSteps([annotation]);
     await replaceStepCaptureAtomically(
       sessionId,
       { kind: 'snapshot-singleton', anchorId, annotationId: annotation.id },

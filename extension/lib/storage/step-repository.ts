@@ -10,17 +10,13 @@ import {
 import type { StepRecaptureTarget } from './recording-state';
 import { assertStorableScreenshots } from './screenshot-rules';
 import {
+  recordStepEdit,
   refreshProjectSummary,
-  type ProjectChange,
   requireWritableProject,
   runProjectStepsWrite,
   runWithDatabase,
   writeDenseOrder,
 } from './database';
-
-export async function addStep(step: Step): Promise<void> {
-  await addSteps([step]);
-}
 
 /** Persists rows captured by one recording run. They follow the run's own last
  * row, or `afterStepId` when the run has none yet (a continuation from the
@@ -49,27 +45,7 @@ export async function addStepsAfter(steps: readonly Step[], afterStepId: string 
       ordered.splice(at + 1, 0, ...stored.map((step) => step.id));
       await writeDenseOrder(tx, [...existing, ...stored], ordered);
     }
-    await refreshProjectSummary(tx, project, 'structure', latestTimestamp);
-  });
-}
-
-/** Persists freshly captured same-project rows in one transaction with a single
- * summary refresh — the batched pattern project cloning already uses. Callers
- * with steps from several projects must split per project themselves. */
-export async function addSteps(steps: readonly Step[]): Promise<void> {
-  if (steps.length === 0) return;
-  assertMutationItems(steps, 'Added steps');
-  await assertStorableScreenshots(steps.map((step) => step.screenshotBlob));
-  const sessionId = steps[0].sessionId;
-  let latestTimestamp = steps[0].timestamp;
-  await runProjectStepsWrite(async (tx) => {
-    const project = await requireWritableProject(tx, sessionId);
-    for (const step of steps) {
-      if (step.sessionId !== sessionId) throw new Error(`Step ${step.id} belongs to another project.`);
-      latestTimestamp = Math.max(latestTimestamp, step.timestamp);
-      await tx.objectStore('steps').add(sanitizeStepForStorage(step));
-    }
-    await refreshProjectSummary(tx, project, 'structure', latestTimestamp);
+    await refreshProjectSummary(tx, project, latestTimestamp);
   });
 }
 
@@ -84,9 +60,6 @@ export async function getStep(id: string): Promise<Step | undefined> {
   return runWithDatabase((db) => db.get('steps', id));
 }
 
-/** Applies a visual edit as one IndexedDB transaction. Each row is re-read in
- * the transaction, so description autosaves and reorders cannot be lost by a
- * stale editor draft. Missing or cross-session rows abort the whole commit. */
 export interface CaptureReplacement {
   screenshotBlob: Blob;
   bounds: Bounds;
@@ -114,9 +87,12 @@ export class StepRecaptureError extends Error {
   }
 }
 
+/** The fields an image edit writes in place. */
+export type StepImageEditChanges = Partial<Pick<Step, 'redactions' | 'imageEdits' | 'crop' | 'redactionReviewRequired'>>;
+
 export interface StepUpdate {
   id: string;
-  changes: Partial<Step>;
+  changes: StepImageEditChanges;
   /** Optional compare-and-set guard for privacy-sensitive edits. */
   expectedCaptureRevision?: number;
   /** Optional compare-and-set guard on `imageEditRevision`: the image editor's
@@ -175,26 +151,22 @@ export class StepImageEditConflictError extends Error {
 }
 
 const IMAGE_EDIT_FIELDS = ['redactions', 'imageEdits', 'crop'] as const;
+/** Every field an in-place edit may write. None of them is structural or
+ * counted by the Project summary. */
+const IN_PLACE_FIELDS = [...IMAGE_EDIT_FIELDS, 'redactionReviewRequired', 'description'] as const;
+type InPlaceStepChanges = Partial<Pick<Step, (typeof IN_PLACE_FIELDS)[number]>>;
 
-/** Fields an in-place edit may change without moving the Project's structure. */
-const IN_PLACE_FIELDS: ReadonlySet<string> = new Set<keyof Step>([
-  ...IMAGE_EDIT_FIELDS, 'description', 'manualBounds', 'redactionReviewRequired',
-]);
-
-function changeKind(changes: readonly Partial<Step>[]): ProjectChange {
-  return changes.every((change) => Object.keys(change).every((field) => IN_PLACE_FIELDS.has(field)))
-    ? 'stepEdit'
-    : 'structure';
-}
-
-/** The revision is owned by storage: callers cannot set it, and any write that
- * touches a per-image edit field moves it forward. */
-function applyStepChanges(existing: Step, changes: Partial<Step>): Step {
-  const { id: _id, sessionId: _sessionId, order: _order, imageEditRevision: _revision, ...mutableChanges } = changes;
-  const touchesImageEdits = IMAGE_EDIT_FIELDS.some((field) => Object.hasOwn(mutableChanges, field));
+/** Copies only the in-place fields `changes` carries, whatever else it holds.
+ * The image edit revision is owned by storage: any write that touches a
+ * per-image edit field moves it forward. */
+function applyStepChanges(existing: Step, changes: InPlaceStepChanges): Step {
+  const written: InPlaceStepChanges = Object.fromEntries(
+    IN_PLACE_FIELDS.filter((field) => Object.hasOwn(changes, field)).map((field) => [field, changes[field]]),
+  );
+  const touchesImageEdits = IMAGE_EDIT_FIELDS.some((field) => Object.hasOwn(written, field));
   return sanitizeStepForStorage({
     ...existing,
-    ...mutableChanges,
+    ...written,
     ...(touchesImageEdits ? { imageEditRevision: (existing.imageEditRevision ?? 0) + 1 } : {}),
   });
 }
@@ -206,10 +178,12 @@ function hadPrivacyMasks(step: Step): boolean {
     || (Array.isArray(step.redactions) ? step.redactions.length > 0 : step.redactions !== undefined);
 }
 
+/** Applies a visual edit as one IndexedDB transaction. Each row is re-read in
+ * the transaction, so description autosaves and reorders cannot be lost by a
+ * stale editor draft. Missing or cross-session rows abort the whole commit. */
 export async function updateStepsAtomically(sessionId: string, updates: StepUpdate[]): Promise<void> {
   assertMutationItems(updates, 'Step updates');
   if (updates.length === 0) return;
-  await assertStorableScreenshots(updates.map((update) => update.changes.screenshotBlob));
   await runProjectStepsWrite(async (tx) => {
     const project = await requireWritableProject(tx, sessionId);
     for (const update of updates) {
@@ -239,7 +213,7 @@ export async function updateStepsAtomically(sessionId: string, updates: StepUpda
       }
       await tx.objectStore('steps').put(applyStepChanges(existing, update.changes));
     }
-    await refreshProjectSummary(tx, project, changeKind(updates.map((update) => update.changes)));
+    await recordStepEdit(tx, project);
   });
 }
 
@@ -274,7 +248,7 @@ export async function replaceStepCaptureAtomically(
         imageEditRevision: (step.imageEditRevision ?? 0) + 1,
         lastCaptureRunId: recaptureRunId,
       }));
-      await refreshProjectSummary(tx, project, 'structure', capture.timestamp);
+      await refreshProjectSummary(tx, project, capture.timestamp);
       return { entryId: step.id, captureRevision };
     }
 
@@ -326,23 +300,8 @@ export async function replaceStepCaptureAtomically(
       url: capture.url,
       timestamp: capture.timestamp,
     }));
-    await refreshProjectSummary(tx, project, 'structure', capture.timestamp);
+    await refreshProjectSummary(tx, project, capture.timestamp);
     return { entryId: anchor.id, captureRevision };
-  });
-}
-
-/** Applies field changes to one existing row. A missing row is a typed error,
- * never a silent no-op: callers such as description autosave treat a resolved
- * update as durably committed and drop their local draft journal, so a
- * swallowed not-found would destroy the user's only remaining copy. */
-export async function updateStep(id: string, changes: Partial<Step>): Promise<void> {
-  await assertStorableScreenshots([changes.screenshotBlob]);
-  await runProjectStepsWrite(async (tx) => {
-    const existing = await tx.objectStore('steps').get(id);
-    if (!existing) throw new StepNotFoundError(id);
-    const project = await requireWritableProject(tx, existing.sessionId);
-    await tx.objectStore('steps').put(applyStepChanges(existing, changes));
-    await refreshProjectSummary(tx, project, changeKind([changes]));
   });
 }
 
@@ -367,14 +326,13 @@ export async function saveStepDescription(
     const project = await requireWritableProject(tx, existing.sessionId);
     const stored = applyStepChanges(existing, { description });
     await tx.objectStore('steps').put(stored);
-    await refreshProjectSummary(tx, project, 'stepEdit');
+    await recordStepEdit(tx, project);
     return stored.description;
   });
 }
 
-
-/** Deletes one row if present. Unlike updateStep, a missing row is success:
- * deletion is idempotent and re-running it cannot lose user content. */
+/** Deletes one row if present. A missing row is success: deletion is
+ * idempotent and re-running it cannot lose user content. */
 export async function deleteStep(id: string): Promise<void> {
   await runProjectStepsWrite(async (tx) => {
     const existing = await tx.objectStore('steps').get(id);
@@ -383,7 +341,7 @@ export async function deleteStep(id: string): Promise<void> {
     await tx.objectStore('steps').delete(id);
     const remaining = await tx.objectStore('steps').index('by-session').getAll(existing.sessionId);
     await writeDenseOrder(tx, remaining, []);
-    await refreshProjectSummary(tx, project, 'structure');
+    await refreshProjectSummary(tx, project);
   });
 }
 
@@ -397,58 +355,6 @@ export async function deleteStepsForRun(sessionId: string, runId: string): Promi
     for (const id of removedIds) await tx.objectStore('steps').delete(id);
     const remaining = sessionSteps.filter((step) => !removedIds.has(step.id));
     await writeDenseOrder(tx, remaining, []);
-    await refreshProjectSummary(tx, project, 'structure');
-  });
-}
-
-/** Persists a dense new step order, appending rows omitted by a stale editor. */
-export async function reorderSteps(sessionId: string, orderedIds: string[]): Promise<void> {
-  assertMutationItems(orderedIds, 'Step reorder', true);
-  await runProjectStepsWrite(async (tx) => {
-    const project = await requireWritableProject(tx, sessionId);
-    const sessionSteps = await tx.objectStore('steps').index('by-session').getAll(sessionId);
-    await writeDenseOrder(tx, sessionSteps, orderedIds);
-    await refreshProjectSummary(tx, project, 'structure');
-  });
-}
-
-/** Atomically removes editor-selected rows and closes every remaining order gap. */
-export async function deleteStepsAndReorder(
-  sessionId: string,
-  deletedIds: string[],
-  orderedIds: string[],
-): Promise<void> {
-  assertMutationItems(deletedIds, 'Deleted step ids', true);
-  assertMutationItems(orderedIds, 'Step reorder', true);
-  await runProjectStepsWrite(async (tx) => {
-    const project = await requireWritableProject(tx, sessionId);
-    for (const id of new Set(deletedIds)) {
-      const step = await tx.objectStore('steps').get(id);
-      if (step && step.sessionId !== sessionId) throw new Error(`Step ${id} belongs to another project.`);
-      if (step) await tx.objectStore('steps').delete(id);
-    }
-    const remaining = await tx.objectStore('steps').index('by-session').getAll(sessionId);
-    await writeDenseOrder(tx, remaining, orderedIds);
-    await refreshProjectSummary(tx, project, 'structure');
-  });
-}
-
-/** Restores editor-deleted rows and reapplies the requested order atomically. */
-export async function restoreStepsAndReorder(
-  sessionId: string,
-  restoredSteps: Step[],
-  orderedIds: string[],
-): Promise<void> {
-  assertMutationItems(restoredSteps, 'Restored steps');
-  assertMutationItems(orderedIds, 'Step reorder', true);
-  await runProjectStepsWrite(async (tx) => {
-    const project = await requireWritableProject(tx, sessionId);
-    for (const step of restoredSteps) {
-      if (step.sessionId !== sessionId) throw new Error(`Step ${step.id} belongs to another project.`);
-      await tx.objectStore('steps').add(sanitizeStepForStorage(step));
-    }
-    const sessionSteps = await tx.objectStore('steps').index('by-session').getAll(sessionId);
-    await writeDenseOrder(tx, sessionSteps, orderedIds);
-    await refreshProjectSummary(tx, project, 'structure');
+    await refreshProjectSummary(tx, project);
   });
 }

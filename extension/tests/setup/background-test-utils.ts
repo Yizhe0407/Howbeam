@@ -24,7 +24,8 @@ export function makeBackgroundMocks() {
     getStep: vi.fn(),
     getSteps: vi.fn(),
     replaceStepCaptureAtomically: vi.fn(),
-    addStep: vi.fn(),
+    /** Every row the background stores, one call per row. */
+    storeStep: vi.fn(),
     deleteStep: vi.fn(),
     deleteStepsForRun: vi.fn(),
     discardPristineProject: vi.fn(),
@@ -118,14 +119,8 @@ export async function mockStepRepositoryModule(
     ...actual,
     getStep: mocks.getStep,
     getSteps: mocks.getSteps,
-    addStep: mocks.addStep,
-    // Background persists captures through the batched write; route it to the
-    // same per-step mock so existing addStep assertions keep observing rows.
     addStepsAfter: async (steps: readonly unknown[]) => {
-      for (const step of steps) await mocks.addStep(step);
-    },
-    addSteps: async (steps: readonly unknown[]) => {
-      for (const step of steps) await mocks.addStep(step);
+      for (const step of steps) await mocks.storeStep(step);
     },
     deleteStep: mocks.deleteStep,
     replaceStepCaptureAtomically: mocks.replaceStepCaptureAtomically,

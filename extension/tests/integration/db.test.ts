@@ -1,11 +1,12 @@
 import 'fake-indexeddb/auto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import { addStep as addStepToDatabase, addSteps, addStepsAfter, deleteStepsAndReorder, deleteStepsForRun, getSteps, reorderSteps, replaceStepCaptureAtomically, restoreStepsAndReorder, saveStepDescription, StepNotFoundError, updateStep, updateStepsAtomically } from '@/lib/storage/step-repository';
+import { addStepsAfter, deleteStepsForRun, getSteps, replaceStepCaptureAtomically, saveStepDescription, StepNotFoundError, updateStepsAtomically } from '@/lib/storage/step-repository';
 import { buildStepEntries, getEffectiveBounds, getOrderedAnnotations, STEP_STORAGE_LIMITS, StepStorageValidationError, type Step } from '@/lib/storage/models';
 import { closeDatabase, ProjectNotFoundError } from '@/lib/storage/database';
 import { PROJECT_TAG_LIMITS } from '@/lib/storage/project-tag-model';
 import { serializeProjectArchive } from '@/lib/export/project-archive-serialize';
 import { jpegBlob, pngBlob } from '../setup/raster-fixtures';
+import { seedSteps } from '../setup/step-fixtures';
 import { createProject, createProjectFromSteps, deleteProjectPermanently, duplicateProject, ensureProject, getProject, getProjectSummaries, ProjectTagLimitError, resetProject, updateProject } from '@/lib/storage/project-repository';
 
 function makeStep(overrides: Partial<Step> = {}): Step {
@@ -24,8 +25,13 @@ function makeStep(overrides: Partial<Step> = {}): Step {
 }
 
 async function addStep(step: Step): Promise<void> {
+  await seedSteps([step]);
+}
+
+/** Stores a step through the capture write, the path user data takes. */
+async function captureStep(step: Step): Promise<void> {
   await ensureProject(step.sessionId, step.timestamp);
-  await addStepToDatabase(step);
+  await addStepsAfter([step], null);
 }
 
 describe('buildStepEntries', () => {
@@ -104,7 +110,7 @@ describe('step storage boundaries', () => {
     ['group id', { groupId: '' }],
   ])('rejects an invalid %s before writing', async (_label, overrides) => {
     const step = makeStep(overrides as Partial<Step>);
-    await expect(addStep(step)).rejects.toBeInstanceOf(StepStorageValidationError);
+    await expect(captureStep(step)).rejects.toBeInstanceOf(StepStorageValidationError);
   });
 
   it.each([
@@ -114,7 +120,7 @@ describe('step storage boundaries', () => {
     { screenshotScale: STEP_STORAGE_LIMITS.maxPixelRatio + 1 },
     { captureRevision: -1 },
   ])('rejects invalid numeric metadata: %j', async (overrides) => {
-    await expect(addStep(makeStep(overrides))).rejects.toBeInstanceOf(StepStorageValidationError);
+    await expect(captureStep(makeStep(overrides))).rejects.toBeInstanceOf(StepStorageValidationError);
   });
 
   it('nulls impossible capture bounds and privacy-gates impossible redaction bounds', async () => {
@@ -138,7 +144,7 @@ describe('step storage boundaries', () => {
   });
 
   it('rejects descriptions that cannot be represented in project backups', async () => {
-    await expect(addStep(makeStep({
+    await expect(captureStep(makeStep({
       description: 'x'.repeat(STEP_STORAGE_LIMITS.maxDescriptionLength + 1),
     }))).rejects.toBeInstanceOf(StepStorageValidationError);
   });
@@ -146,19 +152,19 @@ describe('step storage boundaries', () => {
   it.each(['javascript:alert(1)', 'https://user:secret@example.com/private', 'x'.repeat(STEP_STORAGE_LIMITS.maxUrlLength + 1)])(
     'rejects unsafe or oversized persisted URLs',
     async (url) => {
-      await expect(addStep(makeStep({ url }))).rejects.toBeInstanceOf(StepStorageValidationError);
+      await expect(captureStep(makeStep({ url }))).rejects.toBeInstanceOf(StepStorageValidationError);
     },
   );
 
   it('rejects a screenshot above the per-image storage budget', async () => {
-    await expect(addStep(makeStep({
+    await expect(captureStep(makeStep({
       screenshotBlob: pngBlob(2, 2, STEP_STORAGE_LIMITS.maxScreenshotBytes + 1 - 24),
     }))).rejects.toBeInstanceOf(StepStorageValidationError);
   });
 
   it('rejects excessive redactions and privacy-gates duplicate identifiers', async () => {
     const bounds = { x: 1, y: 1, width: 2, height: 2 };
-    await expect(addStep(makeStep({
+    await expect(captureStep(makeStep({
       redactions: Array.from({ length: STEP_STORAGE_LIMITS.maxRedactionsPerStep + 1 }, (_, index) => ({
         id: `mask-${index}`,
         kind: 'solid' as const,
@@ -201,9 +207,9 @@ describe('step storage boundaries', () => {
   });
 
   it('rejects oversized mutation vectors before opening a transaction', async () => {
-    await expect(reorderSteps(
+    await expect(updateStepsAtomically(
       'missing-project',
-      Array.from({ length: STEP_STORAGE_LIMITS.maxMutationItems + 1 }, (_, index) => `step-${index}`),
+      Array.from({ length: STEP_STORAGE_LIMITS.maxMutationItems + 1 }, (_, index) => ({ id: `step-${index}`, changes: {} })),
     )).rejects.toBeInstanceOf(StepStorageValidationError);
   });
 });
@@ -214,7 +220,7 @@ describe('step persistence', () => {
     const project = await ensureProject(sessionId);
     const steps = [0, 1, 2].map((order) => makeStep({ sessionId, order, timestamp: 100 + order }));
 
-    await addSteps(steps);
+    await addStepsAfter(steps, null);
 
     const persisted = await getSteps(sessionId);
     expect(persisted.map((step) => step.order)).toEqual([0, 1, 2]);
@@ -228,7 +234,7 @@ describe('step persistence', () => {
     const sessionId = crypto.randomUUID();
     await ensureProject(sessionId);
     const old = [0, 1, 2].map((order) => makeStep({ id: `old-${order}`, sessionId, order, timestamp: 100 + order }));
-    await addSteps(old);
+    await seedSteps(old);
     const runId = 'run-1';
 
     await addStepsAfter([makeStep({ id: 'new-a', sessionId, runId, order: 3, timestamp: 200 })], 'old-0');
@@ -242,7 +248,7 @@ describe('step persistence', () => {
   it('appends when no row is named or the named row is gone', async () => {
     const sessionId = crypto.randomUUID();
     await ensureProject(sessionId);
-    await addSteps([makeStep({ id: 'solo-0', sessionId, order: 0 })]);
+    await seedSteps([makeStep({ id: 'solo-0', sessionId, order: 0 })]);
 
     await addStepsAfter([makeStep({ id: 'solo-a', sessionId, runId: 'r', order: 1 })], null);
     await addStepsAfter([makeStep({ id: 'solo-b', sessionId, runId: 'r2', order: 2 })], 'missing');
@@ -255,7 +261,7 @@ describe('step persistence', () => {
     await ensureProject(sessionId);
     const foreign = makeStep({ order: 1 });
 
-    await expect(addSteps([makeStep({ sessionId, order: 0 }), foreign])).rejects.toThrow(
+    await expect(addStepsAfter([makeStep({ sessionId, order: 0 }), foreign], null)).rejects.toThrow(
       /belongs to another project/,
     );
     expect(await getSteps(sessionId)).toHaveLength(0);
@@ -279,45 +285,11 @@ describe('step persistence', () => {
     await addStep(step);
 
     await Promise.all([
-      updateStep(step.id, { description: 'updated' }),
-      updateStep(step.id, { numbered: false }),
+      saveStepDescription(step.id, 'updated', step.description),
+      updateStepsAtomically(step.sessionId, [{ id: step.id, changes: { crop: { x: 0, y: 0, width: 1, height: 1 } } }]),
     ]);
 
-    expect((await getSteps(step.sessionId))[0]).toMatchObject({ description: 'updated', numbered: false });
-  });
-
-  it('appends steps missing from a stale reorder request without order collisions', async () => {
-    const sessionId = crypto.randomUUID();
-    const first = makeStep({ sessionId, order: 0, description: 'keep me' });
-    const second = makeStep({ sessionId, order: 1 });
-    const newlyRecorded = makeStep({ sessionId, order: 2 });
-    await Promise.all([addStep(first), addStep(second), addStep(newlyRecorded)]);
-
-    await reorderSteps(sessionId, [second.id, first.id]);
-
-    const stored = await getSteps(sessionId);
-    expect(stored.map(({ id, order }) => ({ id, order }))).toEqual([
-      { id: second.id, order: 0 },
-      { id: first.id, order: 1 },
-      { id: newlyRecorded.id, order: 2 },
-    ]);
-    expect(stored[1].description).toBe('keep me');
-  });
-
-  it('deletes multiple rows and closes order gaps in one transaction', async () => {
-    const sessionId = crypto.randomUUID();
-    const first = makeStep({ sessionId, order: 0 });
-    const removedA = makeStep({ sessionId, order: 1 });
-    const removedB = makeStep({ sessionId, order: 2 });
-    const last = makeStep({ sessionId, order: 3 });
-    await Promise.all([first, removedA, removedB, last].map(addStep));
-
-    await deleteStepsAndReorder(sessionId, [removedA.id, removedB.id], [last.id, first.id]);
-
-    expect((await getSteps(sessionId)).map(({ id, order }) => ({ id, order }))).toEqual([
-      { id: last.id, order: 0 },
-      { id: first.id, order: 1 },
-    ]);
+    expect((await getSteps(step.sessionId))[0]).toMatchObject({ description: 'updated', crop: { x: 0, y: 0, width: 1, height: 1 } });
   });
 
   it('discards only the selected recording run and closes remaining order gaps', async () => {
@@ -350,28 +322,9 @@ describe('step persistence', () => {
     ]);
   });
 
-  it('restores deleted rows and their original order in one transaction', async () => {
-    const sessionId = crypto.randomUUID();
-    const first = makeStep({ sessionId, order: 0 });
-    const restored = makeStep({ sessionId, order: 1, description: 'restore me' });
-    const last = makeStep({ sessionId, order: 2 });
-    await Promise.all([first, restored, last].map(addStep));
-    await deleteStepsAndReorder(sessionId, [restored.id], [first.id, last.id]);
-
-    await restoreStepsAndReorder(sessionId, [restored], [first.id, restored.id, last.id]);
-
-    expect((await getSteps(sessionId)).map(({ id, order, description }) => ({ id, order, description }))).toEqual([
-      { id: first.id, order: 0, description: '' },
-      { id: restored.id, order: 1, description: 'restore me' },
-      { id: last.id, order: 2, description: '' },
-    ]);
-  });
-
   it('reports a missing row with a typed error instead of a silent no-op', async () => {
     // An autosave that treats a resolved update as committed would otherwise
     // clear its draft journal even though nothing was written.
-    await expect(updateStep(crypto.randomUUID(), { description: '孤兒寫入' }))
-      .rejects.toBeInstanceOf(StepNotFoundError);
     await expect(saveStepDescription(crypto.randomUUID(), '孤兒寫入', ''))
       .rejects.toBeInstanceOf(StepNotFoundError);
   });
@@ -422,18 +375,15 @@ describe('atomic visual edits and recapture', () => {
     await Promise.all([addStep(anchor), addStep(annotation)]);
 
     await Promise.all([
-      updateStep(annotation.id, { description: 'new description' }),
+      saveStepDescription(annotation.id, 'new description', annotation.description),
       updateStepsAtomically(sessionId, [
-        { id: annotation.id, changes: { manualBounds: { x: 4, y: 5, width: 6, height: 7 }, redactions: [{ id: 'wrong-owner', kind: 'solid', bounds: { x: 1, y: 1, width: 2, height: 2 } }] } },
+        { id: annotation.id, changes: { redactions: [{ id: 'wrong-owner', kind: 'solid', bounds: { x: 1, y: 1, width: 2, height: 2 } }] } },
         { id: anchor.id, changes: { redactions: [{ id: 'mask', kind: 'solid', bounds: { x: 8, y: 9, width: 10, height: 11 } }] } },
       ]),
     ]);
 
     const stored = await getSteps(sessionId);
-    expect(stored.find((step) => step.id === annotation.id)).toMatchObject({
-      description: 'new description',
-      manualBounds: { x: 4, y: 5, width: 6, height: 7 },
-    });
+    expect(stored.find((step) => step.id === annotation.id)).toMatchObject({ description: 'new description' });
     expect(stored.find((step) => step.id === annotation.id)?.redactions).toBeUndefined();
     expect(stored.find((step) => step.id === anchor.id)?.redactions?.[0].id).toBe('mask');
   });
@@ -490,7 +440,7 @@ describe('atomic visual edits and recapture', () => {
 
     await expect(
       updateStepsAtomically(step.sessionId, [
-        { id: step.id, changes: { manualBounds: { x: 7, y: 7, width: 7, height: 7 } } },
+        { id: step.id, changes: { crop: { x: 7, y: 7, width: 7, height: 7 } } },
         {
           id: step.id,
           expectedCaptureRevision: 0,
@@ -502,6 +452,7 @@ describe('atomic visual edits and recapture', () => {
     const stored = (await getSteps(step.sessionId))[0];
     expect(stored.captureRevision).toBe(1);
     expect(stored.manualBounds).toBeNull();
+    expect(stored.crop).toBeUndefined();
     expect(stored.redactions).toEqual([]);
     // The old masks covered the old pixels: the new image waits for its masks to be checked.
     expect(stored.redactionReviewRequired).toBe(true);
@@ -535,7 +486,7 @@ describe('atomic visual edits and recapture', () => {
 
     await expect(
       updateStepsAtomically(sessionId, [
-        { id: annotation.id, changes: { manualBounds: { x: 7, y: 7, width: 7, height: 7 } } },
+        { id: anchorId, changes: { crop: { x: 7, y: 7, width: 7, height: 7 } } },
         {
           id: anchorId,
           expectedCaptureRevision: 0,
@@ -550,6 +501,7 @@ describe('atomic visual edits and recapture', () => {
     expect(storedAnchor.captureRevision).toBe(1);
     expect(storedAnchor.redactions).toEqual([]);
     expect(storedAnchor.redactionReviewRequired).toBe(true);
+    expect(storedAnchor.crop).toBeUndefined();
     expect(storedAnnotation.manualBounds).toBeNull();
     expect(storedAnnotation.bounds).toEqual({ x: 20, y: 30, width: 40, height: 50 });
   });
@@ -582,17 +534,17 @@ describe('project transaction safety', () => {
     const step = makeStep();
     await ensureProject(step.sessionId, step.timestamp);
 
-    await expect(addStepToDatabase(step)).resolves.toBeUndefined();
+    await expect(addStepsAfter([step], null)).resolves.toBeUndefined();
     expect(await getSteps(step.sessionId)).toHaveLength(1);
   });
 
   it('does not resurrect a permanently deleted project from a stale capture write', async () => {
     const step = makeStep();
     await ensureProject(step.sessionId, step.timestamp);
-    await addStepToDatabase(step);
+    await addStepsAfter([step], null);
     await deleteProjectPermanently(step.sessionId);
 
-    await expect(addStepToDatabase({ ...step, description: 'stale write' })).rejects.toThrow('Project not found.');
+    await expect(addStepsAfter([{ ...step, description: 'stale write' }], null)).rejects.toThrow('Project not found.');
     expect(await getProject(step.sessionId)).toBeUndefined();
     expect(await getSteps(step.sessionId)).toEqual([]);
   });
@@ -602,8 +554,8 @@ describe('project transaction safety', () => {
     const first = makeStep({ sessionId, order: 0, screenshotBlob: pngBlob() });
     const second = makeStep({ sessionId, order: 1, screenshotBlob: pngBlob() });
     await ensureProject(sessionId);
-    await addStepToDatabase(first);
-    await addStepToDatabase(second);
+    await seedSteps([first]);
+    await seedSteps([second]);
     const before = (await getProject(sessionId))!;
 
     const reset = await resetProject(sessionId);
@@ -618,9 +570,9 @@ describe('project transaction safety', () => {
     const sessionId = crypto.randomUUID();
     const groupId = crypto.randomUUID();
     await ensureProject(sessionId);
-    await addStepToDatabase(makeStep({ sessionId, order: 0, screenshotBlob: pngBlob(2, 2, 5) }));
-    await addStepToDatabase(makeStep({ id: groupId, sessionId, groupId, bounds: null, order: 1, screenshotBlob: pngBlob(2, 2, 6) }));
-    await addStepToDatabase(makeStep({ sessionId, groupId, order: 2, screenshotBlob: undefined }));
+    await seedSteps([makeStep({ sessionId, order: 0, screenshotBlob: pngBlob(2, 2, 5) })]);
+    await seedSteps([makeStep({ id: groupId, sessionId, groupId, bounds: null, order: 1, screenshotBlob: pngBlob(2, 2, 6) })]);
+    await seedSteps([makeStep({ sessionId, groupId, order: 2, screenshotBlob: undefined })]);
 
     const nativeGetAll = IDBIndex.prototype.getAll;
     const getAllSpy = vi.spyOn(IDBIndex.prototype, 'getAll').mockImplementation(function (this: IDBIndex, ...args) {
@@ -661,7 +613,7 @@ describe('project transaction safety', () => {
   it('rolls back duplicate project metadata if cloning a source step fails', async () => {
     const sourceStep = makeStep();
     await ensureProject(sourceStep.sessionId);
-    await addStepToDatabase(sourceStep);
+    await seedSteps([sourceStep]);
     const destinationId = crypto.randomUUID();
     const uuidSpy = vi.spyOn(crypto, 'randomUUID')
       .mockReturnValueOnce(destinationId)
@@ -701,18 +653,12 @@ describe('stored text and screenshots match the archive rules', () => {
     ['an image beyond the raster dimension limit', pngBlob(16_385, 10)],
   ])('refuses to store %s, which export would reject', async (_label, screenshotBlob) => {
     const step = makeStep({ screenshotBlob });
-    await expect(addStep(step)).rejects.toBeInstanceOf(StepStorageValidationError);
+    await ensureProject(step.sessionId);
+    await expect(addStepsAfter([step], null)).rejects.toBeInstanceOf(StepStorageValidationError);
     await expect(createProjectFromSteps([makeStep({ screenshotBlob })])).rejects.toBeInstanceOf(StepStorageValidationError);
     expect(await getSteps(step.sessionId)).toEqual([]);
   });
 
-  it('refuses an invalid replacement screenshot without touching the step', async () => {
-    const step = makeStep();
-    await addStep(step);
-    await expect(updateStep(step.id, { screenshotBlob: new Blob(['x'], { type: 'image/gif' }) }))
-      .rejects.toBeInstanceOf(StepStorageValidationError);
-    expect((await getSteps(step.sessionId))[0].screenshotBlob?.type).toBe('image/jpeg');
-  });
 });
 
 describe('project metadata', () => {
