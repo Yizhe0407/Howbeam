@@ -4,7 +4,7 @@ import { getRecordingState } from '../../storage/storage';
 import type { RecordingState } from '../../storage/recording-state';
 import { isRecordableTabUrl } from '../../shared/restricted-urls';
 import { describeBrowserError } from '../../runtime/browser-errors';
-import { clearRecordingWait } from './recording-wait';
+import { clearRecordingWait, markRecordingWait } from './recording-wait';
 import type { ControlPlane } from './control-plane';
 import type { RecorderRuntime } from './recorder-runtime';
 
@@ -81,8 +81,10 @@ export function createFollowMode(deps: { control: ControlPlane; runtime: Recorde
    * Moves a live run from `previousTabId` into `tabId`. Publishes the new
    * tabId BEFORE injecting: the recorder's READY handshake and its keep-alive
    * port are validated against state.tabId, so injecting first would make the
-   * fresh recorder reject itself and tear down immediately. On an injection
-   * failure the run is handed back to `previousTabId`.
+   * fresh recorder reject itself and tear down immediately. Until the move
+   * settles the previous tab stays trusted too, so its recorder survives a
+   * failed move. On an injection failure the run is handed back to
+   * `previousTabId`, on hold until the user reloads that page or goes back.
    */
   async function moveRun(
     expectedControlVersion: number,
@@ -90,27 +92,31 @@ export function createFollowMode(deps: { control: ControlPlane; runtime: Recorde
     previousTabId: number,
     tabId: number,
   ): Promise<'moved' | 'stale' | 'failed'> {
-    const moved = await control.writeStateIf(
-      expectedControlVersion,
-      (current) =>
-        current.isRecording &&
-        current.operation === 'recording' &&
-        current.runId === runId &&
-        current.tabId === previousTabId,
-      // A wait notice belonged to the page being left; the new page starts clean.
-      (current) => ({ ...clearRecordingWait(current), tabId }),
-    );
-    if (!moved) return 'stale';
+    control.followOriginTabId = previousTabId;
     try {
-      // All-frames mirrors the START injection so iframe clicks in the followed
-      // tab are relayed to its top-frame recorder rather than silently lost.
-      await runtime.injectRecorder(tabId, true);
-    } catch (error) {
-      console.warn(
-        '[stepmark] failed to move the recording into another tab',
-        describeBrowserError(error),
-        error,
+      const moved = await control.writeStateIf(
+        expectedControlVersion,
+        (current) =>
+          current.isRecording &&
+          current.operation === 'recording' &&
+          current.runId === runId &&
+          current.tabId === previousTabId,
+        // A wait notice belonged to the page being left; the new page starts clean.
+        (current) => ({ ...clearRecordingWait(current), tabId }),
       );
+      if (!moved) return 'stale';
+      try {
+        // All-frames mirrors the START injection so iframe clicks in the followed
+        // tab are relayed to its top-frame recorder rather than silently lost.
+        await runtime.injectRecorder(tabId, true);
+        return 'moved';
+      } catch (error) {
+        console.warn(
+          '[stepmark] failed to move the recording into another tab',
+          describeBrowserError(error),
+          error,
+        );
+      }
       await control.writeStateIf(
         expectedControlVersion,
         (current) =>
@@ -118,11 +124,12 @@ export function createFollowMode(deps: { control: ControlPlane; runtime: Recorde
           current.operation === 'recording' &&
           current.runId === runId &&
           current.tabId === tabId,
-        (current) => ({ ...current, tabId: previousTabId, error: moved.previous.error, recoverableError: moved.previous.recoverableError }),
+        (current) => markRecordingWait({ ...current, tabId: previousTabId }, 'follow-failed'),
       );
       return 'failed';
+    } finally {
+      if (control.followOriginTabId === previousTabId) control.followOriginTabId = null;
     }
-    return 'moved';
   }
 
   function isFollowableRun(state: RecordingState): boolean {
@@ -153,8 +160,7 @@ export function createFollowMode(deps: { control: ControlPlane; runtime: Recorde
     if (!tab?.active) return;
 
     const previousTabId = state.tabId!;
-    // On failure the run is back in the previous tab, whose recorder was never
-    // stopped; no error is surfaced because nothing about the run was lost.
+    // On failure the run is back in the previous tab, whose recorder was never stopped.
     if ((await moveRun(expectedControlVersion, state.runId!, previousTabId, tabId)) !== 'moved') return;
     rememberPreviousTab(state.runId!, previousTabId);
     forgetTab(tabId);

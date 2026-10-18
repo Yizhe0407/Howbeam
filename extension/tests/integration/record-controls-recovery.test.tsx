@@ -47,6 +47,26 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('record controls recovery', () => {
+  it('says why a live run is on hold, for a user who is not on the recorded tab', () => {
+    render(
+      <RecordControls
+        recording={makeRecordingState({
+          operation: 'recording',
+          isRecording: true,
+          phase: 'recording',
+          sessionId: 'session-1',
+          runId: 'run-1',
+          tabId: 4,
+          error: '無法在剛才切換到的分頁錄製',
+          recoverableError: { code: 'RECORDING_WAITING_FOLLOW_FAILED', message: '無法在剛才切換到的分頁錄製' },
+        })}
+        onOpenEditor={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('無法在剛才切換到的分頁錄製')).toBeTruthy();
+  });
+
   it('offers completion through the editor after the source tab closes', () => {
     const onOpenEditor = vi.fn();
     render(

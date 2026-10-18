@@ -233,9 +233,12 @@ export default function RecordControls({
   }
 
   if (recording.isRecording && recording.runId) {
+    // Why the run is on hold or what went wrong, for a user who is not looking at the recorded tab.
+    const runError = recording.recoverableError?.message ?? recording.error;
     return (
       <div className={cn('flex flex-col gap-4', className)}>
         {controlError && <InlineAlert>{controlError}</InlineAlert>}
+        {runError && runError !== controlError && <InlineAlert>{runError}</InlineAlert>}
         <div className="rounded-md border-2 border-border bg-surface-raised px-3.5 py-3">
           <div className="flex items-center gap-2 text-sm font-bold text-foreground">
             <span className="size-2 rounded-full bg-recording" />

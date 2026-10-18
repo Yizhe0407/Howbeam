@@ -766,6 +766,7 @@ export const zhTW = {
     stoppedSnapshotPageChanged: '錄製已停止，因為快照頁面已變更。',
     waitingRestrictedPage: '這個頁面無法錄製。回到一般網站後會繼續錄製。',
     waitingSiteAccess: 'Stepmark 沒有這個網站的存取權限，這裡的操作不會被錄下。請在 Stepmark 彈出視窗允許存取所有網站，或回到已允許的網站。',
+    waitingFollowFailed: '無法在剛才切換到的分頁錄製，那裡的操作不會被錄下。重新載入該頁面，或回到原本的分頁繼續錄製。',
     stoppedRecorderUnavailable: '錄製已停止，因為頁面切換後無法繼續錄製。',
     sourceTabOpenFailed: '無法開啟原始頁面。',
     restrictedContinuationSource: '此來源頁面不允許錄製。',

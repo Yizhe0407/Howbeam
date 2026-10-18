@@ -243,7 +243,8 @@ export function isTrustedRecorderControlSender(
   );
 }
 
-/** Keeps MV3 alive only for the top frame that owns the active capture job. */
+/** Keeps MV3 alive only for the top frame that owns the active capture job,
+ * plus the tab a recording is moving out of while that move is in flight. */
 export function isTrustedKeepAliveSender(
   sender: RuntimeMessageSenderLike,
   state: {
@@ -252,10 +253,11 @@ export function isTrustedKeepAliveSender(
     tabId: number | null;
     recapture: { sourceTabId: number } | null;
   },
+  followOriginTabId: number | null = null,
 ): boolean {
   if (sender.frameId !== 0 || sender.tab?.id == null) return false;
   if (state.operation === 'recording') {
-    return state.isRecording && state.tabId === sender.tab.id;
+    return state.isRecording && (state.tabId === sender.tab.id || followOriginTabId === sender.tab.id);
   }
   return state.operation === 'recapture' && state.recapture?.sourceTabId === sender.tab.id;
 }

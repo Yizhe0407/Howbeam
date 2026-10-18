@@ -2171,7 +2171,7 @@ export default defineBackground(() => {
   const handleKeepAlivePort = createKeepAlivePortHandler({
     getRecordingState,
     isTrustedKeepAliveSender: (sender: Browser.runtime.MessageSender | undefined, state: RecordingState) =>
-      isTrustedKeepAliveSender(sender ?? {}, state),
+      isTrustedKeepAliveSender(sender ?? {}, state, control.followOriginTabId),
     acknowledgeDisconnect: () => void browser.runtime.lastError,
   });
   browser.runtime.onConnect.addListener(handleKeepAlivePort);

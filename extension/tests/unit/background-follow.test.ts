@@ -223,9 +223,12 @@ describe('follow-the-active-tab recording (steps mode)', () => {
     expect(storedState.tabId).toBe(4);
   });
 
-  it('hands the run back to the previous tab when injection into the new tab fails', async () => {
+  it('hands the run back to the previous tab, on hold, when injection into the new tab fails', async () => {
     silenceIntentionalErrorLogs();
-    mocks.executeScript.mockRejectedValue(new Error('Cannot access contents of the page.'));
+    mocks.executeScript.mockImplementation(async ({ target }: { target: { tabId: number } }) => {
+      if (target.tabId === OTHER_TAB.id) throw new Error('Cannot access contents of the page.');
+      return [];
+    });
     await importBackground();
     await flushAsyncWork();
 
@@ -233,9 +236,10 @@ describe('follow-the-active-tab recording (steps mode)', () => {
 
     expect(storedState.tabId).toBe(4);
     expect(storedState.isRecording).toBe(true);
-    // The previous tab's recorder was never stopped, so no stop message and no user-facing error: the run simply stays where it was.
+    expect(storedState.recoverableError?.code).toBe('RECORDING_WAITING_FOLLOW_FAILED');
+    expect(storedState.error).toBe(storedState.recoverableError?.message);
+    // The previous tab's recorder was never stopped and stays the live one.
     expect(mocks.tabsSendMessage).not.toHaveBeenCalled();
-    expect(storedState.error).toBeNull();
   });
 
   it('does nothing when the activated tab is the recorded tab itself', async () => {

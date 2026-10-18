@@ -772,6 +772,8 @@ export const en: Messages = {
     waitingRestrictedPage: 'This page can’t be recorded. Recording picks up again when you go back to a regular website.',
     waitingSiteAccess:
       'Stepmark doesn’t have access to this site, so nothing here is recorded. Allow access to all sites in the Stepmark popup, or go back to a site you allowed.',
+    waitingFollowFailed:
+      'Recording couldn’t move into the tab you switched to, so nothing there is recorded. Reload that page, or go back to the previous tab to keep recording.',
     stoppedRecorderUnavailable: 'Recording stopped because it couldn’t carry on after the page changed.',
     sourceTabOpenFailed: 'Couldn’t open the original page.',
     restrictedContinuationSource: 'The source page can’t be recorded.',

@@ -12,23 +12,28 @@ import { t } from '@/lib/shared/i18n';
  *   browser hides its URL and refuses injection.
  * - 'page-failed': the navigation failed and the tab shows the browser's
  *   error page.
+ * - 'follow-failed': the run could not move into the tab the user switched
+ *   to and stayed in the one it came from.
  */
-export type RecordingWaitReason = 'restricted-page' | 'site-access' | 'page-failed';
+export type RecordingWaitReason = 'restricted-page' | 'site-access' | 'page-failed' | 'follow-failed';
 
 const WAIT_CODES: Record<RecordingWaitReason, string> = {
   'restricted-page': 'RECORDING_WAITING_RESTRICTED_PAGE',
   'site-access': 'RECORDING_WAITING_SITE_ACCESS',
   'page-failed': 'RECORDING_WAITING_PAGE_FAILED',
+  'follow-failed': 'RECORDING_WAITING_FOLLOW_FAILED',
+};
+
+const WAIT_MESSAGES: Record<RecordingWaitReason, () => string> = {
+  'restricted-page': () => t().background.waitingRestrictedPage,
+  'site-access': () => t().background.waitingSiteAccess,
+  'page-failed': () => t().background.errorPageFailedToLoad,
+  'follow-failed': () => t().background.waitingFollowFailed,
 };
 
 /** Built on demand so the message is in the locale active when it is raised. */
 export function recordingWaitError(reason: RecordingWaitReason): RecoverableRecordingError {
-  const message = reason === 'site-access'
-    ? t().background.waitingSiteAccess
-    : reason === 'page-failed'
-      ? t().background.errorPageFailedToLoad
-      : t().background.waitingRestrictedPage;
-  return { code: WAIT_CODES[reason], message };
+  return { code: WAIT_CODES[reason], message: WAIT_MESSAGES[reason]() };
 }
 
 export function isRecordingWaitError(error: RecoverableRecordingError | null): boolean {

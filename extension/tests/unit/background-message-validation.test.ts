@@ -362,6 +362,14 @@ describe('background sender authorization', () => {
     })).toBe(false);
   });
 
+  it('keeps trusting the tab a recording is moving out of until the move settles', () => {
+    const sender = { frameId: 0, tab: { id: 4, url: 'https://example.com/' } };
+    const moving = { operation: 'recording', isRecording: true, tabId: 9, recapture: null } as const;
+    expect(isTrustedKeepAliveSender(sender, moving)).toBe(false);
+    expect(isTrustedKeepAliveSender(sender, moving, 4)).toBe(true);
+    expect(isTrustedKeepAliveSender(sender, { ...moving, isRecording: false }, 4)).toBe(false);
+  });
+
   it('accepts recording controls only from the top frame of the recorded tab', () => {
     expect(isTrustedRecorderControlSender(
       { frameId: 0, url: 'https://example.com/', tab: { id: 7, url: 'https://example.com/' } },

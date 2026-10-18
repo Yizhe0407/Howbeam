@@ -65,6 +65,8 @@ export function createControlPlane(hooks: ControlPlaneHooks) {
     pendingSnapshotContext: undefined as SnapshotCaptureContext | undefined,
     /** Settles when the recorder startup in flight, if any, has finished. */
     startupSettled: null as Promise<void> | null,
+    /** The tab a run is moving out of while the move is in flight. */
+    followOriginTabId: null as number | null,
 
     bumpVersion(): number {
       return ++plane.controlVersion;
