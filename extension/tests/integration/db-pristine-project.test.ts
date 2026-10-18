@@ -102,11 +102,15 @@ describe('discardPristineProject', () => {
     await expect(getActiveProjectId()).resolves.toBe(project.id);
   });
 
-  it('bumps contentRevision on a metadata edit so backups notice it', async () => {
+  it('bumps metadataRevision, never contentRevision, on a metadata edit', async () => {
+    // Backups notice the edit; a pending structural undo (which checks contentRevision) survives it.
     const project = await createProject();
     const renamed = await updateProject(project.id, { title: '我的教學' });
-    expect(renamed.contentRevision).toBe(project.contentRevision + 1);
-    expect((await updateProject(project.id, { description: 'x' })).contentRevision).toBe(renamed.contentRevision + 1);
+    expect(renamed.metadataRevision).toBe(project.metadataRevision + 1);
+    expect(renamed.contentRevision).toBe(project.contentRevision);
+    const described = await updateProject(project.id, { description: 'x' });
+    expect(described.metadataRevision).toBe(renamed.metadataRevision + 1);
+    expect(described.contentRevision).toBe(project.contentRevision);
   });
 
   it('treats an already-deleted project as a no-op', async () => {

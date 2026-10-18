@@ -4,7 +4,7 @@ import { inflateSync } from 'node:zlib';
 import type { Project } from '../../../lib/storage/models';
 
 /** Browser 內的 page.evaluate 無法匯入 Node 模組，因此在此集中管理持久化契約字面值。 */
-const SCRIBE_DB = { name: 'stepmark', version: 1 } as const;
+const SCRIBE_DB = { name: 'stepmark', version: 2 } as const;
 // `as const` keeps the literal types non-widening so the typed chrome.storage.local.get overloads still apply inside evaluate bodies.
 const RECORDING_STATE_KEY = 'stepmark:recordingState' as const;
 const ACTIVE_PROJECT_ID_KEY = 'stepmark:activeProjectId' as const;
@@ -18,6 +18,7 @@ const E2E_PROJECT_TEMPLATE = {
   createdAt: 0,
   updatedAt: 0,
   contentRevision: 0,
+  metadataRevision: 0,
   stepCount: 0,
   entryCount: 0,
   storageBytes: 0,

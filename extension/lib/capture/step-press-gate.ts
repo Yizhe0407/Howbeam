@@ -17,6 +17,8 @@ import { isExtensionOverlay } from './viewport-overlay-host';
  * - Released without travelling → `click`. The trusted `click` event is
  *   cancelled (its activation — navigation, toggling, submission — is what
  *   must wait for the screenshot) and replayed by the recorder afterwards.
+ * - A press on a dropdown `<select>` → `click` at once: its native popup
+ *   takes the release, which the page never sees.
  * - Travelled past the drag threshold, or the browser started a native drag
  *   → `drag`; a pointercancel → `cancel`. The page is handed the withheld
  *   press as a synthetic pointerdown/mousedown and every later event of the
@@ -319,7 +321,7 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
   return {
     onTrustedPointerDown() {
       // Trusted events are ordered: a held press whose pointerup never reached
-      // this document (native popup, release outside the window) is over now.
+      // this document (release outside the window) is over now.
       if (current?.state === 'held') release(current);
       current = null;
     },
@@ -337,6 +339,7 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
         return { kind: 'continuation' };
       }
       hide(event);
+      if (opensNativePopupOnPress(target)) release(press);
       return { kind: 'step', press };
     },
 
@@ -442,6 +445,12 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
       last = null;
     },
   };
+}
+
+/** A dropdown `<select>` opens a native popup on mousedown that swallows the release. */
+function opensNativePopupOnPress(target: Element): boolean {
+  const select = target.closest('select');
+  return select !== null && !select.disabled && !select.multiple && select.size <= 1;
 }
 
 /** True when a trusted click landed on the armed element or inside it. */

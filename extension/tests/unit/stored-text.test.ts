@@ -41,7 +41,7 @@ describe('stored text rule', () => {
 
     const project = sanitizeProject({
       id: 'p', title: `標題${EVERY_LOW_CODE_UNIT}`, description: EVERY_LOW_CODE_UNIT, sections: [], tags: [`tag\u0085x`],
-      createdAt: 1, updatedAt: 1, contentRevision: 0, stepCount: 0, entryCount: 0, storageBytes: 0,
+      createdAt: 1, updatedAt: 1, contentRevision: 0, metadataRevision: 0, stepCount: 0, entryCount: 0, storageBytes: 0,
     } as Project);
     expect(isStoredText(project.title)).toBe(true);
     expect(isStoredText(project.description)).toBe(true);

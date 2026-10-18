@@ -76,7 +76,7 @@ export function createCaptureSender(runId: string) {
   /**
    * Step-mode capture that never fails silently: a request whose answer is
    * lost is reconciled against the durable recording state (the background
-   * bumps itemCount in the same transaction that stores the step), so the
+   * records the committed captureId right after storing the step), so the
    * caller can tell the user exactly when a click was not recorded.
    */
   async function deliverStepCapture(
@@ -87,7 +87,6 @@ export function createCaptureSender(runId: string) {
     captureId: string,
     captureKind: ClickCapture['captureKind'] = 'element',
   ): Promise<CaptureDelivery> {
-    const before = await readAuthoritativeAnnotationCount();
     let failure: unknown;
     try {
       const result = await requestCapture(rect, target, intent, now, captureId, captureKind);
@@ -101,14 +100,16 @@ export function createCaptureSender(runId: string) {
       failure = error;
     }
     console.warn('[stepmark] step capture request failed; reconciling with recording state', failure);
-    return (await wasStepCommitted(before)) ? 'saved' : 'lost';
+    return (await wasCaptureCommitted(captureId)) ? 'saved' : 'lost';
   }
 
-  /** True when the recording state proves a step landed after `before`. */
-  async function wasStepCommitted(before: number | null): Promise<boolean> {
-    if (before === null) return false;
-    const after = await readAuthoritativeAnnotationCount();
-    return after !== null && after > before;
+  async function wasCaptureCommitted(captureId: string): Promise<boolean> {
+    try {
+      const state = await getRecordingState();
+      return state.operation === 'recording' && state.runId === runId && state.lastCommittedCaptureId === captureId;
+    } catch {
+      return false;
+    }
   }
 
   // The background's itemCount is the single source of truth for how many
@@ -149,7 +150,6 @@ export function createCaptureSender(runId: string) {
   return {
     sendCapture,
     deliverStepCapture,
-    wasStepCommitted,
     readAuthoritativeAnnotationCount,
     commitSnapshotAnnotation,
   };

@@ -125,19 +125,18 @@ export function createFollowMode(deps: { control: ControlPlane; runtime: Recorde
     return 'moved';
   }
 
+  function isFollowableRun(state: RecordingState): boolean {
+    return state.operation === 'recording'
+      && state.isRecording
+      && !!state.runId
+      && state.tabId != null
+      && canFollow(state);
+  }
+
   /** Re-reads the run and whether it may move across tabs at all. */
   async function readFollowableRun(expectedControlVersion: number): Promise<RecordingState | null> {
     const state = await getRecordingState();
-    if (
-      expectedControlVersion !== control.controlVersion ||
-      state.operation !== 'recording' ||
-      !state.isRecording ||
-      !state.runId ||
-      state.tabId == null ||
-      !canFollow(state)
-    ) {
-      return null;
-    }
+    if (expectedControlVersion !== control.controlVersion || !isFollowableRun(state)) return null;
     if (!(await browser.permissions.contains({ origins: ['<all_urls>'] }))) return null;
     return state;
   }
@@ -172,7 +171,8 @@ export function createFollowMode(deps: { control: ControlPlane; runtime: Recorde
    * when it is the active tab of the focused window, so a background tab or
    * another window refreshing itself never steals the run.
    */
-  function scheduleFollowForLoadedTab(tabId: number): void {
+  function scheduleFollowForLoadedTab(tabId: number, state: RecordingState): void {
+    if (!isFollowableRun(state) || state.tabId === tabId) return;
     void browser.tabs.query({ active: true, lastFocusedWindow: true }).then(([focused]) => {
       if (focused?.id === tabId) scheduleRecordingFollow(tabId);
     }).catch((error) => {

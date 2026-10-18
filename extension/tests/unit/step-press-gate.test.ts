@@ -121,6 +121,27 @@ describe('createStepPressGate', () => {
     ]);
   });
 
+  it('settles a press on a dropdown select as a click at once, since its native popup takes the release', async () => {
+    const select = document.createElement('select');
+    select.append(new Option('一'), new Option('二'));
+    document.body.append(select);
+    target = select as unknown as HTMLButtonElement;
+    fire(pointer('pointerdown', { buttons: 1 }), select);
+    fire(mouse('mousedown', { buttons: 1 }), select);
+    // No pointerup, mouseup or click ever reaches the document.
+    await expect(presses[0].outcome).resolves.toBe('click');
+  });
+
+  it('keeps a list-box select (drawn in the page) held until it is released', async () => {
+    const select = document.createElement('select');
+    select.size = 4;
+    document.body.append(select);
+    target = select as unknown as HTMLButtonElement;
+    fire(pointer('pointerdown', { buttons: 1 }), select);
+    fire(pointer('pointermove', { buttons: 1, clientX: 40 }), select);
+    await expect(presses[0].outcome).resolves.toBe('drag');
+  });
+
   it('hands a drag back to the page and lets the rest of the gesture through untouched', async () => {
     fire(pointer('pointerdown', { buttons: 1 }));
     fire(mouse('mousedown', { buttons: 1 }));

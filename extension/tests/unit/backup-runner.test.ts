@@ -30,9 +30,9 @@ function fakeDirectory(failOn?: string, asciiOnly = false) {
   return { directory, files };
 }
 
-/** updatedAt is deliberately constant: the backup must follow contentRevision, not the clock. */
-function project(id: string, title: string, contentRevision: number): ProjectSummary {
-  return { id, title, description: '', sections: [], tags: [], createdAt: 0, updatedAt: 0, contentRevision, stepCount: 0, entryCount: 0, storageBytes: 0 };
+/** updatedAt is deliberately constant: the backup must follow the revisions, not the clock. */
+function project(id: string, title: string, contentRevision: number, metadataRevision = 0): ProjectSummary {
+  return { id, title, description: '', sections: [], tags: [], createdAt: 0, updatedAt: 0, contentRevision, metadataRevision, stepCount: 0, entryCount: 0, storageBytes: 0 };
 }
 
 function setup(projects: ProjectSummary[], failOn?: string, asciiOnly = false) {
@@ -80,6 +80,22 @@ describe('runBackup', () => {
     expect(await runBackup(deps)).toMatchObject({ written: 1, skipped: 0 });
   });
 
+  it('rewrites a project whose only change is its metadata', async () => {
+    const projects = [project('aaaaaaaa-1', 'One', 4, 0)];
+    const { deps } = setup(projects);
+    await runBackup(deps);
+    projects[0] = project('aaaaaaaa-1', 'One', 4, 1);
+    expect(await runBackup(deps)).toMatchObject({ written: 1, skipped: 0 });
+  });
+
+  it('rewrites a project whose manifest entry predates the metadata revision', async () => {
+    const { deps, manifest } = setup([project('aaaaaaaa-1', 'One', 3)]);
+    await runBackup(deps);
+    const entry = manifest.get('aaaaaaaa-1')!;
+    manifest.set('aaaaaaaa-1', { contentRevision: 3, filename: entry.filename, backedUpAt: 1 } as unknown as BackupManifestEntry);
+    expect(await runBackup(deps)).toMatchObject({ written: 1, skipped: 0 });
+  });
+
   it('rewrites a project whose manifest entry predates revisions', async () => {
     const { deps, manifest } = setup([project('aaaaaaaa-1', 'One', 0)]);
     await runBackup(deps);
@@ -122,7 +138,7 @@ describe('runBackup', () => {
     await runBackup(deps);
     const [oldName] = [...files.keys()];
 
-    projects[0] = project('aaaaaaaa-1', 'New name', 11);
+    projects[0] = project('aaaaaaaa-1', 'New name', 10, 1);
     await runBackup(deps);
 
     expect(files.has(oldName)).toBe(false);

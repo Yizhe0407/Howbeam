@@ -130,7 +130,7 @@ export async function updateProject(id: string, changes: ProjectMetadataChanges)
         throw error;
       }
     }
-    const updated = sanitizeProject({ ...existing, ...patch, updatedAt: Math.max(existing.updatedAt, Date.now()), contentRevision: existing.contentRevision + 1 });
+    const updated = sanitizeProject({ ...existing, ...patch, updatedAt: Math.max(existing.updatedAt, Date.now()), metadataRevision: existing.metadataRevision + 1 });
     await tx.store.put(updated);
     await tx.done;
     notifyProjectsChanged();

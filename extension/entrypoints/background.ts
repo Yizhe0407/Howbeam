@@ -696,6 +696,7 @@ async function handleStartRecording(
     recoverableError: null,
     mode: message.mode,
     itemCount: 0,
+    lastCommittedCaptureId: null,
     numbered: RUN_STARTS_NUMBERED,
     groupAnchorId: null,
     runId,
@@ -1765,6 +1766,7 @@ async function handleClick(
     await updateRunState(message.runId, (currentState) => ({
       ...currentState,
       itemCount: currentState.itemCount + 1,
+      lastCommittedCaptureId: message.captureId,
       error: null,
       recoverableError: null,
     }));
@@ -2169,14 +2171,11 @@ export default defineBackground(() => {
   });
   browser.runtime.onConnect.addListener(handleKeepAlivePort);
 
-  /** 回傳仍有效且屬於此 tab 事件的流程。 */
-  const readActiveRunForTab = async (
+  const activeRunInTab = (
+    state: RecordingState,
     tabId: number,
-    expectedControlVersion: number,
-  ): Promise<{ state: RecordingState; runId: string } | null> => {
-    const state = await getRecordingState();
+  ): { state: RecordingState; runId: string } | null => {
     if (
-      expectedControlVersion !== control.controlVersion ||
       !state.isRecording ||
       state.operation !== 'recording' ||
       state.tabId !== tabId ||
@@ -2261,12 +2260,14 @@ export default defineBackground(() => {
       // mirroring follow-mode's listener/logic split.
       if (await recaptureFlow.handleSourceTabUpdated(tabId, changeInfo)) return;
       const expectedControlVersion = control.controlVersion;
-      const active = await readActiveRunForTab(tabId, expectedControlVersion);
+      const current = await getRecordingState();
+      if (expectedControlVersion !== control.controlVersion) return;
+      const active = activeRunInTab(current, tabId);
       if (!active) {
         // Another tab finished loading a web page while the user is on it (a
         // blank tab they typed a URL into): the run may follow it now.
         if (changeInfo.status === 'complete' && tab.active && isRecordableTabUrl(tab.url)) {
-          followMode.scheduleFollowForLoadedTab(tabId);
+          followMode.scheduleFollowForLoadedTab(tabId, current);
         }
         return;
       }

@@ -86,6 +86,8 @@ export interface RecordingState {
   recoverableError: RecoverableRecordingError | null;
   mode: RecordingMode;
   itemCount: number;
+  /** Lets a page whose capture answer was lost check whether it was committed. */
+  lastCommittedCaptureId: string | null;
   /** Every run starts numbered; the editor turns it off per snapshot. Captures
    * stamp this onto each step so a later change cannot rewrite old images. */
   numbered: boolean;
@@ -131,6 +133,7 @@ const DEFAULT_STATE: RecordingState = {
   recoverableError: null,
   mode: 'steps',
   itemCount: 0,
+  lastCommittedCaptureId: null,
   numbered: true,
   groupAnchorId: null,
   runId: null,

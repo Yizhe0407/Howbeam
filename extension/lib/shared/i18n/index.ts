@@ -16,16 +16,33 @@ const CATALOGS: Record<Locale, Messages> = {
   en,
 };
 
-/**
- * The preference in force. 'auto' is deliberately kept as-is rather than
- * resolved once at module load: a long-lived context (the background service
- * worker above all) must follow the browser UI language as it is when copy is
- * produced, not whatever it read while the module was first evaluated.
- */
 let activePreference: LocalePreference = 'auto';
 
+/** Cached because t() runs on every render. */
+let browserLocale: Locale | null = null;
+let followingLanguageChanges = false;
+
+function resolveBrowserLocale(): Locale {
+  if (browserLocale === null) {
+    browserLocale = resolveLocale(detectBrowserLanguage());
+    followLanguageChanges();
+  }
+  return browserLocale;
+}
+
+/** Only the navigator.language fallback can change mid-session. */
+function followLanguageChanges(): void {
+  if (followingLanguageChanges || typeof globalThis.addEventListener !== 'function') return;
+  followingLanguageChanges = true;
+  globalThis.addEventListener('languagechange', () => {
+    updateLocale(() => {
+      browserLocale = null;
+    });
+  });
+}
+
 function resolvePreference(preference: LocalePreference): Locale {
-  return preference === 'auto' ? resolveLocale(detectBrowserLanguage()) : preference;
+  return preference === 'auto' ? resolveBrowserLocale() : preference;
 }
 
 /**
@@ -43,20 +60,25 @@ export function messagesFor(locale: Locale): Messages {
   return CATALOGS[locale];
 }
 
-/** The locale in force right now; 'auto' resolves against the browser at call time. */
 export function getLocale(): Locale {
   return resolvePreference(activePreference);
 }
 
 const listeners = new Set<() => void>();
 
-/** Applies a preference and tells every subscriber when the effective locale
- * changed, so mounted UI re-renders in the new language. */
-function applyPreference(preference: LocalePreference): void {
+/** Notifies subscribers when `change` alters the effective locale. */
+function updateLocale(change: () => void): void {
   const before = getLocale();
-  activePreference = preference;
+  change();
   if (getLocale() === before) return;
   for (const listener of listeners) listener();
+}
+
+function applyPreference(preference: LocalePreference): void {
+  updateLocale(() => {
+    activePreference = preference;
+    browserLocale = null;
+  });
 }
 
 /** Switches to a fixed locale. */

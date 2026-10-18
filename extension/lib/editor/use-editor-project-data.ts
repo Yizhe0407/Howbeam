@@ -29,14 +29,6 @@ async function sweepEmptySnapshotAnchors(sessionId: string): Promise<void> {
   });
 }
 
-/** The metadata another tab can change without touching the entry structure. */
-function sameMetadata(first: Project, second: Project): boolean {
-  return first.title === second.title
-    && first.description === second.description
-    && first.tags.length === second.tags.length
-    && first.tags.every((tag, index) => tag === second.tags[index]);
-}
-
 export function useEditorProjectData(sessionId: string | null, steps: readonly unknown[]) {
   const [project, setProject] = useState<Project | null>(null);
   /** Set once the open Project's row is gone (deleted in another tab): the
@@ -116,8 +108,8 @@ export function useEditorProjectData(sessionId: string | null, steps: readonly u
       return;
     }
     setProject((current) => (
-      current && current.id === stored.id && !sameMetadata(current, stored)
-        ? { ...current, title: stored.title, description: stored.description, tags: stored.tags }
+      current && current.id === stored.id && current.metadataRevision !== stored.metadataRevision
+        ? { ...current, title: stored.title, description: stored.description, tags: stored.tags, metadataRevision: stored.metadataRevision }
         : current
     ));
   }, [sessionId]);

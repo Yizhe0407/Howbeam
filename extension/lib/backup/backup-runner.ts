@@ -1,4 +1,4 @@
-import { projectExportFilename } from '../export/project-export-contract';
+import { projectFilenameStem } from '../export/project-export-contract';
 import type { ProjectSummary } from '../storage/models';
 import type { BackupManifestEntry } from './backup-store';
 
@@ -6,25 +6,7 @@ import type { BackupManifestEntry } from './backup-store';
  * projects with the same title never collide. The id part is what keeps the
  * name stable across runs; a rename of the project renames the file. */
 export function backupFilename(project: Pick<ProjectSummary, 'id' | 'title'>): string {
-  const stem = projectExportFilename({ title: project.title }, 'html').replace(/\.html$/, '');
-  return `${boundUtf8(stem, MAX_STEM_BYTES)}-${project.id.slice(0, 8)}.stepmark`;
-}
-
-/** File systems limit a name to 255 bytes, not characters, and one CJK
- * character is three UTF-8 bytes. The stem leaves room for the id suffix and extension. */
-const MAX_STEM_BYTES = 200;
-
-function boundUtf8(text: string, maxBytes: number): string {
-  const encoder = new TextEncoder();
-  let bytes = 0;
-  let bounded = '';
-  // Iterating by code point never splits a surrogate pair.
-  for (const character of text) {
-    bytes += encoder.encode(character).length;
-    if (bytes > maxBytes) break;
-    bounded += character;
-  }
-  return bounded.replace(/-+$/, '') || 'stepmark';
+  return `${projectFilenameStem({ title: project.title })}-${project.id.slice(0, 8)}.stepmark`;
 }
 
 /** Plain-ASCII name used when the folder's file system rejects the readable
@@ -97,10 +79,9 @@ export async function runBackup(deps: BackupRunDeps): Promise<BackupResult> {
     let filename = preferred;
     try {
       // A file the user removed by hand counts as "not backed up", not as up to date.
-      // contentRevision only ever grows (updatedAt can stand still when the clock
-      // moves back or two edits share a millisecond). A manifest entry from before
-      // revisions existed has none, so it never matches and the project is rewritten.
+      // Revisions, not updatedAt: the clock can move back or two edits share a millisecond.
       if (previous && previous.contentRevision === project.contentRevision
+        && previous.metadataRevision === project.metadataRevision
         && (previous.filename === preferred || previous.filename === fallback)
         && await fileExists(directory, previous.filename)) {
         result.skipped += 1;
@@ -117,7 +98,12 @@ export async function runBackup(deps: BackupRunDeps): Promise<BackupResult> {
       if (previous && previous.filename !== filename) {
         await directory.removeEntry(previous.filename).catch(() => undefined);
       }
-      await deps.putManifestEntry(project.id, { contentRevision: project.contentRevision, filename, backedUpAt: now() });
+      await deps.putManifestEntry(project.id, {
+        contentRevision: project.contentRevision,
+        metadataRevision: project.metadataRevision,
+        filename,
+        backedUpAt: now(),
+      });
       result.written += 1;
     } catch (error) {
       result.failed += 1;

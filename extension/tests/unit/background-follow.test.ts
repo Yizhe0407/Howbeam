@@ -408,6 +408,20 @@ describe('following a blank tab once it loads a page', () => {
     expect(mocks.executeScript).not.toHaveBeenCalled();
   });
 
+  it('does no follow work for page loads while nothing is recording', async () => {
+    storedState = makeRecordingState();
+    await importBackground();
+    await flushAsyncWork();
+
+    mocks.tabUpdatedListener?.(9, { status: 'complete' }, LOADED_TAB);
+    await flushAsyncWork();
+    await vi.advanceTimersByTimeAsync(300);
+    await flushAsyncWork();
+
+    expect(mocks.tabsQuery).not.toHaveBeenCalled();
+    expect(mocks.permissionsContains).not.toHaveBeenCalled();
+  });
+
   it('ignores a background tab finishing its load', async () => {
     await importBackground();
     await flushAsyncWork();

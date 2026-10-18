@@ -3,7 +3,7 @@ import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectContentConflictError, addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, moveProjectEntriesAtomically, repairEmptySnapshotAnchors, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically, setProjectEntriesNumberedAtomically } from '@/lib/storage/project-structure';
 import { ProjectStructureIntegrityError, type ProjectSection, type Step } from '@/lib/storage/models';
 import { closeDatabase, runWithDatabase } from '@/lib/storage/database';
-import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, resetProject } from '@/lib/storage/project-repository';
+import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, resetProject, updateProject } from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
 import { pngBlob } from '../setup/raster-fixtures';
 
@@ -164,6 +164,18 @@ describe('Project entry-safe atomic structure', () => {
     );
     expect(restored.entryIds).toEqual(before.entryIds);
     expect(restored.project.sections).toEqual(before.project.sections);
+  });
+
+  it('still restores a deletion after the Project was renamed and retagged', async () => {
+    const { project, snapshot } = await createTrackedProject(makeSingleSteps(3));
+    const removed = snapshot.entries[1];
+    const rows = removed.kind === 'single' ? [removed.step] : [removed.anchor, ...removed.annotations];
+    const deleted = await deleteProjectEntriesAtomically(project.id, [snapshot.entryIds[1]], snapshot.project.contentRevision);
+    await updateProject(project.id, { title: '改過的名稱', addTags: ['標籤'] });
+    const restored = await restoreProjectEntriesAtomically(
+      project.id, rows, snapshot.entryIds, snapshot.project.sections, deleted.project.contentRevision,
+    );
+    expect(restored.entryIds).toEqual(snapshot.entryIds);
   });
 
   it('sanitizes section titles and supports atomic rename/delete', async () => {

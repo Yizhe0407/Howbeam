@@ -202,7 +202,7 @@ test.describe('editor workflows', () => {
     await recordSnapshotTargets(appPage, popupPage, ['#action-button', '#disabled-button']);
     await popupPage.evaluate(async () => {
       await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('stepmark', 1);
+        const request = indexedDB.open('stepmark', 2);
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {
           const db = request.result;

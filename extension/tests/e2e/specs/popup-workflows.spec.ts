@@ -23,7 +23,7 @@ async function readActiveProjectId(page: import('@playwright/test').Page): Promi
 
 async function readProjectIds(page: import('@playwright/test').Page): Promise<string[]> {
   return page.evaluate(async () => new Promise<string[]>((resolve, reject) => {
-    const request = indexedDB.open('stepmark', 1);
+    const request = indexedDB.open('stepmark', 2);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const db = request.result;

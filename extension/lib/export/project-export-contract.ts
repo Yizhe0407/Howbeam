@@ -70,7 +70,7 @@ export class ProjectExportLimitError extends Error {
 /** 產生確定且檔案系統安全的名稱，確保重試結果穩定。 */
 export function projectExportFilename(metadata: ProjectExportMetadata = {}, format: ProjectExportFormat): string {
   const extension = format === 'markdown' ? 'md' : format === 'markdown-archive' ? 'zip' : format;
-  return `${filenameStem(metadata)}.${extension}`;
+  return `${projectFilenameStem(metadata)}.${extension}`;
 }
 
 /** Escapes text before placing it in generated HTML text or attribute content. */
@@ -128,7 +128,7 @@ function utf8Length(codePoint: string): number {
   return value < 0x80 ? 1 : value < 0x800 ? 2 : value < 0x10000 ? 3 : 4;
 }
 
-function filenameStem(metadata: ProjectExportMetadata): string {
+export function projectFilenameStem(metadata: ProjectExportMetadata): string {
   const source = textValue(metadata.filename) || textValue(metadata.title);
   const stem = source
     .normalize('NFKD')

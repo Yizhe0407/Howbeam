@@ -71,14 +71,22 @@ describe('active locale', () => {
     expect(messagesFor('en').common.startRecording).toBe('Start recording');
   });
 
-  it("resolves 'auto' against the browser language when copy is produced, not once at load", () => {
-    // A long-lived service worker must not keep whatever language it saw first.
+  it("resolves 'auto' once, and again when the browser reports a language change", () => {
     const getUILanguage = vi.fn(() => 'zh-TW');
+    const languageListeners: (() => void)[] = [];
     vi.stubGlobal('chrome', { i18n: { getUILanguage } });
+    vi.stubGlobal('addEventListener', (type: string, listener: () => void) => {
+      if (type === 'languagechange') languageListeners.push(listener);
+    });
     try {
       applyLocalePreference('auto');
       expect(getLocale()).toBe('zh-TW');
+      t();
+      t();
+      expect(getUILanguage).toHaveBeenCalledTimes(1);
+
       getUILanguage.mockReturnValue('en-US');
+      for (const listener of languageListeners) listener();
       expect(getLocale()).toBe('en');
       expect(t().common.startRecording).toBe('Start recording');
       // A fixed choice still wins over the browser language.

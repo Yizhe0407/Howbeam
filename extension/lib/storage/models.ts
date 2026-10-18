@@ -110,6 +110,8 @@ export interface Project {
   updatedAt: number;
   /** Monotonic project-content generation. Metadata-only edits do not change it. */
   contentRevision: number;
+  /** Monotonic generation of title, description and tags. */
+  metadataRevision: number;
   /** Denormalized summary fields kept transactionally in sync with `steps`. */
   stepCount: number;
   entryCount: number;
@@ -288,6 +290,7 @@ export function sanitizeProject(project: Project): Project {
     createdAt,
     updatedAt,
     contentRevision: nonNegativeInteger(project.contentRevision),
+    metadataRevision: nonNegativeInteger(project.metadataRevision),
     stepCount: nonNegativeInteger(project.stepCount),
     entryCount: nonNegativeInteger(project.entryCount),
     storageBytes: nonNegativeInteger(project.storageBytes),

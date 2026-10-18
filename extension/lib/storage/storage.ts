@@ -234,6 +234,8 @@ export function normalizeRecordingState(stored: Partial<RecordingState> | undefi
       (raw.itemCount as number) <= PERSISTED_STEP_LIMITS.maxStepsPerProject
         ? raw.itemCount as number
         : 0,
+    lastCommittedCaptureId:
+      operation === 'recording' ? normalizeNullableString(raw.lastCommittedCaptureId, MAX_STATE_ID_LENGTH) : null,
     numbered: typeof raw.numbered === 'boolean' ? raw.numbered : DEFAULT_STATE.numbered,
     groupAnchorId:
       operation === 'recording' && mode === 'snapshot'

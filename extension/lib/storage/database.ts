@@ -1,5 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from 'idb';
 import { notifyProjectsChanged } from './change-notifier';
+import { conformStepToStoredTextRule } from './stored-text-migration';
 import {
   STEP_STORAGE_LIMITS,
   isDefaultProjectTitle,
@@ -128,6 +129,7 @@ export function newProject(
     createdAt: now,
     updatedAt: now,
     contentRevision,
+    metadataRevision: 0,
     ...summary,
   });
 }
@@ -201,17 +203,30 @@ async function abortTransaction(tx: ProjectStepsTransaction, error: unknown): Pr
   throw error;
 }
 
+/** 2: step text rewritten to the stored-text rule. */
+export const DATABASE_VERSION = 2;
+
 let databasePromise: Promise<IDBPDatabase<StepmarkDB>> | undefined;
 let databaseConnection: IDBPDatabase<StepmarkDB> | undefined;
 
 function getDatabase(): Promise<IDBPDatabase<StepmarkDB>> {
   if (databasePromise) return databasePromise;
-  databasePromise = openDB<StepmarkDB>('stepmark', 1, {
-    upgrade(db) {
-      const steps = db.createObjectStore('steps', { keyPath: 'id' });
-      steps.createIndex('by-session', 'sessionId');
-      const projects = db.createObjectStore('projects', { keyPath: 'id' });
-      projects.createIndex('by-updated-at', 'updatedAt');
+  databasePromise = openDB<StepmarkDB>('stepmark', DATABASE_VERSION, {
+    async upgrade(db, oldVersion, _newVersion, transaction) {
+      if (oldVersion < 1) {
+        const steps = db.createObjectStore('steps', { keyPath: 'id' });
+        steps.createIndex('by-session', 'sessionId');
+        const projects = db.createObjectStore('projects', { keyPath: 'id' });
+        projects.createIndex('by-updated-at', 'updatedAt');
+      }
+      if (oldVersion >= 1 && oldVersion < 2) {
+        let cursor = await transaction.objectStore('steps').openCursor();
+        while (cursor) {
+          const conformed = conformStepToStoredTextRule(cursor.value);
+          if (conformed) await cursor.update(conformed);
+          cursor = await cursor.continue();
+        }
+      }
     },
     blocked(currentVersion, blockedVersion) {
       console.warn(`Stepmark database upgrade to ${blockedVersion ?? 'unknown'} is blocked by version ${currentVersion}.`);

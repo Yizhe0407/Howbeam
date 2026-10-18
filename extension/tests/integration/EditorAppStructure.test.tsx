@@ -193,6 +193,7 @@ const project = {
   createdAt: 1,
   updatedAt: 2,
   contentRevision: 7,
+  metadataRevision: 3,
 };
 
 const emptyEntries: any[] = [];
@@ -412,14 +413,14 @@ describe('Editor App and changes from other tabs', () => {
     render(<EditorApp />);
     await waitFor(() => expect(rendered.stepStageProps?.projectTitle).toBe('結構測試教學'));
 
-    database.getProject.mockResolvedValue({ ...project, title: '別的分頁改的標題', contentRevision: 99 });
+    database.getProject.mockResolvedValue({ ...project, title: '別的分頁改的標題', contentRevision: 99, metadataRevision: project.metadataRevision + 1 });
     notifyProjectsChanged();
 
     await waitFor(() => expect(rendered.stepStageProps.projectTitle).toBe('別的分頁改的標題'));
   });
 
   it('sends tag edits as single add/remove operations', async () => {
-    database.updateProject.mockResolvedValue({ ...project, tags: ['新標籤'], contentRevision: 8 });
+    database.updateProject.mockResolvedValue({ ...project, tags: ['新標籤'], metadataRevision: 4 });
     render(<EditorApp />);
     await waitFor(() => expect(rendered.stepStageProps).not.toBeNull());
 
