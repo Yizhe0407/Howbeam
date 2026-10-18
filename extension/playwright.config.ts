@@ -6,8 +6,9 @@ const port = Number(process.env.E2E_PORT ?? 4175);
 export default defineConfig({
   testDir: './tests/e2e/specs',
   globalSetup: './tests/e2e/setup/global-setup.ts',
+  // Every test gets its own browser context and profile, so files run in parallel
+  // (Playwright's default: half the CPU cores); tests within a file stay in order.
   fullyParallel: false,
-  workers: 1,
   timeout: 45_000,
   expect: {
     timeout: 8_000,
