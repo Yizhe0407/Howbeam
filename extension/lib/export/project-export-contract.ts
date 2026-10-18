@@ -29,18 +29,19 @@ export interface ProjectMarkdownArchive {
 export const DEFAULT_TITLE = 'Stepmark Project';
 const DEFAULT_FILENAME = 'stepmark-project';
 export const IMAGE_MIME_TYPE = 'image/jpeg';
+/** The credit at the end of every document, in English whatever the interface language. */
+export const MADE_WITH = 'Made with Stepmark';
 
-/** HTML 螢幕與 PDF 共用主題；HTML 列印仍使用省墨配色。 */
+/** Shared by the HTML and PDF documents: black, white and greys only, so the
+ * screenshots' red highlights are the one colour on the page. */
 export const PROJECT_EXPORT_THEME = Object.freeze({
-  text: '#1d2129',
-  secondaryText: '#454d59',
-  mutedText: '#6d7585',
-  accent: '#3e63c4',
-  rule: '#e2e5ea',
-  /** Frame around exported screenshots in both documents. Deliberately the
-   * PDF's slightly darker #d6dae1 rather than `rule`: an image edge must read
-   * against near-white screenshot content, where the hairline value washes out. */
-  imageBorder: '#d6dae1',
+  text: '#1a1a1a',
+  secondaryText: '#404040',
+  mutedText: '#6b6b6b',
+  rule: '#d4d4d4',
+  /** Frame around exported screenshots. A touch darker than `rule`: an image
+   * edge must read against near-white screenshot content. */
+  imageBorder: '#cfcfcf',
   /** CJK-capable system font stack shared by HTML text and PDF canvas rasterization. */
   fontFamily:
     '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Helvetica Neue", Arial, sans-serif',

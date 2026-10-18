@@ -20,31 +20,6 @@ export function segmentPdfText(text: string, granularity: 'word' | 'grapheme'): 
   return Array.from(text);
 }
 
-/**
- * Distance from a text line's top edge (textBaseline 'top') down to its
- * optical middle, used to center the step badge on the first title line. Uses
- * the measured glyph bounding box when the canvas reports one; otherwise it
- * approximates the cap-height middle — baseline (≈0.8em below the top) minus
- * half a cap height (≈0.7em), i.e. 0.45em — which also suits CJK squares.
- */
-/** A full-height CJK square, measured in place of a whitespace-only line. It
- * is a typographic probe, never shown, so it is not UI copy to translate. */
-// eslint-disable-next-line no-restricted-syntax -- measurement glyph, not copy
-const FULL_HEIGHT_PROBE_GLYPH = '中';
-
-export function pdfLineMiddleOffset(context: PdfTextMeasureContext, line: string, fontSize: number): number {
-  // Whitespace-only lines have an empty bounding box; measure a representative
-  // full-height glyph instead so the badge still lands on the text band.
-  const metrics = context.measureText(line.trim() || FULL_HEIGHT_PROBE_GLYPH);
-  // With textBaseline 'top' both values are measured from the line's top edge:
-  // the glyph box spans [-ascent, +descent] below it.
-  const { actualBoundingBoxAscent: ascent, actualBoundingBoxDescent: descent } = metrics;
-  if (Number.isFinite(ascent) && Number.isFinite(descent) && descent - ascent > 0) {
-    return (descent - ascent) / 2;
-  }
-  return fontSize * 0.45;
-}
-
 /** Shortens footer text with an ellipsis, never splitting a grapheme cluster. */
 export function truncatePdfText(context: PdfTextMeasureContext, text: string, maxWidth: number): string {
   if (context.measureText(text).width <= maxWidth) return text;

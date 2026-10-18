@@ -212,7 +212,10 @@ describe('project export', () => {
     expect(drawnText).toContain('First annotation');
     expect(drawnText).toContain('共 1 個步驟');
     expect(drawnText).toContain('第 1 頁');
-    expect(drawnText).toContain('1');
+    // The step number is printed, not drawn in a badge.
+    expect(drawnText).toContain('1.');
+    // The credit is the last content line, before the footer's title and page number.
+    expect(drawnText.slice(-3)).toEqual(['Made with Stepmark', 'PDF project', '第 1 頁']);
     expect(drawnText).not.toContain('Source');
     expect(drawnText).not.toContain('Step');
     expect(drawnText).not.toContain('Annotations');
@@ -331,7 +334,7 @@ describe('project export', () => {
     expect(html).toContain('src="data:image/jpeg;base64,YW5ub3RhdGVk"');
     expect(html).toContain('http-equiv="Content-Security-Policy"');
     expect(html).toContain("default-src 'none'; img-src data:");
-    expect(html.match(/<header class="project-header">/g)).toHaveLength(1);
+    expect(html.match(/<header class="document-header">/g)).toHaveLength(1);
     expect(html.match(/<\/header>/g)).toHaveLength(1);
     expect(html).not.toContain('<svg onload=alert(1)>');
     expect(html).not.toContain('<img src=x onerror=alert(1)>');
@@ -367,8 +370,8 @@ describe('project export', () => {
   it('lets long unbreakable strings wrap in the HTML export', async () => {
     const html = await generateProjectHtml([entry({ description: 'x'.repeat(5_000) })], { title: 'y'.repeat(5_000) });
 
-    expect(html).toMatch(/h1, h2, h3, p, li \{ overflow-wrap: anywhere; \}/);
-    expect(html).toMatch(/\.step-title \{\s*min-width: 0;/);
+    expect(html).toMatch(/h1, h2, h3, p, li \{ margin: 0; overflow-wrap: anywhere; \}/);
+    expect(html).toMatch(/\.step-title \{ display: grid; grid-template-columns: 2\.2em minmax\(0, 1fr\);/);
   });
 
   it('builds the HTML as Blob parts so no document-sized string is ever assembled', async () => {
@@ -431,7 +434,7 @@ describe('project export', () => {
     const html = await generateProjectHtml([groupEntry()], { title: 'Project' });
 
     const image = html.indexOf('<figure>');
-    const annotations = html.indexOf('<div class="annotation-list">');
+    const annotations = html.indexOf('<ol class="annotations">');
     expect(image).toBeGreaterThan(-1);
     expect(image).toBeLessThan(annotations);
     expect(html.indexOf('First annotation')).toBeLessThan(html.indexOf('Second annotation'));
@@ -444,17 +447,22 @@ describe('project export', () => {
     expect(html).not.toContain('Step 1');
   });
 
-  it('renders a numbered badge and description heading above each HTML screenshot', async () => {
+  it('prints the step number and description as one heading above each HTML screenshot', async () => {
     const html = await generateProjectHtml([entry(), groupEntry()], { title: 'Project' });
 
-    const firstBadge = html.indexOf('<span class="step-number" aria-hidden="true">1</span>');
-    const firstTitle = html.indexOf('<h3 class="step-title">Open settings</h3>');
+    const firstHeading = html.indexOf('<h3 class="step-title"><span class="step-number">1.</span><span>Open settings</span></h3>');
     const firstImage = html.indexOf('<figure>');
-    expect(firstBadge).toBeGreaterThan(-1);
-    expect(firstBadge).toBeLessThan(firstTitle);
-    expect(firstTitle).toBeLessThan(firstImage);
-    expect(html).toContain('<span class="step-number" aria-hidden="true">2</span>');
-    expect(html).toContain('<h3 class="step-title">Shared page</h3>');
+    expect(firstHeading).toBeGreaterThan(-1);
+    expect(firstHeading).toBeLessThan(firstImage);
+    expect(html).toContain('<h3 class="step-title"><span class="step-number">2.</span><span>Shared page</span></h3>');
+  });
+
+  it('ends the HTML with a centred English credit whatever the interface language', async () => {
+    const html = await generateProjectHtml([entry()], { title: 'Project' });
+
+    expect(html).toContain('<footer class="document-end">Made with Stepmark</footer>\n</main>');
+    expect(html).toMatch(/\.document-end \{[^}]*text-align: center;/);
+    expect(html).not.toContain('以 Stepmark 製作');
   });
 
   it('renders a title-block metadata line with the step count and optional creation date', async () => {

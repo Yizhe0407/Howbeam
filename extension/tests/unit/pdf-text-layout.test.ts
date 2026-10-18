@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  pdfLineMiddleOffset,
   segmentPdfText,
   truncatePdfText,
   wrapPdfText,
@@ -11,18 +10,6 @@ import {
 function measureContext(): PdfTextMeasureContext {
   return {
     measureText: (text: string) => ({ width: Array.from(text).length * 14 }) as TextMetrics,
-  };
-}
-
-/** Context that also reports a glyph bounding box, for the metrics branch. */
-function measureContextWithBox(ascent: number, descent: number): PdfTextMeasureContext {
-  return {
-    measureText: (text: string) =>
-      ({
-        width: Array.from(text).length * 14,
-        actualBoundingBoxAscent: ascent,
-        actualBoundingBoxDescent: descent,
-      }) as TextMetrics,
   };
 }
 
@@ -83,30 +70,6 @@ describe('truncatePdfText', () => {
     // the whole cluster is dropped rather than split.
     const result = truncatePdfText(measureContext(), `ab${family}cdef`, 6 * 14);
     expect(result).toBe('ab…');
-  });
-});
-
-describe('pdfLineMiddleOffset', () => {
-  it('uses the measured glyph bounding box when available', () => {
-    // With textBaseline 'top': box spans [-ascent, +descent] below the top
-    // edge, so the optical middle is (descent - ascent) / 2.
-    expect(pdfLineMiddleOffset(measureContextWithBox(-8, 34), 'Title', 30)).toBe(21);
-  });
-
-  it('falls back to the 0.45em cap-height approximation without box metrics', () => {
-    expect(pdfLineMiddleOffset(measureContext(), 'Title', 30)).toBe(13.5);
-  });
-
-  it('measures a representative full-height glyph for whitespace-only lines', () => {
-    const measured: string[] = [];
-    const context: PdfTextMeasureContext = {
-      measureText: (text: string) => {
-        measured.push(text);
-        return { width: 0 } as TextMetrics;
-      },
-    };
-    expect(pdfLineMiddleOffset(context, '   ', 30)).toBe(13.5);
-    expect(measured).toEqual(['中']);
   });
 });
 

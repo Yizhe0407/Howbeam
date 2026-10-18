@@ -698,7 +698,6 @@ export const zhTW = {
     imageAlt: '步驟截圖',
     stepCount: (count: number) => `共 ${count} 個步驟`,
     createdAt: (date: string) => `建立於 ${date}`,
-    section: '章節',
     pageNumber: (page: number) => `第 ${page} 頁`,
     downloadNotStarted: '瀏覽器沒有開始下載，請再試一次。',
   },

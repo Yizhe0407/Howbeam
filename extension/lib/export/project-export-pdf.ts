@@ -2,6 +2,7 @@ import { throwIfAborted } from '../shared/abort';
 import { type StepEntry } from '../storage/models';
 import {
   DEFAULT_TITLE,
+  MADE_WITH,
   PROJECT_EXPORT_LIMITS,
   PROJECT_EXPORT_THEME,
   ProjectExportLimitError,
@@ -14,7 +15,7 @@ import {
   type ProjectExportOptions,
 } from './project-export-contract';
 import { renderEntryImages } from './project-export-render';
-import { pdfLineMiddleOffset, truncatePdfText, wrapPdfText } from './pdf-text-layout';
+import { truncatePdfText, wrapPdfText } from './pdf-text-layout';
 import { t } from '@/lib/shared/i18n';
 
 /**
@@ -65,7 +66,6 @@ export async function generateProjectPdf(
     }
   }, title, signal);
 
-  await paginator.addRule(0, PDF_KICKER_GAP_AFTER, PDF_KICKER_THICKNESS, PDF_COLOR_ACCENT, PDF_KICKER_WIDTH);
   await paginator.addParagraph(title, PDF_TITLE_TEXT);
   const projectDescription = textValue(metadata.description);
   if (projectDescription) await paginator.addParagraph(projectDescription, PDF_PROJECT_DESCRIPTION_TEXT);
@@ -73,14 +73,17 @@ export async function generateProjectPdf(
   const createdAt = formatProjectCreatedAt(metadata.createdAt);
   if (createdAt) metaParts.push(t().export.createdAt(createdAt));
   await paginator.addParagraph(metaParts.join(' · '), PDF_META_TEXT);
-  await paginator.addRule(0, PDF_HEADER_RULE_GAP_AFTER, PDF_HEADER_RULE_THICKNESS, PDF_COLOR_RULE);
+  await paginator.addRule(0, PDF_HEADER_RULE_GAP_AFTER, PDF_HEADER_RULE_THICKNESS, PDF_COLOR_TEXT);
 
   const sections = sectionsByStartEntry(metadata.sections, entries);
   let renderedCount = 0;
   for await (const rendered of renderEntryImages(entries, signal)) {
     if (renderedCount > 0) await paginator.startNewPage();
     const section = sections.get(rendered.content.entryId);
-    if (section) await paginator.addParagraph(section.title, PDF_SECTION_TEXT);
+    if (section) {
+      await paginator.addParagraph(section.title, PDF_SECTION_TEXT);
+      await paginator.addRule(0, PDF_SECTION_RULE_GAP_AFTER, PDF_SECTION_RULE_THICKNESS, PDF_COLOR_RULE);
+    }
     await paginator.addStepHeading(
       rendered.content.ordinal,
       textOrDefault(rendered.content.description, t().export.missingDescription),
@@ -92,6 +95,8 @@ export async function generateProjectPdf(
     }
     renderedCount += 1;
   }
+  await paginator.addRule(PDF_END_GAP_BEFORE, PDF_END_RULE_GAP_AFTER, PDF_SECTION_RULE_THICKNESS, PDF_COLOR_RULE);
+  await paginator.addCenteredLine(MADE_WITH, PDF_END_TEXT);
   await paginator.finish();
   throwIfAborted(signal);
 
@@ -131,14 +136,16 @@ const PDF_CONTENT_WIDTH = PDF_PAGE_WIDTH - PDF_MARGIN * 2;
 const PDF_CONTENT_BOTTOM = PDF_PAGE_HEIGHT - 150;
 const PDF_FOOTER_RULE_Y = PDF_PAGE_HEIGHT - 112;
 const PDF_FOOTER_TEXT_Y = PDF_PAGE_HEIGHT - 92;
-const PDF_STEP_BADGE_SIZE = 56;
-const PDF_STEP_BADGE_GAP = 24;
-const PDF_STEP_BADGE_FONT_SIZE = 26;
-const PDF_KICKER_WIDTH = 120;
-const PDF_KICKER_THICKNESS = 8;
-const PDF_KICKER_GAP_AFTER = 26;
-const PDF_HEADER_RULE_THICKNESS = 2;
+/** Hanging indent for a step: its printed number sits left of it, and the
+ * title, screenshot and annotations all start at the same edge. */
+const PDF_STEP_INDENT = 66;
+const PDF_STEP_CONTENT_WIDTH = PDF_CONTENT_WIDTH - PDF_STEP_INDENT;
+const PDF_HEADER_RULE_THICKNESS = 4;
 const PDF_HEADER_RULE_GAP_AFTER = 34;
+const PDF_SECTION_RULE_THICKNESS = 2;
+const PDF_SECTION_RULE_GAP_AFTER = 28;
+const PDF_END_GAP_BEFORE = 40;
+const PDF_END_RULE_GAP_AFTER = 18;
 const PDF_IMAGE_MIN_SPACE = 360;
 const PDF_IMAGE_MIN_HEIGHT = 320;
 const PDF_IMAGE_MAX_HEIGHT = 1_040;
@@ -153,7 +160,6 @@ const PDF_FONT_FAMILY = PROJECT_EXPORT_THEME.fontFamily;
 const PDF_COLOR_TEXT = PROJECT_EXPORT_THEME.text;
 const PDF_COLOR_SECONDARY = PROJECT_EXPORT_THEME.secondaryText;
 const PDF_COLOR_MUTED = PROJECT_EXPORT_THEME.mutedText;
-const PDF_COLOR_ACCENT = PROJECT_EXPORT_THEME.accent;
 const PDF_COLOR_RULE = PROJECT_EXPORT_THEME.rule;
 const PDF_COLOR_IMAGE_BORDER = PROJECT_EXPORT_THEME.imageBorder;
 
@@ -193,10 +199,10 @@ const PDF_META_TEXT: PdfTextStyle = {
 const PDF_SECTION_TEXT: PdfTextStyle = {
   fontSize: 36,
   lineHeight: 56,
-  color: PDF_COLOR_ACCENT,
+  color: PDF_COLOR_TEXT,
   weight: 700,
   gapBefore: 0,
-  gapAfter: 20,
+  gapAfter: 10,
 };
 const PDF_STEP_TITLE_TEXT: PdfTextStyle = {
   fontSize: 30,
@@ -205,6 +211,14 @@ const PDF_STEP_TITLE_TEXT: PdfTextStyle = {
   weight: 650,
   gapBefore: 0,
   gapAfter: 22,
+};
+const PDF_END_TEXT: PdfTextStyle = {
+  fontSize: 22,
+  lineHeight: 34,
+  color: PDF_COLOR_MUTED,
+  weight: 400,
+  gapBefore: 0,
+  gapAfter: 0,
 };
 const PDF_LIST_TEXT: PdfTextStyle = {
   fontSize: 28,
@@ -275,41 +289,35 @@ class ProjectPdfPaginator {
     this.cursorY += style.gapAfter;
   }
 
-  /**
-   * Step heading in the Scribe/Tango convention: a filled circular badge with
-   * the step number, and the step description as a bold title beside it. The
-   * badge is centered on the FIRST title line's optical middle (multi-line
-   * titles keep it anchored there), and the first line drops just far enough
-   * that the badge never rises above the heading's top edge.
-   */
+  /** Step heading: the printed number in the hanging column, the bold title beside it. */
   async addStepHeading(ordinal: number, text: string): Promise<void> {
     const style = PDF_STEP_TITLE_TEXT;
     this.applyTextStyle(style);
-    const indent = PDF_STEP_BADGE_SIZE + PDF_STEP_BADGE_GAP;
-    const lines = wrapPdfText(this.context, text, PDF_CONTENT_WIDTH - indent, this.signal);
-    const middleOffset = pdfLineMiddleOffset(this.context, lines[0], style.fontSize);
-    const badgeRadius = PDF_STEP_BADGE_SIZE / 2;
-    const firstLineDrop = Math.max(0, badgeRadius - middleOffset);
+    const lines = wrapPdfText(this.context, text, PDF_STEP_CONTENT_WIDTH, this.signal);
     let pendingGap = style.gapBefore;
-    let isFirstLine = true;
 
-    for (const line of lines) {
-      const drop = isFirstLine ? firstLineDrop : 0;
-      const badgeBottom = isFirstLine ? middleOffset + badgeRadius : 0;
-      await this.ensureSpace(pendingGap + drop + Math.max(style.lineHeight, badgeBottom));
+    for (const [index, line] of lines.entries()) {
+      await this.ensureSpace(pendingGap + style.lineHeight);
       this.applyTextStyle(style);
-      this.cursorY += pendingGap + drop;
-      if (isFirstLine) {
-        this.drawStepBadge(ordinal, this.cursorY + middleOffset);
-        this.applyTextStyle(style);
-        isFirstLine = false;
-      }
-      this.context.fillText(line, PDF_MARGIN + indent, this.cursorY);
+      this.cursorY += pendingGap;
+      if (index === 0) this.context.fillText(`${ordinal}.`, PDF_MARGIN, this.cursorY);
+      this.context.fillText(line, PDF_MARGIN + PDF_STEP_INDENT, this.cursorY);
       this.cursorY += style.lineHeight;
       this.hasContent = true;
       pendingGap = 0;
     }
     this.cursorY += style.gapAfter;
+  }
+
+  async addCenteredLine(text: string, style: PdfTextStyle): Promise<void> {
+    await this.ensureSpace(style.gapBefore + style.lineHeight);
+    this.applyTextStyle(style);
+    this.cursorY += style.gapBefore;
+    this.context.textAlign = 'center';
+    this.context.fillText(truncatePdfText(this.context, text, PDF_CONTENT_WIDTH), PDF_PAGE_WIDTH / 2, this.cursorY);
+    this.context.textAlign = 'left';
+    this.cursorY += style.lineHeight + style.gapAfter;
+    this.hasContent = true;
   }
 
   async addNumberedParagraph(number: number, text: string): Promise<void> {
@@ -320,7 +328,7 @@ class ProjectPdfPaginator {
     const lines = wrapPdfText(
       this.context,
       textOrDefault(text, t().export.missingDescription),
-      PDF_CONTENT_WIDTH - prefixWidth,
+      PDF_STEP_CONTENT_WIDTH - prefixWidth,
       this.signal,
     );
     let pendingGap = style.gapBefore;
@@ -329,8 +337,8 @@ class ProjectPdfPaginator {
       await this.ensureSpace(pendingGap + style.lineHeight);
       this.applyTextStyle(style);
       this.cursorY += pendingGap;
-      if (index === 0) this.context.fillText(prefix, PDF_MARGIN, this.cursorY);
-      this.context.fillText(line, PDF_MARGIN + prefixWidth, this.cursorY);
+      if (index === 0) this.context.fillText(prefix, PDF_MARGIN + PDF_STEP_INDENT, this.cursorY);
+      this.context.fillText(line, PDF_MARGIN + PDF_STEP_INDENT + prefixWidth, this.cursorY);
       this.cursorY += style.lineHeight;
       this.hasContent = true;
       pendingGap = 0;
@@ -338,18 +346,17 @@ class ProjectPdfPaginator {
     this.cursorY += style.gapAfter;
   }
 
-  /** Draws a horizontal rule; the accent variant doubles as the title kicker. */
+  /** Draws a full-width horizontal rule. */
   async addRule(
     gapBefore: number,
     gapAfter: number,
     thickness: number,
     color: string,
-    width: number = PDF_CONTENT_WIDTH,
   ): Promise<void> {
     await this.ensureSpace(gapBefore + thickness);
     this.cursorY += gapBefore;
     this.context.fillStyle = color;
-    this.context.fillRect(PDF_MARGIN, this.cursorY, width, thickness);
+    this.context.fillRect(PDF_MARGIN, this.cursorY, PDF_CONTENT_WIDTH, thickness);
     this.cursorY += thickness + gapAfter;
     this.hasContent = true;
   }
@@ -367,13 +374,13 @@ class ProjectPdfPaginator {
         PDF_CONTENT_BOTTOM - this.cursorY - PDF_IMAGE_BOTTOM_CLEARANCE,
       );
       const scale = Math.min(
-        PDF_CONTENT_WIDTH / Math.max(1, bitmap.width),
+        PDF_STEP_CONTENT_WIDTH / Math.max(1, bitmap.width),
         Math.min(PDF_IMAGE_MAX_HEIGHT, availableHeight) / Math.max(1, bitmap.height),
         1,
       );
       const width = Math.max(1, bitmap.width * scale);
       const height = Math.max(1, bitmap.height * scale);
-      const x = PDF_MARGIN + (PDF_CONTENT_WIDTH - width) / 2;
+      const x = PDF_MARGIN + PDF_STEP_INDENT;
       const y = this.cursorY;
       const embeddable = await this.prepareScreenshot(imageBytes, bitmap, width, height);
       if (embeddable) {
@@ -455,24 +462,6 @@ class ProjectPdfPaginator {
     this.context.fillStyle = style.color;
     this.context.textBaseline = 'top';
     this.context.textAlign = 'left';
-  }
-
-  /** Filled circular numbered badge whose vertical center sits on centerY. */
-  private drawStepBadge(ordinal: number, centerY: number): void {
-    const radius = PDF_STEP_BADGE_SIZE / 2;
-    const centerX = PDF_MARGIN + radius;
-    const context = this.context;
-    context.beginPath();
-    context.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    context.fillStyle = PDF_COLOR_ACCENT;
-    context.fill();
-    context.font = `700 ${PDF_STEP_BADGE_FONT_SIZE}px ${PDF_FONT_FAMILY}`;
-    context.fillStyle = '#ffffff';
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillText(String(ordinal), centerX, centerY);
-    context.textAlign = 'left';
-    context.textBaseline = 'top';
   }
 
   /** Running footer: hairline, project title on the left, page number right. */

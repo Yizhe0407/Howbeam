@@ -125,8 +125,8 @@ describe('generateProjectPdf with the real pdf-lib', () => {
     expect(mocks.composite).toHaveBeenCalledTimes(entries.length);
 
     // Layout invariants: every page carries a running footer with the project
-    // title and a zh-Hant page number, each step draws its numbered badge, and
-    // each screenshot is framed with a border.
+    // title and a zh-Hant page number, each step prints its number, each
+    // screenshot is framed with a border, and the document ends with the credit.
     const drawnText = canvasContext.fillText.mock.calls.map(([text]) => String(text));
     expect(drawnText).toContain('第 1 頁');
     expect(drawnText).toContain('第 2 頁');
@@ -134,8 +134,9 @@ describe('generateProjectPdf with the real pdf-lib', () => {
     expect(drawnText).not.toContain('第 4 頁');
     expect(drawnText.filter((text) => text.includes('安裝指南 Setup Project 🚀')).length)
       .toBeGreaterThanOrEqual(entries.length);
-    expect(canvasContext.arc).toHaveBeenCalledTimes(entries.length);
+    expect(canvasContext.arc).not.toHaveBeenCalled();
     expect(canvasContext.strokeRect).toHaveBeenCalledTimes(entries.length);
+    expect(drawnText).toContain('Made with Stepmark');
 
     // Hybrid embedding: each page has its rasterized background JPEG plus the
     // screenshot embedded as its own full-resolution JPEG (two DCT streams per
@@ -146,19 +147,13 @@ describe('generateProjectPdf with the real pdf-lib', () => {
     }
     expect(jpegStreams).toBe(entries.length * 2);
 
-    // Cap-height fallback (stub measureText reports no glyph bbox): the badge
-    // center sits fontSize * 0.45 = 13.5px below the title line's top edge,
-    // and the numeral is drawn exactly at the badge center.
-    const titleLineYs = canvasContext.fillText.mock.calls
-      .filter(([, x]) => x === 164) // margin 84 + badge 56 + gap 24
-      .map(([, , y]) => Number(y));
-    const badges = canvasContext.arc.mock.calls;
-    expect(badges).toHaveLength(entries.length);
-    for (const [centerX, centerY, radius] of badges) {
-      expect(centerX).toBe(112); // margin 84 + badge radius 28
-      expect(radius).toBe(28);
-      expect(titleLineYs).toContain(Number(centerY) - 13.5);
-      expect(canvasContext.fillText).toHaveBeenCalledWith(expect.any(String), centerX, centerY);
+    // Each number sits at the margin and its title starts at the hanging
+    // indent on the same line (margin 84 + indent 66).
+    const calls = canvasContext.fillText.mock.calls;
+    for (const ordinal of [1, 2, 3]) {
+      const number = calls.find(([text, x]) => text === `${ordinal}.` && x === 84);
+      expect(number).toBeDefined();
+      expect(calls.some(([, x, y]) => x === 150 && y === number![2])).toBe(true);
     }
   });
 
@@ -196,7 +191,8 @@ describe('generateProjectPdf with the real pdf-lib', () => {
     expect(drawnText).toContain('2. ');
     expect(drawnText).toContain('點擊登入按鈕');
     expect(drawnText).toContain('輸入電子郵件');
-    // Both entries still draw a numbered step badge for their own heading.
-    expect(canvasContext.arc).toHaveBeenCalledTimes(entries.length);
+    // Both entries print their own step number.
+    expect(drawnText).toContain('1.');
+    expect(drawnText).toContain('2.');
   });
 });

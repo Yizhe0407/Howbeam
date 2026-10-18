@@ -4,6 +4,7 @@ import { type StepEntry } from '../storage/models';
 import {
   DEFAULT_TITLE,
   IMAGE_MIME_TYPE,
+  MADE_WITH,
   PROJECT_EXPORT_THEME,
   escapeProjectHtml,
   formatProjectCreatedAt,
@@ -43,10 +44,9 @@ export async function generateProjectHtml(
   const createdAt = formatProjectCreatedAt(metadata.createdAt);
   if (createdAt) metaParts.push(t().export.createdAt(createdAt));
   const header = [
-    `<p class="project-overline">Stepmark</p>`,
     `<h1>${escapeProjectHtml(title)}</h1>`,
-    description ? `<p class="project-description">${htmlText(description)}</p>` : '',
-    `<p class="project-meta">${metaParts.map((part) => `<span>${escapeProjectHtml(part)}</span>`).join('\n')}</p>`,
+    description ? `<p class="document-description">${htmlText(description)}</p>` : '',
+    `<p class="document-meta">${metaParts.map((part) => `<span>${escapeProjectHtml(part)}</span>`).join('')}</p>`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -64,12 +64,11 @@ export async function generateProjectHtml(
 ${BASE_STYLE}
 </style>
 </head>
-<body class="project-document">
-<main class="project">
-<header class="project-header">
+<body>
+<main class="document">
+<header class="document-header">
 ${header}
 </header>
-<div class="project-content">
 `;
 
   const sections = sectionsByStartEntry(metadata.sections, entries);
@@ -89,7 +88,7 @@ ${header}
   throwIfAborted(signal);
 
   parts.push(`${pending}
-</div>
+<footer class="document-end">${MADE_WITH}</footer>
 </main>
 </body>
 </html>
@@ -102,10 +101,7 @@ ${header}
 const IMAGE_SRC_TOKEN = '<image-src>';
 
 function renderHtmlSectionHeading(section: ProjectSection): string {
-  return `<section class="project-section-heading">
-<p class="project-section-label">${escapeProjectHtml(t().export.section)}</p>
-<h2>${htmlText(section.title)}</h2>
-</section>`;
+  return `<h2 class="section-heading">${htmlText(section.title)}</h2>`;
 }
 
 function renderHtmlEntry(entry: RenderedEntryContent, imageSrc: string): string {
@@ -114,14 +110,9 @@ function renderHtmlEntry(entry: RenderedEntryContent, imageSrc: string): string 
   const annotations = entry.annotations.length > 0 ? renderHtmlAnnotations(entry) : '';
 
   return [
-    `<section class="project-step">`,
-    `<div class="step-heading">`,
-    `<span class="step-number" aria-hidden="true">${entry.ordinal}</span>`,
-    `<h3 class="step-title">${heading}</h3>`,
-    `</div>`,
-    `<figure>`,
-    `<img src="${imageSrc}" alt="${alt}">`,
-    `</figure>`,
+    `<section class="step">`,
+    `<h3 class="step-title"><span class="step-number">${entry.ordinal}.</span><span>${heading}</span></h3>`,
+    `<figure><img src="${imageSrc}" alt="${alt}"></figure>`,
     annotations,
     `</section>`,
   ]
@@ -133,234 +124,96 @@ function renderHtmlAnnotations(entry: RenderedEntryContent): string {
   const items = entry.annotations
     .map((annotation) => `<li>${htmlText(textOrDefault(annotation.description, t().export.missingDescription))}</li>`)
     .join('\n');
-  return `<div class="annotation-list">
-<ol>
+  return `<ol class="annotations">
 ${items}
-</ol>
-</div>`;
+</ol>`;
 }
 
 function htmlText(value: string): string {
   return escapeProjectHtml(value).replace(/\r\n?|\n/g, '<br>');
 }
 
-/**
- * Ink-friendly print palette. Deliberately separate from PROJECT_EXPORT_THEME:
- * near-black text and a darker accent keep contrast on paper, and hairlines
- * darken so they survive low-resolution printing.
- */
-const PRINT_TEXT = '#111111';
+/** Pure black on paper: screen greys wash out in print. */
+const PRINT_TEXT = '#000000';
 const PRINT_TEXT_SECONDARY = '#333333';
 const PRINT_TEXT_MUTED = '#555555';
-const PRINT_LINE = '#c8c8c8';
-const PRINT_LINE_SOFT = '#dcdcdc';
-const PRINT_ACCENT = '#2f4d9e';
+const PRINT_LINE = '#bdbdbd';
 
 /**
- * Document stylesheet for step projects: system font stack with CJK coverage,
- * >=1.7 body leading, a comfortable centered reading column, numbered step
- * cards, light/dark schemes, and an ink-friendly A4 print layout.
+ * A formal document: white paper, black text, one strong rule under the
+ * title, hairlines between sections, printed step numbers and a thin frame
+ * around each screenshot. The red highlights in the screenshots are the only
+ * colour. Follows the reader's dark scheme on screen and prints in black.
  */
 const BASE_STYLE = `
 :root {
-  color-scheme: light;
-  --canvas: #f5f6f8;
-  --surface: #ffffff;
-  --surface-muted: #f2f4f7;
+  color-scheme: light dark;
+  --paper: #ffffff;
   --text: ${PROJECT_EXPORT_THEME.text};
   --text-secondary: ${PROJECT_EXPORT_THEME.secondaryText};
   --text-muted: ${PROJECT_EXPORT_THEME.mutedText};
-  --line: ${PROJECT_EXPORT_THEME.rule};
-  --line-soft: #eceef2;
+  --rule-strong: ${PROJECT_EXPORT_THEME.text};
+  --rule: ${PROJECT_EXPORT_THEME.rule};
   --image-border: ${PROJECT_EXPORT_THEME.imageBorder};
-  --accent: ${PROJECT_EXPORT_THEME.accent};
-  --accent-contrast: #ffffff;
-  --card-shadow: 0 1px 2px rgb(23 26 31 / 0.04), 0 8px 24px rgb(23 26 31 / 0.05);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    color-scheme: dark;
-    --canvas: #111318;
-    --surface: #191c23;
-    --surface-muted: #20242d;
-    --text: #e7e9ee;
-    --text-secondary: #c3c8d2;
-    --text-muted: #8f97a6;
-    --line: #2b303b;
-    --line-soft: #252a33;
-    --image-border: #2b303b;
-    --accent: #7c9aea;
-    --accent-contrast: #10141d;
-    --card-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 28px rgb(0 0 0 / 0.3);
+    --paper: #17181a;
+    --text: #e8e8e8;
+    --text-secondary: #c4c4c4;
+    --text-muted: #9a9a9a;
+    --rule-strong: #e8e8e8;
+    --rule: #3a3b3e;
+    --image-border: #3a3b3e;
   }
 }
 * { box-sizing: border-box; }
-html { background: var(--canvas); }
+html, body { margin: 0; background: var(--paper); color: var(--text); }
 body {
-  margin: 0;
-  background: var(--canvas);
-  color: var(--text);
   font-family: ${PROJECT_EXPORT_THEME.fontFamily};
   font-size: 16px;
   line-height: 1.75;
   -webkit-font-smoothing: antialiased;
 }
-p { margin: 0; }
-h1, h2, h3, p, li { overflow-wrap: anywhere; }
-.project { width: min(100% - 40px, 760px); margin: 0 auto; padding: 48px 0 72px; }
-.project-header {
-  margin-bottom: 32px;
-  padding: 36px 40px 30px;
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-left: 4px solid var(--accent);
-  border-radius: 12px;
-  box-shadow: var(--card-shadow);
+h1, h2, h3, p, li { margin: 0; overflow-wrap: anywhere; }
+.document { width: min(100% - 32px, 760px); margin: 0 auto; padding: 56px 0 48px; }
+.document-header { padding-bottom: 20px; border-bottom: 2px solid var(--rule-strong); }
+h1 { font-size: 30px; line-height: 1.35; font-weight: 700; }
+.document-description { margin-top: 10px; color: var(--text-secondary); }
+.document-meta { margin-top: 14px; color: var(--text-muted); font-size: 14px; }
+.document-meta span + span::before { content: "・"; margin: 0 4px; }
+.section-heading { margin-top: 44px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); font-size: 21px; line-height: 1.45; font-weight: 700; }
+.step { margin-top: 32px; }
+.step-title { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); font-size: 17px; line-height: 1.7; font-weight: 600; }
+.step-number { font-variant-numeric: tabular-nums; }
+figure { margin: 14px 0 0 2.2em; }
+img { display: block; max-width: 100%; height: auto; border: 1px solid var(--image-border); }
+.annotations { margin: 12px 0 0 2.2em; padding-left: 1.4em; color: var(--text-secondary); }
+.annotations li + li { margin-top: 4px; }
+.document-end { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--rule); color: var(--text-muted); font-size: 13px; text-align: center; }
+@media (max-width: 560px) {
+  .document { padding-top: 28px; }
+  h1 { font-size: 25px; }
+  .step-title { grid-template-columns: 1.8em minmax(0, 1fr); }
+  figure, .annotations { margin-left: 0; }
 }
-.project-overline {
-  margin-bottom: 14px;
-  color: var(--accent);
-  font-size: .75rem;
-  font-weight: 700;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-}
-h1 {
-  margin: 0;
-  color: var(--text);
-  font-size: clamp(1.75rem, 4.5vw, 2.5rem);
-  line-height: 1.3;
-  letter-spacing: -.015em;
-  text-wrap: balance;
-}
-.project-description {
-  max-width: 70ch;
-  margin-top: 14px;
-  color: var(--text-secondary);
-  font-size: 1.0625rem;
-}
-.project-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 0;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line-soft);
-  color: var(--text-muted);
-  font-size: .875rem;
-}
-.project-meta span + span::before { content: "·"; margin: 0 10px; }
-.project-content { display: flow-root; }
-.project-section-heading { margin: 48px 0 20px; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
-.project-section-heading:first-child { margin-top: 8px; }
-.project-section-label {
-  margin-bottom: 4px;
-  color: var(--accent);
-  font-size: .72rem;
-  font-weight: 700;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-}
-.project-section-heading h2 { margin: 0; color: var(--text); font-size: 1.5rem; line-height: 1.4; }
-.project-step {
-  margin: 0 0 24px;
-  padding: 24px 28px 28px;
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  box-shadow: var(--card-shadow);
-}
-.step-heading { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
-.step-number {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  margin-top: 2px;
-  background: var(--accent);
-  border-radius: 999px;
-  color: var(--accent-contrast);
-  font-size: .9375rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-.step-title {
-  min-width: 0;
-  margin: 0;
-  max-width: 66ch;
-  color: var(--text);
-  font-size: 1.0625rem;
-  font-weight: 600;
-  line-height: 1.7;
-}
-figure { margin: 0; }
-img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  margin-inline: auto;
-  background: var(--surface-muted);
-  border: 1px solid var(--image-border);
-  border-radius: 10px;
-}
-.annotation-list {
-  margin-top: 18px;
-  padding: 14px 20px;
-  background: var(--surface-muted);
-  border-left: 3px solid var(--accent);
-  border-radius: 0 10px 10px 0;
-}
-.annotation-list ol { margin: 0; padding-left: 1.4rem; }
-.annotation-list li { max-width: 66ch; padding-left: .35rem; }
-.annotation-list li + li { margin-top: 8px; }
-@media (max-width: 640px) {
-  .project { width: min(100% - 24px, 760px); padding: 20px 0 48px; }
-  .project-header { padding: 24px 20px; }
-  .project-step { padding: 18px 16px 20px; }
-  .step-heading { gap: 10px; }
-}
-@page { size: A4; margin: 16mm; }
+@page { size: A4; margin: 18mm 16mm 20mm; }
 @media print {
   :root {
-    color-scheme: light;
-    --canvas: #ffffff;
-    --surface: #ffffff;
-    --surface-muted: #ffffff;
+    --paper: #ffffff;
     --text: ${PRINT_TEXT};
     --text-secondary: ${PRINT_TEXT_SECONDARY};
     --text-muted: ${PRINT_TEXT_MUTED};
-    --line: ${PRINT_LINE};
-    --line-soft: ${PRINT_LINE_SOFT};
+    --rule-strong: ${PRINT_TEXT};
+    --rule: ${PRINT_LINE};
     --image-border: ${PRINT_LINE};
-    --accent: ${PRINT_ACCENT};
-    --accent-contrast: #ffffff;
-    --card-shadow: none;
   }
-  html, body { background: #ffffff; }
-  body { font-size: 11pt; line-height: 1.7; }
-  .project { width: 100%; padding: 0; }
-  .project-header {
-    margin-bottom: 18pt;
-    padding: 0 0 12pt;
-    border: 0;
-    border-bottom: 2pt solid ${PRINT_TEXT};
-    border-radius: 0;
-  }
-  .project-section-heading { break-after: avoid; page-break-after: avoid; }
-  .project-step {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    margin-bottom: 14pt;
-    padding: 0 0 14pt;
-    border: 0;
-    border-bottom: 1pt solid var(--line-soft);
-    border-radius: 0;
-  }
-  .step-number { background: #ffffff; border: 1.5pt solid var(--accent); color: var(--accent); }
-  img { max-height: 150mm; border-radius: 4pt; }
-  .annotation-list { border: 1pt solid var(--line); border-left: 3pt solid var(--accent); border-radius: 0; }
+  body { font-size: 10.5pt; line-height: 1.7; }
+  .document { width: 100%; padding: 0; }
+  h1 { font-size: 20pt; }
+  .section-heading { font-size: 14pt; break-after: avoid; page-break-after: avoid; }
+  .step { break-inside: avoid; page-break-inside: avoid; }
+  .step-title { font-size: 11.5pt; }
+  img { max-height: 150mm; }
 }
 `;
