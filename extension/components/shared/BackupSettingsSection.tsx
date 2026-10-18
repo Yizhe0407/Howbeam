@@ -23,9 +23,12 @@ export default function BackupSettingsSection() {
   const { folderName, availability, lastRun } = backup;
   const enabled = folderName !== null;
 
-  const lastRunLabel = lastRun
-    ? copy.lastRun(new Date(lastRun.at).toLocaleString(intlLocale()), lastRun.written)
-    : copy.notYetRun;
+  const lastRunTime = lastRun ? new Date(lastRun.at).toLocaleString(intlLocale()) : '';
+  const lastRunLabel = !lastRun
+    ? copy.notYetRun
+    : lastRun.written === 0 && lastRun.failed === 0
+      ? copy.upToDate(lastRunTime)
+      : copy.lastRun(lastRunTime, lastRun.written);
 
   return (
     <section aria-labelledby="settings-backup" className="flex flex-col gap-4 rounded-md border-2 border-border bg-card p-5">

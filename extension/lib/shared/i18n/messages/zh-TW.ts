@@ -64,6 +64,7 @@ export const zhTW = {
       reauthorize: '重新授權',
       folder: (name: string) => `備份到：${name}`,
       lastRun: (time: string, written: number) => `上次備份：${time}（更新 ${written} 個專案）`,
+      upToDate: (time: string) => `上次檢查：${time}（全部已是最新）`,
       notYetRun: '尚未備份',
       needsPermission: '瀏覽器需要你重新允許存取這個資料夾，備份才會繼續。',
       paused: '自動備份已暫停：需要重新允許存取備份資料夾。',

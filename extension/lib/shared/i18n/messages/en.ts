@@ -61,6 +61,7 @@ export const en: Messages = {
       reauthorize: 'Allow again',
       folder: (name: string) => `Backing up to: ${name}`,
       lastRun: (time: string, written: number) => `Last backup: ${time} (${written} updated)`,
+      upToDate: (time: string) => `Last checked: ${time} (everything up to date)`,
       notYetRun: 'Not backed up yet',
       needsPermission: 'Your browser needs you to allow access to this folder again before backups continue.',
       paused: 'Automatic backup is paused: allow access to the backup folder again.',
