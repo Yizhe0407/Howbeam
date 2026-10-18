@@ -5,6 +5,7 @@ import { useRecordingSession } from '@/lib/recording/use-recording-session';
 import { useEditorProjectData } from '@/lib/editor/use-editor-project-data';
 import { EMPTY_STEP_ENTRIES } from '@/lib/editor/editor-app-model';
 import { entryId, type StepEntry } from '@/lib/storage/models';
+import { sectionOfEntry } from '@/lib/project/project-sections';
 import { updateProject, type ProjectMetadataChanges } from '@/lib/storage/project-repository';
 import { ProjectNotFoundError } from '@/lib/storage/database';
 import { type ProjectStructureSnapshot } from '@/lib/storage/project-structure';
@@ -111,6 +112,8 @@ function EditorApp() {
   });
 
   const [publishOpen, setPublishOpen] = useState(false);
+  /** The entry a new section is being named at; both the rail seam and the stage open it. */
+  const [newSectionAt, setNewSectionAt] = useState<string | null>(null);
   const {
     selectedEntry,
     selectedEntryId,
@@ -258,6 +261,7 @@ function EditorApp() {
     deleteEntry,
     handleDeleteAnnotation,
     setEntriesNumbered,
+    addSection,
     renameSection,
     deleteSection,
     handleUndo,
@@ -475,6 +479,13 @@ function EditorApp() {
               onSelect={selectEntrySafely}
               onRenameSection={renameSection}
               onDeleteSection={deleteSection}
+              newSectionAt={newSectionAt}
+              onStartSection={setNewSectionAt}
+              onAddSection={async (startEntryId, title) => {
+                await addSection(startEntryId, title);
+                setNewSectionAt(null);
+              }}
+              onCancelSection={() => setNewSectionAt(null)}
               onReorder={handleReorderEntries}
               onContinueRecording={(afterEntryId) => void handleContinueRecording(afterEntryId)}
               reorderDisabled={operationActive || editingLocked}
@@ -484,6 +495,12 @@ function EditorApp() {
                 key={entryId(selectedEntry)}
                 entry={selectedEntry}
                 index={selectedIndex}
+                sectionTitle={sectionOfEntry(project?.sections ?? [], entries, selectedIndex)?.title}
+                onStartSection={
+                  newSectionAt === null && !project?.sections.some((section) => section.startEntryId === entryId(selectedEntry))
+                    ? () => setNewSectionAt(entryId(selectedEntry))
+                    : undefined
+                }
                 projectTitle={project?.title}
                 projectTags={project?.tags}
                 onTitleChange={(title) => updateProjectMetadata({ title })}

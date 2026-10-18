@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useId, useRef, useState } from 'react';
+import { Ellipsis, Pencil, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { t } from '@/lib/shared/i18n';
 
 /** A parent-owned action that may complete synchronously or asynchronously. */
@@ -21,13 +21,113 @@ export interface ProjectSectionHeadingProps {
   onDelete: (sectionId: string) => MaybePromise;
 }
 
+export interface SectionTitleFormProps {
+  initialTitle?: string;
+  disabled?: boolean;
+  /** Resolves once the title is stored; a rejection keeps the field open (the owner reports it). */
+  onSubmit: (title: string) => MaybePromise;
+  onCancel: () => void;
+}
+
 const MAX_TITLE_LENGTH = 200;
 
 function normalizeTitle(value: string): string {
   return value.trim().slice(0, MAX_TITLE_LENGTH);
 }
 
-/** A callback-only section heading; the owner controls persistence, error reporting, and any confirmation UI. */
+/** The one field for naming a section, used both to add one and to rename one. */
+export function SectionTitleForm({ initialTitle = '', disabled = false, onSubmit, onCancel }: SectionTitleFormProps) {
+  const [draft, setDraft] = useState(initialTitle);
+  const [emptyTitle, setEmptyTitle] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  // Escape and a successful save unmount the field; the blur that follows must not act again.
+  const settled = useRef(false);
+  const inputId = useId();
+  const noteId = useId();
+  const busy = disabled || submitting;
+
+  function cancel() {
+    if (settled.current) return;
+    settled.current = true;
+    onCancel();
+  }
+
+  async function submit() {
+    if (busy || settled.current) return;
+    const title = normalizeTitle(draft);
+    if (!title) {
+      setEmptyTitle(true);
+      return;
+    }
+    if (title === initialTitle) {
+      cancel();
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSubmit(title);
+      settled.current = true;
+    } catch {
+      // The owner reports the failure; the field stays open so nothing typed is lost.
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form
+      className="flex flex-col gap-1 pt-1"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
+    >
+      <label htmlFor={inputId} className="sr-only">{t().editor.sections.nameLabel}</label>
+      <Input
+        id={inputId}
+        type="text"
+        autoFocus
+        value={draft}
+        maxLength={MAX_TITLE_LENGTH}
+        disabled={busy}
+        aria-invalid={emptyTitle || undefined}
+        aria-describedby={noteId}
+        placeholder={t().editor.sections.nameLabel}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          if (emptyTitle) setEmptyTitle(false);
+        }}
+        onBlur={() => {
+          // Leaving an empty field means the user changed their mind, never an empty name.
+          if (!normalizeTitle(draft)) cancel();
+          else void submit();
+        }}
+        onKeyDown={(event) => {
+          if (event.nativeEvent.isComposing) return;
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            cancel();
+          } else if (event.key === 'Enter') {
+            event.preventDefault();
+            void submit();
+          }
+        }}
+        className="h-8 px-2 text-[13px]"
+      />
+      {emptyTitle ? (
+        <p id={noteId} role="alert" className="px-1 pb-0.5 text-[11px] font-bold text-danger">
+          {t().editor.sections.emptyName}
+        </p>
+      ) : (
+        <p id={noteId} className="px-1 pb-0.5 text-center text-[11px] text-muted-foreground">
+          {t().editor.sections.inputHint}
+        </p>
+      )}
+    </form>
+  );
+}
+
+/** A one-line section label; renaming and deleting live in its menu. The owner reports failures. */
 function ProjectSectionHeading({
   section,
   disabled = false,
@@ -35,165 +135,82 @@ function ProjectSectionHeading({
   onDelete,
 }: ProjectSectionHeadingProps) {
   const [editing, setEditing] = useState(false);
-  const [draftTitle, setDraftTitle] = useState(section.title);
-  const [submitting, setSubmitting] = useState(false);
-  const [emptyTitle, setEmptyTitle] = useState(false);
-  const actionInFlight = useRef(false);
-  const inputId = useId();
-  const errorId = useId();
-  const controlsDisabled = disabled || submitting;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const deleteInFlight = useRef(false);
+  const controlsDisabled = disabled || deleting;
 
-  useEffect(() => {
-    if (!editing) setDraftTitle(section.title);
-  }, [editing, section.title]);
-
-  const runAction = useCallback(async (action: () => MaybePromise) => {
-    if (disabled || actionInFlight.current) return false;
-
-    actionInFlight.current = true;
-    setSubmitting(true);
+  async function handleDelete() {
+    if (controlsDisabled || deleteInFlight.current) return;
+    deleteInFlight.current = true;
+    setDeleting(true);
+    setMenuOpen(false);
     try {
-      await action();
-      return true;
+      await onDelete(section.id);
     } catch {
       // Callback owners decide how operation failures are presented.
-      return false;
     } finally {
-      actionInFlight.current = false;
-      setSubmitting(false);
+      deleteInFlight.current = false;
+      setDeleting(false);
     }
-  }, [disabled]);
+  }
 
-  const cancelRename = useCallback(() => {
-    if (controlsDisabled) return;
-    setDraftTitle(section.title);
-    setEmptyTitle(false);
-    setEditing(false);
-  }, [controlsDisabled, section.title]);
-
-  const saveRename = useCallback(async () => {
-    if (controlsDisabled) return;
-
-    const title = normalizeTitle(draftTitle);
-    if (!title) {
-      setEmptyTitle(true);
-      return;
-    }
-
-    setEmptyTitle(false);
-    if (title === section.title) {
-      setEditing(false);
-      return;
-    }
-
-    if (await runAction(() => onRename(section.id, title))) {
-      setEditing(false);
-    }
-  }, [controlsDisabled, draftTitle, onRename, runAction, section.id, section.title]);
-
-  const handleDelete = useCallback(() => {
-    void runAction(() => onDelete(section.id));
-  }, [onDelete, runAction, section.id]);
+  if (editing) {
+    return (
+      <section aria-label={t().editor.sections.label(section.title)} className="pt-1">
+        <SectionTitleForm
+          initialTitle={section.title}
+          disabled={disabled}
+          onSubmit={async (title) => {
+            await onRename(section.id, title);
+            setEditing(false);
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      </section>
+    );
+  }
 
   return (
     <section
       aria-label={t().editor.sections.label(section.title)}
-      className="flex flex-wrap items-center gap-2 rounded-md border-2 border-border bg-secondary px-2.5 py-2"
+      className="flex min-w-0 items-center gap-1.5 pt-1.5 pb-0.5 pl-1"
     >
-      {editing ? (
-        <form
-          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void saveRename();
-          }}
-        >
-          <label htmlFor={inputId} className="sr-only">{t().editor.sections.nameLabel}</label>
-          <Input
-            id={inputId}
-            type="text"
-            value={draftTitle}
-            maxLength={MAX_TITLE_LENGTH}
-            disabled={controlsDisabled}
-            aria-invalid={emptyTitle || undefined}
-            aria-describedby={emptyTitle ? errorId : undefined}
-            onChange={(event) => {
-              setDraftTitle(event.target.value);
-              if (emptyTitle) setEmptyTitle(false);
-            }}
-            onBlur={() => {
-              // Blurring with empty text must never become an accidental rename.
-              if (!normalizeTitle(draftTitle)) {
-                setEmptyTitle(true);
-                return;
-              }
-              void saveRename();
-            }}
-            onKeyDown={(event) => {
-              if (event.nativeEvent.isComposing) return;
-              if (event.key === 'Escape') {
-                event.preventDefault();
-                cancelRename();
-              } else if (event.key === 'Enter') {
-                event.preventDefault();
-                void saveRename();
-              }
-            }}
-            className="h-9 min-w-0 flex-1"
-          />
-          {emptyTitle && (
-            <p id={errorId} role="alert" className="w-full text-xs font-bold text-danger">
-              {t().editor.sections.emptyName}
-            </p>
-          )}
-          {/* Suppress mousedown blur so the button the user pressed wins, not the blur handler. */}
-          <Button type="submit" size="sm" disabled={controlsDisabled} onMouseDown={(event) => event.preventDefault()}>
-            {t().common.save}
-          </Button>
-          <Button
+      <span aria-hidden="true" className="w-1 self-stretch rounded-full bg-matcha" />
+      <h2 title={section.title} className="min-w-0 flex-1 truncate text-[13px] leading-6 font-bold text-foreground">
+        {section.title}
+      </h2>
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+        <PopoverTrigger asChild>
+          <button
             type="button"
-            size="sm"
-            variant="outline"
             disabled={controlsDisabled}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={cancelRename}
+            aria-label={t().editor.sections.actionsLabel}
+            className="relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-transparent text-muted-foreground outline-none transition-colors focus-ring hover:border-border hover:bg-card hover:text-foreground disabled:pointer-events-none disabled:opacity-40 data-[state=open]:border-border data-[state=open]:bg-card data-[state=open]:text-foreground"
           >
-            {t().common.cancel}
-          </Button>
-        </form>
-      ) : (
-        <>
-          <h2 className="min-w-0 flex-1 break-words text-sm font-bold text-foreground">
-            {section.title}
-          </h2>
-          <div className="flex items-center gap-2" aria-label={t().editor.sections.actionsLabel}>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={controlsDisabled}
-              onClick={() => {
-                setDraftTitle(section.title);
-                setEmptyTitle(false);
-                setEditing(true);
-              }}
-            >
-              <Pencil aria-hidden="true" />
-              {t().common.rename}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              disabled={controlsDisabled}
-              onClick={handleDelete}
-            >
-              <Trash2 aria-hidden="true" />
-              {t().common.delete}
-            </Button>
-          </div>
-        </>
-      )}
+            <Ellipsis className="size-3.5" aria-hidden="true" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="end" sideOffset={4} className="flex w-36 flex-col p-0.5">
+          <button
+            type="button"
+            onClick={() => {
+              setMenuOpen(false);
+              setEditing(true);
+            }}
+            className="flex h-8 items-center gap-2 rounded-sm px-2 text-[13px] text-foreground outline-none transition-colors focus-ring hover:bg-secondary"
+          >
+            <Pencil className="size-3.5" aria-hidden="true" />{t().common.rename}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            className="flex h-8 items-center gap-2 rounded-sm px-2 text-[13px] text-danger outline-none transition-colors focus-ring hover:bg-danger-soft"
+          >
+            <Trash2 className="size-3.5" aria-hidden="true" />{t().editor.sections.delete}
+          </button>
+        </PopoverContent>
+      </Popover>
     </section>
   );
 }

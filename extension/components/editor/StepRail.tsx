@@ -17,37 +17,59 @@ import { t } from '@/lib/shared/i18n';
 import { cn } from '@/lib/shared/utils';
 import EntryThumbnail from './EntryThumbnail';
 import SortableItem from './SortableItem';
-import ProjectSectionHeading from './ProjectSectionHeading';
+import ProjectSectionHeading, { SectionTitleForm } from './ProjectSectionHeading';
 
+
+const SEAM_PILL = 'relative flex h-[18px] scale-90 items-center gap-1 rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
 
 /**
  * The seam between two steps. It takes no room of its own: a zero-height row
  * whose hit area straddles the existing gap, so the list keeps its density.
- * Invisible until hovered or focused, then a dashed line with a pill floats
- * over the seam to say new steps go right here.
+ * Invisible until hovered or focused, then a dashed line with its actions
+ * floats over the seam: record new steps here, or start a section here.
  */
-function InsertSlot({ afterStep, disabled, onInsert }: { afterStep: number; disabled: boolean; onInsert: () => void }) {
+function SeamActions({
+  afterStep,
+  disabled,
+  onInsert,
+  onStartSection,
+}: {
+  afterStep: number;
+  disabled: boolean;
+  onInsert?: () => void;
+  onStartSection?: () => void;
+}) {
   return (
     <li className="relative z-10 -mt-1 hidden h-0 shrink-0 lg:block">
       {/* The thumbnails' own padding makes the visible seam sit 2px below this row, hence -top-1.5 rather than -top-2. */}
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={onInsert}
-        aria-label={t().editor.rail.insertAfter(afterStep)}
-        className="group/slot absolute inset-x-0 -top-1.5 flex h-4 items-center justify-center outline-none disabled:pointer-events-none"
-      >
+      <div className="group/slot absolute inset-x-0 -top-1.5 flex h-4 items-center justify-center gap-1">
         <span
           aria-hidden="true"
-          className="absolute inset-x-2 top-1/2 origin-center scale-x-0 border-t-2 border-dashed border-border opacity-0 transition-[transform,opacity] duration-200 ease-out group-hover/slot:scale-x-100 group-hover/slot:opacity-100 group-focus-visible/slot:scale-x-100 group-focus-visible/slot:opacity-100 motion-reduce:transition-none"
+          className="absolute inset-x-2 top-1/2 origin-center scale-x-0 border-t-2 border-dashed border-border opacity-0 transition-[transform,opacity] duration-200 ease-out group-hover/slot:scale-x-100 group-hover/slot:opacity-100 group-focus-within/slot:scale-x-100 group-focus-within/slot:opacity-100 motion-reduce:transition-none"
         />
-        <span
-          aria-hidden="true"
-          className="relative flex h-[18px] scale-90 items-center gap-1 rounded-full border-2 border-border bg-primary px-2.5 text-[11px] leading-none font-bold text-primary-foreground opacity-0 shadow-sm transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 group-focus-visible/slot:scale-100 group-focus-visible/slot:opacity-100 group-focus-visible/slot:outline-2 group-focus-visible/slot:outline-offset-2 group-focus-visible/slot:outline-focus motion-reduce:transition-none"
-        >
-          <Plus className="size-3" strokeWidth={3} />{t().editor.rail.insertHere}
-        </span>
-      </button>
+        {onInsert && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={onInsert}
+            aria-label={t().editor.rail.insertAfter(afterStep)}
+            className={cn(SEAM_PILL, 'bg-sora')}
+          >
+            <Plus className="size-3" strokeWidth={3} aria-hidden="true" />{t().editor.rail.insertHere}
+          </button>
+        )}
+        {onStartSection && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={onStartSection}
+            aria-label={t().editor.rail.addSectionAt(afterStep + 1)}
+            className={cn(SEAM_PILL, 'bg-matcha')}
+          >
+            <Plus className="size-3" strokeWidth={3} aria-hidden="true" />{t().editor.rail.addSectionHere}
+          </button>
+        )}
+      </div>
     </li>
   );
 }
@@ -94,6 +116,12 @@ interface Props {
   onSelect: (id: string) => void;
   onRenameSection?: (sectionId: string, title: string) => Promise<void>;
   onDeleteSection?: (sectionId: string) => Promise<void>;
+  /** The entry a section is being named at, shown as a field above that step. */
+  newSectionAt?: string | null;
+  /** Opens the naming field above an entry that does not begin a section yet. */
+  onStartSection?: (startEntryId: string) => void;
+  onAddSection?: (startEntryId: string, title: string) => Promise<void>;
+  onCancelSection?: () => void;
   onReorder: (reordered: StepEntry[]) => Promise<void>;
   /** Starts a continuation; `afterEntryId` inserts after that entry, omitted appends at the end. */
   onContinueRecording?: (afterEntryId?: string) => void;
@@ -107,6 +135,10 @@ export default function StepRail({
   onSelect,
   onRenameSection,
   onDeleteSection,
+  newSectionAt = null,
+  onStartSection,
+  onAddSection,
+  onCancelSection,
   onReorder,
   onContinueRecording,
   reorderDisabled = false,
@@ -206,30 +238,46 @@ export default function StepRail({
               const id = entryId(entry);
               const active = id === selectedEntryId;
               const section = sectionByStartId.get(id);
+              const naming = !section && newSectionAt === id && onAddSection && onCancelSection;
+              const labelled = Boolean((section && onRenameSection && onDeleteSection) || naming);
               return (
                 <Fragment key={id}>
                 <SortableItem
                   id={id}
                   disabled={reorderDisabled}
-                  className="w-32 shrink-0 [content-visibility:auto] [contain-intrinsic-size:128px_78px] lg:w-full lg:min-w-0"
+                  className={cn(
+                    'shrink-0 [content-visibility:auto] [contain-intrinsic-size:128px_78px] lg:w-full lg:min-w-0',
+                    labelled ? 'w-auto' : 'w-32',
+                  )}
                   // Sits on top of a screenshot, so it wears the same solid sticker chip as the step number.
                   handleClassName="size-6 rounded-full border-2 border-border bg-card text-foreground hover:bg-secondary [&_svg]:size-3.5"
                 >
                   {(handle, { isDragging }) => (
-                    <div className="flex min-w-0 flex-col gap-1">
-                      {section && onRenameSection && onDeleteSection && (
-                        <ProjectSectionHeading
-                          section={section}
-                          disabled={reorderDisabled}
-                          onRename={onRenameSection}
-                          onDelete={onDeleteSection}
-                        />
+                    // The mobile rail is a fixed-height strip, so a section label sits beside its first step there instead of above it.
+                    <div className="flex min-w-0 flex-row items-center gap-1 lg:flex-col lg:items-stretch">
+                      {labelled && (
+                        <div className="w-36 shrink-0 lg:w-auto">
+                          {naming ? (
+                            <SectionTitleForm
+                              disabled={reorderDisabled}
+                              onSubmit={(title) => onAddSection(id, title)}
+                              onCancel={onCancelSection}
+                            />
+                          ) : section && onRenameSection && onDeleteSection && (
+                            <ProjectSectionHeading
+                              section={section}
+                              disabled={reorderDisabled}
+                              onRename={onRenameSection}
+                              onDelete={onDeleteSection}
+                            />
+                          )}
+                        </div>
                       )}
                       <div
                         data-active={active || undefined}
                         className={cn(
                           // p-1 puts the thumbnail exactly 4px inside, the inset its `rounded-sm` is drawn for.
-                          'group relative flex min-w-0 cursor-pointer items-center rounded-md p-1 transition-colors',
+                          'group relative flex w-32 min-w-0 shrink-0 cursor-pointer items-center rounded-md p-1 transition-colors lg:w-auto lg:shrink',
                           active ? 'bg-card' : 'bg-transparent hover:bg-secondary',
                           // Lifts the row being moved off the list so the reflow underneath reads as the drop preview.
                           isDragging && 'bg-card outline-2 outline-dashed outline-border',
@@ -285,11 +333,17 @@ export default function StepRail({
                   )}
                 </SortableItem>
                 {/* The last seam is the 接續錄製 button below the list. */}
-                {onContinueRecording && index < entries.length - 1 && (
-                  <InsertSlot
+                {/* While a section is being named at the next step, that field occupies this seam. */}
+                {index < entries.length - 1 && (onContinueRecording || onStartSection) && newSectionAt !== entryId(entries[index + 1]) && (
+                  <SeamActions
                     afterStep={index + 1}
                     disabled={reorderDisabled}
-                    onInsert={() => onContinueRecording(id)}
+                    onInsert={onContinueRecording && (() => onContinueRecording(id))}
+                    onStartSection={
+                      onStartSection && newSectionAt === null && !sectionByStartId.has(entryId(entries[index + 1]))
+                        ? () => onStartSection(entryId(entries[index + 1]))
+                        : undefined
+                    }
                   />
                 )}
                 </Fragment>

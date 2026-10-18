@@ -1,4 +1,4 @@
-import { stepRole, type StepEntry } from '../storage/models';
+import { entryId, stepRole, type StepEntry } from '../storage/models';
 import { isRecord } from '../shared/validation';
 import {
   PROJECT_SECTION_LIMITS,
@@ -55,6 +55,20 @@ export function repairProjectSections(
 
   repaired.sort((left, right) => left.timelineIndex - right.timelineIndex || left.inputIndex - right.inputIndex);
   return repaired.map(({ id, title, startEntryId }) => ({ id, title, startEntryId }));
+}
+
+/** The section an entry falls under: the last one starting at or before it. */
+export function sectionOfEntry(
+  sections: readonly ProjectSection[],
+  entries: readonly StepEntry[],
+  index: number,
+): ProjectSection | undefined {
+  const byStart = new Map(sections.map((section) => [section.startEntryId, section]));
+  for (let at = Math.min(index, entries.length - 1); at >= 0; at -= 1) {
+    const section = byStart.get(entryId(entries[at]));
+    if (section) return section;
+  }
+  return undefined;
 }
 
 function validIdentifier(value: unknown): string | null {

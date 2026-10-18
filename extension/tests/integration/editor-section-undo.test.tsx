@@ -58,6 +58,13 @@ vi.mock('@/components/editor/StepRail', () => ({
       <button type="button" onClick={() => void props.onDeleteSection('section-1')}>
         刪除第一個章節
       </button>
+      <button type="button" onClick={() => props.onStartSection('entry-2')}>
+        從第二步開始新章節
+      </button>
+      <output aria-label="命名位置">{props.newSectionAt ?? '無'}</output>
+      <button type="button" onClick={() => void props.onAddSection('entry-2', '操作').catch(() => undefined)}>
+        送出章節名稱
+      </button>
     </aside>
   ),
 }));
@@ -210,5 +217,58 @@ describe('section delete undo', () => {
     await waitFor(() => expect(screen.queryByText('已刪除章節「準備」')).toBeNull());
     expect(database.addProjectSectionAtomically).not.toHaveBeenCalled();
     expect(await screen.findByText('專案已被其他操作修改，為避免覆蓋最新內容，無法還原。')).toBeTruthy();
+  });
+});
+
+describe('section add', () => {
+  it('names the section where it was started, then offers an undo that deletes it again', async () => {
+    let snapshotSections: any[] = [section];
+    let snapshotRevision = 7;
+    database.getProjectStructureSnapshot.mockImplementation(async () => ({
+      project: makeProject(snapshotRevision, snapshotSections),
+      entries,
+      entryIds: entries.map(database.entryId),
+    }));
+    database.addProjectSectionAtomically.mockImplementation(async () => {
+      snapshotSections = [section, { id: 'section-2', title: '操作', startEntryId: 'entry-2' }];
+      snapshotRevision = 8;
+      return { project: makeProject(8, snapshotSections), entryIds: entries.map(database.entryId) };
+    });
+    database.deleteProjectSectionAtomically.mockImplementation(async () => {
+      snapshotSections = [section];
+      snapshotRevision = 9;
+      return { project: makeProject(9, snapshotSections), entryIds: entries.map(database.entryId) };
+    });
+
+    render(<EditorApp />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '從第二步開始新章節' }));
+    expect(screen.getByRole('status', { name: '命名位置' }).textContent).toBe('entry-2');
+
+    fireEvent.click(screen.getByRole('button', { name: '送出章節名稱' }));
+    await waitFor(() => expect(database.addProjectSectionAtomically).toHaveBeenCalledWith('project-1', 'entry-2', '操作', 7));
+    expect(await screen.findByText('已新增章節「操作」')).toBeTruthy();
+    expect(screen.getByRole('status', { name: '命名位置' }).textContent).toBe('無');
+
+    fireEvent.click(screen.getByRole('button', { name: '還原' }));
+    await waitFor(() => expect(database.deleteProjectSectionAtomically).toHaveBeenCalledWith('project-1', 'section-2', 8));
+  });
+
+  it('keeps the naming field open when adding fails', async () => {
+    silenceIntentionalErrorLogs();
+    database.getProjectStructureSnapshot.mockImplementation(async () => ({
+      project: makeProject(7, [section]),
+      entries,
+      entryIds: entries.map(database.entryId),
+    }));
+    database.addProjectSectionAtomically.mockRejectedValue(new Error('storage failed'));
+
+    render(<EditorApp />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '從第二步開始新章節' }));
+    fireEvent.click(screen.getByRole('button', { name: '送出章節名稱' }));
+
+    expect(await screen.findByText('新增章節失敗，已重新載入目前資料。')).toBeTruthy();
+    expect(screen.getByRole('status', { name: '命名位置' }).textContent).toBe('entry-2');
   });
 });

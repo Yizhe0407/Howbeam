@@ -53,6 +53,8 @@ interface StageOptions {
   onZoom?: () => void;
   projectTags?: readonly string[];
   onRemoveTag?: (tag: string) => Promise<void>;
+  sectionTitle?: string;
+  onStartSection?: () => void;
 }
 
 function makeStep(changes: Partial<Step> = {}): Step {
@@ -111,11 +113,15 @@ function stage({
   onZoom = vi.fn(),
   projectTags,
   onRemoveTag,
+  sectionTitle,
+  onStartSection,
 }: StageOptions = {}) {
   return (
     <StepStage
       entry={entry}
       index={0}
+      sectionTitle={sectionTitle}
+      onStartSection={onStartSection}
       projectTags={projectTags}
       onRemoveTag={onRemoveTag}
       onChange={vi.fn()}
@@ -248,5 +254,27 @@ describe('StepStage image editing', () => {
     expect(screen.getByText(/請按「檢查遮罩」確認遮罩/)).toBeTruthy();
     const check = screen.getByRole('button', { name: '檢查遮罩' }) as HTMLButtonElement;
     expect(check.disabled).toBe(false);
+  });
+});
+
+describe('StepStage sections', () => {
+  afterEach(cleanup);
+
+  it('shows the section the step belongs to', () => {
+    renderStage({ entry: singleEntry(), sectionTitle: '條目頁面' });
+    expect(screen.getByText('所屬章節：條目頁面')).toBeTruthy();
+  });
+
+  it('offers to start a section here only when the owner allows it, and not while editing is disabled', () => {
+    const onStartSection = vi.fn();
+    const { rerender } = renderStage({ entry: singleEntry(), onStartSection });
+    fireEvent.click(screen.getByRole('button', { name: '從這步開始新章節' }));
+    expect(onStartSection).toHaveBeenCalledOnce();
+
+    rerender(stage({ entry: singleEntry(), onStartSection, editingDisabled: true }));
+    expect((screen.getByRole('button', { name: '從這步開始新章節' }) as HTMLButtonElement).disabled).toBe(true);
+
+    rerender(stage({ entry: singleEntry() }));
+    expect(screen.queryByRole('button', { name: '從這步開始新章節' })).toBeNull();
   });
 });

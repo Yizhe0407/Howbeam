@@ -345,6 +345,33 @@ export function useProjectMutations({
     });
   }
 
+  async function addSection(startEntryId: string, title: string) {
+    await runProjectMutation({
+      operation: 'addSection',
+      rethrow: true,
+      mutate: async (snapshot, projectId) => {
+        const result = await addProjectSectionAtomically(
+          projectId,
+          startEntryId,
+          title,
+          snapshot.project.contentRevision,
+        );
+        adoptProject(result.project);
+        const added = result.project.sections.find((section) => section.startEntryId === startEntryId);
+        if (!added) return;
+        return {
+          message: t().editor.mutations.addSection.done(added.title),
+          expectedRevision: result.project.contentRevision,
+          restore: () => deleteProjectSectionAtomically(
+            projectId,
+            added.id,
+            result.project.contentRevision,
+          ).then(() => undefined),
+        };
+      },
+    });
+  }
+
   async function renameSection(sectionId: string, title: string) {
     await runProjectMutation({
       operation: 'renameSection',
@@ -429,6 +456,7 @@ export function useProjectMutations({
     deleteEntry,
     handleDeleteAnnotation,
     setEntriesNumbered,
+    addSection,
     renameSection,
     deleteSection,
     handleUndo,

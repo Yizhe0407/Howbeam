@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2, Pencil, Plus, PencilRuler, X, ZoomIn } from 'lucide-react';
+import { Bookmark, Loader2, Pencil, Plus, PencilRuler, X, ZoomIn } from 'lucide-react';
 import { entryId, getEntryPrivacyState, type Step, type StepEntry } from '@/lib/storage/models';
 import ImageEditWorkspace from './ImageEditWorkspace';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,10 @@ import { t } from '@/lib/shared/i18n';
 interface Props {
   entry: StepEntry;
   index: number;
+  /** The section this entry falls under, if any. */
+  sectionTitle?: string;
+  /** Present when a section can start at this entry. */
+  onStartSection?: () => void;
   projectTitle?: string;
   projectTags?: readonly string[];
   onTitleChange?: (title: string) => Promise<void>;
@@ -39,6 +43,8 @@ interface Props {
 export default function StepStage({
   entry,
   index,
+  sectionTitle,
+  onStartSection,
   projectTitle,
   projectTags = [],
   onTitleChange,
@@ -149,8 +155,18 @@ export default function StepStage({
 
   const headerRow = (
     <div className="flex shrink-0 items-center justify-between gap-3 mb-3.5">
-      <div className="flex items-center gap-3">
-        <span className="rounded-full border-2 border-border bg-secondary px-2.5 py-0.5 text-xs font-bold text-foreground">
+      <div className="flex min-w-0 items-center gap-2">
+        {sectionTitle && (
+          <span
+            title={t().editor.sections.current(sectionTitle)}
+            className="flex min-w-0 max-w-[16rem] items-center gap-1 rounded-full border-2 border-border bg-matcha px-2.5 py-0.5 text-xs font-bold text-on-accent"
+          >
+            <Bookmark className="size-3 shrink-0" aria-hidden="true" />
+            <span className="sr-only">{t().editor.sections.current(sectionTitle)}</span>
+            <span aria-hidden="true" className="min-w-0 truncate">{sectionTitle}</span>
+          </span>
+        )}
+        <span className="shrink-0 rounded-full border-2 border-border bg-secondary px-2.5 py-0.5 text-xs font-bold text-foreground">
           {/* Names entries with the same vocabulary as the popup and recording toolbar. */}
           {entry.kind === 'single'
             ? recordingModeCopy('steps').label
@@ -159,6 +175,18 @@ export default function StepStage({
       </div>
       <div className="flex items-center gap-3">
         {numberingPending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-label={t().editor.stage.savingNumbering} />}
+        {onStartSection && (
+          <button
+            type="button"
+            onClick={onStartSection}
+            disabled={editingDisabled}
+            aria-label={t().editor.sections.startHere}
+            className="flex h-10 items-center gap-1.5 rounded-md border-2 border-border bg-matcha px-3 text-xs font-bold text-on-accent outline-none transition-colors focus-ring hover:brightness-95 disabled:pointer-events-none disabled:opacity-40"
+          >
+            <Bookmark className="size-4" aria-hidden="true" />
+            <span className="hidden xl:inline">{t().editor.sections.startHere}</span>
+          </button>
+        )}
         {/* Also the way out of a pending mask review: the editor is where masks are checked and confirmed. */}
         <button
           type="button"

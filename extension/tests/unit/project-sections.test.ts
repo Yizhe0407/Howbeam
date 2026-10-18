@@ -5,6 +5,7 @@ import {
   PROJECT_SECTION_LIMITS,
   repairProjectSections,
   sanitizeProjectSectionTitle,
+  sectionOfEntry,
 } from '@/lib/project/project-sections';
 
 function step(id: string, order: number, overrides: Partial<Step> = {}): Step {
@@ -96,5 +97,15 @@ describe('project sections', () => {
     }));
 
     expect(repairProjectSections(sections, manyEntries)).toHaveLength(PROJECT_SECTION_LIMITS.maxSections);
+  });
+
+  it('finds the section an entry falls under: the last one starting at or before it', () => {
+    const timeline = entries();
+    const sections = [{ id: 'later', title: 'Later', startEntryId: 'snapshot' }];
+    expect(sectionOfEntry(sections, timeline, 0)).toBeUndefined();
+    expect(sectionOfEntry(sections, timeline, 1)?.id).toBe('later');
+    expect(sectionOfEntry(sections, timeline, 2)?.id).toBe('later');
+    expect(sectionOfEntry([{ id: 'first', title: 'First', startEntryId: 'first' }, ...sections], timeline, 0)?.id).toBe('first');
+    expect(sectionOfEntry([], timeline, 2)).toBeUndefined();
   });
 });

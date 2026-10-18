@@ -273,8 +273,10 @@ export const zhTW = {
       thumbnailPending: '縮圖尚未載入',
       openStep: (number: number) => `開啟步驟 ${number}`,
       continueRecording: '接續錄製',
-      insertHere: '在此接續錄製',
+      insertHere: '接續錄製',
       insertAfter: (step: number) => `在第 ${step} 步後接續錄製`,
+      addSectionHere: '新增章節',
+      addSectionAt: (step: number) => `從第 ${step} 步開始新章節`,
     },
 
     imageEdit: {
@@ -418,6 +420,10 @@ export const zhTW = {
       nameLabel: '章節名稱',
       emptyName: '章節名稱不可為空白。',
       actionsLabel: '章節操作',
+      inputHint: 'Enter 確認 · Esc 取消',
+      delete: '刪除章節',
+      startHere: '從這步開始新章節',
+      current: (title: string) => `所屬章節：${title}`,
     },
 
     tags: {
@@ -552,6 +558,11 @@ export const zhTW = {
         pending: '正在儲存快照編號設定…',
         failed: '快照編號設定失敗，已重新載入目前資料。',
         done: (numbered: boolean): string => (numbered ? '已開啟快照編號' : '已關閉快照編號'),
+      },
+      addSection: {
+        pending: '正在新增章節…',
+        failed: '新增章節失敗，已重新載入目前資料。',
+        done: (title: string) => `已新增章節「${title}」`,
       },
       renameSection: {
         pending: '正在重新命名章節…',

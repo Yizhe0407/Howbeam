@@ -275,6 +275,8 @@ export const en: Messages = {
       continueRecording: 'Continue recording',
       insertHere: 'Record here',
       insertAfter: (step: number) => `Record after step ${step}`,
+      addSectionHere: 'Add section',
+      addSectionAt: (step: number) => `Start a section at step ${step}`,
     },
 
     imageEdit: {
@@ -421,6 +423,10 @@ export const en: Messages = {
       nameLabel: 'Section name',
       emptyName: 'The section name can’t be empty.',
       actionsLabel: 'Section actions',
+      inputHint: 'Enter to save · Esc to cancel',
+      delete: 'Delete section',
+      startHere: 'Start a section here',
+      current: (title: string) => `Section: ${title}`,
     },
 
     tags: {
@@ -558,6 +564,11 @@ export const en: Messages = {
         pending: 'Saving snapshot numbering…',
         failed: 'Couldn’t change snapshot numbering. The current data was reloaded.',
         done: (numbered: boolean) => (numbered ? 'Snapshot numbering on' : 'Snapshot numbering off'),
+      },
+      addSection: {
+        pending: 'Adding section…',
+        failed: 'Couldn’t add the section. The current data was reloaded.',
+        done: (title: string) => `Added section “${title}”`,
       },
       renameSection: {
         pending: 'Renaming section…',
