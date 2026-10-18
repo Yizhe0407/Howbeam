@@ -1,13 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type PointerEvent,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,13 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import InlineAlert from "@/components/shared/InlineAlert";
 import { Button } from "@/components/ui/button";
-import {
-  getEntryCrop,
-  getEntryImageEdits,
-  getEntryImageOwner,
-  getEntryPrivacyState,
-  type StepEntry,
-} from "@/lib/storage/models";
+import { getEntryImageOwner, type StepEntry } from "@/lib/storage/models";
 import type { TextEdit } from "@/lib/storage/image-edit-model";
 import { normalizeStoredText } from "@/lib/storage/stored-text";
 import {
@@ -34,7 +19,6 @@ import {
   reorderItem,
   roomForKind,
   splitItems,
-  toItems,
   type ImageEditItem,
 } from "@/lib/editor/image-edit-items";
 import {
@@ -58,34 +42,10 @@ import {
   toolForShortcut,
   type ImageEditToolId,
 } from "@/lib/editor/image-edit-tools";
-import {
-  ImageEditSessionConflict,
-  useImageEditSession,
-} from "@/lib/editor/image-edit-session";
-import {
-  isEntryImageStale,
-  loadLatestEntry,
-  saveEntryImageEdits,
-} from "@/lib/editor/save-entry-image-edits";
-import {
-  StepImageEditConflictError,
-  StepUpdateConflictError,
-} from "@/lib/storage/step-repository";
-import { subscribeProjectsChanged } from "@/lib/storage/change-notifier";
 import { useImageCssSize } from "@/lib/editor/use-image-css-size";
-import type { ImageCssSize } from "@/lib/editor/image-edit-geometry";
-import {
-  anchorAt,
-  clampZoom,
-  fitSize,
-  maxZoomFor,
-  nativeZoom,
-  MIN_ZOOM,
-  scrollDeltaForAnchor,
-  wheelZoomFactor,
-  ZOOM_STEP,
-  type ZoomAnchor,
-} from "@/lib/editor/image-edit-viewport";
+import { useImageEditViewport } from "@/lib/editor/use-image-edit-viewport";
+import { useStoredImageEdits } from "@/lib/editor/use-stored-image-edits";
+import { MIN_ZOOM, nativeZoom } from "@/lib/editor/image-edit-viewport";
 import { t } from "@/lib/shared/i18n";
 import EntryThumbnail from "./EntryThumbnail";
 import ImageEditLayer from "./ImageEditLayer";
@@ -94,23 +54,6 @@ import ImageEditStylePanel, {
   ImageEditItemActions,
 } from "./ImageEditStylePanel";
 import ImageEditToolbar, { ImageEditHeaderActions } from "./ImageEditToolbar";
-
-/** Breathing room kept around the fitted image so edge masks are easy to reach. */
-const FIT_MARGIN = 24;
-
-/** Everything stored on an entry's image, as the editor's item list. */
-function itemsOf(entry: StepEntry): ImageEditItem[] {
-  return toItems(
-    getEntryPrivacyState(entry).redactions,
-    getEntryImageEdits(entry),
-    getEntryCrop(entry),
-  );
-}
-
-const imageEditRevisionOf = (entry: StepEntry): number =>
-  getEntryImageOwner(entry).imageEditRevision ?? 0;
-const captureRevisionOf = (entry: StepEntry): number =>
-  getEntryImageOwner(entry).captureRevision ?? 0;
 
 interface Props {
   entry: StepEntry;
@@ -121,113 +64,14 @@ interface Props {
 }
 
 /**
- * Full-window image editor. The image is laid out at the fitted size times the
- * zoom inside a scrollable viewport, so scrolling pans, the wheel zooms around
- * the pointer, and outlines and handles keep their on-screen size at any zoom.
- * Edits live in a session draft (instant, with undo/redo) and are saved behind it.
+ * Full-window image editor: the tools, the selection and the text being typed
+ * over a zoomable viewport, editing a draft that is saved behind it.
  */
 export default function ImageEditWorkspace({
   entry: openedEntry,
   number,
   onClose,
 }: Props) {
-  /** The entry as last read from storage: replaced when another tab changes this image. */
-  const [entry, setEntry] = useState(openedEntry);
-  const entryRef = useRef(entry);
-  /** The stored image edit revision the draft builds on; every save must replace exactly it. */
-  const revisionRef = useRef(imageEditRevisionOf(openedEntry));
-  const owner = getEntryImageOwner(entry);
-  const [initialItems] = useState(() => itemsOf(openedEntry));
-  /** The masks still wait for the person to confirm them (after a retake, or repaired metadata). */
-  const [reviewRequired, setReviewRequired] = useState(
-    () => getEntryPrivacyState(openedEntry).reviewRequired,
-  );
-  /** Set only while Done is saving: that save also confirms the masks. */
-  const confirmReviewRef = useRef(false);
-  /** Another tab's saved edits were loaded into an untouched editor. */
-  const [updatedElsewhere, setUpdatedElsewhere] = useState(false);
-
-  const adoptEntry = useCallback((next: StepEntry) => {
-    entryRef.current = next;
-    revisionRef.current = imageEditRevisionOf(next);
-    setEntry(next);
-    setReviewRequired(getEntryPrivacyState(next).reviewRequired);
-  }, []);
-
-  const session = useImageEditSession({
-    initialItems,
-    persist: async (items) => {
-      const confirmReview = confirmReviewRef.current;
-      try {
-        revisionRef.current = await saveEntryImageEdits(
-          entryRef.current,
-          splitItems(items),
-          { imageEditRevision: revisionRef.current, confirmReview },
-        );
-        if (confirmReview) setReviewRequired(false);
-      } catch (error) {
-        if (
-          !(error instanceof StepImageEditConflictError) &&
-          !(error instanceof StepUpdateConflictError)
-        )
-          throw error;
-        // Saving over what another tab stored would delete its masks: show that instead.
-        const latest = await loadLatestEntry(entryRef.current);
-        if (!latest) throw error;
-        adoptEntry(latest);
-        throw new ImageEditSessionConflict(itemsOf(latest), { cause: error });
-      }
-    },
-  });
-
-  // Follow saves made in other tabs, so an untouched editor never shows (and later
-  // saves over) stale masks. Edits made here meanwhile are checked when they are written.
-  const { adoptIfSettled } = session;
-  useEffect(() => {
-    let disposed = false;
-    let running: Promise<void> | null = null;
-    let again = false;
-    const check = async () => {
-      do {
-        again = false;
-        const current = entryRef.current;
-        if (!(await isEntryImageStale(current, revisionRef.current))) continue;
-        const latest = await loadLatestEntry(current).catch(() => null);
-        if (disposed || !latest) continue;
-        // Revisions only move forward: an older read never replaces what this editor saved since.
-        const newer =
-          imageEditRevisionOf(latest) > revisionRef.current ||
-          captureRevisionOf(latest) !== captureRevisionOf(entryRef.current);
-        if (newer && adoptIfSettled(itemsOf(latest))) {
-          adoptEntry(latest);
-          setSelectedId(null);
-          setUpdatedElsewhere(true);
-        }
-      } while (again && !disposed);
-    };
-    const unsubscribe = subscribeProjectsChanged(() => {
-      if (running) {
-        again = true;
-        return;
-      }
-      running = check()
-        .catch((error) => {
-          console.warn("[stepmark] failed to check for image edits made elsewhere", error);
-        })
-        .finally(() => {
-          running = null;
-        });
-    });
-    return () => {
-      disposed = true;
-      unsubscribe();
-    };
-  }, [adoptEntry, adoptIfSettled]);
-  const imageSize = useImageCssSize(
-    owner.screenshotBlob,
-    owner.screenshotScale ?? owner.devicePixelRatio,
-  );
-
   const [tool, setTool] = useState<ImageEditToolId>("select");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
@@ -240,132 +84,18 @@ export default function ImageEditWorkspace({
     isNew: boolean;
   } | null>(null);
 
-  // --- viewport: fit, zoom, pan -------------------------------------------
-  // The dialog content mounts through a portal after this component first renders,
-  // so the elements are tracked as state: effects re-run when they actually exist.
-  const [frame, setFrame] = useState<HTMLDivElement | null>(null);
-  const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [frameSize, setFrameSize] = useState<ImageCssSize | null>(null);
-  const [zoom, setZoom] = useState(MIN_ZOOM);
-  const zoomRef = useRef(MIN_ZOOM);
-  const anchorRef = useRef<ZoomAnchor | null>(null);
-
-  // The fit is measured on a box that scrollbars cannot resize, otherwise the
-  // scrollbar appearing would change the fit and with it the scrollbar.
-  useLayoutEffect(() => {
-    if (!frame) return undefined;
-    const measure = () =>
-      setFrameSize({ width: frame.clientWidth, height: frame.clientHeight });
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(frame);
-    return () => observer.disconnect();
-  }, [frame]);
-
-  const fit =
-    imageSize && frameSize ? fitSize(frameSize, imageSize, FIT_MARGIN) : null;
-  const maxZoom = maxZoomFor(fit, imageSize);
-  const maxZoomRef = useRef(maxZoom);
-  maxZoomRef.current = maxZoom;
-
-  const zoomTo = useCallback(
-    (nextZoom: number, client: { x: number; y: number } | null) => {
-      const clamped = clampZoom(nextZoom, maxZoomRef.current);
-      if (clamped === zoomRef.current) return;
-      const canvas = canvasRef.current?.getBoundingClientRect();
-      anchorRef.current = client && canvas ? anchorAt(client, canvas) : null;
-      zoomRef.current = clamped;
-      setZoom(clamped);
-    },
-    [],
+  const { entry, session, commit, saveAll, reviewRequired, updatedElsewhere } =
+    useStoredImageEdits(openedEntry, () => setSelectedId(null));
+  const owner = getEntryImageOwner(entry);
+  const imageSize = useImageCssSize(
+    owner.screenshotBlob,
+    owner.screenshotScale ?? owner.devicePixelRatio,
   );
-
-  const frameCenter = useCallback(() => {
-    const rect = frame?.getBoundingClientRect();
-    return rect
-      ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-      : null;
-  }, [frame]);
-
-  // After the zoom is laid out, scroll so the image point under the pointer stays under it.
-  useLayoutEffect(() => {
-    const anchor = anchorRef.current;
-    const canvas = canvasRef.current?.getBoundingClientRect();
-    anchorRef.current = null;
-    if (!anchor || !scroller || !canvas) return;
-    const { dx, dy } = scrollDeltaForAnchor(anchor, canvas);
-    scroller.scrollLeft += dx;
-    scroller.scrollTop += dy;
-  }, [zoom, scroller]);
-
-  // Wheel zoom needs preventDefault, which React's passive wheel handler cannot do.
-  useEffect(() => {
-    if (!scroller) return undefined;
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      zoomTo(zoomRef.current * wheelZoomFactor(event.deltaY, event.deltaMode), {
-        x: event.clientX,
-        y: event.clientY,
-      });
-    };
-    scroller.addEventListener("wheel", onWheel, { passive: false });
-    return () => scroller.removeEventListener("wheel", onWheel);
-  }, [scroller, zoomTo]);
-
-  // Pan: middle button, Space + drag, or dragging empty space with the pointer tool.
-  const [spaceHeld, setSpaceHeld] = useState(false);
-  const [panning, setPanning] = useState(false);
-  const panRef = useRef<{
-    pointerId: number;
-    x: number;
-    y: number;
-    left: number;
-    top: number;
-  } | null>(null);
-
-  const startPan = useCallback(
-    (event: PointerEvent<HTMLElement>) => {
-      if (!scroller) return;
-      panRef.current = {
-        pointerId: event.pointerId,
-        x: event.clientX,
-        y: event.clientY,
-        left: scroller.scrollLeft,
-        top: scroller.scrollTop,
-      };
-      scroller.setPointerCapture(event.pointerId);
-      setPanning(true);
-    },
-    [scroller],
-  );
-
-  useEffect(() => {
-    const isTypingTarget = (target: EventTarget | null) =>
-      target instanceof HTMLButtonElement ||
-      target instanceof HTMLTextAreaElement;
-    const down = (event: globalThis.KeyboardEvent) => {
-      if (event.code !== "Space" || isTypingTarget(event.target)) return;
-      event.preventDefault();
-      setSpaceHeld(true);
-    };
-    const up = (event: globalThis.KeyboardEvent) => {
-      if (event.code === "Space") setSpaceHeld(false);
-    };
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-    return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
-    };
-  }, []);
+  const viewport = useImageEditViewport(imageSize);
+  const { fit, zoom, maxZoom, scroller } = viewport;
 
   // --- editing ----------------------------------------------------------------
   const { items } = session;
-  const commit = (next: ImageEditItem[]) => {
-    setUpdatedElsewhere(false);
-    session.commit(next);
-  };
   /** Storage keeps a limited number of masks and edits per image: past that, nothing new is added. */
   const room = itemRoom(items);
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
@@ -522,15 +252,12 @@ export default function ImageEditWorkspace({
   const requestClose = async (confirm = false) => {
     if (closing) return;
     setClosing(true);
-    const confirming = confirm && reviewRequired;
-    confirmReviewRef.current = confirming;
     try {
-      await session.flush({ force: confirming });
+      await saveAll(confirm && reviewRequired);
       onClose();
     } catch {
       // The failed save is reported in the header; the editor stays open with the draft intact.
     } finally {
-      confirmReviewRef.current = false;
       setClosing(false);
     }
   };
@@ -568,11 +295,11 @@ export default function ImageEditWorkspace({
       event.preventDefault();
       session.redo();
     } else if (!modifier && (event.key === "+" || event.key === "=")) {
-      zoomTo(zoomRef.current * ZOOM_STEP, frameCenter());
+      viewport.zoomIn();
     } else if (!modifier && event.key === "-") {
-      zoomTo(zoomRef.current / ZOOM_STEP, frameCenter());
+      viewport.zoomOut();
     } else if (!modifier && event.key === "0") {
-      zoomTo(MIN_ZOOM, frameCenter());
+      viewport.zoomFit();
     }
   };
 
@@ -588,9 +315,7 @@ export default function ImageEditWorkspace({
     !room.masks && copy.maskLimitReached(IMAGE_ITEM_LIMITS.maxMasks),
     !room.edits && copy.editLimitReached(IMAGE_ITEM_LIMITS.maxEdits),
   ].filter((notice): notice is string => Boolean(notice));
-  const canvasStyle = fit
-    ? { width: fit.width * zoom, height: fit.height * zoom }
-    : undefined;
+  const { canvasStyle } = viewport;
 
   return (
     <Dialog open onOpenChange={(next) => !next && void requestClose()}>
@@ -624,13 +349,9 @@ export default function ImageEditWorkspace({
                 nativeZoom={nativeZoom(zoom, fit, imageSize)}
                 canZoomIn={zoom < maxZoom}
                 canZoomOut={zoom > MIN_ZOOM}
-                onZoomIn={() =>
-                  zoomTo(zoomRef.current * ZOOM_STEP, frameCenter())
-                }
-                onZoomOut={() =>
-                  zoomTo(zoomRef.current / ZOOM_STEP, frameCenter())
-                }
-                onZoomFit={() => zoomTo(MIN_ZOOM, frameCenter())}
+                onZoomIn={viewport.zoomIn}
+                onZoomOut={viewport.zoomOut}
+                onZoomFit={viewport.zoomFit}
                 itemCount={items.length}
                 saving={session.saving}
                 onDone={() => void requestClose(true)}
@@ -714,41 +435,17 @@ export default function ImageEditWorkspace({
               room={room}
             />
           </div>
-          <div ref={setFrame} className="relative min-h-0 min-w-0 flex-1">
+          <div ref={viewport.setFrame} className="relative min-h-0 min-w-0 flex-1">
             <div
-              ref={setScroller}
+              ref={viewport.setScroller}
               data-stepmark-edit-scroller=""
-              className={`app-scrollbar absolute inset-0 overflow-auto outline-none ${panning ? "cursor-grabbing" : spaceHeld ? "cursor-grab" : ""}`}
+              className={`app-scrollbar absolute inset-0 overflow-auto outline-none ${viewport.panning ? "cursor-grabbing" : viewport.spaceHeld ? "cursor-grab" : ""}`}
               tabIndex={-1}
-              onPointerDownCapture={(event) => {
-                // Working on the canvas moves keyboard focus onto it (as in any editor), so
-                // Space pans here instead of pressing whichever toolbar button was last used.
-                event.currentTarget.focus({ preventScroll: true });
-                if (event.button === 1 || (event.button === 0 && spaceHeld)) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  startPan(event);
-                }
-              }}
-              onPointerMove={(event) => {
-                const pan = panRef.current;
-                if (!pan || !scroller || pan.pointerId !== event.pointerId)
-                  return;
-                scroller.scrollLeft = pan.left - (event.clientX - pan.x);
-                scroller.scrollTop = pan.top - (event.clientY - pan.y);
-              }}
-              onPointerUp={() => {
-                panRef.current = null;
-                setPanning(false);
-              }}
-              onPointerCancel={() => {
-                panRef.current = null;
-                setPanning(false);
-              }}
+              {...viewport.scrollerHandlers}
             >
               <div className="flex min-h-full min-w-full">
                 <div
-                  ref={canvasRef}
+                  ref={viewport.canvasRef}
                   className="relative m-auto shrink-0"
                   style={canvasStyle}
                 >
@@ -781,13 +478,13 @@ export default function ImageEditWorkspace({
                             editingText={editing?.item ?? null}
                             onStartTextEdit={startTextEdit}
                             onFinishTextEdit={finishTextEdit}
-                            onPanStart={startPan}
+                            onPanStart={viewport.startPan}
                           />
                         )
                       }
                     />
                   )}
-                  {(spaceHeld || panning) && (
+                  {(viewport.spaceHeld || viewport.panning) && (
                     <div
                       className="absolute inset-0 z-30 cursor-[inherit]"
                       aria-hidden="true"
