@@ -1,13 +1,80 @@
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium, expect, test as base, type BrowserContext, type Page, type Worker } from '@playwright/test';
+import { RECORDING_STATE_KEY } from './harness';
 import { preparedExtensionPath } from './paths';
 
 export const FIXTURE_PORT = Number(process.env.E2E_PORT ?? 4175);
 export const FIXTURE_URL = `http://127.0.0.1:${FIXTURE_PORT}/`;
 
 const isWelcomePage = (page: Page) => page.url().endsWith('/welcome.html');
+
+declare const chrome: {
+  storage: {
+    onChanged: {
+      addListener(listener: (changes: Record<string, { newValue?: unknown }>, area: string) => void): void;
+    };
+  };
+  tabs: {
+    onActivated: {
+      addListener(listener: (info: { tabId: number; windowId: number }) => void): void;
+    };
+  };
+};
+
+/**
+ * Inside the service worker: logs every recording-state write and tab
+ * activation, so a failed spec's console log shows how the run moved.
+ */
+function traceRecordingInWorker(recordingStateKey: string): void {
+  const scope = globalThis as typeof globalThis & { __stepmarkE2eTrace?: true };
+  if (scope.__stepmarkE2eTrace) return;
+  scope.__stepmarkE2eTrace = true;
+  chrome.storage.onChanged.addListener((changes, area) => {
+    const change = changes[recordingStateKey];
+    if (area !== 'local' || !change) return;
+    const state = (change.newValue ?? {}) as Record<string, unknown>;
+    const notice = state.recoverableError as { code?: string } | null | undefined;
+    console.debug('[e2e] state', JSON.stringify({
+      runId: state.runId,
+      mode: state.mode,
+      phase: state.phase,
+      tabId: state.tabId,
+      itemCount: state.itemCount,
+      notice: notice?.code ?? null,
+    }));
+  });
+  chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
+    console.debug('[e2e] tab activated', JSON.stringify({ tabId, windowId }));
+  });
+}
+
+/**
+ * Every console message from the context's pages and service worker, once
+ * each and in arrival order, attached to a failed spec next to its trace.
+ */
+function collectExtensionLog(context: BrowserContext): string[] {
+  const lines: string[] = [];
+  const startedAt = Date.now();
+  const record = (source: string, type: string, text: string) => {
+    lines.push(`+${String(Date.now() - startedAt).padStart(6)}ms ${source} ${type}: ${text}`);
+  };
+  context.on('console', (message) => {
+    const source = message.worker() ? 'worker' : `page ${message.page()?.url() ?? '?'}`;
+    record(source, message.type(), message.text());
+  });
+  context.on('weberror', (error) => record(`page ${error.page()?.url() ?? '?'}`, 'pageerror', String(error.error())));
+  const traceWorker = (worker: Worker) => {
+    void worker.evaluate(traceRecordingInWorker, RECORDING_STATE_KEY).catch((error) => {
+      record('worker', 'trace', `could not install the recording trace: ${error}`);
+    });
+  };
+  for (const worker of context.serviceWorkers()) traceWorker(worker);
+  // A respawned worker starts without the trace; install it again.
+  context.on('serviceworker', traceWorker);
+  return lines;
+}
 
 /**
  * A fresh profile is a first install, so the extension opens its welcome page
@@ -68,6 +135,7 @@ export const test = base.extend<Fixtures & Options>({
         '--no-default-browser-check',
       ],
     });
+    const extensionLog = collectExtensionLog(context);
     await dismissWelcomePage(context);
     await mkdir(testInfo.outputPath('browser'), { recursive: true });
     if (recordTrace) {
@@ -76,6 +144,9 @@ export const test = base.extend<Fixtures & Options>({
     try {
       await use(context);
       if (testInfo.status !== testInfo.expectedStatus) {
+        const extensionLogPath = testInfo.outputPath('browser/extension-log.txt');
+        await writeFile(extensionLogPath, `${extensionLog.join('\n')}\n`);
+        await testInfo.attach('extension-log', { path: extensionLogPath, contentType: 'text/plain' });
         for (const [index, page] of context.pages().entries()) {
           await page.screenshot({ path: testInfo.outputPath(`browser/page-${index}.png`), fullPage: true }).catch(() => {});
         }
