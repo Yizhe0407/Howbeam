@@ -10,7 +10,7 @@ export interface ProjectSection {
 export const PROJECT_SECTION_LIMITS = Object.freeze({
   maxSections: 200,
   maxIdLength: 256,
-  maxTitleLength: 200,
+  maxTitleLength: 60,
 });
 
 /**

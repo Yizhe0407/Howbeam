@@ -2,6 +2,7 @@ import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
 import { type Step } from '@/lib/storage/models';
+import { PERSISTED_STEP_LIMITS } from '@/lib/storage/persistence-limits';
 import { type ProjectArchiveMetadataInput } from '@/lib/export/project-archive-contract';
 import {
   ARCHIVE_MANIFEST_PATH,
@@ -465,7 +466,7 @@ describe('project archive', () => {
 
     await expect(
       exportProjectArchive([
-        makeStep({ description: 'x'.repeat(PROJECT_ARCHIVE_LIMITS.maxDescriptionLength + 1) }),
+        makeStep({ description: 'x'.repeat(PERSISTED_STEP_LIMITS.maxStepDescriptionLength + 1) }),
       ]),
     ).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' });
     await expect(exportProjectArchive([makeStep({ description: 'bad\u0000text' })])).rejects.toMatchObject({

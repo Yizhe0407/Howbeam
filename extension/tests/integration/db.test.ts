@@ -144,8 +144,15 @@ describe('step storage boundaries', () => {
 
   it('rejects descriptions that cannot be represented in project backups', async () => {
     await expect(captureStep(makeStep({
-      description: 'x'.repeat(STEP_STORAGE_LIMITS.maxDescriptionLength + 1),
+      description: 'x'.repeat(STEP_STORAGE_LIMITS.maxStepDescriptionLength + 1),
     }))).rejects.toBeInstanceOf(StepStorageValidationError);
+  });
+
+  it('holds an annotation description to the shorter annotation limit', async () => {
+    const description = 'x'.repeat(STEP_STORAGE_LIMITS.maxAnnotationDescriptionLength + 1);
+    await expect(captureStep(makeStep({ groupId: 'anchor-1', screenshotBlob: undefined, description })))
+      .rejects.toBeInstanceOf(StepStorageValidationError);
+    await expect(captureStep(makeStep({ description }))).resolves.toBeUndefined();
   });
 
   it.each(['javascript:alert(1)', 'https://user:secret@example.com/private', 'x'.repeat(STEP_STORAGE_LIMITS.maxUrlLength + 1)])(

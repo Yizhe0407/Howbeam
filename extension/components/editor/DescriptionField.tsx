@@ -36,7 +36,7 @@ export default function DescriptionField({ step, onChange, disabled = false }: P
       <Textarea
         id={`description-${step.id}`}
         value={description}
-        maxLength={PERSISTED_STEP_LIMITS.maxDescriptionLength}
+        maxLength={PERSISTED_STEP_LIMITS.maxStepDescriptionLength}
         onChange={(e) => setDescription(e.target.value)}
         onBlur={() => void flush().catch(() => undefined)}
         disabled={disabled}

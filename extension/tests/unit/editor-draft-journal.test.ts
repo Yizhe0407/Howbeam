@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
+import { PERSISTED_STEP_LIMITS } from '@/lib/storage/persistence-limits';
 import {
   clearCommittedDescriptionDraft,
   clearMatchingCommittedDescriptionDrafts,
@@ -32,9 +33,9 @@ class StorageProxy implements Storage {
   }
 }
 
-function metadataKeys(): string[] {
+function recordKeys(): string[] {
   return Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
-    .filter((key): key is string => key?.includes(':v2:meta:') ?? false);
+    .filter((key): key is string => key?.includes(':v3:') ?? false);
 }
 
 beforeEach(() => localStorage.clear());
@@ -61,7 +62,6 @@ describe('editor description draft journal', () => {
       },
     ]);
   });
-
   it('clears only the completed writer and only when its exact draft committed', () => {
     writeDescriptionDraft(step, 'A 第一版', 'writer-a', localStorage, 1_000);
     writeDescriptionDraft(step, 'B 草稿', 'writer-b', localStorage, 1_001);
@@ -78,7 +78,6 @@ describe('editor description draft journal', () => {
       'B 草稿',
     ]);
   });
-
   it('marks a conflict by exact base value rather than a lossy hash', () => {
     writeDescriptionDraft(step, '本機草稿', 'writer-a', localStorage, 1_000);
     expect(
@@ -88,84 +87,16 @@ describe('editor description draft journal', () => {
       conflictsWithPersistedValue: false,
     });
   });
-
-  it('updates a 100,000-character draft with bounded synchronous writes', () => {
-    const storage = new StorageProxy(localStorage);
-    const first = 'x'.repeat(99_999);
-    expect(writeDescriptionDraft({ ...step, description: '' }, first, 'writer-a', storage, 1_000)).toBe(true);
-    storage.setCalls = 0;
-
-    expect(writeDescriptionDraft({ ...step, description: '' }, `${first}y`, 'writer-a', storage, 1_001)).toBe(true);
-    expect(storage.setCalls).toBeLessThanOrEqual(2); // one changed chunk plus metadata
-    expect(readDescriptionDrafts({ ...step, description: '' }, 'writer-a', storage, 1_002)[0]?.description).toBe(`${first}y`);
-  });
-
-  it.each([
-    ['chunk write', 1],
-    ['metadata commit', 2],
-  ])('retains the previous atomic record when a %s fails', (_label, failSetCall) => {
-    writeDescriptionDraft(step, '完整舊草稿', 'writer-a', localStorage, 1_000);
-    const storage = new StorageProxy(localStorage);
-    storage.failSetCall = failSetCall;
-
-    expect(writeDescriptionDraft(step, '完整舊草稿加一字', 'writer-a', storage, 1_001)).toBe(false);
-    expect(readDescriptionDrafts(step, 'writer-a', localStorage, 1_002)[0]?.description).toBe('完整舊草稿');
-  });
-
-  it('fails closed and removes metadata when a referenced chunk is missing', () => {
-    writeDescriptionDraft(step, '需要完整分塊', 'writer-a', localStorage, 1_000);
-    const key = metadataKeys()[0];
-    const metadata = JSON.parse(localStorage.getItem(key)!) as { descriptionChunks: string[] };
-    localStorage.removeItem(metadata.descriptionChunks[0]);
-
-    expect(readDescriptionDrafts(step, 'writer-a', localStorage, 1_001)).toEqual([]);
-    expect(localStorage.getItem(key)).toBeNull();
-  });
-
-  it('prunes only old orphan chunks, preserving a fresh in-progress cross-tab write', () => {
-    const old = 'howbeam:editor-description-draft:v2:chunk:project:step:writer:description:1000-rev:0';
-    const fresh = 'howbeam:editor-description-draft:v2:chunk:project:step:writer:description:999999-rev:0';
-    localStorage.setItem(old, 'old');
-    localStorage.setItem(fresh, 'fresh');
-
-    readDescriptionDrafts(step, 'writer-a', localStorage, 1_000_000);
-    expect(localStorage.getItem(old)).toBeNull();
-    expect(localStorage.getItem(fresh)).toBe('fresh');
-  });
-
-  it('reclaims stale orphan chunks before allocating when they are blocking quota', () => {
-    const orphan = 'howbeam:editor-description-draft:v2:chunk:project:step:writer:description:1000-rev:0';
-    localStorage.setItem(orphan, 'stale quota consumer');
-    const storage: Storage = {
-      get length() { return localStorage.length; },
-      clear: () => localStorage.clear(),
-      getItem: (key) => localStorage.getItem(key),
-      key: (index) => localStorage.key(index),
-      removeItem: (key) => localStorage.removeItem(key),
-      setItem: (key, value) => {
-        if (localStorage.getItem(orphan) !== null) {
-          throw new DOMException('quota failure', 'QuotaExceededError');
-        }
-        localStorage.setItem(key, value);
-      },
-    };
-
-    expect(writeDescriptionDraft(step, '可恢復寫入', 'writer-a', storage, 1_000_000)).toBe(true);
-    expect(localStorage.getItem(orphan)).toBeNull();
-    expect(readDescriptionDrafts(step, 'writer-a', storage, 1_000_001)[0]?.description).toBe('可恢復寫入');
-  });
-
   it('clears all and only candidates matching the authoritative commit', () => {
     writeDescriptionDraft(step, '相同內容', 'writer-a', localStorage, 1_000);
     writeDescriptionDraft(step, '相同內容', 'writer-b', localStorage, 1_001);
     writeDescriptionDraft(step, '替代內容', 'writer-c', localStorage, 1_002);
 
-    clearMatchingCommittedDescriptionDrafts(step, '相同內容', localStorage);
+    clearMatchingCommittedDescriptionDrafts(step, '相同內容', localStorage, 1_003);
     expect(readDescriptionDrafts({ ...step, description: '相同內容' }, 'writer-a', localStorage, 1_003)).toEqual([
       expect.objectContaining({ writerId: 'writer-c', description: '替代內容' }),
     ]);
   });
-
   it('removes expired records instead of restoring stale data', () => {
     writeDescriptionDraft(step, '過期草稿', 'writer-a', localStorage, 1_000);
     expect(
@@ -179,7 +110,6 @@ describe('editor description draft journal', () => {
     expect(localStorage.length).toBe(0);
 
   });
-
   it('evicts the oldest foreign records at the record cap instead of refusing the live write', () => {
     expect(writeDescriptionDraft(
       { id: 'oldest-step', sessionId: 'project', description: '' },
@@ -221,7 +151,6 @@ describe('editor description draft journal', () => {
       readDescriptionDrafts({ id: 'overflow', sessionId: 'project', description: '' }, 'observer', localStorage, 2_001)[0]?.description,
     ).toBe('live typing must stay journaled');
   });
-
   it('never evicts the current writer’s own drafts for other steps', () => {
     for (let index = 0; index < DESCRIPTION_DRAFT_JOURNAL_LIMITS.maxRecords; index += 1) {
       expect(
@@ -250,59 +179,36 @@ describe('editor description draft journal', () => {
     ).toBe('own-draft-0');
   });
 
-  it('evicts oldest foreign records at the total size cap until the write fits', () => {
-    const large = 'x'.repeat(100_000);
-    const capRecords = DESCRIPTION_DRAFT_JOURNAL_LIMITS.maxTotalCodeUnits / large.length;
-    for (let index = 0; index < capRecords; index += 1) {
-      expect(
-        writeDescriptionDraft(
-          { id: `bulk-${index}`, sessionId: 'project', description: '' },
-          large,
-          `writer-${index}`,
-          localStorage,
-          1_000 + index,
-        ),
-      ).toBe(true);
-    }
-
-    expect(
-      writeDescriptionDraft(
-        { id: 'incoming', sessionId: 'project', description: '' },
-        large,
-        'incoming-writer',
-        localStorage,
-        2_000,
-      ),
-    ).toBe(true);
-    expect(
-      readDescriptionDrafts({ id: 'bulk-0', sessionId: 'project', description: '' }, 'observer', localStorage, 2_001),
-    ).toEqual([]);
-    expect(
-      readDescriptionDrafts({ id: `bulk-${capRecords - 1}`, sessionId: 'project', description: '' }, 'observer', localStorage, 2_001)[0]?.description,
-    ).toBe(large);
+  it('stores a maximum-length draft and restores it exactly', () => {
+    const maximum = 'x'.repeat(PERSISTED_STEP_LIMITS.maxStepDescriptionLength);
+    expect(writeDescriptionDraft({ ...step, description: '' }, maximum, 'writer-a', localStorage, 1_000)).toBe(true);
+    expect(readDescriptionDrafts({ ...step, description: '' }, 'writer-a', localStorage, 1_001)[0]?.description).toBe(maximum);
   });
 
-  it('never lets malicious metadata delete chunks owned by another record', () => {
+  it('refuses a draft longer than a step description may be', () => {
+    const tooLong = 'x'.repeat(PERSISTED_STEP_LIMITS.maxStepDescriptionLength + 1);
+    expect(writeDescriptionDraft({ ...step, description: '' }, tooLong, 'writer-a', localStorage, 1_000)).toBe(false);
+    expect(localStorage.length).toBe(0);
+  });
+
+  it('retains the previous record when a write fails', () => {
+    writeDescriptionDraft(step, '完整舊草稿', 'writer-a', localStorage, 1_000);
+    const storage = new StorageProxy(localStorage);
+    storage.failSetCall = 1;
+
+    expect(writeDescriptionDraft(step, '完整舊草稿加一字', 'writer-a', storage, 1_001)).toBe(false);
+    expect(readDescriptionDrafts(step, 'writer-a', localStorage, 1_002)[0]?.description).toBe('完整舊草稿');
+  });
+
+  it('drops a record filed under another record key instead of trusting its contents', () => {
     writeDescriptionDraft(step, '安全草稿 A', 'writer-a', localStorage, 1_000);
     writeDescriptionDraft(step, '安全草稿 B', 'writer-b', localStorage, 1_001);
-    const [keyA, keyB] = metadataKeys().sort();
-    const metadataA = JSON.parse(localStorage.getItem(keyA)!) as { descriptionChunks: string[] };
-    const metadataB = JSON.parse(localStorage.getItem(keyB)!) as { descriptionChunks: string[] };
-    metadataA.descriptionChunks = [...metadataB.descriptionChunks];
-    localStorage.setItem(keyA, JSON.stringify(metadataA));
+    const [keyA, keyB] = recordKeys().sort();
+    localStorage.setItem(keyA, localStorage.getItem(keyB)!);
 
-    readDescriptionDrafts(step, 'writer-a', localStorage, 1_002);
-    expect(readDescriptionDrafts(step, 'writer-b', localStorage, 1_003)).toContainEqual(
+    expect(readDescriptionDrafts(step, 'observer', localStorage, 1_002)).toEqual([
       expect.objectContaining({ writerId: 'writer-b', description: '安全草稿 B' }),
-    );
-  });
-
-  it('does not rewrite unchanged chunks when the clock rolls backward', () => {
-    const storage = new StorageProxy(localStorage);
-    writeDescriptionDraft(step, '草稿', 'writer-a', storage, 2_000);
-    storage.setCalls = 0;
-    expect(writeDescriptionDraft(step, '草稿更新', 'writer-a', storage, 1_500)).toBe(true);
-    expect(storage.setCalls).toBeGreaterThan(0);
-    expect(readDescriptionDrafts(step, 'writer-a', storage, 1_501)[0]?.description).toBe('草稿更新');
+    ]);
+    expect(recordKeys()).toEqual([keyB]);
   });
 });

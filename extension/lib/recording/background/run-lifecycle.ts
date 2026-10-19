@@ -263,7 +263,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
     const targetProject = message.autoCreatedProject === true ? null : await getProject(message.sessionId);
     if (version !== control.controlVersion) return;
     const targetProjectTitle = targetProject
-      ? (targetProject.title.trim() || t().common.untitledProject).slice(0, 120)
+      ? targetProject.title.trim() || t().common.untitledProject
       : null;
     const insertAfterStepId = message.insertAfterEntryId === undefined
       ? null

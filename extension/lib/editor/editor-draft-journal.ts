@@ -4,15 +4,11 @@ import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
  * cross-tab `storage` listeners can filter on it without hardcoding a copy. */
 export const DESCRIPTION_DRAFT_KEY_PREFIX = 'howbeam:editor-description-draft:';
 
-const METADATA_PREFIX = `${DESCRIPTION_DRAFT_KEY_PREFIX}v2:meta:`;
-const CHUNK_PREFIX = `${DESCRIPTION_DRAFT_KEY_PREFIX}v2:chunk:`;
+const RECORD_PREFIX = `${DESCRIPTION_DRAFT_KEY_PREFIX}v3:`;
 const WRITER_SESSION_KEY = `${DESCRIPTION_DRAFT_KEY_PREFIX}writer:v1`;
-const JOURNAL_VERSION = 2;
-const CHUNK_CODE_UNITS = 4_096;
+const JOURNAL_VERSION = 3;
 const MAX_DRAFT_RECORDS = 32;
-const MAX_TOTAL_DRAFT_CODE_UNITS = 2_000_000;
 const DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1_000;
-const ORPHAN_GRACE_MS = 5 * 60 * 1_000;
 const FUTURE_CLOCK_SKEW_MS = 60_000;
 
 interface DraftStepIdentity {
@@ -21,16 +17,19 @@ interface DraftStepIdentity {
   description: string;
 }
 
-interface PersistedDescriptionDraftMetadata {
+interface PersistedDescriptionDraft {
   version: typeof JOURNAL_VERSION;
   writerId: string;
   stepId: string;
   sessionId: string;
-  baseLength: number;
-  descriptionLength: number;
-  baseChunks: string[];
-  descriptionChunks: string[];
+  baseDescription: string;
+  description: string;
   updatedAt: number;
+}
+
+interface JournalRecord {
+  key: string;
+  draft: PersistedDescriptionDraft;
 }
 
 export interface RestoredDescriptionDraft {
@@ -53,6 +52,10 @@ function isValidIdentifier(value: unknown): value is string {
     value.trim() === value &&
     !/[\u0000-\u001f\u007f-\u009f]/u.test(value)
   );
+}
+
+function isValidDescription(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= PERSISTED_STEP_LIMITS.maxStepDescriptionLength;
 }
 
 function newUniqueId(prefix: string): string {
@@ -101,57 +104,25 @@ function resolveStorage(storage?: Storage): Storage | null {
   }
 }
 
-function encodedStepKey(step: Pick<DraftStepIdentity, 'id' | 'sessionId'>): string {
-  return `${encodeURIComponent(step.sessionId)}:${encodeURIComponent(step.id)}`;
+function recordKey(step: Pick<DraftStepIdentity, 'id' | 'sessionId'>, writerId: string): string {
+  return `${RECORD_PREFIX}${encodeURIComponent(step.sessionId)}:${encodeURIComponent(step.id)}:${encodeURIComponent(writerId)}`;
 }
 
-function recordId(step: Pick<DraftStepIdentity, 'id' | 'sessionId'>, writerId: string): string {
-  return `${encodedStepKey(step)}:${encodeURIComponent(writerId)}`;
-}
-
-function metadataKey(step: Pick<DraftStepIdentity, 'id' | 'sessionId'>, writerId: string): string {
-  return `${METADATA_PREFIX}${recordId(step, writerId)}`;
-}
-
-function chunkOwnerPrefix(metadata: PersistedDescriptionDraftMetadata): string {
-  return `${CHUNK_PREFIX}${recordId(
-    { id: metadata.stepId, sessionId: metadata.sessionId },
-    metadata.writerId,
-  )}:`;
-}
-
-function isValidDescription(value: unknown): value is string {
-  return typeof value === 'string' && value.length <= PERSISTED_STEP_LIMITS.maxDescriptionLength;
-}
-
-function isValidLength(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) >= 0 && (value as number) <= PERSISTED_STEP_LIMITS.maxDescriptionLength;
-}
-
-function parseMetadata(raw: string | null): PersistedDescriptionDraftMetadata | null {
+function parseDraft(raw: string | null): PersistedDescriptionDraft | null {
   if (!raw) return null;
   try {
-    const value = JSON.parse(raw) as Partial<PersistedDescriptionDraftMetadata> | null;
+    const value = JSON.parse(raw) as Partial<PersistedDescriptionDraft> | null;
     if (
       !value ||
       value.version !== JOURNAL_VERSION ||
       !isValidIdentifier(value.writerId) ||
       !isValidIdentifier(value.stepId) ||
       !isValidIdentifier(value.sessionId) ||
-      !isValidLength(value.baseLength) ||
-      !isValidLength(value.descriptionLength) ||
-      !Array.isArray(value.baseChunks) ||
-      !Array.isArray(value.descriptionChunks) ||
-      value.baseChunks.length !== Math.ceil(value.baseLength / CHUNK_CODE_UNITS) ||
-      value.descriptionChunks.length !== Math.ceil(value.descriptionLength / CHUNK_CODE_UNITS) ||
-      !value.baseChunks.every((key) => typeof key === 'string' && key.startsWith(CHUNK_PREFIX)) ||
-      !value.descriptionChunks.every((key) => typeof key === 'string' && key.startsWith(CHUNK_PREFIX)) ||
+      !isValidDescription(value.baseDescription) ||
+      !isValidDescription(value.description) ||
       !Number.isFinite(value.updatedAt)
     ) return null;
-    const metadata = value as PersistedDescriptionDraftMetadata;
-    const owner = chunkOwnerPrefix(metadata);
-    if (![...metadata.baseChunks, ...metadata.descriptionChunks].every((key) => key.startsWith(owner))) return null;
-    return metadata;
+    return value as PersistedDescriptionDraft;
   } catch {
     return null;
   }
@@ -166,153 +137,42 @@ function removeSafely(storage: Storage, key: string): boolean {
   }
 }
 
-function removeMetadataRecord(storage: Storage, key: string, metadata: PersistedDescriptionDraftMetadata | null): void {
-  removeSafely(storage, key);
-  if (!metadata || key !== metadataKey({ id: metadata.stepId, sessionId: metadata.sessionId }, metadata.writerId)) return;
-  const owner = chunkOwnerPrefix(metadata);
-  for (const chunkKey of new Set([...metadata.baseChunks, ...metadata.descriptionChunks])) {
-    if (chunkKey.startsWith(owner)) removeSafely(storage, chunkKey);
-  }
-}
-
-function readChunkedValue(storage: Storage, keys: readonly string[], expectedLength: number, owner: string): string | null {
-  let result = '';
-  try {
-    for (const key of keys) {
-      if (!key.startsWith(owner)) return null;
-      const chunk = storage.getItem(key);
-      if (chunk === null || chunk.length > CHUNK_CODE_UNITS) return null;
-      result += chunk;
-    }
-  } catch {
-    return null;
-  }
-  return result.length === expectedLength ? result : null;
-}
-
-function readMetadataValues(
-  storage: Storage,
-  metadata: PersistedDescriptionDraftMetadata,
-): { baseDescription: string; description: string } | null {
-  const owner = chunkOwnerPrefix(metadata);
-  const baseDescription = readChunkedValue(storage, metadata.baseChunks, metadata.baseLength, owner);
-  const description = readChunkedValue(storage, metadata.descriptionChunks, metadata.descriptionLength, owner);
-  return baseDescription === null || description === null ? null : { baseDescription, description };
-}
-
-function storageKeys(storage: Storage): string[] | null {
-  try {
-    return Array.from({ length: storage.length }, (_, index) => storage.key(index)).filter(
-      (key): key is string => key !== null,
-    );
-  } catch {
-    return null;
-  }
-}
-
 function isExpired(updatedAt: number, now: number): boolean {
   return now - updatedAt > DRAFT_MAX_AGE_MS || updatedAt > now + FUTURE_CLOCK_SKEW_MS;
 }
 
-interface JournalRecordUsage {
-  key: string;
-  writerId: string;
-  updatedAt: number;
-  codeUnits: number;
-  metadata: PersistedDescriptionDraftMetadata;
-}
-
-interface JournalUsage {
-  count: number;
-  codeUnits: number;
-  referencedChunks: Set<string>;
-  records: JournalRecordUsage[];
-}
-
-function scanUsage(storage: Storage, now: number): JournalUsage | null {
-  const keys = storageKeys(storage);
-  if (!keys) return null;
-  let count = 0;
-  let codeUnits = 0;
-  const referencedChunks = new Set<string>();
-  const records: JournalRecordUsage[] = [];
+/**
+ * Every live record in the journal. This is also the cleanup pass: records
+ * that are corrupt, filed under a key that does not match their contents, or
+ * expired are removed while scanning. Returns null when storage is unreadable.
+ */
+function scanRecords(storage: Storage, now: number): JournalRecord[] | null {
   try {
+    const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
+    const records: JournalRecord[] = [];
     for (const key of keys) {
-      if (key.startsWith(METADATA_PREFIX)) {
-        const metadata = parseMetadata(storage.getItem(key));
-        if (
-          !metadata ||
-          key !== metadataKey({ id: metadata.stepId, sessionId: metadata.sessionId }, metadata.writerId) ||
-          isExpired(metadata.updatedAt, now)
-        ) {
-          removeMetadataRecord(storage, key, metadata);
-          continue;
-        }
-        const recordCodeUnits = metadata.baseLength + metadata.descriptionLength;
-        count += 1;
-        codeUnits += recordCodeUnits;
-        records.push({ key, writerId: metadata.writerId, updatedAt: metadata.updatedAt, codeUnits: recordCodeUnits, metadata });
-        for (const chunkKey of [...metadata.baseChunks, ...metadata.descriptionChunks]) referencedChunks.add(chunkKey);
-      }
-    }
-    return { count, codeUnits, referencedChunks, records };
-  } catch {
-    return null;
-  }
-}
-
-function orphanCreatedAt(key: string): number | null {
-  const match = /:(?:base|description):(\d+)-[^:]+:\d+$/u.exec(key);
-  if (!match) return null;
-  const value = Number(match[1]);
-  return Number.isFinite(value) ? value : null;
-}
-
-function pruneOldOrphanChunks(storage: Storage, referencedChunks: ReadonlySet<string>, now: number): void {
-  const keys = storageKeys(storage);
-  if (!keys) return;
-  for (const key of keys) {
-    if (!key.startsWith(CHUNK_PREFIX) || referencedChunks.has(key)) continue;
-    const createdAt = orphanCreatedAt(key);
-    // A grace period prevents another tab from deleting copy-on-write chunks
-    // between that tab's chunk writes and its metadata commit.
-    if (createdAt !== null && now - createdAt > ORPHAN_GRACE_MS) removeSafely(storage, key);
-  }
-}
-
-function writeChunkedValue(
-  storage: Storage,
-  id: string,
-  kind: 'base' | 'description',
-  value: string,
-  previousKeys: readonly string[],
-  revision: string,
-  createdKeys: string[],
-): string[] | null {
-  const keys: string[] = [];
-  try {
-    for (let index = 0; index < Math.ceil(value.length / CHUNK_CODE_UNITS); index += 1) {
-      const chunk = value.slice(index * CHUNK_CODE_UNITS, (index + 1) * CHUNK_CODE_UNITS);
-      const previousKey = previousKeys[index];
-      if (previousKey && storage.getItem(previousKey) === chunk) {
-        keys.push(previousKey);
+      if (key === null || !key.startsWith(RECORD_PREFIX)) continue;
+      const draft = parseDraft(storage.getItem(key));
+      const filedCorrectly = draft !== null &&
+        key === recordKey({ id: draft.stepId, sessionId: draft.sessionId }, draft.writerId);
+      if (!draft || !filedCorrectly || isExpired(draft.updatedAt, now)) {
+        removeSafely(storage, key);
         continue;
       }
-      const key = `${CHUNK_PREFIX}${id}:${kind}:${revision}:${index}`;
-      storage.setItem(key, chunk);
-      createdKeys.push(key);
-      keys.push(key);
+      records.push({ key, draft });
     }
-    return keys;
+    return records;
   } catch {
     return null;
   }
 }
 
-/** Copy-on-write chunking keeps a crash-safe synchronous write bounded: normal
- * typing updates one 4 KiB chunk plus metadata instead of rewriting 100,000
- * characters. Metadata is committed last, so interrupted writes retain the
- * previous complete record. */
+function recordsForStep(records: readonly JournalRecord[], step: Pick<DraftStepIdentity, 'id' | 'sessionId'>): JournalRecord[] {
+  return records.filter(({ draft }) => draft.stepId === step.id && draft.sessionId === step.sessionId);
+}
+
+/** Each record is a single localStorage entry, so a write either lands whole or
+ * leaves the previous record untouched. */
 export function writeDescriptionDraft(
   step: DraftStepIdentity,
   description: string,
@@ -331,114 +191,42 @@ export function writeDescriptionDraft(
   ) return false;
   if (description === step.description) return discardDescriptionDraft(step, writerId, storage);
 
-  const key = metadataKey(step, writerId);
-  const usage = scanUsage(storage, now);
-  if (!usage) return false;
-  // Reclaim stale crash leftovers before allocating. Waiting until a successful
-  // write creates a deadlock when those orphan chunks are what exhausted the
-  // localStorage quota in the first place. Fresh cross-tab chunks remain
-  // protected by ORPHAN_GRACE_MS.
-  pruneOldOrphanChunks(storage, usage.referencedChunks, now);
+  const key = recordKey(step, writerId);
+  const records = scanRecords(storage, now);
+  if (!records) return false;
 
-  let previous: PersistedDescriptionDraftMetadata | null;
-  try {
-    previous = parseMetadata(storage.getItem(key));
-    if (previous && readMetadataValues(storage, previous) === null) {
-      usage.count = Math.max(0, usage.count - 1);
-      usage.codeUnits = Math.max(0, usage.codeUnits - previous.baseLength - previous.descriptionLength);
-      removeMetadataRecord(storage, key, previous);
-      previous = null;
-    }
-  } catch {
-    return false;
-  }
-
-  const previousCodeUnits = previous ? previous.baseLength + previous.descriptionLength : 0;
-  let nextCount = usage.count + (previous ? 0 : 1);
-  let nextCodeUnits = usage.codeUnits - previousCodeUnits + step.description.length + description.length;
-  if (nextCount > MAX_DRAFT_RECORDS || nextCodeUnits > MAX_TOTAL_DRAFT_CODE_UNITS) {
-    // The bounds protect localStorage, not abandoned drafts: refusing the
-    // write here would silently stop journaling live typing once dead tabs
+  let nextCount = records.length + (records.some((record) => record.key === key) ? 0 : 1);
+  if (nextCount > MAX_DRAFT_RECORDS) {
+    // The cap protects localStorage, not abandoned drafts: refusing the write
+    // here would silently stop journaling live typing once dead tabs
     // accumulate 32 records. Evict other writers' records oldest-first
     // instead. This tab's own drafts for other steps are never evicted —
     // they may be the only copy of text this same user just typed.
-    const evictable = usage.records
-      .filter((record) => record.writerId !== writerId)
-      .sort((left, right) => left.updatedAt - right.updatedAt);
+    const evictable = records
+      .filter((record) => record.draft.writerId !== writerId)
+      .sort((left, right) => left.draft.updatedAt - right.draft.updatedAt);
     for (const record of evictable) {
-      if (nextCount <= MAX_DRAFT_RECORDS && nextCodeUnits <= MAX_TOTAL_DRAFT_CODE_UNITS) break;
-      removeMetadataRecord(storage, record.key, record.metadata);
+      if (nextCount <= MAX_DRAFT_RECORDS) break;
+      removeSafely(storage, record.key);
       nextCount -= 1;
-      nextCodeUnits -= record.codeUnits;
     }
-    if (nextCount > MAX_DRAFT_RECORDS || nextCodeUnits > MAX_TOTAL_DRAFT_CODE_UNITS) return false;
+    if (nextCount > MAX_DRAFT_RECORDS) return false;
   }
 
-  const id = recordId(step, writerId);
-  const revision = `${now}-${newUniqueId('revision')}`;
-  const createdKeys: string[] = [];
-  const baseChunks = writeChunkedValue(storage, id, 'base', step.description, previous?.baseChunks ?? [], revision, createdKeys);
-  const descriptionChunks = writeChunkedValue(
-    storage,
-    id,
-    'description',
-    description,
-    previous?.descriptionChunks ?? [],
-    revision,
-    createdKeys,
-  );
-  if (!baseChunks || !descriptionChunks) {
-    for (const createdKey of createdKeys) removeSafely(storage, createdKey);
-    return false;
-  }
-
-  const metadata: PersistedDescriptionDraftMetadata = {
+  const draft: PersistedDescriptionDraft = {
     version: JOURNAL_VERSION,
     writerId,
     stepId: step.id,
     sessionId: step.sessionId,
-    baseLength: step.description.length,
-    descriptionLength: description.length,
-    baseChunks,
-    descriptionChunks,
+    baseDescription: step.description,
+    description,
     updatedAt: now,
   };
   try {
-    storage.setItem(key, JSON.stringify(metadata));
+    storage.setItem(key, JSON.stringify(draft));
+    return true;
   } catch {
-    for (const createdKey of createdKeys) removeSafely(storage, createdKey);
     return false;
-  }
-
-  const retained = new Set([...baseChunks, ...descriptionChunks]);
-  if (previous) {
-    const owner = chunkOwnerPrefix(previous);
-    for (const oldKey of new Set([...previous.baseChunks, ...previous.descriptionChunks])) {
-      if (oldKey.startsWith(owner) && !retained.has(oldKey)) removeSafely(storage, oldKey);
-    }
-  }
-  // The pre-allocation prune above already ran with these exact inputs; the
-  // only chunks added since are this write's own, which stay referenced. A
-  // second full-storage scan per keystroke would buy nothing.
-  return true;
-}
-
-/** One scan over everything journaled for a step, shared by the read and clear paths so their
- * key-matching rules cannot drift apart. Storage failures propagate to the
- * caller, which owns the fail-soft policy. */
-function forEachStepDraftRecord(
-  storage: Storage,
-  step: Pick<DraftStepIdentity, 'id' | 'sessionId'>,
-  callback: (key: string, metadata: PersistedDescriptionDraftMetadata) => void,
-): void {
-  const keys = storageKeys(storage);
-  if (!keys) return;
-  const stepPrefix = `${METADATA_PREFIX}${encodedStepKey(step)}:`;
-  for (const key of keys) {
-    if (!key.startsWith(stepPrefix)) continue;
-    const metadata = parseMetadata(storage.getItem(key));
-    if (!metadata || metadata.stepId !== step.id || metadata.sessionId !== step.sessionId) continue;
-    callback(key, metadata);
   }
 }
 
@@ -446,9 +234,9 @@ function forEachStepDraftRecord(
  * Returns all independently journaled versions for one step.
  *
  * Destructive side effects: this is also the journal's cleanup pass — it
- * removes expired, corrupt, over-limit, and value-matching records (plus
- * orphaned chunks) while scanning. Callers must therefore invoke it once per
- * mounted field (e.g. a lazy useState initializer), never per render.
+ * removes expired, corrupt, and value-matching records while scanning.
+ * Callers must therefore invoke it once per mounted field (e.g. a lazy
+ * useState initializer), never per render.
  */
 export function readDescriptionDrafts(
   step: DraftStepIdentity,
@@ -458,30 +246,23 @@ export function readDescriptionDrafts(
 ): RestoredDescriptionDraft[] {
   const storage = resolveStorage(storageOverride);
   if (!storage || !isValidIdentifier(step.id) || !isValidIdentifier(step.sessionId) || !isValidDescription(step.description)) return [];
-  const usage = scanUsage(storage, now);
-  if (!usage) return [];
+  const records = scanRecords(storage, now);
+  if (!records) return [];
+
   const candidates: RestoredDescriptionDraft[] = [];
-
-  try {
-    forEachStepDraftRecord(storage, step, (key, metadata) => {
-      const values = readMetadataValues(storage, metadata);
-      if (!values || values.description === step.description) {
-        removeMetadataRecord(storage, key, metadata);
-        return;
-      }
-      candidates.push({
-        writerId: metadata.writerId,
-        description: values.description,
-        updatedAt: metadata.updatedAt,
-        belongsToCurrentWriter: metadata.writerId === currentWriterId,
-        conflictsWithPersistedValue: values.baseDescription !== step.description,
-      });
+  for (const { key, draft } of recordsForStep(records, step)) {
+    if (draft.description === step.description) {
+      removeSafely(storage, key);
+      continue;
+    }
+    candidates.push({
+      writerId: draft.writerId,
+      description: draft.description,
+      updatedAt: draft.updatedAt,
+      belongsToCurrentWriter: draft.writerId === currentWriterId,
+      conflictsWithPersistedValue: draft.baseDescription !== step.description,
     });
-  } catch {
-    return [];
   }
-
-  pruneOldOrphanChunks(storage, usage.referencedChunks, now);
   return candidates.sort((left, right) => right.updatedAt - left.updatedAt || left.writerId.localeCompare(right.writerId));
 }
 
@@ -492,14 +273,7 @@ export function discardDescriptionDraft(
 ): boolean {
   const storage = resolveStorage(storageOverride);
   if (!storage || !isValidIdentifier(step.id) || !isValidIdentifier(step.sessionId) || !isValidIdentifier(writerId)) return false;
-  const key = metadataKey(step, writerId);
-  try {
-    const metadata = parseMetadata(storage.getItem(key));
-    removeMetadataRecord(storage, key, metadata);
-    return true;
-  } catch {
-    return false;
-  }
+  return removeSafely(storage, recordKey(step, writerId));
 }
 
 /** Compare-and-clear prevents an older IndexedDB completion from deleting a
@@ -512,12 +286,9 @@ export function clearCommittedDescriptionDraft(
 ): void {
   const storage = resolveStorage(storageOverride);
   if (!storage) return;
-  const key = metadataKey(step, writerId);
+  const key = recordKey(step, writerId);
   try {
-    const metadata = parseMetadata(storage.getItem(key));
-    if (!metadata) return;
-    const values = readMetadataValues(storage, metadata);
-    if (values?.description === committedDescription) removeMetadataRecord(storage, key, metadata);
+    if (parseDraft(storage.getItem(key))?.description === committedDescription) removeSafely(storage, key);
   } catch {
     // The draft remains available for a later recovery attempt.
   }
@@ -529,24 +300,18 @@ export function clearMatchingCommittedDescriptionDrafts(
   step: Pick<DraftStepIdentity, 'id' | 'sessionId'>,
   committedDescription: string,
   storageOverride?: Storage,
+  now = Date.now(),
 ): void {
   const storage = resolveStorage(storageOverride);
   if (!storage) return;
-  try {
-    forEachStepDraftRecord(storage, step, (key, metadata) => {
-      if (readMetadataValues(storage, metadata)?.description === committedDescription) {
-        removeMetadataRecord(storage, key, metadata);
-      }
-    });
-  } catch {
-    // Best effort cleanup only; stale matching drafts are harmless and bounded.
+  const records = scanRecords(storage, now);
+  if (!records) return;
+  for (const { key, draft } of recordsForStep(records, step)) {
+    if (draft.description === committedDescription) removeSafely(storage, key);
   }
 }
 
 export const DESCRIPTION_DRAFT_JOURNAL_LIMITS = Object.freeze({
   maxRecords: MAX_DRAFT_RECORDS,
-  maxTotalCodeUnits: MAX_TOTAL_DRAFT_CODE_UNITS,
   maxAgeMs: DRAFT_MAX_AGE_MS,
-  chunkCodeUnits: CHUNK_CODE_UNITS,
-  orphanGraceMs: ORPHAN_GRACE_MS,
 });

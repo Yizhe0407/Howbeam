@@ -15,6 +15,7 @@ import EditableTitle from '@/components/shared/EditableTitle';
 import InlineAlert from '@/components/shared/InlineAlert';
 import { reportError } from '@/components/shared/report-error';
 import { recordingItemCountLabel, recordingModeCopy } from '@/lib/recording/recording-mode-copy';
+import { PERSISTED_PROJECT_LIMITS } from '@/lib/storage/persistence-limits';
 import { t } from '@/lib/shared/i18n';
 
 interface Props {
@@ -91,6 +92,7 @@ export default function StepStage({
         <div className="flex min-w-0 w-full items-center gap-1.5 sm:max-w-[45%]">
           <EditableTitle
             value={projectTitle ?? ''}
+            maxLength={PERSISTED_PROJECT_LIMITS.maxTitleLength}
             fallback={t().common.untitledProject}
             label={t().editor.stage.titleLabel}
             disabled={editingDisabled || !onTitleChange}

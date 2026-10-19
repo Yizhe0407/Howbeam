@@ -65,7 +65,7 @@ function AnnotationRow({ step, index, onChange, onDelete, deleteDisabled, dragHa
           type="text"
           aria-label={t().editor.annotations.descriptionLabel(index + 1)}
           value={description}
-          maxLength={PERSISTED_STEP_LIMITS.maxDescriptionLength}
+          maxLength={PERSISTED_STEP_LIMITS.maxAnnotationDescriptionLength}
           onChange={(e) => setDescription(e.target.value)}
           onBlur={() => void flush().catch(() => undefined)}
           disabled={deleteDisabled || deleting}

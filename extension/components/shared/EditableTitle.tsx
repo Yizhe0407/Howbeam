@@ -10,7 +10,7 @@ interface Props {
   /** Shown when `value` is empty. Also what an emptied field reverts to. */
   fallback: string;
   label: string;
-  maxLength?: number;
+  maxLength: number;
   disabled?: boolean;
   className?: string;
 }
@@ -25,7 +25,7 @@ export default function EditableTitle({
   onCommitError,
   fallback,
   label,
-  maxLength = 120,
+  maxLength,
   disabled = false,
   className,
 }: Props) {

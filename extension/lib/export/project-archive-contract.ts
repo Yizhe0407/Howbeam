@@ -1,5 +1,5 @@
 import type { Bounds, ImageEdit, Redaction, Step } from '../storage/models';
-import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
+import { PERSISTED_PROJECT_LIMITS, PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
 import { PROJECT_SECTION_LIMITS, type ProjectSection } from '../storage/project-section-model';
 import { PROJECT_TAG_LIMITS } from '../storage/project-tag-model';
 import { SCREENSHOT_MEDIA_TYPES } from '../storage/screenshot-rules';
@@ -29,9 +29,8 @@ export const PROJECT_ARCHIVE_LIMITS = Object.freeze({
   maxImageEditsPerStep: PERSISTED_STEP_LIMITS.maxImageEditsPerStep,
   maxImageEditTextLength: PERSISTED_STEP_LIMITS.maxImageEditTextLength,
   maxIdLength: PERSISTED_STEP_LIMITS.maxIdLength,
-  maxTitleLength: 120,
-  maxDescriptionLength: PERSISTED_STEP_LIMITS.maxDescriptionLength,
-  maxProjectDescriptionLength: 2_000,
+  maxTitleLength: PERSISTED_PROJECT_LIMITS.maxTitleLength,
+  maxProjectDescriptionLength: PERSISTED_PROJECT_LIMITS.maxDescriptionLength,
   maxSections: PROJECT_SECTION_LIMITS.maxSections,
   maxSectionTitleLength: PROJECT_SECTION_LIMITS.maxTitleLength,
   maxTags: PROJECT_TAG_LIMITS.maxTags,

@@ -5,7 +5,7 @@ import {
 } from './project-section-model';
 import { PROJECT_TAG_LIMITS, sanitizeProjectTag } from './project-tag-model';
 import { isRecord } from '../shared/validation';
-import { PERSISTED_STEP_LIMITS } from './persistence-limits';
+import { PERSISTED_PROJECT_LIMITS, PERSISTED_STEP_LIMITS } from './persistence-limits';
 import { normalizeStoredText } from './stored-text';
 import { cloneImageEdit, IMAGE_EDIT_LIMITS, readImageEdits, type ImageEdit } from './image-edit-model';
 export type { ImageEdit } from './image-edit-model';
@@ -121,9 +121,6 @@ export interface Project {
 }
 
 export type ProjectSummary = Project;
-
-const PROJECT_TITLE_MAX_LENGTH = 120;
-const PROJECT_DESCRIPTION_MAX_LENGTH = 2_000;
 
 /** Runtime persistence limits mirror the portable project format so data that
  * can be recorded locally can always be backed up without unbounded memory or
@@ -282,11 +279,11 @@ function sanitizeProjectTagsShape(value: unknown): string[] {
 export function sanitizeProject(project: Project): Project {
   const createdAt = Number.isFinite(project.createdAt) ? project.createdAt : Date.now();
   const updatedAt = Number.isFinite(project.updatedAt) ? Math.max(project.updatedAt, createdAt) : createdAt;
-  const title = sanitizeProjectText(project.title, PROJECT_TITLE_MAX_LENGTH) || defaultProjectTitle(createdAt);
+  const title = sanitizeProjectText(project.title, PERSISTED_PROJECT_LIMITS.maxTitleLength) || defaultProjectTitle(createdAt);
   return {
     id: project.id,
     title,
-    description: sanitizeProjectText(project.description, PROJECT_DESCRIPTION_MAX_LENGTH),
+    description: sanitizeProjectText(project.description, PERSISTED_PROJECT_LIMITS.maxDescriptionLength),
     sections: sanitizeProjectSectionsShape((project as Project & { sections?: unknown }).sections),
     tags: sanitizeProjectTagsShape((project as Project & { tags?: unknown }).tags),
     createdAt,
@@ -312,6 +309,12 @@ export type StepRole = 'ordinary' | 'anchor' | 'annotation';
 export function stepRole(step: Pick<Step, 'id' | 'groupId'>): StepRole {
   if (!step.groupId) return 'ordinary';
   return step.id === step.groupId ? 'anchor' : 'annotation';
+}
+
+export function stepDescriptionLimit(step: Pick<Step, 'id' | 'groupId'>): number {
+  return stepRole(step) === 'annotation'
+    ? PERSISTED_STEP_LIMITS.maxAnnotationDescriptionLength
+    : PERSISTED_STEP_LIMITS.maxStepDescriptionLength;
 }
 
 export function getEffectiveBounds(step: Pick<Step, 'bounds' | 'manualBounds'>): Bounds | null {
@@ -446,7 +449,7 @@ export function sanitizeStepForStorage(step: Step): Step {
       ? null
       : isValidBounds(step.bounds) ? { ...step.bounds } : null,
     devicePixelRatio: sanitizePixelRatio(step.devicePixelRatio, 'Step device pixel ratio'),
-    description: sanitizeStepText(step.description, STEP_STORAGE_LIMITS.maxDescriptionLength, 'Step description'),
+    description: sanitizeStepText(step.description, stepDescriptionLimit(step), 'Step description'),
     url: sanitizeStepUrl(step.url),
     timestamp: sanitizeNonNegativeSafeInteger(step.timestamp, 'Step timestamp'),
   };

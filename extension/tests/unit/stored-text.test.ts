@@ -4,7 +4,7 @@ import { sanitizeProject, sanitizeStepForStorage, type Project, type Step } from
 import { sanitizeProjectTag } from '@/lib/storage/project-tag-model';
 import { validateRuntimeStep } from '@/lib/export/project-archive-validation';
 
-const EVERY_LOW_CODE_UNIT = Array.from({ length: 0x200 }, (_, code) => String.fromCharCode(code)).join('');
+const EVERY_LOW_CODE_UNIT = Array.from({ length: 0x100 }, (_, code) => String.fromCharCode(code)).join('');
 
 function step(description: string): Step {
   return {

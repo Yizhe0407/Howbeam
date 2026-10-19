@@ -1,5 +1,5 @@
 import { isRecord } from '../shared/validation';
-import { buildStepEntries, stepRole, type Bounds, type ImageEdit, type Redaction, type Step } from '../storage/models';
+import { buildStepEntries, stepDescriptionLimit, stepRole, type Bounds, type ImageEdit, type Redaction, type Step } from '../storage/models';
 import {
   IMAGE_EDIT_LIMITS,
   isImageEditColor,
@@ -476,6 +476,7 @@ export function validateRuntimeStep(stepValue: unknown, path: string): Step {
   }
   if (screenshotBlob) validateScreenshotBlob(screenshotBlob, `${path}.screenshotBlob`);
 
+  const groupId = expectOptionalString(record, 'groupId', path);
   const step: Step = {
     id,
     sessionId,
@@ -487,7 +488,7 @@ export function validateRuntimeStep(stepValue: unknown, path: string): Step {
       Number.MIN_VALUE,
       PROJECT_ARCHIVE_LIMITS.maxPixelRatio,
     ),
-    description: expectText(record.description, `${path}.description`, PROJECT_ARCHIVE_LIMITS.maxDescriptionLength),
+    description: expectText(record.description, `${path}.description`, stepDescriptionLimit({ id, groupId })),
     url: expectUrl(record.url, `${path}.url`),
     timestamp: expectSafeInteger(record.timestamp, `${path}.timestamp`),
   };
@@ -525,7 +526,6 @@ export function validateRuntimeStep(stepValue: unknown, path: string): Step {
   }
   const lastCaptureRunId = expectOptionalString(record, 'lastCaptureRunId', path);
   if (lastCaptureRunId !== undefined) step.lastCaptureRunId = lastCaptureRunId;
-  const groupId = expectOptionalString(record, 'groupId', path);
   if (groupId !== undefined) step.groupId = groupId;
   const numbered = expectOptionalBoolean(record, 'numbered', path);
   if (numbered !== undefined) step.numbered = numbered;

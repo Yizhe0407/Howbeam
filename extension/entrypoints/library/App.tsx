@@ -34,6 +34,7 @@ import BackupPausedNotice from '@/components/shared/BackupPausedNotice';
 import { useAutoFolderBackup } from '@/lib/backup/use-folder-backup';
 import { reportError } from '@/components/shared/report-error';
 import { usePendingAction } from '@/components/shared/use-pending-action';
+import { PERSISTED_PROJECT_LIMITS } from '@/lib/storage/persistence-limits';
 import { intlLocale, t } from '@/lib/shared/i18n';
 import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
 import { importProjectArchive } from '@/lib/export/project-archive-import';
@@ -183,7 +184,7 @@ export default function App() {
     }
     await run('import', async () => {
       const imported = await importProjectArchive(file);
-      const fallbackTitle = file.name.replace(/\.howbeam$/i, '').slice(0, 120) || t().library.importedFallbackTitle;
+      const fallbackTitle = file.name.replace(/\.howbeam$/i, '') || t().library.importedFallbackTitle;
       const project = await createProjectFromSteps(
         imported.steps,
         {
@@ -383,6 +384,7 @@ export default function App() {
                     )}
                     <EditableTitle
                       value={project.title}
+                      maxLength={PERSISTED_PROJECT_LIMITS.maxTitleLength}
                       fallback={t().common.untitledProject}
                       label={t().library.titleLabel}
                       disabled={actionsLocked}
