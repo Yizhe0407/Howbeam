@@ -14,7 +14,6 @@ const E2E_PROJECT_TEMPLATE = {
   title: 'E2E 測試教學',
   description: '',
   sections: [],
-  tags: [],
   createdAt: 0,
   updatedAt: 0,
   contentRevision: 0,

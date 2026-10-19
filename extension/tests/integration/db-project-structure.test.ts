@@ -166,12 +166,12 @@ describe('Project entry-safe atomic structure', () => {
     expect(restored.project.sections).toEqual(before.project.sections);
   });
 
-  it('still restores a deletion after the Project was renamed and retagged', async () => {
+  it('still restores a deletion after the Project was renamed', async () => {
     const { project, snapshot } = await createTrackedProject(makeSingleSteps(3));
     const removed = snapshot.entries[1];
     const rows = removed.kind === 'single' ? [removed.step] : [removed.anchor, ...removed.annotations];
     const deleted = await deleteProjectEntriesAtomically(project.id, [snapshot.entryIds[1]], snapshot.project.contentRevision);
-    await updateProject(project.id, { title: '改過的名稱', addTags: ['標籤'] });
+    await updateProject(project.id, { title: '改過的名稱' });
     const restored = await restoreProjectEntriesAtomically(
       project.id, rows, snapshot.entryIds, snapshot.project.sections, deleted.project.contentRevision,
     );

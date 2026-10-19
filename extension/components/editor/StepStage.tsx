@@ -1,16 +1,13 @@
 import { useState } from 'react';
-import { Bookmark, Loader2, Pencil, Plus, PencilRuler, X, ZoomIn } from 'lucide-react';
+import { Bookmark, Loader2, Pencil, Plus, PencilRuler, ZoomIn } from 'lucide-react';
 import { entryId, getEntryPrivacyState, type Step, type StepEntry } from '@/lib/storage/models';
 import ImageEditWorkspace from './ImageEditWorkspace';
 import { Badge } from '@/components/ui/badge';
 import { DashedOutline } from '@/components/ui/dashed-outline';
-import { cn } from '@/lib/shared/utils';
-import { tagHueClass } from '@/lib/shared/tag-hue';
 import EntryThumbnail from './EntryThumbnail';
 import StepActions from './StepActions';
 import DescriptionField from './DescriptionField';
 import AnnotationList from './AnnotationList';
-import TagSelectDialog from './TagSelectDialog';
 import EditableTitle from '@/components/shared/EditableTitle';
 import InlineAlert from '@/components/shared/InlineAlert';
 import { reportError } from '@/components/shared/report-error';
@@ -26,11 +23,7 @@ interface Props {
   /** Present when a section can start at this entry. */
   onStartSection?: () => void;
   projectTitle?: string;
-  projectTags?: readonly string[];
   onTitleChange?: (title: string) => Promise<void>;
-  /** Tag edits are single add/remove operations, merged into the stored list. */
-  onAddTag?: (tag: string) => Promise<void>;
-  onRemoveTag?: (tag: string) => Promise<void>;
   onChange: () => void | Promise<void>;
   onDelete: () => Promise<void>;
   onDeleteAnnotation: (step: Step) => Promise<void>;
@@ -47,10 +40,7 @@ export default function StepStage({
   sectionTitle,
   onStartSection,
   projectTitle,
-  projectTags = [],
   onTitleChange,
-  onAddTag,
-  onRemoveTag,
   onChange,
   onDelete,
   onDeleteAnnotation,
@@ -61,85 +51,26 @@ export default function StepStage({
   editingDisabled = false,
 }: Props) {
   const [numberingPending, setNumberingPending] = useState(false);
-  const [tagDialogOpen, setTagDialogOpen] = useState(false);
   const [stageError, setStageError] = useState<string | null>(null);
   const privacy = getEntryPrivacyState(entry);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
 
-  const displayTags = projectTags;
-
-  // Adding rethrows so the tag dialog shows the failure inline while open (a stage banner
-  // would sit behind the modal); removing happens on the chip row, which uses `stageError`.
-  async function addTag(tag: string): Promise<void> {
-    if (!onAddTag) return;
-    setStageError(null);
-    await onAddTag(tag);
-  }
-
-  async function removeTag(tag: string): Promise<void> {
-    if (!onRemoveTag) return;
-    setStageError(null);
-    try {
-      await onRemoveTag(tag);
-    } catch (tagError) {
-      setStageError(reportError('[howbeam] failed to update project tags', tagError, t().editor.stage.tagSaveFailed));
-    }
-  }
-
-  const titleAndTagRow = (
-    <>
-      <div className="mb-4 flex shrink-0 flex-col gap-3 border-b-2 border-border-soft pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 w-full items-center gap-1.5 sm:max-w-[45%]">
-          <EditableTitle
-            value={projectTitle ?? ''}
-            maxLength={PERSISTED_PROJECT_LIMITS.maxTitleLength}
-            fallback={t().common.untitledProject}
-            label={t().editor.stage.titleLabel}
-            disabled={editingDisabled || !onTitleChange}
-            onCommit={(title) => onTitleChange?.(title)}
-            onCommitError={(titleError) => {
-              setStageError(reportError('[howbeam] failed to rename project', titleError, t().editor.stage.titleSaveFailed));
-            }}
-            className="w-fit min-w-[8ch] max-w-[calc(100%-1.75rem)] rounded-md border-2 border-transparent px-2 py-1 text-[22px] leading-tight font-bold text-foreground transition-colors focus-ring hover:border-border-soft focus:border-border focus:bg-card [field-sizing:content]"
-          />
-          <Pencil className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        </div>
-        <div className="app-scrollbar flex max-h-[84px] min-w-0 flex-wrap items-center gap-2 overflow-y-auto p-0.5 pr-1 sm:max-w-[55%] sm:justify-end">
-          {displayTags.map((tag) => (
-            <Badge key={tag} variant="tagEditable" className={cn('max-w-full select-none', tagHueClass(tag))}>
-              <span className="min-w-0 truncate">{tag}</span>
-              <button
-                type="button"
-                onClick={() => void removeTag(tag)}
-                aria-label={t().editor.stage.removeTag(tag)}
-                disabled={editingDisabled}
-                className="flex size-5 shrink-0 items-center justify-center rounded-full text-on-accent outline-none transition-colors focus-ring hover:bg-on-accent hover:text-card disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <X className="size-3 stroke-[2.5]" />
-              </button>
-            </Badge>
-          ))}
-          <Badge asChild variant="tagAction" className="disabled:opacity-50">
-            <button
-              type="button"
-              onClick={() => setTagDialogOpen(true)}
-              disabled={editingDisabled}
-            >
-              <DashedOutline radius="full" outset={2} hideOnHover />
-              <Plus className="size-3.5 stroke-[2.5]" />
-              {t().editor.stage.tagButton}
-            </button>
-          </Badge>
-        </div>
-      </div>
-
-      <TagSelectDialog
-        open={tagDialogOpen}
-        selectedTags={projectTags}
-        onOpenChange={setTagDialogOpen}
-        onAddTag={addTag}
+  const titleRow = (
+    <div className="mb-4 flex shrink-0 items-center gap-1.5 border-b-2 border-border-soft pb-4">
+      <EditableTitle
+        value={projectTitle ?? ''}
+        maxLength={PERSISTED_PROJECT_LIMITS.maxTitleLength}
+        fallback={t().common.untitledProject}
+        label={t().editor.stage.titleLabel}
+        disabled={editingDisabled || !onTitleChange}
+        onCommit={(title) => onTitleChange?.(title)}
+        onCommitError={(titleError) => {
+          setStageError(reportError('[howbeam] failed to rename project', titleError, t().editor.stage.titleSaveFailed));
+        }}
+        className="w-fit min-w-[8ch] max-w-[calc(100%-1.75rem)] rounded-md border-2 border-transparent px-2 py-1 text-[22px] leading-tight font-bold text-foreground transition-colors focus-ring hover:border-border-soft focus:border-border focus:bg-card [field-sizing:content]"
       />
-    </>
+      <Pencil className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+    </div>
   );
 
   async function setNumbered(next: boolean) {
@@ -176,7 +107,7 @@ export default function StepStage({
         </span>
         {/* Sits with the section chip: a section is where this step stands in the document, not an image action. */}
         {onStartSection && (
-          <Badge asChild variant="tagAction" className="shrink-0 disabled:opacity-50">
+          <Badge asChild variant="dashedAction" className="shrink-0 disabled:opacity-50">
             <button
               type="button"
               onClick={onStartSection}
@@ -271,7 +202,7 @@ export default function StepStage({
     return (
       <main className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-y-auto bg-background px-4 pt-4 pb-6 sm:px-6 lg:px-10 lg:pt-5 lg:pb-16">
         <div className="flex w-full max-w-[1180px] flex-none flex-col gap-3 lg:min-h-0 lg:flex-1">
-          <div className="flex-none">{titleAndTagRow}</div>
+          <div className="flex-none">{titleRow}</div>
           <div className="flex-none">{headerRow}</div>
           {errorNotice && <div className="flex-none">{errorNotice}</div>}
           {privacyReviewNotice && <div className="flex-none">{privacyReviewNotice}</div>}
@@ -294,7 +225,7 @@ export default function StepStage({
 
   return (
     <main className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto bg-background px-4 pt-4 pb-6 sm:px-6 lg:px-10 lg:pt-5 lg:pb-16">
-      <div className="flex-none">{titleAndTagRow}</div>
+      <div className="flex-none">{titleRow}</div>
       <div className="flex-none">{headerRow}</div>
       {errorNotice && <div className="flex-none">{errorNotice}</div>}
       {privacyReviewNotice && <div className="flex-none">{privacyReviewNotice}</div>}

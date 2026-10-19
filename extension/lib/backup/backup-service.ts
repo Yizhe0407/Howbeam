@@ -22,7 +22,6 @@ async function buildArchive(project: ProjectSummary): Promise<Blob> {
       title: project.title,
       description: project.description,
       sections: project.sections,
-      tags: project.tags,
     },
   });
 }

@@ -3,11 +3,10 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { addStepsAfter, deleteStep, deleteStepsForRun, getSteps, replaceStepCaptureAtomically, saveStepDescription, StepNotFoundError, updateStepsAtomically } from '@/lib/storage/step-repository';
 import { buildStepEntries, getEffectiveBounds, getOrderedAnnotations, STEP_STORAGE_LIMITS, StepStorageValidationError, type Step } from '@/lib/storage/models';
 import { closeDatabase, ProjectNotFoundError, summarizeSteps } from '@/lib/storage/database';
-import { PROJECT_TAG_LIMITS } from '@/lib/storage/project-tag-model';
 import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
 import { jpegBlob, pngBlob } from '../setup/raster-fixtures';
 import { seedSteps } from '../setup/step-fixtures';
-import { createProject, createProjectFromSteps, deleteProjectPermanently, duplicateProject, ensureProject, getProject, getProjectSummaries, ProjectTagLimitError, resetProject, updateProject } from '@/lib/storage/project-repository';
+import { createProject, createProjectFromSteps, deleteProjectPermanently, duplicateProject, ensureProject, getProject, getProjectSummaries, resetProject, updateProject } from '@/lib/storage/project-repository';
 
 function makeStep(overrides: Partial<Step> = {}): Step {
   return {
@@ -743,24 +742,6 @@ describe('stored text and screenshots match the archive rules', () => {
 });
 
 describe('project metadata', () => {
-  it('merges tag operations from two stale editors instead of the later list winning', async () => {
-    const project = await createProject({ tags: ['共用'] });
-    // Both tabs last saw ['共用']; each adds or removes one tag.
-    await updateProject(project.id, { addTags: ['分頁 A'] });
-    await updateProject(project.id, { addTags: ['分頁 B'] });
-    await updateProject(project.id, { removeTags: ['共用'] });
-    expect((await getProject(project.id))!.tags).toEqual(['分頁 A', '分頁 B']);
-  });
-
-  it('refuses a tag beyond the limit instead of silently dropping it', async () => {
-    const tags = Array.from({ length: PROJECT_TAG_LIMITS.maxTags }, (_, index) => `tag-${index}`);
-    const project = await createProject({ tags });
-    await expect(updateProject(project.id, { addTags: ['one-too-many'] })).rejects.toBeInstanceOf(ProjectTagLimitError);
-    expect((await getProject(project.id))!.tags).toEqual(tags);
-    // Re-adding an existing tag is a no-op, not a limit violation.
-    await expect(updateProject(project.id, { addTags: ['tag-0'] })).resolves.toMatchObject({ tags });
-  });
-
   it('reports a deleted project with a typed error', async () => {
     const project = await createProject();
     await deleteProjectPermanently(project.id);

@@ -32,7 +32,7 @@ function fakeDirectory(failOn?: string, asciiOnly = false) {
 
 /** updatedAt is deliberately constant: the backup must follow the revisions, not the clock. */
 function project(id: string, title: string, contentRevision: number, metadataRevision = 0, stepEditRevision = 0): ProjectSummary {
-  return { id, title, description: '', sections: [], tags: [], createdAt: 0, updatedAt: 0, contentRevision, stepEditRevision, metadataRevision, stepCount: 0, entryCount: 0, storageBytes: 0 };
+  return { id, title, description: '', sections: [], createdAt: 0, updatedAt: 0, contentRevision, stepEditRevision, metadataRevision, stepCount: 0, entryCount: 0, storageBytes: 0 };
 }
 
 function setup(projects: ProjectSummary[], failOn?: string, asciiOnly = false) {

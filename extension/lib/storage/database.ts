@@ -112,7 +112,7 @@ export function assertProjectStorageLimits(
 export function newProject(
   id: string,
   now: number,
-  initial?: Partial<Pick<Project, 'title' | 'description' | 'tags'>>,
+  initial?: Partial<Pick<Project, 'title' | 'description'>>,
   summary: Pick<Project, 'stepCount' | 'entryCount' | 'storageBytes'> = {
     stepCount: 0,
     entryCount: 0,
@@ -125,7 +125,6 @@ export function newProject(
     title: initial?.title ?? '',
     description: initial?.description ?? '',
     sections: [],
-    tags: initial?.tags ? [...initial.tags] : [],
     createdAt: now,
     updatedAt: now,
     contentRevision,
@@ -138,7 +137,7 @@ export function newProject(
 /**
  * True while a (sanitized) Project is still exactly the empty shell newProject
  * leaves behind with no initial metadata: nothing recorded, and no
- * user-entered title, description, tags, or sections. sanitizeProject always
+ * user-entered title, description, or sections. sanitizeProject always
  * substitutes the timestamped untitled placeholder for an empty title, so on
  * a sanitized project "unnamed" is exactly a placeholder derived from createdAt
  * (in any locale) — any user-typed title differs from it. contentRevision is
@@ -151,7 +150,6 @@ export function isPristineProject(project: Project): boolean {
     project.entryCount === 0 &&
     isDefaultProjectTitle(project.title, project.createdAt) &&
     project.description === '' &&
-    project.tags.length === 0 &&
     project.sections.length === 0
   );
 }

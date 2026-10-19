@@ -3,7 +3,6 @@ import toast from 'react-hot-toast';
 import {
   Copy,
   Download,
-  Filter,
   Loader2,
   PencilLine,
   Plus,
@@ -17,12 +16,8 @@ import { type ProjectSummary } from '@/lib/storage/models';
 import { clearSelectedProject, createAndSelectProject, openSelectedProjectInEditor } from '@/lib/project/project-actions';
 import { subscribeProjectsChanged } from '@/lib/storage/change-notifier';
 import { getRecordingState, onRecordingStateChange } from '@/lib/storage/storage';
-import { cn } from '@/lib/shared/utils';
-import { tagHueClass } from '@/lib/shared/tag-hue';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DashedOutline } from '@/components/ui/dashed-outline';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import AppToaster from '@/components/shared/AppToaster';
@@ -54,8 +49,6 @@ export default function App() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
-  const [filterTags, setFilterTags] = useState<string[]>([]);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const { pendingKey: pendingId, runExclusive } = usePendingAction<string>();
   const [deleteTarget, setDeleteTarget] = useState<ProjectSummary | null>(null);
@@ -105,18 +98,12 @@ export default function App() {
     };
   }, []);
 
-  const allTags = useMemo(
-    () => [...new Set(projects.flatMap((project) => project.tags))].sort((a, b) => a.localeCompare(b, intlLocale())),
-    [projects],
-  );
-
   const visibleProjects = useMemo(() => {
     const normalized = deferredQuery.trim().toLocaleLowerCase(intlLocale());
     return projects.filter((project) => {
-      if (filterTags.length > 0 && !filterTags.every((tag) => project.tags.includes(tag))) return false;
       return !normalized || `${project.title}\n${project.description}`.toLocaleLowerCase(intlLocale()).includes(normalized);
     });
-  }, [deferredQuery, filterTags, projects]);
+  }, [deferredQuery, projects]);
 
   async function run(id: string, action: () => Promise<void>, options: { refreshAfter?: boolean } = {}) {
     if (loading || operationLocked) return false;
@@ -152,7 +139,6 @@ export default function App() {
           title: project.title,
           description: project.description,
           sections: project.sections,
-          tags: project.tags,
         },
       });
       // Keeps the object URL alive until the download settles; a download that
@@ -190,7 +176,6 @@ export default function App() {
         {
           title: imported.metadata.title || fallbackTitle,
           description: imported.metadata.description,
-          tags: imported.metadata.tags,
         },
         { sections: imported.metadata.sections },
       );
@@ -259,9 +244,8 @@ export default function App() {
           <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>
         )}
 
-        <div className="mb-6 flex flex-wrap items-center gap-3">
           {/* The field draws the outline, so focus is shown on the whole box. */}
-          <div className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-md border-2 border-border bg-card px-3.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus">
+          <div className="mb-6 flex h-11 min-w-0 items-center gap-2.5 rounded-md border-2 border-border bg-card px-3.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus">
             <Search className="size-[18px] shrink-0 text-muted-foreground" aria-hidden="true" />
             <input
               value={query}
@@ -272,70 +256,6 @@ export default function App() {
               className="min-w-0 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
           </div>
-          <Popover open={filterOpen} onOpenChange={setFilterOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn('h-11', filterTags.length > 0 && 'bg-selected text-on-accent hover:bg-selected')}
-              >
-                <Filter />
-                {t().library.filter}
-                {filterTags.length > 0 && (
-                  <Badge variant="outline" className="h-5 min-w-5 px-1">
-                    {filterTags.length}
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              aria-labelledby="project-tag-filter-label"
-              className="app-scrollbar max-h-[min(360px,calc(100vh-140px))] w-[min(280px,calc(100vw-32px))] overflow-y-auto"
-            >
-              <div className="mb-2.5 flex items-center justify-between gap-3">
-                <span id="project-tag-filter-label" className="text-xs font-bold text-muted-foreground">
-                  {t().library.filterByTag}
-                </span>
-                {filterTags.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setFilterTags([])}
-                    className="shrink-0 rounded-sm text-xs font-bold text-brand-text outline-none focus-ring hover:underline"
-                  >
-                    {t().library.clearFilter}
-                  </button>
-                )}
-              </div>
-              {allTags.length === 0 ? (
-                <p className="py-1 text-xs text-muted-foreground">{t().library.noTags}</p>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {allTags.map((tag) => {
-                    const active = filterTags.includes(tag);
-                    return (
-                      <Badge
-                        key={tag}
-                        asChild
-                        variant={active ? 'tagFilterActive' : 'tagFilter'}
-                        className="max-w-full truncate"
-                      >
-                        <button
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() => setFilterTags((current) => (
-                            active ? current.filter((value) => value !== tag) : [...current, tag]
-                          ))}
-                        >
-                          {tag}
-                        </button>
-                      </Badge>
-                    );
-                  })}
-                </div>
-              )}
-            </PopoverContent>
-          </Popover>
-        </div>
 
         {loading ? (
           <div role="status" className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
@@ -345,18 +265,16 @@ export default function App() {
           <div className="relative flex min-h-72 flex-col items-center justify-center gap-2 rounded-md bg-card px-6 py-10 text-center">
             <DashedOutline radius={8} />
             <Mascot className="mb-2 size-16" />
-            <h2 className="text-lg font-bold">{query || filterTags.length > 0 ? t().library.noMatches : t().library.empty}</h2>
+            <h2 className="text-lg font-bold">{query ? t().library.noMatches : t().library.empty}</h2>
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-              {query || filterTags.length > 0
-                ? t().library.noMatchesHint
-                : t().library.emptyHint}
+              {query ? t().library.noMatchesHint : t().library.emptyHint}
             </p>
-            {!query && filterTags.length === 0 && (
+            {!query && (
               <Button className="mt-3" onClick={() => void createNewProject()}><Plus />{t().library.create}</Button>
             )}
           </div>
         ) : (
-          <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-4">
+          <ul className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-4">
             {visibleProjects.map((project) => {
               const pending = pendingId === project.id;
               // While any operation is in flight, `run` rejects further actions;
@@ -364,24 +282,12 @@ export default function App() {
               const actionsLocked = operationLocked || pendingId !== null;
               const otherActionPending = pendingId !== null && !pending;
               const lockedTitle = (title: string) => (otherActionPending ? t().library.otherActionPending : title);
-              const visibleTags = project.tags.slice(0, 3);
-              const hiddenTagCount = project.tags.length - visibleTags.length;
               return (
                 <li
                   key={project.id}
                   className="group flex flex-col overflow-hidden rounded-md border-2 border-border bg-card transition-transform duration-200 hover:-translate-y-0.5"
                 >
                   <div className="flex flex-1 flex-col gap-2.5 p-4">
-                    {visibleTags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {visibleTags.map((tag) => (
-                          <Badge key={tag} variant="tag" className={cn('max-w-full truncate', tagHueClass(tag))}>
-                            {t().library.tag(tag)}
-                          </Badge>
-                        ))}
-                        {hiddenTagCount > 0 && <Badge variant="outline">+{hiddenTagCount}</Badge>}
-                      </div>
-                    )}
                     <EditableTitle
                       value={project.title}
                       maxLength={PERSISTED_PROJECT_LIMITS.maxTitleLength}

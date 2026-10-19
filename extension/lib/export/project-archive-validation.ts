@@ -16,7 +16,6 @@ import {
   sanitizeProjectSectionTitle,
   type ProjectSection,
 } from '../project/project-sections';
-import { sanitizeProjectTag } from '../storage/project-tag-model';
 import { isStoredText } from '../storage/stored-text';
 import {
   BOUNDS_KEYS,
@@ -363,24 +362,6 @@ function parseSectionRecords(value: unknown, path: string, steps: readonly Step[
   return repairProjectSections(sections, buildStepEntries([...steps]));
 }
 
-function parseTagRecords(value: unknown, path: string): string[] {
-  const records = expectArray(value, path);
-  if (records.length > PROJECT_ARCHIVE_LIMITS.maxTags) {
-    fail('LIMIT_EXCEEDED', `An archive may contain at most ${PROJECT_ARCHIVE_LIMITS.maxTags} tags.`);
-  }
-  const tags: string[] = [];
-  const seen = new Set<string>();
-  records.forEach((tag, index) => {
-    const raw = expectString(tag, `${path}[${index}]`, PROJECT_ARCHIVE_LIMITS.maxTagLength);
-    const sanitized = sanitizeProjectTag(raw);
-    if (sanitized && !seen.has(sanitized)) {
-      seen.add(sanitized);
-      tags.push(sanitized);
-    }
-  });
-  return tags;
-}
-
 export function parseArchiveMetadata(value: unknown, steps: readonly Step[], path = 'manifest.metadata'): ProjectArchiveMetadata {
   const record = expectRecord(value, path);
   assertExactKeys(record, METADATA_KEYS, path);
@@ -392,9 +373,6 @@ export function parseArchiveMetadata(value: unknown, steps: readonly Step[], pat
       PROJECT_ARCHIVE_LIMITS.maxProjectDescriptionLength,
     ),
     sections: parseSectionRecords(record.sections, `${path}.sections`, steps),
-    // Archives written before tags existed omit this key entirely; treat
-    // that as "no tags" rather than a malformed archive.
-    tags: hasOwn(record, 'tags') ? parseTagRecords(record.tags, `${path}.tags`) : [],
   };
 }
 
@@ -414,8 +392,7 @@ export function archiveMetadataFromInput(value: ProjectArchiveMetadataInput | un
   const sections = hasOwn(record, 'sections')
     ? parseSectionRecords(record.sections, 'metadata.sections', steps)
     : [];
-  const tags = hasOwn(record, 'tags') ? parseTagRecords(record.tags, 'metadata.tags') : [];
-  return { title, description, sections, tags };
+  return { title, description, sections };
 }
 
 function freshImportId(used: Set<string>): string {
@@ -456,7 +433,6 @@ export function remapImportedProject(
       title: metadata.title,
       description: metadata.description,
       sections: repairProjectSections(remappedSections, buildStepEntries(remappedSteps)),
-      tags: metadata.tags,
     },
   };
 }

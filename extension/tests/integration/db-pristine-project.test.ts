@@ -53,14 +53,12 @@ describe('isPristineProject', () => {
     expect(isPristineProject(project)).toBe(true);
   });
 
-  it('stops matching once the user names, describes, or tags the project', async () => {
+  it('stops matching once the user names or describes the project', async () => {
     const named = await createProject({ title: '我的教學' });
     const described = await createProject({ description: '說明' });
-    const tagged = await createProject({ tags: ['入門'] });
 
     expect(isPristineProject(named)).toBe(false);
     expect(isPristineProject(described)).toBe(false);
-    expect(isPristineProject(tagged)).toBe(false);
   });
 
   it('stops matching once anything was recorded into the project', async () => {

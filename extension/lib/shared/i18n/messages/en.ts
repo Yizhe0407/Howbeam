@@ -170,17 +170,12 @@ export const en: Messages = {
     lockedNotice: 'A recording or retake is in progress. The library is read-only until it finishes.',
     searchPlaceholder: 'Search titles and descriptions…',
     searchLabel: 'Search projects',
-    filter: 'Filter',
-    filterByTag: 'Filter by tag',
-    clearFilter: 'Clear',
-    noTags: 'No tags yet',
     loading: 'Loading library…',
     noMatches: 'No matching projects',
     empty: 'Create your first project',
-    noMatchesHint: 'Try another keyword, or clear the tag filter.',
+    noMatchesHint: 'Try another keyword.',
     emptyHint: 'Open Howbeam on the page you want to demonstrate and press “Start recording”, or create a blank project.',
     otherActionPending: 'Another action is in progress',
-    tag: (tag: string) => `#${tag}`,
     titleLabel: 'Project title',
     screenCount: (count: number) => plural(count, 'screen', 'screens'),
     annotationCount: (count: number) => plural(count, 'marker', 'markers'),
@@ -346,11 +341,8 @@ export const en: Messages = {
 
     stage: {
       titleLabel: 'Project title',
-      tagSaveFailed: 'Couldn’t save the tags. Please try again.',
       titleSaveFailed: 'Couldn’t save the title. Please try again.',
       numberingSaveFailed: 'Couldn’t save the numbering setting. Please try again.',
-      removeTag: (tag: string) => `Remove tag ${tag}`,
-      tagButton: 'Tag',
       savingNumbering: 'Saving numbering setting',
       zoomHint: 'Click to enlarge',
       zoomImage: 'Enlarge image',
@@ -426,21 +418,6 @@ export const en: Messages = {
       create: 'Create',
       rename: 'Rename section',
       renameHint: 'The name appears in the step list and in exported documents.',
-    },
-
-    tags: {
-      dialogTitle: 'Add tags',
-      close: 'Close tag settings',
-      dialogDescription:
-        'Add tags shown in the library. To remove a tag, close this dialog and use the remove button on the tag in the title bar.',
-      inputPlaceholder: 'Type and press Enter',
-      inputLabel: 'New tag name',
-      add: 'Add tag',
-      limitReached: (limit: number) => `You’ve reached the ${limit}-tag limit. Remove one to add another.`,
-      current: 'Current tags',
-      used: 'Used before',
-      addTag: (tag: string) => `Add tag ${tag}`,
-      saveFailed: 'Couldn’t save the tags. Please try again.',
     },
 
     lightbox: {

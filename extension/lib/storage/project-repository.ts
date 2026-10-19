@@ -26,9 +26,8 @@ import { clearActiveProjectId } from './storage';
 import { assertStorableScreenshots } from './screenshot-rules';
 import { notifyProjectsChanged } from './change-notifier';
 import { t } from '../shared/i18n';
-import { PROJECT_TAG_LIMITS, sanitizeProjectTag } from './project-tag-model';
 
-export async function createProject(initial?: Partial<Pick<Project, 'title' | 'description' | 'tags'>>): Promise<Project> {
+export async function createProject(initial?: Partial<Pick<Project, 'title' | 'description'>>): Promise<Project> {
   const project = newProject(crypto.randomUUID(), Date.now(), initial);
   await runWithDatabase((db) => db.add('projects', project));
   return project;
@@ -79,39 +78,10 @@ async function requireProjectInTx(tx: ProjectOnlyTransaction, id: string): Promi
   return existing;
 }
 
-/** A metadata edit. Tags are changed by operations, never by writing a whole
- * list: each one is applied to the tags stored at commit time, inside the
- * transaction, so two tabs adding or removing different tags both keep their
- * change instead of the later write replacing the earlier one's list. */
+/** A metadata edit. */
 export interface ProjectMetadataChanges {
   title?: string;
   description?: string;
-  addTags?: readonly string[];
-  removeTags?: readonly string[];
-}
-
-/** Adding a tag beyond PROJECT_TAG_LIMITS.maxTags is refused, not truncated. */
-export class ProjectTagLimitError extends Error {
-  constructor() {
-    super(`A project can have at most ${PROJECT_TAG_LIMITS.maxTags} tags.`);
-    this.name = 'ProjectTagLimitError';
-  }
-}
-
-function applyTagOperations(
-  stored: readonly string[],
-  addTags: readonly string[] = [],
-  removeTags: readonly string[] = [],
-): string[] {
-  const removed = new Set(removeTags.map(sanitizeProjectTag));
-  const tags = stored.filter((tag) => !removed.has(tag));
-  for (const raw of addTags) {
-    const tag = sanitizeProjectTag(raw);
-    if (!tag || tags.includes(tag)) continue;
-    if (tags.length >= PROJECT_TAG_LIMITS.maxTags) throw new ProjectTagLimitError();
-    tags.push(tag);
-  }
-  return tags;
 }
 
 export async function updateProject(id: string, changes: ProjectMetadataChanges): Promise<Project> {
@@ -121,15 +91,6 @@ export async function updateProject(id: string, changes: ProjectMetadataChanges)
     const patch: Partial<Project> = {};
     if (changes.title !== undefined) patch.title = changes.title;
     if (changes.description !== undefined) patch.description = changes.description;
-    if (changes.addTags?.length || changes.removeTags?.length) {
-      try {
-        patch.tags = applyTagOperations(existing.tags, changes.addTags, changes.removeTags);
-      } catch (error) {
-        tx.abort();
-        await tx.done.catch(() => undefined);
-        throw error;
-      }
-    }
     const updated = sanitizeProject({ ...existing, ...patch, updatedAt: Math.max(existing.updatedAt, Date.now()), metadataRevision: existing.metadataRevision + 1 });
     await tx.store.put(updated);
     await tx.done;
@@ -156,7 +117,7 @@ export interface CreateProjectFromStepsOptions {
 
 function prepareProjectClone(
   sourceSteps: readonly Step[],
-  initial?: Partial<Pick<Project, 'title' | 'description' | 'tags'>>,
+  initial?: Partial<Pick<Project, 'title' | 'description'>>,
   options: CreateProjectFromStepsOptions = {},
 ): PreparedProjectClone {
   if (sourceSteps.length > STEP_STORAGE_LIMITS.maxStepsPerProject) {
@@ -205,7 +166,7 @@ async function storePreparedProject(tx: ProjectStepsTransaction, prepared: Prepa
 
 export async function createProjectFromSteps(
   sourceSteps: readonly Step[],
-  initial?: Partial<Pick<Project, 'title' | 'description' | 'tags'>>,
+  initial?: Partial<Pick<Project, 'title' | 'description'>>,
   options: CreateProjectFromStepsOptions = {},
 ): Promise<Project> {
   const prepared = prepareProjectClone(sourceSteps, initial, options);
@@ -226,7 +187,6 @@ export async function duplicateProject(sourceId: string, title?: string): Promis
     const prepared = prepareProjectClone(sourceSteps, {
       title: title ?? t().common.duplicateTitle(sanitizedSource.title),
       description: sanitizedSource.description,
-      tags: sanitizedSource.tags,
     }, { sections: sanitizedSource.sections });
     await storePreparedProject(tx, prepared);
     return prepared.project;

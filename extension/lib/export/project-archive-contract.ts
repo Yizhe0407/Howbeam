@@ -1,7 +1,6 @@
 import type { Bounds, ImageEdit, Redaction, Step } from '../storage/models';
 import { PERSISTED_PROJECT_LIMITS, PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
 import { PROJECT_SECTION_LIMITS, type ProjectSection } from '../storage/project-section-model';
-import { PROJECT_TAG_LIMITS } from '../storage/project-tag-model';
 import { SCREENSHOT_MEDIA_TYPES } from '../storage/screenshot-rules';
 
 export const PROJECT_ARCHIVE_FORMAT = 'howbeam-project';
@@ -33,8 +32,6 @@ export const PROJECT_ARCHIVE_LIMITS = Object.freeze({
   maxProjectDescriptionLength: PERSISTED_PROJECT_LIMITS.maxDescriptionLength,
   maxSections: PROJECT_SECTION_LIMITS.maxSections,
   maxSectionTitleLength: PROJECT_SECTION_LIMITS.maxTitleLength,
-  maxTags: PROJECT_TAG_LIMITS.maxTags,
-  maxTagLength: PROJECT_TAG_LIMITS.maxTagLength,
   maxUrlLength: PERSISTED_STEP_LIMITS.maxUrlLength,
   maxCoordinateMagnitude: PERSISTED_STEP_LIMITS.maxCoordinateMagnitude,
   maxBoundsDimension: PERSISTED_STEP_LIMITS.maxBoundsDimension,
@@ -78,14 +75,12 @@ export interface ProjectArchiveMetadataInput {
   title?: string;
   description?: string;
   sections?: readonly ProjectSection[];
-  tags?: readonly string[];
 }
 
 export interface ProjectArchiveMetadata {
   title: string;
   description: string;
   sections: ProjectSection[];
-  tags: string[];
 }
 
 export interface ImportedProjectArchive {
@@ -145,11 +140,10 @@ export interface ArchiveMetadata {
   title: string;
   description: string;
   sections: ProjectSection[];
-  tags: string[];
 }
 
 export const MANIFEST_KEYS = ['format', 'version', 'stepCount', 'steps', 'screenshots', 'metadata'] as const;
-export const METADATA_KEYS = ['title', 'description', 'sections', 'tags'] as const;
+export const METADATA_KEYS = ['title', 'description', 'sections'] as const;
 export const SECTION_KEYS = ['id', 'title', 'startEntryId'] as const;
 export const SCREENSHOT_KEYS = ['id', 'mediaType', 'size'] as const;
 export const BOUNDS_KEYS = ['x', 'y', 'width', 'height'] as const;

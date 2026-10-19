@@ -9,7 +9,7 @@
  * Multi-line text (step descriptions, project titles and descriptions) keeps
  * tab, line feed and carriage return; every other C0 control, DEL and every C1
  * control (U+0080–U+009F, e.g. U+0085 NEXT LINE) is removed. Single-line labels
- * (tags, section titles) drop all of them, including tab and newlines.
+ * (section titles) drop all of them, including tab and newlines.
  */
 const DISALLOWED_TEXT_CHARACTER = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/u;
 const DISALLOWED_TEXT_CHARACTERS = new RegExp(DISALLOWED_TEXT_CHARACTER.source, 'gu');

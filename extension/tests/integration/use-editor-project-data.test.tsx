@@ -25,7 +25,7 @@ import { useEditorProjectData } from '@/lib/editor/use-editor-project-data';
 import type { Project } from '@/lib/storage/models';
 
 const loaded = {
-  id: 'p1', title: '原標題', description: '', sections: [], tags: ['甲'],
+  id: 'p1', title: '原標題', description: '', sections: [],
   createdAt: 1, updatedAt: 1, contentRevision: 5, stepEditRevision: 0, metadataRevision: 2, stepCount: 0, entryCount: 0, storageBytes: 0,
 } satisfies Project;
 const steps: unknown[] = [];
@@ -47,11 +47,11 @@ describe('useEditorProjectData follows other tabs', () => {
     const { result } = renderHook(() => useEditorProjectData('p1', steps));
     await waitFor(() => expect(result.current.projectLoadState).toBe('ready'));
 
-    mocks.getProject.mockResolvedValue({ ...loaded, title: '新標題', tags: ['甲', '乙'], contentRevision: 9, metadataRevision: 3 });
+    mocks.getProject.mockResolvedValue({ ...loaded, title: '新標題', contentRevision: 9, metadataRevision: 3 });
     await otherTabWrote();
 
     await waitFor(() => expect(result.current.project?.title).toBe('新標題'));
-    expect(result.current.project).toMatchObject({ tags: ['甲', '乙'], contentRevision: 5, metadataRevision: 3 });
+    expect(result.current.project).toMatchObject({ title: '新標題', contentRevision: 5, metadataRevision: 3 });
     expect(result.current.projectDeleted).toBe(false);
   });
 

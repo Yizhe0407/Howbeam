@@ -25,7 +25,7 @@ Howbeam only handles data while you are recording, on the tabs that are part of 
 
 Howbeam also keeps:
 
-- **What you create in the editor**: descriptions, annotations, project titles and tags.
+- **What you create in the editor**: descriptions, annotations and project titles.
 - **Your settings**: interface language, recording preferences, and the folder you chose for automatic backup.
 
 ### Where it is stored
@@ -85,7 +85,7 @@ Howbeam 只在你錄製時，針對你開始錄製的分頁處理資料：
 
 Howbeam 也會保存：
 
-- **你在編輯器裡製作的內容**：說明文字、標註、專案名稱與標籤。
+- **你在編輯器裡製作的內容**：說明文字、標註、專案名稱。
 - **你的設定**：介面語言、錄製偏好，以及你選來自動備份的資料夾。
 
 ### 存放位置

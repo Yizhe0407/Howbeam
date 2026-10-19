@@ -80,7 +80,6 @@ const project = {
   title: '安全教學',
   description: '範例',
   sections: [{ id: 'section-1', title: '準備', startEntryId: 'step-1' }],
-  tags: [],
   createdAt: 1,
   updatedAt: 2,
   contentRevision: 3,
@@ -261,25 +260,6 @@ describe('專案庫', () => {
     expect(screen.queryByText('讀取專案庫…')).toBeNull();
   });
 
-  it('可依多個標籤交集篩選並清除篩選', async () => {
-    const taggedProject = { ...project, id: 'project-2', title: '團隊入門', tags: ['入門', '團隊'] };
-    const otherProject = { ...project, id: 'project-3', title: '個人入門', tags: ['入門'] };
-    database.getProjectSummaries.mockResolvedValue([taggedProject, otherProject]);
-    render(<LibraryApp />);
-
-    fireEvent.click(await screen.findByRole('button', { name: '篩選' }));
-    fireEvent.click(screen.getByRole('button', { name: '入門' }));
-    expect(await screen.findByDisplayValue('團隊入門')).toBeTruthy();
-    expect(screen.getByDisplayValue('個人入門')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: '團隊' }));
-    await waitFor(() => expect(screen.queryByDisplayValue('個人入門')).toBeNull());
-    expect(screen.getByDisplayValue('團隊入門')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: '清除' }));
-    expect(await screen.findByDisplayValue('個人入門')).toBeTruthy();
-  });
-
   it('匯出可編輯檔案時包含完整 metadata、使用安全檔名且不重新載入專案庫', async () => {
     const steps = [{ id: 'step-1' }];
     database.getSteps.mockResolvedValue(steps);
@@ -297,7 +277,6 @@ describe('專案庫', () => {
         title: project.title,
         description: project.description,
         sections: project.sections,
-        tags: project.tags,
       },
     }));
     expect(downloads.download).toHaveBeenCalledWith({
@@ -402,7 +381,6 @@ describe('專案庫', () => {
       metadata: {
         title: '匯入標題',
         description: '匯入說明',
-        tags: ['匯入'],
         sections: [{ id: 'new-section', title: '第一章', startEntryId: 'new-step' }],
       },
     };
@@ -419,7 +397,7 @@ describe('專案庫', () => {
     await waitFor(() => expect(archive.importProjectArchive).toHaveBeenCalledWith(file));
     expect(database.createProjectFromSteps).toHaveBeenCalledWith(
       imported.steps,
-      { title: '匯入標題', description: '匯入說明', tags: ['匯入'] },
+      { title: '匯入標題', description: '匯入說明' },
       { sections: imported.metadata.sections },
     );
     expect(projectActions.openSelectedProjectInEditor).toHaveBeenCalledWith('imported-project', { inPlace: true });

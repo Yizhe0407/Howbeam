@@ -504,10 +504,7 @@ function EditorApp() {
                     : () => setSectionDialog({ kind: 'add', startEntryId: entryId(selectedEntry), step: selectedIndex + 1 })
                 }
                 projectTitle={project?.title}
-                projectTags={project?.tags}
                 onTitleChange={(title) => updateProjectMetadata({ title })}
-                onAddTag={(tag) => updateProjectMetadata({ addTags: [tag] })}
-                onRemoveTag={(tag) => updateProjectMetadata({ removeTags: [tag] })}
                 onChange={refresh}
                 onDelete={deleteEntry}
                 onDeleteAnnotation={handleDeleteAnnotation}

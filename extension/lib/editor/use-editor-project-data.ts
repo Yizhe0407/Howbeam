@@ -97,7 +97,7 @@ export function useEditorProjectData(sessionId: string | null, steps: readonly u
 
   /** Re-reads the Project row after a write anywhere in the extension. A
    * missing row means it was deleted; otherwise metadata other tabs changed
-   * (title, description, tags) is merged in. Structure and its revision stay
+   * (title, description) is merged in. Structure and its revision stay
    * with the canonical snapshot, so a structural compare-and-swap is never
    * rebased onto entries this tab hasn't loaded. */
   const syncProjectRow = useCallback(async (): Promise<void> => {
@@ -109,7 +109,7 @@ export function useEditorProjectData(sessionId: string | null, steps: readonly u
     }
     setProject((current) => (
       current && current.id === stored.id && current.metadataRevision !== stored.metadataRevision
-        ? { ...current, title: stored.title, description: stored.description, tags: stored.tags, metadataRevision: stored.metadataRevision }
+        ? { ...current, title: stored.title, description: stored.description, metadataRevision: stored.metadataRevision }
         : current
     ));
   }, [sessionId]);

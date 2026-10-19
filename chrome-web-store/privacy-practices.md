@@ -118,7 +118,7 @@ snapshot-shield.html is an extension page that Howbeam shows in an iframe over t
 | 網址 | 被錄製頁面的 `location.href` |
 | 元素文字 | 被點擊元素上看得到的文字，或它的 label、placeholder、aria-label（`extension/lib/capture/element-description.ts`）。**不會讀取輸入框裡使用者打的值**，但如果那些字顯示在畫面上，截圖會拍到。 |
 | 位置與時間 | 元素在畫面上的位置、視窗大小與捲動位置、時間戳記 |
-| 使用者自己編輯的內容 | 說明文字、標註、專案名稱、標籤 |
+| 使用者自己編輯的內容 | 說明文字、標註、專案名稱 |
 | 設定 | 介面語言、錄製偏好、備份資料夾的存取權 |
 
 這些資料都不會離開使用者的電腦。只有使用者自己按匯出、或開啟自動備份時，才會把檔案寫到使用者選的位置。

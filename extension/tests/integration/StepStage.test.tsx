@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { type ScreenshotStep, type Step, type StepEntry } from '@/lib/storage/models';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
-// StepStage's "add tag" control uses the shadcn Tooltip, which requires a
+// StepStage's action buttons use the shadcn Tooltip, which requires a
 // TooltipProvider ancestor — wrap every render() the same way the app roots do.
 function render(ui: Parameters<typeof rtlRender>[0], options?: Parameters<typeof rtlRender>[1]) {
   return rtlRender(ui, { wrapper: TooltipProvider, ...options });
@@ -51,8 +51,6 @@ interface StageOptions {
   editingDisabled?: boolean;
   onSetNumbered?: (entryId: string, next: boolean) => Promise<void>;
   onZoom?: () => void;
-  projectTags?: readonly string[];
-  onRemoveTag?: (tag: string) => Promise<void>;
   sectionTitle?: string;
   onStartSection?: () => void;
 }
@@ -111,8 +109,6 @@ function stage({
   editingDisabled = false,
   onSetNumbered = vi.fn().mockResolvedValue(undefined),
   onZoom = vi.fn(),
-  projectTags,
-  onRemoveTag,
   sectionTitle,
   onStartSection,
 }: StageOptions = {}) {
@@ -122,8 +118,6 @@ function stage({
       index={0}
       sectionTitle={sectionTitle}
       onStartSection={onStartSection}
-      projectTags={projectTags}
-      onRemoveTag={onRemoveTag}
       onChange={vi.fn()}
       onDelete={vi.fn().mockResolvedValue(undefined)}
       onDeleteAnnotation={vi.fn().mockResolvedValue(undefined)}
@@ -147,36 +141,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
-});
-
-describe('StepStage tags', () => {
-  // Adding happens via the ＋標籤 dialog; removing happens on the inline chips only.
-  it('keeps the inline chip as the only way to remove a tag', async () => {
-    const onRemoveTag = vi.fn().mockResolvedValue(undefined);
-    renderStage({ projectTags: ['驗收', '交付'], onRemoveTag });
-
-    fireEvent.click(screen.getByRole('button', { name: '移除 驗收 標籤' }));
-
-    // A single remove operation, never a whole list another tab's tags could be missing from.
-    await waitFor(() => expect(onRemoveTag).toHaveBeenCalledWith('驗收'));
-
-    // The dialog behind that chip adds only; it must not offer its own remove.
-    fireEvent.click(screen.getByRole('button', { name: '標籤' }));
-    expect(await screen.findByPlaceholderText('輸入後按 Enter')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: '移除 交付 標籤' })).toBeNull();
-  });
-
-  it('reports a refused tag write on the stage rather than losing it', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const onRemoveTag = vi.fn().mockRejectedValue(new Error('目前有其他操作進行中，請稍後再修改。'));
-    renderStage({ projectTags: ['驗收'], onRemoveTag });
-
-    fireEvent.click(screen.getByRole('button', { name: '移除 驗收 標籤' }));
-
-    expect((await screen.findByRole('alert')).textContent).toContain('目前有其他操作進行中');
-    // The chip is driven by the stored value, so a refused write leaves it.
-    expect(screen.getByRole('button', { name: '移除 驗收 標籤' })).toBeTruthy();
-  });
 });
 
 describe('StepStage numbered snapshots', () => {

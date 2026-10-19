@@ -3,7 +3,6 @@ import {
   sanitizeProjectSectionTitle,
   type ProjectSection,
 } from './project-section-model';
-import { PROJECT_TAG_LIMITS, sanitizeProjectTag } from './project-tag-model';
 import { isRecord } from '../shared/validation';
 import { PERSISTED_PROJECT_LIMITS, PERSISTED_STEP_LIMITS } from './persistence-limits';
 import { normalizeStoredText } from './stored-text';
@@ -104,15 +103,13 @@ export interface Project {
   title: string;
   description: string;
   sections: ProjectSection[];
-  /** Free-form labels for search/filter in the Library. Order is insertion order. */
-  tags: string[];
   createdAt: number;
   updatedAt: number;
   /** Monotonic generation of the Project's structure: which rows exist, their order and grouping. */
   contentRevision: number;
   /** Monotonic generation of in-place row edits: descriptions, image edits. */
   stepEditRevision: number;
-  /** Monotonic generation of title, description and tags. */
+  /** Monotonic generation of title and description. */
   metadataRevision: number;
   /** Denormalized summary fields kept transactionally in sync with `steps`. */
   stepCount: number;
@@ -262,20 +259,6 @@ function sanitizeProjectSectionsShape(value: unknown): ProjectSection[] {
   return sections;
 }
 
-function sanitizeProjectTagsShape(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  const tags: string[] = [];
-  const seen = new Set<string>();
-  for (const raw of value) {
-    if (tags.length >= PROJECT_TAG_LIMITS.maxTags) break;
-    const tag = sanitizeProjectTag(raw);
-    if (!tag || seen.has(tag)) continue;
-    seen.add(tag);
-    tags.push(tag);
-  }
-  return tags;
-}
-
 export function sanitizeProject(project: Project): Project {
   const createdAt = Number.isFinite(project.createdAt) ? project.createdAt : Date.now();
   const updatedAt = Number.isFinite(project.updatedAt) ? Math.max(project.updatedAt, createdAt) : createdAt;
@@ -285,7 +268,6 @@ export function sanitizeProject(project: Project): Project {
     title,
     description: sanitizeProjectText(project.description, PERSISTED_PROJECT_LIMITS.maxDescriptionLength),
     sections: sanitizeProjectSectionsShape((project as Project & { sections?: unknown }).sections),
-    tags: sanitizeProjectTagsShape((project as Project & { tags?: unknown }).tags),
     createdAt,
     updatedAt,
     contentRevision: nonNegativeInteger(project.contentRevision),
