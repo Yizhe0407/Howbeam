@@ -265,8 +265,8 @@ describe('project export', () => {
     expect(drawnText).toContain('第 1 頁');
     // The step number is printed, not drawn in a badge.
     expect(drawnText).toContain('1.');
-    // The credit is the last content line, before the footer's title and page number.
-    expect(drawnText.slice(-3)).toEqual(['Made with Howbeam', 'PDF project', '第 1 頁']);
+    // The credit sits in the running footer between the title and the page number.
+    expect(drawnText.slice(-3)).toEqual(['PDF project', 'Made with Howbeam', '第 1 頁']);
     expect(drawnText).not.toContain('Source');
     expect(drawnText).not.toContain('Step');
     expect(drawnText).not.toContain('Annotations');

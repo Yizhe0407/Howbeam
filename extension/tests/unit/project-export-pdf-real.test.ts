@@ -126,7 +126,7 @@ describe('generateProjectPdf with the real pdf-lib', () => {
 
     // Layout invariants: every page carries a running footer with the project
     // title and a zh-Hant page number, each step prints its number, each
-    // screenshot is framed with a border, and the document ends with the credit.
+    // screenshot is framed with a border, and the credit.
     const drawnText = canvasContext.fillText.mock.calls.map(([text]) => String(text));
     expect(drawnText).toContain('第 1 頁');
     expect(drawnText).toContain('第 2 頁');
@@ -136,7 +136,7 @@ describe('generateProjectPdf with the real pdf-lib', () => {
       .toBeGreaterThanOrEqual(entries.length);
     expect(canvasContext.arc).not.toHaveBeenCalled();
     expect(canvasContext.strokeRect).toHaveBeenCalledTimes(entries.length);
-    expect(drawnText).toContain('Made with Howbeam');
+    expect(drawnText.filter((text) => text === 'Made with Howbeam')).toHaveLength(entries.length);
 
     // Hybrid embedding: each page has its rasterized background JPEG plus the
     // screenshot embedded as its own full-resolution JPEG (two DCT streams per

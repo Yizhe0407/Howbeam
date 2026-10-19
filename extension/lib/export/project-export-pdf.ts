@@ -29,7 +29,7 @@ import { t } from '@/lib/shared/i18n';
  * Layout: a title block (accent kicker, title, description, metadata line)
  * merged with the first step page, one step per page with a numbered badge
  * heading above a bordered screenshot, and a running footer with the project
- * title and page number.
+ * title, the Howbeam credit and page number.
  */
 export async function generateProjectPdf(
   entries: readonly StepEntry[],
@@ -95,8 +95,6 @@ export async function generateProjectPdf(
     }
     renderedCount += 1;
   }
-  await paginator.addRule(PDF_END_GAP_BEFORE, PDF_END_RULE_GAP_AFTER, PDF_SECTION_RULE_THICKNESS, PDF_COLOR_RULE);
-  await paginator.addCenteredLine(MADE_WITH, PDF_END_TEXT);
   await paginator.finish();
   throwIfAborted(signal);
 
@@ -144,8 +142,6 @@ const PDF_HEADER_RULE_THICKNESS = 4;
 const PDF_HEADER_RULE_GAP_AFTER = 34;
 const PDF_SECTION_RULE_THICKNESS = 2;
 const PDF_SECTION_RULE_GAP_AFTER = 28;
-const PDF_END_GAP_BEFORE = 40;
-const PDF_END_RULE_GAP_AFTER = 18;
 const PDF_IMAGE_MIN_SPACE = 360;
 const PDF_IMAGE_MIN_HEIGHT = 320;
 const PDF_IMAGE_MAX_HEIGHT = 1_040;
@@ -211,14 +207,6 @@ const PDF_STEP_TITLE_TEXT: PdfTextStyle = {
   weight: 650,
   gapBefore: 0,
   gapAfter: 22,
-};
-const PDF_END_TEXT: PdfTextStyle = {
-  fontSize: 22,
-  lineHeight: 34,
-  color: PDF_COLOR_MUTED,
-  weight: 400,
-  gapBefore: 0,
-  gapAfter: 0,
 };
 const PDF_LIST_TEXT: PdfTextStyle = {
   fontSize: 28,
@@ -307,17 +295,6 @@ class ProjectPdfPaginator {
       pendingGap = 0;
     }
     this.cursorY += style.gapAfter;
-  }
-
-  async addCenteredLine(text: string, style: PdfTextStyle): Promise<void> {
-    await this.ensureSpace(style.gapBefore + style.lineHeight);
-    this.applyTextStyle(style);
-    this.cursorY += style.gapBefore;
-    this.context.textAlign = 'center';
-    this.context.fillText(truncatePdfText(this.context, text, PDF_CONTENT_WIDTH), PDF_PAGE_WIDTH / 2, this.cursorY);
-    this.context.textAlign = 'left';
-    this.cursorY += style.lineHeight + style.gapAfter;
-    this.hasContent = true;
   }
 
   async addNumberedParagraph(number: number, text: string): Promise<void> {
@@ -464,7 +441,7 @@ class ProjectPdfPaginator {
     this.context.textAlign = 'left';
   }
 
-  /** Running footer: hairline, project title on the left, page number right. */
+  /** Running footer: hairline, project title left, credit centred, page number right. */
   private drawFooter(): void {
     const context = this.context;
     context.fillStyle = PDF_COLOR_RULE;
@@ -475,8 +452,15 @@ class ProjectPdfPaginator {
     context.textAlign = 'left';
     const pageLabel = t().export.pageNumber(this.pageNumber);
     const pageLabelWidth = context.measureText(pageLabel).width;
-    const maxTitleWidth = Math.max(0, PDF_CONTENT_WIDTH - pageLabelWidth - PDF_FOOTER_TITLE_GAP);
+    const creditWidth = context.measureText(MADE_WITH).width;
+    const maxTitleWidth = Math.max(
+      0,
+      (PDF_CONTENT_WIDTH - creditWidth) / 2 - PDF_FOOTER_TITLE_GAP,
+    );
     context.fillText(truncatePdfText(context, this.footerTitle, maxTitleWidth), PDF_MARGIN, PDF_FOOTER_TEXT_Y);
+    context.textAlign = 'center';
+    context.fillText(MADE_WITH, PDF_PAGE_WIDTH / 2, PDF_FOOTER_TEXT_Y);
+    context.textAlign = 'left';
     context.fillText(pageLabel, PDF_PAGE_WIDTH - PDF_MARGIN - pageLabelWidth, PDF_FOOTER_TEXT_Y);
   }
 
