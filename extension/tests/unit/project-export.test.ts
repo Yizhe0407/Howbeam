@@ -18,6 +18,14 @@ vi.mock('@/lib/export/entry-render', () => ({
 
 vi.mock('pdf-lib', () => ({
   PDFDocument: { create: mocks.pdfCreate },
+  pushGraphicsState: vi.fn(),
+  popGraphicsState: vi.fn(),
+  moveTo: vi.fn(),
+  lineTo: vi.fn(),
+  appendBezierCurve: vi.fn(),
+  closePath: vi.fn(),
+  clip: vi.fn(),
+  endPath: vi.fn(),
 }));
 
 import { PROJECT_EXPORT_LIMITS, ProjectExportLimitError, projectExportFilename, type ProjectExportMetadata } from '@/lib/export/project-export-contract';
@@ -160,7 +168,7 @@ beforeEach(() => {
   mocks.composite.mockReset().mockResolvedValue(new Blob(['annotated'], { type: 'image/jpeg' }));
   mocks.pdfDrawImage.mockReset();
   mocks.pdfEmbedJpg.mockReset().mockResolvedValue({ width: 1, height: 1 });
-  mocks.pdfAddPage.mockReset().mockReturnValue({ drawImage: mocks.pdfDrawImage });
+  mocks.pdfAddPage.mockReset().mockReturnValue({ drawImage: mocks.pdfDrawImage, pushOperators: vi.fn() });
   mocks.pdfSetTitle.mockReset();
   mocks.pdfSave.mockReset().mockResolvedValue(new Uint8Array([0x25, 0x50, 0x44, 0x46]));
   mocks.pdfCreate.mockReset().mockResolvedValue({
@@ -506,6 +514,12 @@ describe('project export', () => {
     expect(firstHeading).toBeGreaterThan(-1);
     expect(firstHeading).toBeLessThan(firstImage);
     expect(html).toContain('<h3 class="step-title"><span class="step-number">2.</span><span>Shared page</span></h3>');
+  });
+
+  it('rounds the corners of every HTML screenshot', async () => {
+    const html = await generateProjectHtml([entry()], { title: 'Project' });
+
+    expect(html).toMatch(/img \{[^}]*border-radius: 10px;/);
   });
 
   it('ends the HTML with a centred English credit whatever the interface language', async () => {

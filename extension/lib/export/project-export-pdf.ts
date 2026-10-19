@@ -38,7 +38,8 @@ export async function generateProjectPdf(
 ): Promise<Blob> {
   const { signal } = options;
   throwIfAborted(signal);
-  const { PDFDocument } = await import('pdf-lib');
+  const pdfLib = await import('pdf-lib');
+  const { PDFDocument } = pdfLib;
   throwIfAborted(signal);
   const document = await PDFDocument.create();
   const title = textOrDefault(metadata.title, DEFAULT_TITLE);
@@ -57,12 +58,15 @@ export async function generateProjectPdf(
     // 將截圖疊在空白點陣矩形上，以保留原生解析度。
     for (const screenshot of screenshots) {
       const image = await document.embedJpg(screenshot.bytes);
-      page.drawImage(image, {
+      const rect = {
         x: screenshot.x * PDF_POINTS_PER_PIXEL_X,
         y: PDF_PAGE_HEIGHT_POINTS - (screenshot.y + screenshot.height) * PDF_POINTS_PER_PIXEL_Y,
         width: screenshot.width * PDF_POINTS_PER_PIXEL_X,
         height: screenshot.height * PDF_POINTS_PER_PIXEL_Y,
-      });
+      };
+      page.pushOperators(pdfLib.pushGraphicsState(), ...roundedRectClipOperators(pdfLib, rect, PDF_IMAGE_RADIUS * PDF_POINTS_PER_PIXEL_X));
+      page.drawImage(image, rect);
+      page.pushOperators(pdfLib.popGraphicsState());
     }
   }, title, signal);
 
@@ -80,6 +84,7 @@ export async function generateProjectPdf(
   for await (const rendered of renderEntryImages(entries, signal)) {
     if (renderedCount > 0) await paginator.startNewPage();
     const section = sections.get(rendered.content.entryId);
+    await paginator.beginStep(section !== undefined);
     if (section) {
       await paginator.addParagraph(section.title, PDF_SECTION_TEXT);
       await paginator.addRule(0, PDF_SECTION_RULE_GAP_AFTER, PDF_SECTION_RULE_THICKNESS, PDF_COLOR_RULE);
@@ -106,6 +111,36 @@ export async function generateProjectPdf(
   const owned = new Uint8Array(saved.byteLength);
   owned.set(saved);
   return new Blob([owned.buffer], { type: 'application/pdf' });
+}
+
+type PdfLibModule = typeof import('pdf-lib');
+
+/** Operators that clip subsequent drawing to a rounded rectangle (PDF user space, origin bottom-left). */
+function roundedRectClipOperators(
+  pdfLib: PdfLibModule,
+  { x, y, width, height }: { x: number; y: number; width: number; height: number },
+  radius: number,
+) {
+  const r = Math.min(radius, width / 2, height / 2);
+  // Control-point offset that makes a cubic Bezier approximate a quarter circle.
+  const k = r * (1 - 0.5522847498);
+  const { moveTo, lineTo, appendBezierCurve, closePath, clip, endPath } = pdfLib;
+  const right = x + width;
+  const top = y + height;
+  return [
+    moveTo(x + r, y),
+    lineTo(right - r, y),
+    appendBezierCurve(right - k, y, right, y + k, right, y + r),
+    lineTo(right, top - r),
+    appendBezierCurve(right, top - k, right - k, top, right - r, top),
+    lineTo(x + r, top),
+    appendBezierCurve(x + k, top, x, top - k, x, top - r),
+    lineTo(x, y + r),
+    appendBezierCurve(x, y + k, x + k, y, x + r, y),
+    closePath(),
+    clip(),
+    endPath(),
+  ];
 }
 
 // A4 rasterized at ~150dpi; embedded 1:1 into A4 point-sized pages.
@@ -148,6 +183,8 @@ const PDF_IMAGE_MAX_HEIGHT = 1_040;
 const PDF_IMAGE_BOTTOM_CLEARANCE = 8;
 const PDF_IMAGE_GAP_AFTER = 30;
 const PDF_IMAGE_BORDER_WIDTH = 2;
+/** The theme radius is in CSS pixels; the page raster runs at ~150dpi against CSS's 96. */
+const PDF_IMAGE_RADIUS = Math.round(PROJECT_EXPORT_THEME.imageRadius * (150 / 96));
 const PDF_FOOTER_FONT_SIZE = 22;
 const PDF_FOOTER_RULE_THICKNESS = 2;
 const PDF_FOOTER_TITLE_GAP = 40;
@@ -277,6 +314,18 @@ class ProjectPdfPaginator {
     this.cursorY += style.gapAfter;
   }
 
+  /**
+   * Starts a step on a fresh page unless its leading text and the screenshot's
+   * minimum height both fit below the cursor, so a section title or step
+   * heading is never stranded at the foot of a page away from its screenshot.
+   */
+  async beginStep(hasSectionTitle: boolean): Promise<void> {
+    const sectionHeight = hasSectionTitle
+      ? PDF_SECTION_TEXT.lineHeight + PDF_SECTION_TEXT.gapAfter + PDF_SECTION_RULE_THICKNESS + PDF_SECTION_RULE_GAP_AFTER
+      : 0;
+    await this.ensureSpace(sectionHeight + PDF_STEP_TITLE_TEXT.lineHeight + PDF_STEP_TITLE_TEXT.gapAfter + PDF_IMAGE_MIN_SPACE);
+  }
+
   /** Step heading: the printed number in the hanging column, the bold title beside it. */
   async addStepHeading(ordinal: number, text: string): Promise<void> {
     const style = PDF_STEP_TITLE_TEXT;
@@ -285,7 +334,9 @@ class ProjectPdfPaginator {
     let pendingGap = style.gapBefore;
 
     for (const [index, line] of lines.entries()) {
-      await this.ensureSpace(pendingGap + style.lineHeight);
+      // The last line must leave room for the screenshot that follows it.
+      const reservedBelow = index === lines.length - 1 ? style.gapAfter + PDF_IMAGE_MIN_SPACE : 0;
+      await this.ensureSpace(pendingGap + style.lineHeight + reservedBelow);
       this.applyTextStyle(style);
       this.cursorY += pendingGap;
       if (index === 0) this.context.fillText(`${ordinal}.`, PDF_MARGIN, this.cursorY);
@@ -366,17 +417,25 @@ class ProjectPdfPaginator {
         // the screenshot.
         this.pageScreenshots.push({ bytes: embeddable, x, y, width, height });
       } else {
+        this.context.save();
+        this.context.beginPath();
+        this.context.roundRect(x, y, width, height, PDF_IMAGE_RADIUS);
+        this.context.clip();
         this.context.drawImage(bitmap, x, y, width, height);
+        this.context.restore();
       }
       this.context.strokeStyle = PDF_COLOR_IMAGE_BORDER;
       this.context.lineWidth = PDF_IMAGE_BORDER_WIDTH;
       // The border straddles the image edge: offset by half its width outward.
-      this.context.strokeRect(
+      this.context.beginPath();
+      this.context.roundRect(
         x - PDF_IMAGE_BORDER_WIDTH / 2,
         y - PDF_IMAGE_BORDER_WIDTH / 2,
         width + PDF_IMAGE_BORDER_WIDTH,
         height + PDF_IMAGE_BORDER_WIDTH,
+        PDF_IMAGE_RADIUS + PDF_IMAGE_BORDER_WIDTH / 2,
       );
+      this.context.stroke();
       this.cursorY += height + PDF_IMAGE_GAP_AFTER;
       this.hasContent = true;
     } finally {

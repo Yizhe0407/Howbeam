@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PDFDocument } from 'pdf-lib';
+import { PDFArray, PDFDocument, PDFRawStream, decodePDFRawStream } from 'pdf-lib';
 import { type StepEntry } from '@/lib/storage/models';
 
 const mocks = vi.hoisted(() => ({
@@ -78,6 +78,17 @@ function groupEntry(id: string, order: number, description: string, annotations:
   } as StepEntry;
 }
 
+/** The page's drawing operators, decoded from its (possibly compressed) content streams. */
+function pageOperators(document: PDFDocument, page: ReturnType<PDFDocument['getPage']>): string {
+  const contents = page.node.Contents();
+  const streams = contents instanceof PDFArray
+    ? contents.asArray().map((ref) => document.context.lookup(ref))
+    : [contents];
+  return streams
+    .map((stream) => new TextDecoder('latin1').decode(decodePDFRawStream(stream as PDFRawStream).decode()))
+    .join('\n');
+}
+
 let canvasContext: ReturnType<typeof stubPdfCanvas>;
 
 beforeEach(() => {
@@ -135,7 +146,8 @@ describe('generateProjectPdf with the real pdf-lib', () => {
     expect(drawnText.filter((text) => text.includes('安裝指南 Setup Project 🚀')).length)
       .toBeGreaterThanOrEqual(entries.length);
     expect(canvasContext.arc).not.toHaveBeenCalled();
-    expect(canvasContext.strokeRect).toHaveBeenCalledTimes(entries.length);
+    expect(canvasContext.roundRect).toHaveBeenCalledTimes(entries.length);
+    expect(canvasContext.stroke).toHaveBeenCalledTimes(entries.length);
     expect(drawnText.filter((text) => text === 'Made with Howbeam')).toHaveLength(entries.length);
 
     // Hybrid embedding: each page has its rasterized background JPEG plus the
@@ -157,11 +169,54 @@ describe('generateProjectPdf with the real pdf-lib', () => {
     }
   });
 
+  it('clips each embedded screenshot to a rounded rectangle', async () => {
+    const entries = [entry('step-1', 1, 'First'), entry('step-2', 2, 'Second')];
+
+    const pdf = await generateProjectPdf(entries, { title: 'Rounded' });
+
+    const loaded = await PDFDocument.load(new Uint8Array(await pdf.arrayBuffer()));
+    const operators = loaded.getPages().map((page) => pageOperators(loaded, page)).join('\n');
+    // A clip (W) closed by an end-path (n) precedes every screenshot draw.
+    expect(operators.match(/\nW\nn\n/g)).toHaveLength(entries.length);
+    expect(operators.match(/ c\n/g)).toHaveLength(entries.length * 4);
+  });
+
   it('emits a single-page PDF for a lone entry and keeps the title page merged with it', async () => {
     const pdf = await generateProjectPdf([entry('step-1', 1, 'Only step')], { title: 'One pager' });
 
     const loaded = await PDFDocument.load(new Uint8Array(await pdf.arrayBuffer()));
     expect(loaded.getPageCount()).toBe(1);
+  });
+
+  describe('when the title page has no room left for the first screenshot', () => {
+    // 18 wrapped title lines leave the cursor where a heading still fits but the screenshot does not.
+    const title = 'a'.repeat(76 * 18);
+
+    function drawnOnLaterPage(text: string): boolean {
+      const { fillText } = canvasContext;
+      const footerCall = fillText.mock.calls.findIndex(([drawn]) => drawn === '第 1 頁');
+      const textCall = fillText.mock.calls.findIndex(([drawn]) => drawn === text);
+      return fillText.mock.invocationCallOrder[textCall] > fillText.mock.invocationCallOrder[footerCall];
+    }
+
+    it('moves the step heading to the page that holds its screenshot', async () => {
+      await generateProjectPdf([entry('step-1', 1, 'First step')], { title });
+
+      expect(drawnOnLaterPage('1.')).toBe(true);
+      expect(canvasContext.roundRect.mock.invocationCallOrder[0]).toBeGreaterThan(
+        canvasContext.fillText.mock.invocationCallOrder[canvasContext.fillText.mock.calls.findIndex(([drawn]) => drawn === '1.')],
+      );
+    });
+
+    it('moves the section title together with the step heading', async () => {
+      await generateProjectPdf([entry('step-1', 1, 'First step')], {
+        title,
+        sections: [{ id: 'section-1', title: '第一章 前置作業', startEntryId: 'step-1' }],
+      });
+
+      expect(drawnOnLaterPage('第一章 前置作業')).toBe(true);
+      expect(drawnOnLaterPage('1.')).toBe(true);
+    });
   });
 
   it('renders section headings before their entries and numbers group annotations', async () => {

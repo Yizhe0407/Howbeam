@@ -42,6 +42,8 @@ export const PROJECT_EXPORT_THEME = Object.freeze({
   /** Frame around exported screenshots. A touch darker than `rule`: an image
    * edge must read against near-white screenshot content. */
   imageBorder: '#cfcfcf',
+  /** Corner radius of exported screenshots, in CSS pixels. */
+  imageRadius: 10,
   /** CJK-capable system font stack shared by HTML text and PDF canvas rasterization. */
   fontFamily:
     '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Helvetica Neue", Arial, sans-serif',

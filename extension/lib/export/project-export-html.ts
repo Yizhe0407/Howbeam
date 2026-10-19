@@ -187,7 +187,7 @@ h1 { font-size: 30px; line-height: 1.35; font-weight: 700; }
 .step-title { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); font-size: 17px; line-height: 1.7; font-weight: 600; }
 .step-number { font-variant-numeric: tabular-nums; }
 figure { margin: 14px 0 0 2.2em; }
-img { display: block; max-width: 100%; height: auto; border: 1px solid var(--image-border); }
+img { display: block; max-width: 100%; height: auto; border: 1px solid var(--image-border); border-radius: ${PROJECT_EXPORT_THEME.imageRadius}px; }
 .annotations { margin: 12px 0 0 2.2em; padding-left: 1.4em; color: var(--text-secondary); }
 .annotations li + li { margin-top: 4px; }
 .document-end { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--rule); color: var(--text-muted); font-size: 13px; text-align: center; }
