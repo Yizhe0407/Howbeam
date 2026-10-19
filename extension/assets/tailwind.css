@@ -298,3 +298,50 @@ html body {
     background-color: rgb(246 238 223 / 0.4);
   }
 }
+
+/* Scrollbar that only paints while the list is scrolling (data-scrolling, set by the component) or its thumb is hovered; the gutter stays reserved so content never shifts, and is mirrored on the left so the content stays centred. */
+.app-scrollbar-autohide {
+  scrollbar-gutter: stable both-edges;
+}
+
+.app-scrollbar-autohide::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.app-scrollbar-autohide::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-scrollbar-autohide::-webkit-scrollbar-thumb {
+  min-height: 36px;
+  border: 3px solid transparent;
+  border-radius: 99px;
+  background: transparent;
+  background-clip: padding-box;
+}
+
+.app-scrollbar-autohide[data-scrolling]::-webkit-scrollbar-thumb,
+.app-scrollbar-autohide::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(31 27 22 / 0.28);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .app-scrollbar-autohide {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(31 27 22 / 0.28) transparent;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .app-scrollbar-autohide[data-scrolling]::-webkit-scrollbar-thumb,
+  .app-scrollbar-autohide::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(246 238 223 / 0.24);
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    .app-scrollbar-autohide {
+      scrollbar-color: rgb(246 238 223 / 0.24) transparent;
+    }
+  }
+}

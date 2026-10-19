@@ -268,7 +268,6 @@ export const zhTW = {
     rail: {
       label: '步驟導覽',
       count: (count: number) => `步驟 · ${count}`,
-      dragHint: '拖曳排序',
       listLabel: '可重新排序的步驟清單',
       thumbnailPending: '縮圖尚未載入',
       openStep: (number: number) => `開啟步驟 ${number}`,

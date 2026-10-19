@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Camera, GripVertical, Plus, Video } from 'lucide-react';
+import { Camera, Plus, Video } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -15,6 +15,7 @@ import {
 } from '@/lib/editor/dnd';
 import { t } from '@/lib/shared/i18n';
 import { cn } from '@/lib/shared/utils';
+import { useAutoHideScrollbar } from '@/lib/editor/use-auto-hide-scrollbar';
 import EntryThumbnail from './EntryThumbnail';
 import SortableItem from './SortableItem';
 import ProjectSectionHeading from './ProjectSectionHeading';
@@ -149,6 +150,7 @@ export default function StepRail({
   );
   const selectedItem = useRef<HTMLButtonElement | null>(null);
   const railRef = useRef<HTMLElement | null>(null);
+  const scrollbar = useAutoHideScrollbar<HTMLUListElement>();
   const sectionByStartId = new Map(sections.map((section) => [section.startEntryId, section]));
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 1024px)').matches : true,
@@ -206,12 +208,6 @@ export default function StepRail({
     >
       <div className="flex shrink-0 items-center justify-between gap-2 px-3.5 pt-3 pb-2 text-xs font-bold text-muted-foreground">
         <span>{t().editor.rail.count(entries.length)}</span>
-        {/* Legend for the grip-icon affordance; a rail of screenshots gives no other hint the order is editable. */}
-        {entries.length > 1 && !reorderDisabled && (
-          <span className="hidden items-center gap-0.5 lg:flex">
-            <GripVertical className="size-3" aria-hidden="true" />{t().editor.rail.dragHint}
-          </span>
-        )}
       </div>
       <DndContext
         sensors={sensors}
@@ -225,8 +221,9 @@ export default function StepRail({
           strategy={isDesktop ? verticalListSortingStrategy : horizontalListSortingStrategy}
         >
           <ul
+            {...scrollbar}
             aria-label={t().editor.rail.listLabel}
-            className="app-scrollbar flex flex-1 flex-row gap-1 overflow-x-auto px-2 pb-2 lg:min-h-0 lg:flex-col lg:gap-1 lg:overflow-x-visible lg:overflow-y-auto lg:px-2 lg:pb-2"
+            className="app-scrollbar-autohide flex flex-1 flex-row gap-1 overflow-x-auto px-2 pb-2 lg:min-h-0 lg:flex-col lg:gap-1 lg:overflow-x-visible lg:overflow-y-auto lg:px-2 lg:pb-2"
           >
             {entries.map((entry, index) => {
               const id = entryId(entry);

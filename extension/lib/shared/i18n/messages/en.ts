@@ -268,7 +268,6 @@ export const en: Messages = {
     rail: {
       label: 'Steps',
       count: (count: number) => `Steps · ${count}`,
-      dragHint: 'Drag to reorder',
       listLabel: 'Reorderable list of steps',
       thumbnailPending: 'Thumbnail not loaded yet',
       openStep: (number: number) => `Open step ${number}`,

@@ -14,6 +14,7 @@ import DescriptionDraftRecoveries from './DescriptionDraftRecoveries';
 import DescriptionSaveIssue from './DescriptionSaveIssue';
 import SortableItem from './SortableItem';
 import { t } from '@/lib/shared/i18n';
+import { useAutoHideScrollbar } from '@/lib/editor/use-auto-hide-scrollbar';
 import { DashedOutline } from '@/components/ui/dashed-outline';
 
 interface RowProps {
@@ -143,6 +144,7 @@ export default function AnnotationList({
   onReorder,
   editingDisabled = false,
 }: Props) {
+  const scrollbar = useAutoHideScrollbar<HTMLDivElement>();
   const { sensors, accessibility, handleDragEnd, itemIds } = useSortableReorder(
     annotations,
     (step) => step.id,
@@ -173,7 +175,7 @@ export default function AnnotationList({
           />
         </label>
       </div>
-      <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto p-3">
+      <div {...scrollbar} className="app-scrollbar-autohide min-h-0 flex-1 overflow-y-auto p-3">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

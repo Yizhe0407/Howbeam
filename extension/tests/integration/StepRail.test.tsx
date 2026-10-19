@@ -251,21 +251,10 @@ describe('StepRail keyboard navigation', () => {
       expect(wrapper.className).not.toContain('opacity-0');
       expect(handle.getAttribute('aria-roledescription')).toBe('可拖曳的排序控制項');
     }
-    expect(screen.getByText('拖曳排序', { selector: 'span' })).toBeTruthy();
   });
 
-  it('單一步驟或操作進行中時不顯示排序提示', () => {
-    const { rerender } = render(
-      <StepRail
-        entries={[makeEntry('step-1', 0)]}
-        selectedEntryId="step-1"
-        onSelect={vi.fn()}
-        onReorder={vi.fn().mockResolvedValue(undefined)}
-      />,
-    );
-    expect(screen.queryByText('拖曳排序', { selector: 'span' })).toBeNull();
-
-    rerender(
+  it('操作進行中時停用排序把手，且不再顯示文字提示', () => {
+    render(
       <StepRail
         entries={[makeEntry('step-1', 0), makeEntry('step-2', 1)]}
         selectedEntryId="step-1"
@@ -274,9 +263,34 @@ describe('StepRail keyboard navigation', () => {
         reorderDisabled
       />,
     );
+
     expect(screen.queryByText('拖曳排序', { selector: 'span' })).toBeNull();
     for (const handle of screen.getAllByRole('button', { name: '拖曳排序' })) {
       expect((handle as HTMLButtonElement).disabled).toBe(true);
+    }
+  });
+
+  it('捲動時才標記 data-scrolling 顯示捲軸，停止後自動移除', () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <StepRail
+          entries={[makeEntry('step-1', 0), makeEntry('step-2', 1)]}
+          selectedEntryId="step-1"
+          onSelect={vi.fn()}
+          onReorder={vi.fn().mockResolvedValue(undefined)}
+        />,
+      );
+      const list = screen.getByRole('list', { name: '可重新排序的步驟清單' });
+      expect(list.hasAttribute('data-scrolling')).toBe(false);
+
+      fireEvent.scroll(list);
+      expect(list.hasAttribute('data-scrolling')).toBe(true);
+
+      act(() => { vi.advanceTimersByTime(1_000); });
+      expect(list.hasAttribute('data-scrolling')).toBe(false);
+    } finally {
+      vi.useRealTimers();
     }
   });
 

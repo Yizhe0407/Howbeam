@@ -102,7 +102,7 @@ export default function StepStage({
           />
           <Pencil className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         </div>
-        <div className="app-scrollbar flex max-h-[84px] min-w-0 flex-wrap items-center gap-2 overflow-y-auto pr-1 sm:max-w-[55%] sm:justify-end">
+        <div className="app-scrollbar flex max-h-[84px] min-w-0 flex-wrap items-center gap-2 overflow-y-auto p-0.5 pr-1 sm:max-w-[55%] sm:justify-end">
           {displayTags.map((tag) => (
             <Badge key={tag} variant="tagEditable" className={cn('max-w-full select-none', tagHueClass(tag))}>
               <span className="min-w-0 truncate">{tag}</span>
