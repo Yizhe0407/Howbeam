@@ -6,7 +6,7 @@
 
 | 欄位 | 英文（預設語系） | 繁體中文 |
 | --- | --- | --- |
-| 名稱 `extName` | Stepmark | Stepmark |
+| 名稱 `extName` | Howbeam | Howbeam |
 | 摘要 `extDescription` | Record clicks and auto-generate a step-by-step annotated image guide（69 字元） | 記錄點擊操作，自動產生逐步的圖解說明 |
 
 官方規定摘要不能超過 132 個字元。名稱要清楚易懂，不能塞關鍵字。
@@ -15,12 +15,12 @@
 
 官方建議開頭先用一句話說清楚這個擴充功能做什麼，接著寫一段概述，再列出主要功能。
 
-依 Limited Use 政策，擴充功能只有在「功能有明顯寫在商店頁上」時，才能收集瀏覽活動。Stepmark 會記錄網址並截圖，所以說明裡要**明確寫出會截圖、會記錄網址**。下面的「Privacy」段落就是為了這件事，不要刪掉。
+依 Limited Use 政策，擴充功能只有在「功能有明顯寫在商店頁上」時，才能收集瀏覽活動。Howbeam 會記錄網址並截圖，所以說明裡要**明確寫出會截圖、會記錄網址**。下面的「Privacy」段落就是為了這件事，不要刪掉。
 
 ### 英文（貼到預設語系 English）
 
 ```text
-Stepmark turns what you click in your browser into a step-by-step guide with screenshots and annotations.
+Howbeam turns what you click in your browser into a step-by-step guide with screenshots and annotations.
 
 Click the toolbar icon, choose a mode and start recording. Each click on a web page captures a screenshot, highlights the element you clicked and writes a short description. When you finish, edit the guide and export it.
 
@@ -29,11 +29,11 @@ Main features
 • Keep recording when you switch tabs or open another site (optional permission, asked only when you need it)
 • Edit your guide: reorder steps, rewrite descriptions, add text, arrows, boxes, numbers, masks and crops
 • Export as PDF, a single HTML file, Markdown (ZIP) or annotated images
-• Automatic backup to a folder you choose, as .stepmark files you can import again
+• Automatic backup to a folder you choose, as .howbeam files you can import again
 • English and Traditional Chinese interface
 
 Privacy
-• While you record, Stepmark takes screenshots of the visible page and saves the page address and the visible text of the element you click. It needs these to build your guide.
+• While you record, Howbeam takes screenshots of the visible page and saves the page address and the visible text of the element you click. It needs these to build your guide.
 • Everything is stored only in your browser on this computer. There is no account, no server and no analytics, and nothing is uploaded.
 • Screenshots show everything visible on the page. Use the mask tool to hide sensitive information before you export or share a guide.
 
@@ -43,7 +43,7 @@ Privacy policy: https://github.com/Yizhe0407/Stepmark/blob/main/chrome-web-store
 ### 繁體中文（貼到 Chinese (Traditional) 語系）
 
 ```text
-Stepmark 把你在瀏覽器裡的點擊操作，自動變成附截圖與標註的逐步教學。
+Howbeam 把你在瀏覽器裡的點擊操作，自動變成附截圖與標註的逐步教學。
 
 點工具列圖示、選擇錄製模式後開始錄製。每在網頁上點一下，就會擷取一張截圖、框出你點的元素，並寫好一句說明。錄完之後可以編輯，再匯出成文件。
 
@@ -52,11 +52,11 @@ Stepmark 把你在瀏覽器裡的點擊操作，自動變成附截圖與標註�
 • 切換分頁或跳到其他網站時可以繼續錄製（選用權限，需要時才會詢問）
 • 編輯教學：調整步驟順序、修改說明，加上文字、箭頭、外框、編號、遮罩與裁切
 • 匯出成 PDF、單一 HTML 檔、Markdown（ZIP）或已標註的圖片
-• 自動備份到你選擇的資料夾，存成之後可以再匯入的 .stepmark 檔
+• 自動備份到你選擇的資料夾，存成之後可以再匯入的 .howbeam 檔
 • 介面支援繁體中文與英文
 
 隱私
-• 錄製時，Stepmark 會擷取目前可見頁面的截圖，並記錄網頁網址與你所點元素上的文字，用來產生教學。
+• 錄製時，Howbeam 會擷取目前可見頁面的截圖，並記錄網頁網址與你所點元素上的文字，用來產生教學。
 • 所有資料只存在這台電腦的瀏覽器裡。沒有帳號、沒有伺服器、沒有分析工具，不會上傳任何資料。
 • 截圖會拍下頁面上所有看得到的內容。匯出或分享前，請用遮罩工具蓋住敏感資訊。
 
@@ -75,7 +75,7 @@ Stepmark 把你在瀏覽器裡的點擊操作，自動變成附截圖與標註�
 
 ## 圖示
 
-| 規格 | 要求 | Stepmark 現況 |
+| 規格 | 要求 | Howbeam 現況 |
 | --- | --- | --- |
 | 尺寸 | 128×128 PNG，放在 ZIP 裡 | 建置時從 `extension/assets/brand/*.svg` 產生為 `icon/128.png`，已在 ZIP 裡 |
 | 留白 | 圖案本身 96×96，四邊各留 16px 透明 | 2026-10-18 實測，圖案範圍是 80×68（x 24–103，y 30–97），符合 |
@@ -124,7 +124,7 @@ Stepmark 把你在瀏覽器裡的點擊操作，自動變成附截圖與標註�
 - 填滿整個區域，不要留邊。
 - 避免大量白色或淺灰色，否則在商店的淺色背景上會糊成一片。
 
-建議做法：用品牌主色當底，把 Stepmark 的圖示放大置中，或放一張簡化的編輯器畫面。不要寫標語。
+建議做法：用品牌主色當底，把 Howbeam 的圖示放大置中，或放一張簡化的編輯器畫面。不要寫標語。
 
 ## 影片與網址
 

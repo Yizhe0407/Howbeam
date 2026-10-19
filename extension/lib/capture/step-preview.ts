@@ -19,7 +19,7 @@ function waitForNextPaint(): Promise<void> {
  * so page CSS cannot alter it, and settles offscreen before capture. */
 export function createStepPreview(): StepPreview {
   const host = createViewportOverlayHost(
-    'data-stepmark-step-preview',
+    'data-howbeam-step-preview',
     {
       'box-sizing': 'border-box',
       opacity: '1',

@@ -3,7 +3,7 @@ import { PERSISTED_STEP_LIMITS } from './persistence-limits';
 import { storageError } from './models';
 
 /**
- * The single rule for a screenshot Blob that Stepmark persists and archives.
+ * The single rule for a screenshot Blob that Howbeam persists and archives.
  * Storage refuses a write that breaks it and the portable archive validates
  * with it, so every stored screenshot can be exported and backed up. Each
  * caller wraps the returned problem in its own error type.

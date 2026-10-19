@@ -130,14 +130,14 @@ export default defineBackground(() => {
   // stored preference is read, so startup recovery (which every click awaits)
   // waits for it too.
   const localeReady = initLocalePreference().catch((error: unknown) => {
-    console.warn('[stepmark] failed to apply the language preference', error);
+    console.warn('[howbeam] failed to apply the language preference', error);
   });
   // Registered synchronously so the install event is never missed by a worker
   // still finishing its first run.
   browser.runtime.onInstalled.addListener((details) => {
     if (!opensWelcomeOnInstall(details)) return;
     openWelcomePage().catch((error: unknown) => {
-      console.error('[stepmark] failed to open the welcome page', error);
+      console.error('[howbeam] failed to open the welcome page', error);
     });
   });
   syncActionIconWithRecordingState();
@@ -154,7 +154,7 @@ export default defineBackground(() => {
     await recaptureFlow.recoverInterruptedRecapture();
     await runLifecycle.recoverInterruptedRecording();
   })().catch((error) => {
-    console.error('[stepmark] failed to recover an interrupted operation', error);
+    console.error('[howbeam] failed to recover an interrupted operation', error);
   });
 
   const relaySender = (sender: Browser.runtime.MessageSender) => ({
@@ -310,7 +310,7 @@ export default defineBackground(() => {
           'snapshot recorder failure recovery failed',
           false,
         );
-      case 'STEPMARK_RECAPTURE_TARGET':
+      case 'HOWBEAM_RECAPTURE_TARGET':
         return withMessageFailureFallback(
           (async () => {
             // The recorder listens before its startup finishes; a click in between waits for it.
@@ -325,7 +325,7 @@ export default defineBackground(() => {
           'recapture target handling failed',
           { ok: false, status: 'failed' } satisfies StepRecaptureTargetResult,
         );
-      case 'STEPMARK_STEP_FRAME_BEGIN':
+      case 'HOWBEAM_STEP_FRAME_BEGIN':
         return withMessageFailureFallback(
           (async () => {
             await startupRecovery;
@@ -335,7 +335,7 @@ export default defineBackground(() => {
           'child-frame relay authorization failed',
           { ok: false } satisfies StepFrameRelayBeginResult,
         );
-      case 'STEPMARK_STEP_FRAME_CLAIM':
+      case 'HOWBEAM_STEP_FRAME_CLAIM':
         return withMessageFailureFallback(
           (async () => {
             await startupRecovery;
@@ -345,21 +345,21 @@ export default defineBackground(() => {
           'child-frame relay claim failed',
           { ok: false } satisfies StepFrameRelayClaimResult,
         );
-      case 'STEPMARK_STEP_FRAME_REJECT':
+      case 'HOWBEAM_STEP_FRAME_REJECT':
         return withMessageFailureFallback(
           stepFrameRelayBroker.reject(message, relaySender(sender)),
           'child-frame relay rejection failed',
           { ok: false } satisfies StepFrameRelayMutationResult,
         );
-      case 'STEPMARK_STEP_FRAME_SETTLE':
+      case 'HOWBEAM_STEP_FRAME_SETTLE':
         return withMessageFailureFallback(
           stepFrameRelayBroker.settle(message, relaySender(sender)),
           'child-frame relay settlement failed',
           { ok: false } satisfies StepFrameRelayMutationResult,
         );
-      case 'STEPMARK_STEP_FRAME_ABORT':
+      case 'HOWBEAM_STEP_FRAME_ABORT':
         return Promise.resolve(stepFrameRelayBroker.abort(message, relaySender(sender)));
-      case 'STEPMARK_CLICK':
+      case 'HOWBEAM_CLICK':
         return withMessageFailureFallback(
           (async () => {
             if (control.startupSettled) await control.startupSettled;
@@ -375,19 +375,19 @@ export default defineBackground(() => {
           'capture request failed',
           { ok: false, error: 'capture-request-failed' } satisfies ClickCaptureResult,
         );
-      case 'STEPMARK_CANCEL_CAPTURE':
+      case 'HOWBEAM_CANCEL_CAPTURE':
         return withMessageFailureFallback(
           recorderMessages.handleCancelCapture(message, sender),
           'capture cancellation failed',
           { ok: false, error: 'capture-cancellation-failed' } satisfies ClickCaptureResult,
         );
-      case 'STEPMARK_READY':
+      case 'HOWBEAM_READY':
         return withMessageFailureFallback(
           recorderMessages.handleRecorderReady(message, sender),
           'recorder ready handling failed',
           false,
         );
-      case 'STEPMARK_RECAPTURE_READY':
+      case 'HOWBEAM_RECAPTURE_READY':
         return withMessageFailureFallback(
           recaptureFlow.handleRecaptureReady(message, sender),
           'recapture ready handling failed',
@@ -404,12 +404,12 @@ export default defineBackground(() => {
       isExtensionPageOnlyMessage(message) &&
       !isTrustedExtensionPageSender(sender, browser.runtime.getURL('/'))
     ) {
-      console.warn('[stepmark] rejected an untrusted extension control message', message.type);
+      console.warn('[howbeam] rejected an untrusted extension control message', message.type);
       return undefined;
     }
     void routeBackgroundMessage(message, sender).then(sendResponse, (error) => {
       console.error(
-        '[stepmark] background message handling failed unexpectedly:',
+        '[howbeam] background message handling failed unexpectedly:',
         describeBrowserError(error),
         error,
       );
@@ -421,7 +421,7 @@ export default defineBackground(() => {
   browser.permissions?.onAdded?.addListener((permissions) => {
     if (!permissions.origins?.includes('<all_urls>')) return;
     void recordedTabUpdates.resumeRunWaitingForSiteAccess().catch((error) => {
-      console.error('[stepmark] failed to resume the recording after the permission grant', error);
+      console.error('[howbeam] failed to resume the recording after the permission grant', error);
     });
     void (async () => {
       const pending = await claimPendingStart();
@@ -442,18 +442,18 @@ export default defineBackground(() => {
         ),
       );
       if (!result.ok) {
-        console.warn('[stepmark] resumed start failed', result.error);
+        console.warn('[howbeam] resumed start failed', result.error);
         const live = await getRecordingState();
         if (!(live.isRecording && live.sessionId === claim.project.id)) await claim.release();
       }
     })().catch((error) => {
-      console.error('[stepmark] failed to resume the start after the permission grant', error);
+      console.error('[howbeam] failed to resume the start after the permission grant', error);
     });
   });
 
   browser.commands?.onCommand.addListener((command) => {
     void runControls.handleCommandShortcut(command).catch((error) => {
-      console.error('[stepmark] failed to handle command shortcut', error);
+      console.error('[howbeam] failed to handle command shortcut', error);
     });
   });
 
@@ -467,7 +467,7 @@ export default defineBackground(() => {
 
   browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     void recordedTabUpdates.handleTabUpdated(tabId, changeInfo, tab).catch((error) => {
-      console.error('[stepmark] failed to handle recorded tab update', error);
+      console.error('[howbeam] failed to handle recorded tab update', error);
     });
   });
 
@@ -482,7 +482,7 @@ export default defineBackground(() => {
     void browser.tabs.query({ active: true, windowId }).then(([tab]) => {
       if (tab?.id != null) followMode.scheduleRecordingFollow(tab.id);
     }).catch((error) => {
-      console.warn('[stepmark] failed to inspect the focused window', error);
+      console.warn('[howbeam] failed to inspect the focused window', error);
     });
   });
 
@@ -494,13 +494,13 @@ export default defineBackground(() => {
       if (await recaptureFlow.handleSourceTabRemoved(tabId)) return;
       await runEnding.handleRecordedTabGone(tabId);
     })().catch((error) => {
-      console.error('[stepmark] failed to handle recorded tab removal', error);
+      console.error('[howbeam] failed to handle recorded tab removal', error);
     });
   });
 
   // Through the click queue so rehydration is ordered before any queued
   // restore/undo message this startup is already receiving.
   void queueClick(undoWindow.recover).catch((error) => {
-    console.error('[stepmark] failed to recover the undo window', error);
+    console.error('[howbeam] failed to recover the undo window', error);
   });
 });

@@ -88,7 +88,7 @@ async function expectPresentationRestored(page: Parameters<typeof startRecording
 
 async function paintInteractionHostRose(
   page: Parameters<typeof startRecording>[0],
-  attribute: 'data-stepmark-snapshot-shield' | 'data-stepmark-step-preview',
+  attribute: 'data-howbeam-snapshot-shield' | 'data-howbeam-step-preview',
 ): Promise<void> {
   await page.evaluate((hostAttribute) => {
     window.captureHostPainted = false;
@@ -132,7 +132,7 @@ test.describe('screenshot presentation', () => {
     expect(await readRootScrollbarSentinelPixels(appPage)).toBeGreaterThan(0);
     await installCaptureMonitor(appPage);
     await startRecording(appPage, popupPage, 'steps');
-    await paintInteractionHostRose(appPage, 'data-stepmark-step-preview');
+    await paintInteractionHostRose(appPage, 'data-howbeam-step-preview');
     await expect.poll(() => appPage.evaluate(() => window.captureHostPainted)).toBe(true);
     await clickTarget(appPage, '#plain-text');
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
@@ -154,7 +154,7 @@ test.describe('screenshot presentation', () => {
     const baseline = await expectRealRootScrollbar(appPage);
     expect(await readRootScrollbarSentinelPixels(appPage)).toBeGreaterThan(0);
     await installCaptureMonitor(appPage);
-    await paintInteractionHostRose(appPage, 'data-stepmark-snapshot-shield');
+    await paintInteractionHostRose(appPage, 'data-howbeam-snapshot-shield');
     await startRecording(appPage, popupPage, 'snapshot');
     await expect.poll(() => appPage.evaluate(() => window.captureHostPainted)).toBe(true);
 

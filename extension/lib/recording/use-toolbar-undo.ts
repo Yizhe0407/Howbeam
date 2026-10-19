@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
 import { UNDO_WINDOW_MS } from '@/lib/storage/recording-state';
 
-export const RECORDING_TOOLBAR_UNDO_KEY = 'stepmark:recordingToolbarUndo';
+export const RECORDING_TOOLBAR_UNDO_KEY = 'howbeam:recordingToolbarUndo';
 
 export interface UndoOffer {
   token: string;
@@ -67,7 +67,7 @@ export function useToolbarUndo(runId: string, itemCount: number) {
     hasOffer.current = true;
     setStored(record);
     void browser.storage.local.set({ [RECORDING_TOOLBAR_UNDO_KEY]: record }).catch((error) => {
-      console.warn('[stepmark] failed to save the undo offer', error);
+      console.warn('[howbeam] failed to save the undo offer', error);
     });
   }, [runId]);
 

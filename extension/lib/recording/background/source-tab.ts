@@ -75,7 +75,7 @@ async function findOrCreateSourceTab(
     // Nothing owns this tab yet (no persisted state references it), so a load
     // timeout or removal race must close it here or every attempt leaks a tab.
     await browser.tabs.remove(created.id).catch((cleanupError) => {
-      console.warn('[stepmark] failed to close an unloaded source tab', cleanupError);
+      console.warn('[howbeam] failed to close an unloaded source tab', cleanupError);
     });
     throw error;
   }
@@ -90,7 +90,7 @@ async function findOrCreateSourceTab(
 async function discardUncommittedSourceTab(source: SourceTabAcquisition): Promise<void> {
   if (source.reused || source.tab.id == null) return;
   await browser.tabs.remove(source.tab.id).catch((error) => {
-    console.warn('[stepmark] failed to close an unused source tab', error);
+    console.warn('[howbeam] failed to close an unused source tab', error);
   });
 }
 
@@ -130,7 +130,7 @@ export async function openVerifiedSourceTab(
   try {
     source = await findOrCreateSourceTab(sourceUrl, preferredTabId);
   } catch (error) {
-    console.error(`[stepmark] ${logLabel}`, error);
+    console.error(`[howbeam] ${logLabel}`, error);
     return { ok: false, reason: 'open-failed' };
   }
   if (await isShowingErrorPage(source.tab)) {

@@ -62,7 +62,7 @@ describe('createRecorderRuntime', () => {
 
     await expect(pending).resolves.toBeUndefined();
     expect(sendStopMessage).toHaveBeenCalledTimes(2);
-    expect(sendStopMessage).toHaveBeenCalledWith(6, { type: 'STEPMARK_STOP' });
+    expect(sendStopMessage).toHaveBeenCalledWith(6, { type: 'HOWBEAM_STOP' });
   });
 
   it('does not retry recorder shutdown against a tab that no longer exists', async () => {

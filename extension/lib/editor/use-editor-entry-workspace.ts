@@ -36,7 +36,7 @@ export function useEditorEntryWorkspace({
     if (!entries.some((entry) => entryId(entry) === requestedEntryId)) return;
     appliedRequestedEntry.current = true;
     setSelectedEntryId(requestedEntryId);
-    requestAnimationFrame(() => document.querySelector<HTMLElement>('#stepmark-editor-title')?.focus());
+    requestAnimationFrame(() => document.querySelector<HTMLElement>('#howbeam-editor-title')?.focus());
   }, [entries, requestedEntryId]);
 
   const selectedIndex = entries.findIndex((entry) => entryId(entry) === selectedEntryId);

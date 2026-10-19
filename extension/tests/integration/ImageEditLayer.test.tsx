@@ -37,12 +37,12 @@ function setup(overrides: Partial<React.ComponentProps<typeof ImageEditLayer>> =
       {...overrides}
     />,
   );
-  const layer = view.container.querySelector('[data-stepmark-image-edit-layer]') as HTMLElement;
+  const layer = view.container.querySelector('[data-howbeam-image-edit-layer]') as HTMLElement;
   return { ...handlers, layer, container: view.container };
 }
 
 const chrome = (container: HTMLElement, id: string) =>
-  container.querySelector(`[data-stepmark-edit-item="${id}"]`) as HTMLElement;
+  container.querySelector(`[data-howbeam-edit-item="${id}"]`) as HTMLElement;
 
 describe('ImageEditLayer creating', () => {
   it('creates a mask from a drag, reporting a live draft on the way', () => {
@@ -121,7 +121,7 @@ describe('ImageEditLayer drawing over existing items', () => {
 
   it('keeps the handles of the selected item usable while drawing', () => {
     const { layer, container, onUpdate, onCreate } = setup({ tool: 'redact', selectedId: 'mask-1' });
-    const handle = container.querySelector('[data-stepmark-edit-handle="se"]') as HTMLElement;
+    const handle = container.querySelector('[data-howbeam-edit-handle="se"]') as HTMLElement;
     fireEvent.pointerDown(handle, { clientX: 180, clientY: 90, button: 0 });
     fireEvent.pointerMove(layer, { clientX: 200, clientY: 100 });
     fireEvent.pointerUp(layer, { clientX: 200, clientY: 100 });
@@ -154,7 +154,7 @@ describe('ImageEditLayer moving and resizing', () => {
 
   it('resizes through a corner handle of a selected box', () => {
     const { layer, container, onUpdate } = setup({ selectedId: 'mask-1' });
-    const handle = container.querySelector('[data-stepmark-edit-handle="se"]') as HTMLElement;
+    const handle = container.querySelector('[data-howbeam-edit-handle="se"]') as HTMLElement;
     fireEvent.pointerDown(handle, { clientX: 180, clientY: 90, button: 0 });
     fireEvent.pointerMove(layer, { clientX: 200, clientY: 100 });
     fireEvent.pointerUp(layer, { clientX: 200, clientY: 100 });
@@ -163,7 +163,7 @@ describe('ImageEditLayer moving and resizing', () => {
 
   it('moves one end of an arrow with its end handle', () => {
     const { layer, container, onUpdate } = setup({ items: [arrow], selectedId: 'arrow-1', tool: 'select' });
-    const handle = container.querySelector('[data-stepmark-edit-handle="to"]') as HTMLElement;
+    const handle = container.querySelector('[data-howbeam-edit-handle="to"]') as HTMLElement;
     fireEvent.pointerDown(handle, { clientX: 110, clientY: 190, button: 0 });
     fireEvent.pointerMove(layer, { clientX: 150, clientY: 170 });
     fireEvent.pointerUp(layer, { clientX: 150, clientY: 170 });
@@ -172,7 +172,7 @@ describe('ImageEditLayer moving and resizing', () => {
 
   it('only offers width handles on text', () => {
     const { container } = setup({ items: [text], selectedId: 'text-1', tool: 'select' });
-    const handles = [...container.querySelectorAll('[data-stepmark-edit-handle]')].map((element) => element.getAttribute('data-stepmark-edit-handle'));
+    const handles = [...container.querySelectorAll('[data-howbeam-edit-handle]')].map((element) => element.getAttribute('data-howbeam-edit-handle'));
     expect(handles.sort()).toEqual(['e', 'w']);
   });
 });
@@ -181,7 +181,7 @@ describe('ImageEditLayer text', () => {
   it('starts editing text on a double press', () => {
     const { container, onStartTextEdit } = setup({ items: [text], tool: 'select' });
     fireEvent.pointerDown(chrome(container, 'text-1'), { clientX: 210, clientY: 110, button: 0, timeStamp: 1000 });
-    fireEvent.pointerUp(container.querySelector('[data-stepmark-image-edit-layer]')!, { clientX: 150, clientY: 170 });
+    fireEvent.pointerUp(container.querySelector('[data-howbeam-image-edit-layer]')!, { clientX: 150, clientY: 170 });
     fireEvent.pointerDown(chrome(container, 'text-1'), { clientX: 210, clientY: 110, button: 0, timeStamp: 1200 });
     expect(onStartTextEdit).toHaveBeenCalledWith('text-1');
   });
@@ -214,9 +214,9 @@ describe('ImageEditLayer text', () => {
     const { container } = setup({ items: [], editingText: editing, tool: 'select' });
     const area = screen.getByRole('textbox') as HTMLTextAreaElement;
     expect(area.maxLength).toBe(IMAGE_EDIT_LIMITS.maxTextLength);
-    expect(container.querySelector('[data-stepmark-text-limit]')).toBeNull();
+    expect(container.querySelector('[data-howbeam-text-limit]')).toBeNull();
     fireEvent.input(area, { target: { value: 'x'.repeat(IMAGE_EDIT_LIMITS.maxTextLength) } });
-    expect(container.querySelector('[data-stepmark-text-limit]')).toBeTruthy();
+    expect(container.querySelector('[data-howbeam-text-limit]')).toBeTruthy();
   });
 
   it('keeps Shift+Enter for a new line', () => {
@@ -259,7 +259,7 @@ describe('ImageEditLayer crop', () => {
 
   it('dims outside the crop at all times, but only lets the crop tool touch it', () => {
     const idle = setup({ items: [mask, crop], tool: 'select' });
-    expect(idle.container.querySelector('[data-stepmark-crop-shade]')).toBeTruthy();
+    expect(idle.container.querySelector('[data-howbeam-crop-shade]')).toBeTruthy();
     expect(chrome(idle.container, 'crop').className).toContain('pointer-events-none');
     expect(chrome(idle.container, 'mask-1').className).not.toContain('pointer-events-none');
     cleanup();
@@ -267,12 +267,12 @@ describe('ImageEditLayer crop', () => {
     const modal = setup({ items: [mask, crop], tool: 'crop' });
     expect(chrome(modal.container, 'crop').className).not.toContain('pointer-events-none');
     expect(chrome(modal.container, 'mask-1').className).toContain('pointer-events-none');
-    expect(modal.container.querySelectorAll('[data-stepmark-edit-handle]')).toHaveLength(8);
+    expect(modal.container.querySelectorAll('[data-howbeam-edit-handle]')).toHaveLength(8);
   });
 
   it('moves and resizes the crop with its handles', () => {
     const { layer, container, onUpdate } = setup({ items: [crop], tool: 'crop' });
-    const handle = container.querySelector('[data-stepmark-edit-handle="se"]') as HTMLElement;
+    const handle = container.querySelector('[data-howbeam-edit-handle="se"]') as HTMLElement;
     fireEvent.pointerDown(handle, { clientX: 300, clientY: 140, button: 0 });
     fireEvent.pointerMove(layer, { clientX: 350, clientY: 160 });
     fireEvent.pointerUp(layer, { clientX: 350, clientY: 160 });

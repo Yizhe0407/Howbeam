@@ -78,7 +78,7 @@ function readEntries(bytes: Uint8Array): Map<string, Uint8Array> {
     });
   } catch (error) {
     if (error instanceof ProjectArchiveError) throw error;
-    fail('INVALID_ARCHIVE', 'The project archive is not a valid Stepmark file.');
+    fail('INVALID_ARCHIVE', 'The project archive is not a valid Howbeam file.');
   }
   return new Map(Object.entries(files));
 }

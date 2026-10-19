@@ -201,7 +201,7 @@ describe('cross-tab permission ask at recording start', () => {
     await waitFor(() => expect(mocks.permissionsRequest).toHaveBeenCalled());
 
     expect(mocks.storageSet).toHaveBeenCalledWith({
-      'stepmark:pending-start:v1': expect.objectContaining({ mode: 'steps', tabId: 7, projectId: 'project-old' }),
+      'howbeam:pending-start:v1': expect.objectContaining({ mode: 'steps', tabId: 7, projectId: 'project-old' }),
     });
   });
 });

@@ -41,7 +41,7 @@ export default function EditorHeader({
   return (
     <AppHeader
       current={projectTitle == null ? t().common.editor : projectTitle.trim() || t().common.untitledProject}
-      currentHeading={{ id: 'stepmark-editor-title' }}
+      currentHeading={{ id: 'howbeam-editor-title' }}
       beforeNavigate={beforeNavigate}
       status={operationActive && (
         <Badge variant="status" className="min-w-0">

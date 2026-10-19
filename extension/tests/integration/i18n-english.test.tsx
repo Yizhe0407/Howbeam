@@ -53,7 +53,7 @@ describe('English UI', () => {
       />,
     );
     expect(screen.getByRole('navigation', { name: 'Location' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Stepmark library' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Howbeam library' })).toBeTruthy();
     expect(screen.getByRole('heading', { level: 1, name: 'Editor' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Export' })).toBeTruthy();

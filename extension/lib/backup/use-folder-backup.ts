@@ -46,7 +46,7 @@ export function createBackupScheduler(
  * up to date. A no-op until the user turns backup on. */
 export function useAutoFolderBackup(): void {
   useEffect(() => {
-    const run = () => void runFolderBackup().catch((error) => console.warn('[stepmark] folder backup failed', error));
+    const run = () => void runFolderBackup().catch((error) => console.warn('[howbeam] folder backup failed', error));
     const { schedule, cancel } = createBackupScheduler(run);
     run();
     const unsubscribe = subscribeProjectsChanged(schedule);
@@ -116,7 +116,7 @@ export function useFolderBackup(): FolderBackupState {
       await action();
       await refresh();
     } catch (actionError) {
-      console.error('[stepmark] folder backup action failed', actionError);
+      console.error('[howbeam] folder backup action failed', actionError);
       setError(true);
     } finally {
       setBusy(false);

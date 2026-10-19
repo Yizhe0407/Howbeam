@@ -17,7 +17,7 @@ vi.mock('@/lib/storage/storage', async (importOriginal) =>
 vi.mock('@/lib/recording/background/pending-undo-store', async () =>
   (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks));
 
-const EDITOR_KEY = 'stepmark:extensionPageTab:editor';
+const EDITOR_KEY = 'howbeam:extensionPageTab:editor';
 const EDITOR_TAB = { tabId: 12, windowId: 4 };
 const EXTENSION_PAGE_SENDER = { url: 'chrome-extension://extension-id/popup.html' };
 const EDITOR_URL_PREFIX = 'chrome-extension://extension-id/editor.html';
@@ -304,8 +304,8 @@ describe('opening the editor from another extension page', () => {
 });
 
 describe('extension page registry', () => {
-  const LIBRARY_KEY = 'stepmark:extensionPageTab:library';
-  const OPTIONS_KEY = 'stepmark:extensionPageTab:options';
+  const LIBRARY_KEY = 'howbeam:extensionPageTab:library';
+  const OPTIONS_KEY = 'howbeam:extensionPageTab:options';
 
   async function register(page: string, tabId: number): Promise<unknown> {
     const url = `chrome-extension://extension-id/${page}`;

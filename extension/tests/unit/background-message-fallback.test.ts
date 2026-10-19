@@ -18,7 +18,7 @@ describe('withMessageFailureFallback', () => {
     await expect(withMessageFailureFallback(Promise.reject(error), '訊息處理失敗', { ok: false }))
       .resolves.toEqual({ ok: false });
     expect(consoleError).toHaveBeenCalledWith(
-      '[stepmark] 訊息處理失敗:',
+      '[howbeam] 訊息處理失敗:',
       'Error: channel closed',
       error,
     );

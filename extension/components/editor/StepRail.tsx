@@ -144,7 +144,7 @@ export default function StepRail({
     {
       disabled: reorderDisabled,
       itemNoun: t().sortable.stepNoun,
-      logLabel: '[stepmark] failed to reorder project entries',
+      logLabel: '[howbeam] failed to reorder project entries',
     },
   );
   const selectedItem = useRef<HTMLButtonElement | null>(null);
@@ -279,8 +279,8 @@ export default function StepRail({
                         {active && (
                           <span
                             aria-hidden="true"
-                            data-stepmark-selected-step-outline
-                            className="stepmark-selected-step-outline pointer-events-none absolute inset-0 z-10 rounded-md border-2"
+                            data-howbeam-selected-step-outline
+                            className="howbeam-selected-step-outline pointer-events-none absolute inset-0 z-10 rounded-md border-2"
                           />
                         )}
                         <div className="pointer-events-none relative z-[1] aspect-[16/9] w-full overflow-hidden rounded-sm border-2 border-border bg-secondary">

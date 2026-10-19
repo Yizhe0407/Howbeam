@@ -149,7 +149,7 @@ describe('a snapshot click on an iframe', () => {
 describe('the child frame’s probe responder', () => {
   function probe(port: MessagePort, overrides: Record<string, unknown> = {}) {
     window.dispatchEvent(new MessageEvent('message', {
-      data: { type: 'stepmark_snapshot_probe_test-extension', runId, timeoutMs: 100, clientX: 20, clientY: 30, ...overrides },
+      data: { type: 'howbeam_snapshot_probe_test-extension', runId, timeoutMs: 100, clientX: 20, clientY: 30, ...overrides },
       source: window.parent,
       ports: [port],
     }));

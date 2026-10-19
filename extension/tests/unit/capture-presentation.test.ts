@@ -74,11 +74,11 @@ describe('withCapturePresentation', () => {
 });
 
 describe('CAPTURE_PRESENTATION_CSS', () => {
-  it('hides Stepmark interaction hosts without changing page layout', () => {
-    expect(CAPTURE_PRESENTATION_CSS).toContain('[data-stepmark-snapshot-shield]');
-    expect(CAPTURE_PRESENTATION_CSS).toContain('[data-stepmark-step-preview]');
-    expect(CAPTURE_PRESENTATION_CSS).toContain('[data-stepmark-region-capture]');
-    expect(CAPTURE_PRESENTATION_CSS).toContain('[data-stepmark-recording-toolbar]');
+  it('hides Howbeam interaction hosts without changing page layout', () => {
+    expect(CAPTURE_PRESENTATION_CSS).toContain('[data-howbeam-snapshot-shield]');
+    expect(CAPTURE_PRESENTATION_CSS).toContain('[data-howbeam-step-preview]');
+    expect(CAPTURE_PRESENTATION_CSS).toContain('[data-howbeam-region-capture]');
+    expect(CAPTURE_PRESENTATION_CSS).toContain('[data-howbeam-recording-toolbar]');
     expect(CAPTURE_PRESENTATION_CSS).toContain('opacity: 0 !important');
   });
 

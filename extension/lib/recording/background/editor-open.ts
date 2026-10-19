@@ -172,7 +172,7 @@ export function createEditorOpen(deps: { control: ControlPlane }) {
       }
       return result;
     } catch (error) {
-      console.error('[stepmark] failed to open editor:', describeBrowserError(error), error);
+      console.error('[howbeam] failed to open editor:', describeBrowserError(error), error);
       if (state?.sessionId === targetSessionId) {
         try {
           await control.writeStateForControl(expectedControlVersion, (current) => {
@@ -181,7 +181,7 @@ export function createEditorOpen(deps: { control: ControlPlane }) {
           });
         } catch (recoveryError) {
           console.error(
-            '[stepmark] failed to persist editor recovery state:',
+            '[howbeam] failed to persist editor recovery state:',
             describeBrowserError(recoveryError),
             recoveryError,
           );

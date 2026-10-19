@@ -44,7 +44,7 @@ test.describe('step recording', () => {
     expect(await rawScreenshotRosePixels(popupPage, step.id)).toBe(0);
 
     await stopRecording(popupPage);
-    await expect.poll(() => appPage.locator('[data-stepmark-step-preview]').count()).toBe(0);
+    await expect.poll(() => appPage.locator('[data-howbeam-step-preview]').count()).toBe(0);
   });
 
   test('records a manually cropped region when the auto-detected box is wrong', async ({
@@ -55,7 +55,7 @@ test.describe('step recording', () => {
     await startRecording(appPage, popupPage, 'steps');
     // Region capture is the only in-page recourse for a box the detector got wrong, so it has to survive as a working path end to end.
     await clickRecordingToolbarButton(appPage, '框選區域');
-    const region = appPage.locator('[data-stepmark-region-capture]');
+    const region = appPage.locator('[data-howbeam-region-capture]');
     await expect(region).toHaveCount(1);
     await expect(region.locator('.ft-region-blocker')).toBeVisible();
 
@@ -77,7 +77,7 @@ test.describe('step recording', () => {
     expect(Math.round(step.bounds!.height)).toBe(120);
 
     // The overlay closes itself once the capture settles, leaving the ordinary hover highlight in charge again.
-    await expect.poll(() => appPage.locator('[data-stepmark-region-capture]').count()).toBe(0);
+    await expect.poll(() => appPage.locator('[data-howbeam-region-capture]').count()).toBe(0);
     await hoverTarget(appPage, '#plain-text');
 
     await stopRecording(popupPage);
@@ -98,7 +98,7 @@ test.describe('step recording', () => {
     const pill = await appPage.evaluate(() => {
       for (let y = window.innerHeight - 10; y > window.innerHeight - 120; y -= 6) {
         for (let x = 20; x < window.innerWidth; x += 20) {
-          if (document.elementFromPoint(x, y)?.hasAttribute('data-stepmark-recording-toolbar')) return { x, y };
+          if (document.elementFromPoint(x, y)?.hasAttribute('data-howbeam-recording-toolbar')) return { x, y };
         }
       }
       return null;
@@ -175,7 +175,7 @@ test.describe('step recording', () => {
     browserErrors: _browserErrors,
   }) => {
     await startRecording(appPage, popupPage, 'steps');
-    await expect(appPage.locator('[data-stepmark-recording-toolbar]')).toHaveCount(1);
+    await expect(appPage.locator('[data-howbeam-recording-toolbar]')).toHaveCount(1);
     await clickTarget(appPage, '#plain-text');
     await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(1);
 
@@ -187,8 +187,8 @@ test.describe('step recording', () => {
             runtime: { sendMessage(message: unknown): Promise<unknown> };
           };
         }).chrome;
-        const stored = await extensionApi.storage.local.get('stepmark:recordingState');
-        const runId = (stored['stepmark:recordingState'] as { runId: string }).runId;
+        const stored = await extensionApi.storage.local.get('howbeam:recordingState');
+        const runId = (stored['howbeam:recordingState'] as { runId: string }).runId;
         return extensionApi.runtime.sendMessage({ type, runId, ...(undoToken ? { undoToken } : {}) });
       }, { type, undoToken });
     };
@@ -216,7 +216,7 @@ test.describe('step recording', () => {
     const editor = await editorOpened;
     await editor.waitForLoadState('domcontentloaded');
     await expect.poll(async () => (await readRecordingState(popupPage)).isRecording).toBe(false);
-    await expect(appPage.locator('[data-stepmark-recording-toolbar]')).toHaveCount(0);
+    await expect(appPage.locator('[data-howbeam-recording-toolbar]')).toHaveCount(0);
     expect(editor.url()).toContain('entryId=');
     await expect(editor.getByRole('button', { name: '開啟步驟 1' })).toHaveAttribute('aria-current', 'step');
   });
@@ -391,9 +391,9 @@ test.describe('step recording', () => {
     await appPage.bringToFront();
     await secondPage.bringToFront();
     await expect.poll(async () => (await readRecordingState(popupPage)).tabId).not.toBe(firstTabId);
-    await expect.poll(() => secondPage.locator('[data-stepmark-step-preview]').count()).toBe(1);
+    await expect.poll(() => secondPage.locator('[data-howbeam-step-preview]').count()).toBe(1);
     // The old tab's recorder (toolbar included) is torn down after the move.
-    await expect.poll(() => appPage.locator('[data-stepmark-recording-toolbar]').count()).toBe(0);
+    await expect.poll(() => appPage.locator('[data-howbeam-recording-toolbar]').count()).toBe(0);
 
     await clickTarget(secondPage, 'h1');
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
@@ -401,7 +401,7 @@ test.describe('step recording', () => {
     // Switching back follows again and keeps appending to the same run.
     await appPage.bringToFront();
     await expect.poll(async () => (await readRecordingState(popupPage)).tabId).toBe(firstTabId);
-    await expect.poll(() => appPage.locator('[data-stepmark-step-preview]').count()).toBe(1);
+    await expect.poll(() => appPage.locator('[data-howbeam-step-preview]').count()).toBe(1);
     await clickTarget(appPage, '#action-button span');
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(3);
 

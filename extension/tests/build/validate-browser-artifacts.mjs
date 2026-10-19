@@ -42,7 +42,7 @@ if ((firefox.manifest.permissions ?? []).includes('<all_urls>')) {
 if (!(firefox.manifest.optional_permissions ?? []).includes('<all_urls>')) {
   throw new Error('Firefox optional host permission is missing.');
 }
-if (firefox.manifest.browser_specific_settings?.gecko?.id !== 'stepmark@local') {
+if (firefox.manifest.browser_specific_settings?.gecko?.id !== 'howbeam@local') {
   throw new Error('Firefox add-on ID is missing or unexpected.');
 }
 

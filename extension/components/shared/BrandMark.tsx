@@ -9,7 +9,7 @@ export default function BrandMark({ className, heading = false }: { className?: 
   return (
     <span className={cn('flex min-w-0 items-center gap-2', className)}>
       <Mascot />
-      <Wordmark className="shrink-0 text-base font-bold text-foreground">Stepmark</Wordmark>
+      <Wordmark className="shrink-0 text-base font-bold text-foreground">Howbeam</Wordmark>
     </span>
   );
 }

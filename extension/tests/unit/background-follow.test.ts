@@ -84,7 +84,7 @@ describe('follow-the-active-tab recording (steps mode)', () => {
     expect(mocks.executeScript).toHaveBeenCalledWith(
       expect.objectContaining({ target: { tabId: 9, allFrames: true } }),
     );
-    expect(mocks.tabsSendMessage).toHaveBeenCalledWith(4, { type: 'STEPMARK_STOP' });
+    expect(mocks.tabsSendMessage).toHaveBeenCalledWith(4, { type: 'HOWBEAM_STOP' });
     // READY validation reads state.tabId, so the state write must precede injection, and the old recorder must only stop after the new one is in.
     const stateWriteOrder = mocks.setRecordingState.mock.invocationCallOrder[0];
     const injectOrder = mocks.executeScript.mock.invocationCallOrder[0];
@@ -393,7 +393,7 @@ describe('following a blank tab once it loads a page', () => {
     expect(mocks.executeScript).toHaveBeenCalledWith(
       expect.objectContaining({ target: { tabId: 9, allFrames: true } }),
     );
-    expect(mocks.tabsSendMessage).toHaveBeenCalledWith(4, { type: 'STEPMARK_STOP' });
+    expect(mocks.tabsSendMessage).toHaveBeenCalledWith(4, { type: 'HOWBEAM_STOP' });
   });
 
   it('never follows a page loading in a window the user is not in', async () => {

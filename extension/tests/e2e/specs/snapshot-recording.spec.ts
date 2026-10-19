@@ -54,7 +54,7 @@ test.describe('snapshot recording', () => {
         expect(await readPageScreenshotPixel(appPage, 40, 320)).toEqual(sentinelPixel);
 
         await stopRecording(popupPage);
-        await expect.poll(() => appPage.locator('[data-stepmark-snapshot-shield]').count()).toBe(0);
+        await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(0);
       }
     }
   });
@@ -89,7 +89,7 @@ test.describe('snapshot recording', () => {
     expect(annotation?.groupId).toBe(anchor?.id);
 
     await stopRecording(popupPage);
-    await expect.poll(() => appPage.locator('[data-stepmark-snapshot-shield]').count()).toBe(0);
+    await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(0);
   });
 
   test('isolates page input while the shield holds focus', async ({
@@ -103,7 +103,7 @@ test.describe('snapshot recording', () => {
 
     await shield.locator('body').hover({ position: point });
     await expect.poll(() => shield.evaluate(() => document.hasFocus())).toBe(true);
-    await expect.poll(() => appPage.evaluate(() => document.activeElement?.hasAttribute('data-stepmark-snapshot-shield'))).toBe(true);
+    await expect.poll(() => appPage.evaluate(() => document.activeElement?.hasAttribute('data-howbeam-snapshot-shield'))).toBe(true);
     await expect(shield.locator('.snapshot-box--preview')).toBeVisible();
 
     await clickSnapshotTarget(appPage, point);
@@ -172,7 +172,7 @@ test.describe('snapshot recording', () => {
     const editor = await editorOpened;
     await editor.waitForLoadState('domcontentloaded');
     await expect.poll(async () => (await readRecordingState(popupPage)).isRecording).toBe(false);
-    await expect.poll(() => appPage.locator('[data-stepmark-snapshot-shield]').count()).toBe(0);
+    await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(0);
     // Finishing hands the editor the snapshot group, not its last annotation: entryId is the anchor id, the timeline entry the rail selects.
     const finishedAnchor = (await readSteps(popupPage)).find((step) => step.bounds === null);
     expect(new URL(editor.url()).searchParams.get('entryId')).toBe(finishedAnchor?.id);
@@ -192,8 +192,8 @@ test.describe('snapshot recording', () => {
       const extensionApi = (globalThis as unknown as {
         chrome: { storage: { local: { get(key: string): Promise<Record<string, unknown>> } } };
       }).chrome;
-      const result = await extensionApi.storage.local.get('stepmark:recordingToolbarCorner');
-      return result['stepmark:recordingToolbarCorner'];
+      const result = await extensionApi.storage.local.get('howbeam:recordingToolbarCorner');
+      return result['howbeam:recordingToolbarCorner'];
     });
 
     const positionControl = shield.getByRole('button', { name: /拖曳移動/ });
@@ -219,7 +219,7 @@ test.describe('snapshot recording', () => {
 
     await expect.poll(async () => (await readRecordingState(popupPage)).isRecording).toBe(false);
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(0);
-    await expect.poll(() => appPage.locator('[data-stepmark-snapshot-shield]').count()).toBe(0);
+    await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(0);
   });
 
   test('creates independent snapshot groups after releasing the page for navigation', async ({
@@ -235,12 +235,12 @@ test.describe('snapshot recording', () => {
 
     await firstShield.getByRole('button', { name: '下一張' }).click();
     await expect.poll(async () => (await readRecordingState(popupPage)).phase).toBe('preparing-next');
-    await expect.poll(() => appPage.locator('[data-stepmark-snapshot-shield]').count()).toBe(0);
-    await expect(appPage.locator('[data-stepmark-recording-toolbar]')).toHaveCount(1);
+    await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(0);
+    await expect(appPage.locator('[data-howbeam-recording-toolbar]')).toHaveCount(1);
 
     await appPage.goto(`${FIXTURE_URL}navigated.html`);
     await expect.poll(async () => (await readRecordingState(popupPage)).phase).toBe('preparing-next');
-    await expect.poll(() => appPage.locator('[data-stepmark-recording-toolbar]').count()).toBe(1);
+    await expect.poll(() => appPage.locator('[data-howbeam-recording-toolbar]').count()).toBe(1);
 
     const createResults = await Promise.all([
       sendRecordingControl(popupPage, 'CREATE_NEXT_SNAPSHOT'),

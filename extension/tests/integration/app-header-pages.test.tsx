@@ -32,12 +32,12 @@ function breadcrumb() {
 }
 
 describe('welcome page', () => {
-  it('sits under Stepmark in the shared header and turns into the library', () => {
+  it('sits under Howbeam in the shared header and turns into the library', () => {
     render(<WelcomeApp />);
 
     expect(mocks.registerPage).toHaveBeenCalled();
     expect(breadcrumb().getByText('歡迎').closest('li')?.getAttribute('aria-current')).toBe('page');
-    expect(screen.getByRole('heading', { level: 1, name: '歡迎使用 Stepmark' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: '歡迎使用 Howbeam' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /前往專案庫/ }));
     expect(mocks.navigateInPlace).toHaveBeenCalledWith('library');
@@ -46,23 +46,23 @@ describe('welcome page', () => {
   it('covers pinning, both recording modes and the up-front limits', () => {
     render(<WelcomeApp />);
 
-    expect(screen.getByRole('heading', { level: 2, name: /將 Stepmark 釘選到工具列/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: /將 Howbeam 釘選到工具列/ })).toBeTruthy();
     expect(screen.getByRole('img', { name: /擴充功能選單/ })).toBeTruthy();
     expect(screen.getByText('每次點擊都會擷取一張截圖，自動編號成一連串操作步驟。')).toBeTruthy();
     expect(screen.getByText('鎖定目前畫面，在同一張截圖上加入多個標註點。')).toBeTruthy();
     expect(screen.getByText('所有截圖只儲存在這台電腦，不會上傳。')).toBeTruthy();
   });
 
-  it('keeps the pin instructions until the browser reports Stepmark as pinned', () => {
+  it('keeps the pin instructions until the browser reports Howbeam as pinned', () => {
     mocks.toolbarPin.mockReturnValue('unpinned');
     const { rerender } = render(<WelcomeApp />);
-    expect(screen.getByRole('heading', { level: 2, name: /將 Stepmark 釘選到工具列/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: /將 Howbeam 釘選到工具列/ })).toBeTruthy();
 
     mocks.toolbarPin.mockReturnValue('pinned');
     rerender(<WelcomeApp />);
-    expect(screen.getByRole('heading', { level: 2, name: /Stepmark 已釘選到工具列/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: /Howbeam 已釘選到工具列/ })).toBeTruthy();
     expect(screen.queryByRole('img', { name: /擴充功能選單/ })).toBeNull();
-    expect(screen.getByText('之後隨時點擊工具列上的 Stepmark 圖示就能開始錄製。')).toBeTruthy();
+    expect(screen.getByText('之後隨時點擊工具列上的 Howbeam 圖示就能開始錄製。')).toBeTruthy();
   });
 });
 
@@ -77,11 +77,11 @@ describe('settings page', () => {
     expect(mocks.navigateInPlace).not.toHaveBeenCalled();
   });
 
-  it('returns to the library in the same tab from the Stepmark crumb', async () => {
+  it('returns to the library in the same tab from the Howbeam crumb', async () => {
     render(<OptionsApp />);
 
     expect(mocks.registerPage).toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Stepmark 專案庫' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Howbeam 專案庫' }));
 
     await waitFor(() => expect(mocks.navigateInPlace).toHaveBeenCalledWith('library'));
   });

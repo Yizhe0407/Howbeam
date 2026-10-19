@@ -19,7 +19,7 @@ import {
   runProjectStepsWrite,
   runWithDatabase,
   summarizeSteps,
-  type StepmarkDB,
+  type HowbeamDB,
   type ProjectStepsTransaction,
 } from './database';
 import { clearActiveProjectId } from './storage';
@@ -64,7 +64,7 @@ export async function getProject(id: string): Promise<Project | undefined> {
   return project ? sanitizeProject(project) : undefined;
 }
 
-type ProjectOnlyTransaction = IDBPTransaction<StepmarkDB, ['projects'], 'readwrite'>;
+type ProjectOnlyTransaction = IDBPTransaction<HowbeamDB, ['projects'], 'readwrite'>;
 
 /** Loads a project row inside a projects-only readwrite transaction, aborting the
  * transaction when the row is gone so the thrown error can never leave a

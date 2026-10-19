@@ -46,7 +46,7 @@ function sender(overrides: { frameId?: number; tabId?: number; windowId?: number
 
 function click(overrides: Partial<ClickCapture> = {}): ClickCapture {
   return {
-    type: 'STEPMARK_CLICK',
+    type: 'HOWBEAM_CLICK',
     captureKind: 'element',
     captureId: 'capture-1',
     runId: RUN_ID,
@@ -383,7 +383,7 @@ describe('createAndActivateSnapshotAnchor', () => {
     expect(harness.control.acceptingClicks).toBe(true);
     expect(mocks.tabsSendMessage).toHaveBeenCalledWith(
       TAB_ID,
-      { type: 'STEPMARK_SNAPSHOT_ACTIVE', runId: RUN_ID },
+      { type: 'HOWBEAM_SNAPSHOT_ACTIVE', runId: RUN_ID },
       { frameId: 0 },
     );
   });

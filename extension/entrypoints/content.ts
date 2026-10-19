@@ -21,8 +21,8 @@ import { installStepRecorder } from '@/lib/recording/content/step-recorder';
 import { createToolbarChannel } from '@/lib/recording/content/toolbar-channel';
 import { CLEANUP_EVENT } from '@/lib/recording/content-script-constants';
 import type {
-  StepmarkSnapshotActiveMessage,
-  StepmarkStopMessage,
+  HowbeamSnapshotActiveMessage,
+  HowbeamStopMessage,
   SnapshotRecorderFailureMessage,
 } from '@/lib/runtime/messages';
 import { t } from '@/lib/shared/i18n';
@@ -33,9 +33,9 @@ import {
   isChildFrameUnrecordable,
 } from '@/lib/recording/content/recordable-page';
 
-const INSTANCE_KEY = `__stepmark_instance_${browser.runtime.id}`;
+const INSTANCE_KEY = `__howbeam_instance_${browser.runtime.id}`;
 /** The live recorder module of this document's extension world. */
-const RECORDER_KEY = `__stepmark_recorder_${browser.runtime.id}`;
+const RECORDER_KEY = `__howbeam_recorder_${browser.runtime.id}`;
 
 interface ResidentRecorder {
   /** Runs one recorder start in the module instance that owns this document. */
@@ -211,12 +211,12 @@ async function startRecorder(): Promise<void> {
     cleanup: () => cleanup(),
   });
 
-  const onRecorderMessage = (message: StepmarkStopMessage | StepmarkSnapshotActiveMessage) => {
-    if (message?.type === 'STEPMARK_STOP') {
+  const onRecorderMessage = (message: HowbeamStopMessage | HowbeamSnapshotActiveMessage) => {
+    if (message?.type === 'HOWBEAM_STOP') {
       cleanup();
       return;
     }
-    if (message?.type === 'STEPMARK_SNAPSHOT_ACTIVE' && message.runId === runId) {
+    if (message?.type === 'HOWBEAM_SNAPSHOT_ACTIVE' && message.runId === runId) {
       snapshot.setInteractionsActive(true);
       snapshot.notifyInvalidated();
       return Promise.resolve(true);
@@ -258,7 +258,7 @@ async function startRecorder(): Promise<void> {
             reason: 'shield-channel',
           } satisfies SnapshotRecorderFailureMessage);
         } catch (error) {
-          console.error('[stepmark] failed to report snapshot shield failure', error);
+          console.error('[howbeam] failed to report snapshot shield failure', error);
         }
       },
     );
@@ -273,7 +273,7 @@ async function startRecorder(): Promise<void> {
           try {
             shield.sendKeyboardCandidates(collectKeyboardCandidateAnchors());
           } catch (error) {
-            console.warn('[stepmark] failed to enumerate keyboard candidates', error);
+            console.warn('[howbeam] failed to enumerate keyboard candidates', error);
           }
         };
         if (typeof requestIdleCallback === 'function') requestIdleCallback(sendCandidates, { timeout: 500 });
@@ -293,7 +293,7 @@ async function startRecorder(): Promise<void> {
   let isCurrentRecordedTab = false;
   try {
     const readyMessage: import('@/lib/runtime/messages').RecorderReadyMessage = {
-      type: 'STEPMARK_READY',
+      type: 'HOWBEAM_READY',
       runId,
       ...(shouldFreezeSnapshot
         ? {
@@ -315,12 +315,12 @@ async function startRecorder(): Promise<void> {
       t().runtime.recordingResponseInvalid,
     );
   } catch (err) {
-    console.error('[stepmark] recorder readiness check failed', err);
+    console.error('[howbeam] recorder readiness check failed', err);
   }
   if (!isCurrentRecordedTab || instanceHost[INSTANCE_KEY] !== instanceId) {
     cleanup();
     return;
   }
 
-  console.log('[stepmark] recorder ready on', location.href);
+  console.log('[howbeam] recorder ready on', location.href);
 }

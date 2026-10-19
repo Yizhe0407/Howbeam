@@ -4,11 +4,11 @@ import { PROJECT_SECTION_LIMITS, type ProjectSection } from '../storage/project-
 import { PROJECT_TAG_LIMITS } from '../storage/project-tag-model';
 import { SCREENSHOT_MEDIA_TYPES } from '../storage/screenshot-rules';
 
-export const PROJECT_ARCHIVE_FORMAT = 'stepmark-project';
+export const PROJECT_ARCHIVE_FORMAT = 'howbeam-project';
 /** Version 4 is a ZIP: `manifest.json` plus each distinct screenshot stored
  * once, as its original bytes, under `screenshots/` named by its SHA-256. */
 export const PROJECT_ARCHIVE_VERSION = 4;
-export const PROJECT_ARCHIVE_MIME_TYPE = 'application/vnd.stepmark.project+zip';
+export const PROJECT_ARCHIVE_MIME_TYPE = 'application/vnd.howbeam.project+zip';
 export const ARCHIVE_MANIFEST_PATH = 'manifest.json';
 
 const SCREENSHOT_EXTENSIONS: Readonly<Record<string, string>> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };

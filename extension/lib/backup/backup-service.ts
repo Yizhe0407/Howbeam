@@ -11,7 +11,7 @@ import {
   saveBackupLastRun,
 } from './backup-store';
 
-const LOCK_NAME = 'stepmark-folder-backup';
+const LOCK_NAME = 'howbeam-folder-backup';
 
 /** The run waiting for the lock another run holds; one is enough for any number of changes. */
 let pendingRun: Promise<BackupResult> | null = null;

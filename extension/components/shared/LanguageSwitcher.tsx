@@ -23,7 +23,7 @@ export default function LanguageSwitcher({ className }: Props) {
       .then((stored) => {
         if (active) setPreference(stored);
       })
-      .catch((error) => console.warn('[stepmark] failed to read the language preference', error));
+      .catch((error) => console.warn('[howbeam] failed to read the language preference', error));
     return () => {
       active = false;
     };
@@ -35,7 +35,7 @@ export default function LanguageSwitcher({ className }: Props) {
     try {
       await setLocalePreference(next);
     } catch (error) {
-      console.error('[stepmark] failed to save the language preference', error);
+      console.error('[howbeam] failed to save the language preference', error);
       setPreference(previous);
     }
   }

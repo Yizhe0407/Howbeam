@@ -158,7 +158,7 @@ export async function startRecordingIntoProject(
       const live = await getRecordingState();
       if (!(live.isRecording && live.sessionId === project.id)) await claim.release();
     } catch (rollbackError) {
-      console.error('[stepmark] failed to roll back the recording project claim', rollbackError);
+      console.error('[howbeam] failed to roll back the recording project claim', rollbackError);
     }
     throw startError;
   }

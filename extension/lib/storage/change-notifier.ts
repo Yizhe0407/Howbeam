@@ -2,7 +2,7 @@
  * was written, so work that follows the data (folder backup) reacts to the
  * change itself instead of polling for it. Best effort by design: a missed
  * message only delays follow-up work until the next page opens. */
-const CHANNEL_NAME = 'stepmark-projects-changed';
+const CHANNEL_NAME = 'howbeam-projects-changed';
 
 function channelsSupported(): boolean {
   return typeof BroadcastChannel === 'function';

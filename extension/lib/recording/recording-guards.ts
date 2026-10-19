@@ -129,7 +129,7 @@ function isSameOrigin(a: string, b: string): boolean {
   }
 }
 
-/** Trusts a STEPMARK_CLICK sender by identity (the tab/frame), not exact
+/** Trusts a HOWBEAM_CLICK sender by identity (the tab/frame), not exact
  * URL: sender.url/tab.url lag behind SPA history.pushState navigations, so
  * comparing full URLs rejected legitimate clicks. Origin is still checked to
  * reject a stale content script left on a different site; getCaptureGuardFailure's

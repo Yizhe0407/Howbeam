@@ -7,7 +7,7 @@ import { StepRecaptureError } from '@/lib/storage/step-repository';
 import type { Step } from '@/lib/storage/models';
 import type { RecordingState } from '@/lib/storage/recording-state';
 import type { StepRecaptureTarget } from '@/lib/storage/step-repository';
-import type { StepmarkRecaptureTargetMessage } from '@/lib/runtime/messages';
+import type { HowbeamRecaptureTargetMessage } from '@/lib/runtime/messages';
 import { makeRecordingState } from '../setup/recording-state';
 import { flushAsyncWork } from '../setup/background-test-utils';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
@@ -101,10 +101,10 @@ function recaptureContext(overrides: Partial<NonNullable<RecordingState['recaptu
 }
 
 function targetMessage(
-  overrides: Partial<StepmarkRecaptureTargetMessage> = {},
-): StepmarkRecaptureTargetMessage {
+  overrides: Partial<HowbeamRecaptureTargetMessage> = {},
+): HowbeamRecaptureTargetMessage {
   return {
-    type: 'STEPMARK_RECAPTURE_TARGET',
+    type: 'HOWBEAM_RECAPTURE_TARGET',
     runId: 'recapture-1',
     captureId: 'capture-1',
     rect: { x: 5, y: 6, width: 70, height: 80 },
@@ -330,7 +330,7 @@ describe('startStepRecapture', () => {
     harness.injectRecorder.mockImplementation(async () => {
       const context = harness.getState().recapture!;
       await harness.flow.handleRecaptureReady(
-        { type: 'STEPMARK_RECAPTURE_READY', runId: context.runId, url: SOURCE_URL },
+        { type: 'HOWBEAM_RECAPTURE_READY', runId: context.runId, url: SOURCE_URL },
         sourceSender(),
       );
     });
@@ -515,7 +515,7 @@ describe('handleRecaptureReady', () => {
   it('advances selection only for the persisted source document', async () => {
     const { settle } = await startWithHandshake((runId) =>
       harness.flow.handleRecaptureReady(
-        { type: 'STEPMARK_RECAPTURE_READY', runId, url: SOURCE_URL },
+        { type: 'HOWBEAM_RECAPTURE_READY', runId, url: SOURCE_URL },
         sourceSender(),
       ),
     );
@@ -530,7 +530,7 @@ describe('handleRecaptureReady', () => {
     const { settle } = await startWithHandshake(async (runId) => {
       acknowledged.push(
         await harness.flow.handleRecaptureReady(
-          { type: 'STEPMARK_RECAPTURE_READY', runId, url: SOURCE_URL },
+          { type: 'HOWBEAM_RECAPTURE_READY', runId, url: SOURCE_URL },
           sourceSender({ tabId: 999 }),
         ),
       );
@@ -548,7 +548,7 @@ describe('handleRecaptureReady', () => {
     silenceIntentionalErrorLogs();
     const { settle } = await startWithHandshake(async () => {
       await harness.flow.handleRecaptureReady(
-        { type: 'STEPMARK_RECAPTURE_READY', runId: 'some-other-run', url: SOURCE_URL },
+        { type: 'HOWBEAM_RECAPTURE_READY', runId: 'some-other-run', url: SOURCE_URL },
         sourceSender(),
       );
     });
@@ -563,7 +563,7 @@ describe('handleRecaptureReady', () => {
 
     await expect(
       harness.flow.handleRecaptureReady(
-        { type: 'STEPMARK_RECAPTURE_READY', runId: 'recapture-1', url: SOURCE_URL },
+        { type: 'HOWBEAM_RECAPTURE_READY', runId: 'recapture-1', url: SOURCE_URL },
         sourceSender(),
       ),
     ).resolves.toBe(false);
@@ -785,7 +785,7 @@ describe('handleRecaptureTarget', () => {
     expect(result).toEqual({
       ok: false,
       status: 'failed',
-      error: 'Stepmark 已失去這個頁面的存取權限。請允許存取此網站後再試一次。',
+      error: 'Howbeam 已失去這個頁面的存取權限。請允許存取此網站後再試一次。',
     });
   });
 
@@ -1129,7 +1129,7 @@ describe('focusStepRecaptureSource', () => {
         { type: 'FOCUS_STEP_RECAPTURE_SOURCE', runId: 'recapture-1' },
         editorSender('project-b'),
       ),
-    ).resolves.toEqual({ ok: false, error: '無法從這個頁面開始補拍，請回到 Stepmark 編輯器重新操作。' });
+    ).resolves.toEqual({ ok: false, error: '無法從這個頁面開始補拍，請回到 Howbeam 編輯器重新操作。' });
   });
 
   it('reports a source tab that can no longer be focused', async () => {

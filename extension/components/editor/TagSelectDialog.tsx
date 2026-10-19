@@ -54,7 +54,7 @@ export default function TagSelectDialog({
       })
       .catch((loadFailure) => {
         // Suggestions are a shortcut, not the feature, so a failed read isn't a save failure.
-        console.warn('[stepmark] failed to read previously used project tags', loadFailure);
+        console.warn('[howbeam] failed to read previously used project tags', loadFailure);
       });
     return () => { stale = true; };
   }, [open]);
@@ -67,7 +67,7 @@ export default function TagSelectDialog({
     try {
       await onAddTag(tag);
     } catch (saveFailure) {
-      setSaveError(reportError('[stepmark] failed to update project tags', saveFailure, t().editor.tags.saveFailed));
+      setSaveError(reportError('[howbeam] failed to update project tags', saveFailure, t().editor.tags.saveFailed));
     }
   }
 

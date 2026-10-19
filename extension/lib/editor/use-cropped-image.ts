@@ -32,7 +32,7 @@ export function useCroppedImage(blob: Blob, crop: Bounds | null, screenshotScale
       (image) => {
         if (!cancelled) setResolved({ source: blob, image, crop });
       },
-      (error) => console.error('[stepmark] failed to crop the image', error),
+      (error) => console.error('[howbeam] failed to crop the image', error),
     );
     return () => {
       cancelled = true;

@@ -25,7 +25,7 @@ async function sweepEmptySnapshotAnchors(sessionId: string): Promise<void> {
   if (!recording || (recording.isRecording && recording.sessionId === sessionId)) return;
   sweptSessions.add(sessionId);
   await repairEmptySnapshotAnchors(sessionId).catch((error) => {
-    console.warn('[stepmark] failed to remove an empty snapshot anchor', error);
+    console.warn('[howbeam] failed to remove an empty snapshot anchor', error);
   });
 }
 
@@ -119,7 +119,7 @@ export function useEditorProjectData(sessionId: string | null, steps: readonly u
     if (!sessionId) return;
     return subscribeProjectsChanged(() => {
       void syncProjectRow().catch((syncError) => {
-        console.warn('[stepmark] failed to re-read the project after a change', syncError);
+        console.warn('[howbeam] failed to re-read the project after a change', syncError);
       });
     });
   }, [sessionId, syncProjectRow]);
@@ -135,7 +135,7 @@ export function useEditorProjectData(sessionId: string | null, steps: readonly u
       if (disposed) return;
       adoptSnapshot(snapshot);
     }).catch(async (loadError) => {
-      console.error('[stepmark] failed to read the project structure', loadError);
+      console.error('[howbeam] failed to read the project structure', loadError);
       if (disposed) return;
       await applyLoadFailure(sessionId, () => disposed);
     });

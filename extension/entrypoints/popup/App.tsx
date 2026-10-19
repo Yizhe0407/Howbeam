@@ -55,7 +55,7 @@ function App() {
         .catch((readError) => {
           // Fail open: the confirm dialog and background guard still protect the
           // action, while failing closed would strand a real reset need.
-          console.error('[stepmark] failed to read project summary', readError);
+          console.error('[howbeam] failed to read project summary', readError);
           if (active) setResetTarget({ title: t().common.untitledProject, hasContent: true });
         });
     };
@@ -75,7 +75,7 @@ function App() {
       await openSettings();
       window.close();
     } catch (settingsError) {
-      console.error('[stepmark] failed to open settings', settingsError);
+      console.error('[howbeam] failed to open settings', settingsError);
       setEditorOpenError(t().nav.settingsOpenFailed);
     }
   }
@@ -86,7 +86,7 @@ function App() {
       await openLibrary();
       window.close();
     } catch (navigationError) {
-      console.error('[stepmark] failed to open library', navigationError);
+      console.error('[howbeam] failed to open library', navigationError);
       setEditorOpenError(t().nav.libraryOpenFailed);
     }
   }
@@ -116,7 +116,7 @@ function App() {
       window.close();
     } catch (openError) {
       setEditorOpenError(
-        reportError('[stepmark] failed to request editor navigation', openError, t().runtime.editorOpenFailed),
+        reportError('[howbeam] failed to request editor navigation', openError, t().runtime.editorOpenFailed),
       );
     } finally {
       setOpeningEditor(false);

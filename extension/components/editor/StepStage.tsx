@@ -81,7 +81,7 @@ export default function StepStage({
     try {
       await onRemoveTag(tag);
     } catch (tagError) {
-      setStageError(reportError('[stepmark] failed to update project tags', tagError, t().editor.stage.tagSaveFailed));
+      setStageError(reportError('[howbeam] failed to update project tags', tagError, t().editor.stage.tagSaveFailed));
     }
   }
 
@@ -96,7 +96,7 @@ export default function StepStage({
             disabled={editingDisabled || !onTitleChange}
             onCommit={(title) => onTitleChange?.(title)}
             onCommitError={(titleError) => {
-              setStageError(reportError('[stepmark] failed to rename project', titleError, t().editor.stage.titleSaveFailed));
+              setStageError(reportError('[howbeam] failed to rename project', titleError, t().editor.stage.titleSaveFailed));
             }}
             className="w-fit min-w-[8ch] max-w-[calc(100%-1.75rem)] rounded-md border-2 border-transparent px-2 py-1 text-[22px] leading-tight font-bold text-foreground transition-colors focus-ring hover:border-border-soft focus:border-border focus:bg-card [field-sizing:content]"
           />
@@ -147,7 +147,7 @@ export default function StepStage({
     try {
       await onSetNumbered(entryId(entry), next);
     } catch (err) {
-      setStageError(reportError('[stepmark] failed to update annotation numbering', err, t().editor.stage.numberingSaveFailed));
+      setStageError(reportError('[howbeam] failed to update annotation numbering', err, t().editor.stage.numberingSaveFailed));
     } finally {
       setNumberingPending(false);
     }
@@ -259,7 +259,7 @@ export default function StepStage({
         setImageEditorOpen(false);
         // The editor wrote its changes straight to storage; load them into the screen once.
         void Promise.resolve(onChange()).catch((reloadError) => {
-          setStageError(reportError('[stepmark] failed to reload after image edits', reloadError, t().editor.imageEdit.saveFailed));
+          setStageError(reportError('[howbeam] failed to reload after image edits', reloadError, t().editor.imageEdit.saveFailed));
         });
       }}
     />

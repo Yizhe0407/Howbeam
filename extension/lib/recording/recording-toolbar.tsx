@@ -144,7 +144,7 @@ export default function RecordingToolbar({
     } catch (error) {
       // Inline copy of components/shared reportError — the toolbar lives in
       // lib/, which must not depend upward on components/.
-      console.error('[stepmark] recording toolbar command failed', error);
+      console.error('[howbeam] recording toolbar command failed', error);
       const result = {
         ok: false,
         error: error instanceof Error && error.message ? error.message : t().toolbar.actionFailed,
@@ -332,7 +332,7 @@ export default function RecordingToolbar({
               ref={(element) => { floatingRef.current = element; }}
               type="button"
               className="ft-collapsed"
-              data-stepmark-toolbar-position=""
+              data-howbeam-toolbar-position=""
               aria-label={t().toolbar.expandLabel(statusLabel)}
               data-tooltip={t().toolbar.expandTooltip}
               onPointerDown={handlePositionPointerDown}
@@ -406,7 +406,7 @@ export default function RecordingToolbar({
                   <button
                     type="button"
                     className="ft-status"
-                    data-stepmark-toolbar-position=""
+                    data-howbeam-toolbar-position=""
                     aria-label={t().toolbar.moveLabel(statusLabel)
                       + (state.projectTitle ? `; ${t().toolbar.appendingTo(state.projectTitle)}` : '')}
                     data-tooltip={state.projectTitle ? t().toolbar.appendingTo(state.projectTitle) : t().toolbar.moveTooltip}

@@ -4,7 +4,7 @@ import { isRecord } from '../shared/validation';
 /**
  * A versioned one-way boolean marker persisted in extension-local storage:
  * `{ version, <flag>: true, <at>: timestamp }` under the key
- * `stepmark:<name>:v<version>`. Incrementing the version gives the marker a
+ * `howbeam:<name>:v<version>`. Incrementing the version gives the marker a
  * brand-new key, so an older marker never suppresses a newer flow (a v1
  * permission decline does not silence a v2 ask).
  */
@@ -32,7 +32,7 @@ export function createVersionedMarkerStore<
   Flag extends string,
   At extends string,
 >(options: {
-  /** Key segment: the store persists under `stepmark:<name>:v<version>`. */
+  /** Key segment: the store persists under `howbeam:<name>:v<version>`. */
   name: string;
   version: Version;
   flagField: Flag;
@@ -40,7 +40,7 @@ export function createVersionedMarkerStore<
 }): VersionedMarkerStore<VersionedMarkerState<Version, Flag, At>> {
   type State = VersionedMarkerState<Version, Flag, At>;
   const { name, version, flagField, atField } = options;
-  const storageKey = `stepmark:${name}:v${version}`;
+  const storageKey = `howbeam:${name}:v${version}`;
 
   // Computed keys defeat TypeScript's object-literal checking, but the shape
   // is exactly State by construction.

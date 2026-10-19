@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
 
-export const RECORDING_TOOLBAR_COLLAPSED_KEY = 'stepmark:recordingToolbarCollapsed';
+export const RECORDING_TOOLBAR_COLLAPSED_KEY = 'howbeam:recordingToolbarCollapsed';
 
 interface StoredCollapse {
   runId: string;
@@ -40,7 +40,7 @@ export function useToolbarCollapsed(runId: string): { collapsed: boolean; setCol
   const setCollapsed = useCallback((next: boolean) => {
     setLocal(next);
     void browser.storage.local.set({ [RECORDING_TOOLBAR_COLLAPSED_KEY]: { runId, collapsed: next } }).catch((error) => {
-      console.warn('[stepmark] failed to save the toolbar collapse state', error);
+      console.warn('[howbeam] failed to save the toolbar collapse state', error);
     });
   }, [runId]);
 

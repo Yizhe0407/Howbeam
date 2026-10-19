@@ -236,7 +236,7 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
   const settleFrames = options.settleFrames ?? 2;
   // Hit-testable on purpose: the transparent host swallows the drag so no page
   // target receives it.
-  const host = createViewportOverlayHost('data-stepmark-region-capture', { 'pointer-events': 'auto' }, { popover: true });
+  const host = createViewportOverlayHost('data-howbeam-region-capture', { 'pointer-events': 'auto' }, { popover: true });
 
   const root = host.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
@@ -357,7 +357,7 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
         if (closed) return;
         await options.onCapture(rect);
       } catch (error) {
-        console.error('[stepmark] failed to capture selected region', error);
+        console.error('[howbeam] failed to capture selected region', error);
       } finally {
         close();
       }

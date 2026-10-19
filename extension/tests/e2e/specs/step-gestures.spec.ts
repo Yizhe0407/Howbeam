@@ -90,7 +90,7 @@ test.describe('step recording gestures', () => {
       await clickTarget(appPage, '#plain-text');
       await expect.poll(async () => (await readSteps(popupPage)).length).toBeGreaterThan(before);
       await stopRecording(popupPage);
-      await expect.poll(() => appPage.locator('[data-stepmark-recording-toolbar]').count()).toBe(0);
+      await expect.poll(() => appPage.locator('[data-howbeam-recording-toolbar]').count()).toBe(0);
     }
   });
 });

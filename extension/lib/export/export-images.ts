@@ -81,7 +81,7 @@ export async function exportImagesAsZip(
   });
   throwIfAborted(signal);
 
-  const filename = `stepmark-images-${localDateStamp()}.zip`;
+  const filename = `howbeam-images-${localDateStamp()}.zip`;
   await downloadBlobViaBrowser(blob, filename, { signal });
   return { filename, itemCount: entries.length };
 }

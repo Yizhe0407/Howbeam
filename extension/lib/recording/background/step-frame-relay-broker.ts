@@ -1,5 +1,5 @@
 import type {
-  StepmarkStepFrameResultMessage,
+  HowbeamStepFrameResultMessage,
   StepFrameRelayAbortMessage,
   StepFrameRelayBeginMessage,
   StepFrameRelayBeginResult,
@@ -35,7 +35,7 @@ export interface StepFrameRelayBrokerDependencies {
   sendResult: (
     tabId: number,
     frameId: number,
-    message: StepmarkStepFrameResultMessage,
+    message: HowbeamStepFrameResultMessage,
   ) => Promise<void>;
 }
 
@@ -90,7 +90,7 @@ export function createStepFrameRelayBroker(
     pending.delete(relayKey(relay.tabId, relay.captureId));
     try {
       await dependencies.sendResult(relay.tabId, relay.originFrameId, {
-        type: 'STEPMARK_STEP_FRAME_RESULT',
+        type: 'HOWBEAM_STEP_FRAME_RESULT',
         runId: relay.runId,
         captureId: relay.captureId,
         replay,

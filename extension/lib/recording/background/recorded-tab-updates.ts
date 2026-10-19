@@ -119,7 +119,7 @@ export function createRecordedTabUpdates(deps: RecordedTabUpdateDependencies) {
     }
     // Cleared before injecting so the fresh toolbar never flashes the old notice.
     await clearRunWaiting(runId, expectedControlVersion);
-    const resumed = await reinjectRecorder(tabId, '[stepmark] failed to resume the recorder after the permission grant:');
+    const resumed = await reinjectRecorder(tabId, '[howbeam] failed to resume the recorder after the permission grant:');
     if (resumed === 'error-page') await markRunWaiting(runId, 'page-failed', expectedControlVersion);
   }
 
@@ -157,7 +157,7 @@ export function createRecordedTabUpdates(deps: RecordedTabUpdateDependencies) {
       }
       const restored = await reinjectRecorder(
         tabId,
-        '[stepmark] failed to restore snapshot preparation toolbar after navigation:',
+        '[howbeam] failed to restore snapshot preparation toolbar after navigation:',
       );
       if (restored === 'failed' || restored === 'error-page') {
         await setRunError(runId, t().background.controlsUnavailableHere);
@@ -186,7 +186,7 @@ export function createRecordedTabUpdates(deps: RecordedTabUpdateDependencies) {
     await clearRunWaiting(runId, expectedControlVersion);
     const reinjected = await reinjectRecorder(
       tabId,
-      '[stepmark] failed to re-inject recorder after navigation:',
+      '[howbeam] failed to re-inject recorder after navigation:',
     );
     if (reinjected === 'error-page') {
       await markRunWaiting(runId, 'page-failed', expectedControlVersion);

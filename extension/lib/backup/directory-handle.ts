@@ -19,7 +19,7 @@ export async function pickBackupDirectory(): Promise<BackupDirectory | null> {
     showDirectoryPicker: (options: { mode: 'readwrite'; id: string }) => Promise<BackupDirectory>;
   }).showDirectoryPicker;
   try {
-    return await picker({ mode: 'readwrite', id: 'stepmark-backup' });
+    return await picker({ mode: 'readwrite', id: 'howbeam-backup' });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') return null;
     throw error;

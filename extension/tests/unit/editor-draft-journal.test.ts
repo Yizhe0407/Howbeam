@@ -123,8 +123,8 @@ describe('editor description draft journal', () => {
   });
 
   it('prunes only old orphan chunks, preserving a fresh in-progress cross-tab write', () => {
-    const old = 'stepmark:editor-description-draft:v2:chunk:project:step:writer:description:1000-rev:0';
-    const fresh = 'stepmark:editor-description-draft:v2:chunk:project:step:writer:description:999999-rev:0';
+    const old = 'howbeam:editor-description-draft:v2:chunk:project:step:writer:description:1000-rev:0';
+    const fresh = 'howbeam:editor-description-draft:v2:chunk:project:step:writer:description:999999-rev:0';
     localStorage.setItem(old, 'old');
     localStorage.setItem(fresh, 'fresh');
 
@@ -134,7 +134,7 @@ describe('editor description draft journal', () => {
   });
 
   it('reclaims stale orphan chunks before allocating when they are blocking quota', () => {
-    const orphan = 'stepmark:editor-description-draft:v2:chunk:project:step:writer:description:1000-rev:0';
+    const orphan = 'howbeam:editor-description-draft:v2:chunk:project:step:writer:description:1000-rev:0';
     localStorage.setItem(orphan, 'stale quota consumer');
     const storage: Storage = {
       get length() { return localStorage.length; },

@@ -28,7 +28,7 @@ export interface ExtensionPageTab {
 // One key per kind, so a page registering itself never has to read-modify-write
 // a record another page is registering at the same moment.
 function pageTabKey(kind: ExtensionPageKind): string {
-  return `stepmark:extensionPageTab:${kind}`;
+  return `howbeam:extensionPageTab:${kind}`;
 }
 
 function normalizeExtensionPageTab(value: unknown): ExtensionPageTab | null {
@@ -127,7 +127,7 @@ export async function showExtensionPage(
     // A record can outlive its tab when tabs.onRemoved is missed while the MV3
     // worker sleeps; only a rejected tabs.update proves that — a window-focus
     // failure below just means the window closed and must not spawn a duplicate page.
-    console.warn(`[stepmark] the remembered ${kind} tab is gone; opening a new one`, error);
+    console.warn(`[howbeam] the remembered ${kind} tab is gone; opening a new one`, error);
     await forgetExtensionPage(kind);
     await createExtensionPage(options.url);
     return;

@@ -35,7 +35,7 @@ export function createCaptureSender(runId: string) {
   ): Promise<boolean> {
     const result = await requestCapture(rect, target, intent, now, captureId, captureKind);
     if (result.ok) return true;
-    console.warn('[stepmark] step was not captured:', result.error);
+    console.warn('[howbeam] step was not captured:', result.error);
     return false;
   }
 
@@ -48,7 +48,7 @@ export function createCaptureSender(runId: string) {
     captureKind: ClickCapture['captureKind'],
   ): Promise<ClickCaptureResult> {
     const payload: ClickCapture = {
-      type: 'STEPMARK_CLICK',
+      type: 'HOWBEAM_CLICK',
       captureKind,
       captureId,
       runId,
@@ -92,14 +92,14 @@ export function createCaptureSender(runId: string) {
       const result = await requestCapture(rect, target, intent, now, captureId, captureKind);
       if (result.ok) return 'saved';
       if (result.error !== CAPTURE_REQUEST_FAILED) {
-        console.warn('[stepmark] step was not captured:', result.error);
+        console.warn('[howbeam] step was not captured:', result.error);
         return result.reported ? 'rejected' : 'lost';
       }
       failure = result.error;
     } catch (error) {
       failure = error;
     }
-    console.warn('[stepmark] step capture request failed; reconciling with recording state', failure);
+    console.warn('[howbeam] step capture request failed; reconciling with recording state', failure);
     return (await wasCaptureCommitted(captureId)) ? 'saved' : 'lost';
   }
 
@@ -141,7 +141,7 @@ export function createCaptureSender(runId: string) {
       // The response was lost after the background may already have
       // committed the step; the durable recording state decides which of
       // the two actually happened, so labels cannot drift off-by-one.
-      console.warn('[stepmark] snapshot capture response was lost; reconciling with recording state', error);
+      console.warn('[howbeam] snapshot capture response was lost; reconciling with recording state', error);
       const after = await readAuthoritativeAnnotationCount();
       return after !== null && after > before ? after : null;
     }

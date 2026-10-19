@@ -213,7 +213,7 @@ describe('useRecordingSession', () => {
     const { result } = renderHook(() => useRecordingSession());
 
     await waitFor(() => expect(result.current.dataError).toBe('無法讀取錄製狀態，請重新整理後再試一次。'));
-    expect(consoleError).toHaveBeenCalledWith('[stepmark] failed to read recording state', error);
+    expect(consoleError).toHaveBeenCalledWith('[howbeam] failed to read recording state', error);
   });
 
   it('surfaces IndexedDB refresh failures and recovers after a successful refresh', async () => {

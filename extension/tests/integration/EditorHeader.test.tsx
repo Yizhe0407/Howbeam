@@ -44,7 +44,7 @@ describe('EditorHeader', () => {
   it('offers exactly one control per action', () => {
     renderHeader();
 
-    expect(screen.getAllByRole('button', { name: 'Stepmark 專案庫' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Howbeam 專案庫' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: '設定' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: '匯出' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: '重置目前錄製' })).toHaveLength(1);
@@ -66,7 +66,7 @@ describe('EditorHeader', () => {
 
     const breadcrumb = screen.getByRole('navigation', { name: '目前位置' });
     const heading = within(breadcrumb).getByRole('heading', { level: 1, name: '新增成員' });
-    expect(heading.id).toBe('stepmark-editor-title');
+    expect(heading.id).toBe('howbeam-editor-title');
     expect(heading.closest('li')?.getAttribute('aria-current')).toBe('page');
   });
 
@@ -78,10 +78,10 @@ describe('EditorHeader', () => {
     expect(screen.getByRole('heading', { level: 1, name: '未命名專案' })).toBeTruthy();
   });
 
-  it('returns to the library in the same tab from the Stepmark crumb', async () => {
+  it('returns to the library in the same tab from the Howbeam crumb', async () => {
     renderHeader();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Stepmark 專案庫' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Howbeam 專案庫' }));
 
     await waitFor(() => expect(mocks.navigateInPlace).toHaveBeenCalledWith('library'));
   });
@@ -98,7 +98,7 @@ describe('EditorHeader', () => {
     const beforeNavigate = vi.fn().mockResolvedValue(false);
     renderHeader({ beforeNavigate });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Stepmark 專案庫' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Howbeam 專案庫' }));
 
     await waitFor(() => expect(beforeNavigate).toHaveBeenCalledOnce());
     expect(mocks.navigateInPlace).not.toHaveBeenCalled();

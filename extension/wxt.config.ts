@@ -50,7 +50,7 @@ export default defineConfig({
     ],
     browser_specific_settings: {
       gecko: {
-        id: 'stepmark@local',
+        id: 'howbeam@local',
         // No strict_min_version: the real floor is storage.session (Firefox 115), but data_collection_permissions below is itself a 140+ key, so declaring 115 would misrepresent support (web-ext flags this).
         data_collection_permissions: {
           required: ['none'],

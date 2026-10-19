@@ -1,10 +1,10 @@
 /**
- * The single rule for user-entered text that Stepmark persists and archives.
+ * The single rule for user-entered text that Howbeam persists and archives.
  *
  * Storage normalizes with it, the editor normalizes as the user types (so the
  * value it compares against is exactly what storage keeps), and the portable
  * archive validates with it. One rule means anything storage accepts can always
- * be exported and backed up, and an archive Stepmark wrote can always be read.
+ * be exported and backed up, and an archive Howbeam wrote can always be read.
  *
  * Multi-line text (step descriptions, project titles and descriptions) keeps
  * tab, line feed and carriage return; every other C0 control, DEL and every C1

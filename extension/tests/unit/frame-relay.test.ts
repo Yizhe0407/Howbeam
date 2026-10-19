@@ -10,7 +10,7 @@ vi.mock('wxt/browser', () => ({
 }));
 
 import {
-  isStepmarkStepFrameResultMessage,
+  isHowbeamStepFrameResultMessage,
   isStepFrameHopPayload,
   isStepFrameRelayBeginResult,
   isStepFrameRelayClaimResult,
@@ -95,16 +95,16 @@ describe('step frame relay protocol', () => {
     expect(isStepFrameRelayMutationResult(null)).toBe(false);
 
     const valid = {
-      type: 'STEPMARK_STEP_FRAME_RESULT',
+      type: 'HOWBEAM_STEP_FRAME_RESULT',
       runId: 'run-id',
       captureId: 'capture-id',
       replay: true,
     };
-    expect(isStepmarkStepFrameResultMessage(valid)).toBe(true);
-    expect(isStepmarkStepFrameResultMessage({ ...valid, replay: false })).toBe(true);
-    expect(isStepmarkStepFrameResultMessage({ ...valid, type: 'other' })).toBe(false);
-    expect(isStepmarkStepFrameResultMessage({ ...valid, runId: '' })).toBe(false);
-    expect(isStepmarkStepFrameResultMessage({ ...valid, captureId: 'x'.repeat(129) })).toBe(false);
-    expect(isStepmarkStepFrameResultMessage({ ...valid, replay: 'true' })).toBe(false);
+    expect(isHowbeamStepFrameResultMessage(valid)).toBe(true);
+    expect(isHowbeamStepFrameResultMessage({ ...valid, replay: false })).toBe(true);
+    expect(isHowbeamStepFrameResultMessage({ ...valid, type: 'other' })).toBe(false);
+    expect(isHowbeamStepFrameResultMessage({ ...valid, runId: '' })).toBe(false);
+    expect(isHowbeamStepFrameResultMessage({ ...valid, captureId: 'x'.repeat(129) })).toBe(false);
+    expect(isHowbeamStepFrameResultMessage({ ...valid, replay: 'true' })).toBe(false);
   });
 });

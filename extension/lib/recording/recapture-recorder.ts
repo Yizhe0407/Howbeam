@@ -15,8 +15,8 @@ import {
   requireRuntimeMessageResult,
 } from '../runtime/runtime-message-result';
 import type {
-  StepmarkRecaptureTargetMessage,
-  StepmarkStopMessage,
+  HowbeamRecaptureTargetMessage,
+  HowbeamStopMessage,
   StepRecaptureTargetResult,
 } from '../runtime/messages';
 import type { StepRecaptureContext } from '../storage/recording-state';
@@ -25,7 +25,7 @@ import { t } from '@/lib/shared/i18n';
 
 function createRecaptureToolbar(onCancel: () => void): { host: HTMLElement; remove(): void } {
   const host = document.createElement('div');
-  host.setAttribute('data-stepmark-recording-toolbar', '');
+  host.setAttribute('data-howbeam-recording-toolbar', '');
   // Top layer like the hover preview it must stay above; z-index alone loses to it.
   host.setAttribute('popover', 'manual');
   host.style.setProperty('all', 'initial', 'important');
@@ -105,7 +105,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
   const cancelWorkflow = () => {
     if (removed) return;
     void browser.runtime.sendMessage({ type: 'CANCEL_STEP_RECAPTURE', runId }).catch((error) => {
-      console.error('[stepmark] failed to cancel recapture', error);
+      console.error('[howbeam] failed to cancel recapture', error);
     });
   };
   const toolbar = createRecaptureToolbar(cancelWorkflow);
@@ -120,7 +120,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
     },
     (error) => {
       if (!removed && active) preview.hide();
-      console.warn('[stepmark] failed to preview recapture target', error);
+      console.warn('[howbeam] failed to preview recapture target', error);
     },
   );
 
@@ -162,8 +162,8 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
       await preview.prepareForCapture();
       if (removed) return;
       const captureId = crypto.randomUUID();
-      const payload: StepmarkRecaptureTargetMessage = {
-        type: 'STEPMARK_RECAPTURE_TARGET',
+      const payload: HowbeamRecaptureTargetMessage = {
+        type: 'HOWBEAM_RECAPTURE_TARGET',
         runId,
         captureId,
         rect: target.rect,
@@ -188,7 +188,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
           preview.show(target.rect);
         }
       } catch (error) {
-        console.error('[stepmark] recapture target failed', error);
+        console.error('[howbeam] recapture target failed', error);
         cancelWorkflow();
       }
     })();
@@ -206,8 +206,8 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
     cancelWorkflow();
   };
   let unsubscribe = () => {};
-  const onStop = (message: StepmarkStopMessage) => {
-    if (message?.type === 'STEPMARK_STOP') cleanup();
+  const onStop = (message: HowbeamStopMessage) => {
+    if (message?.type === 'HOWBEAM_STOP') cleanup();
   };
   function cleanup() {
     if (removed) return;
@@ -256,7 +256,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
   try {
     ready = requireRuntimeMessageResult(
       await browser.runtime.sendMessage({
-        type: 'STEPMARK_RECAPTURE_READY',
+        type: 'HOWBEAM_RECAPTURE_READY',
         runId,
         url: location.href,
       }),
@@ -264,7 +264,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
       t().runtime.recaptureResponseInvalid,
     );
   } catch (error) {
-    console.error('[stepmark] recapture readiness check failed', error);
+    console.error('[howbeam] recapture readiness check failed', error);
   }
   if (!ready || removed) {
     cleanup();

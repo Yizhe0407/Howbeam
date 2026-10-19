@@ -33,7 +33,7 @@ export const CAPTURE_FAILSAFE_MS = 2_000;
  * frame and every instrumented child frame. */
 export const STEP_LATE_CLICK_SUPPRESS_MS = 2_000;
 
-export const CLEANUP_EVENT = `stepmark_cleanup_${browser.runtime.id}`;
+export const CLEANUP_EVENT = `howbeam_cleanup_${browser.runtime.id}`;
 
 /** Events a frozen snapshot page must consume before the input shield is
  * ready (and, in child frames, for the whole snapshot). Kept aligned with the

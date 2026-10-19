@@ -61,7 +61,7 @@ describe('MultiHighlightThumbnail', () => {
     expect(annotateMocks.layoutAnnotations).toHaveBeenCalledWith(expect.any(Array), 400, 300);
     act(() => stubs.flushAnimationFrames());
 
-    const frame = view.container.querySelector<HTMLElement>('[data-stepmark-annotation-frame="1"]')!;
+    const frame = view.container.querySelector<HTMLElement>('[data-howbeam-annotation-frame="1"]')!;
     expect(frame.style.left).toBe('10px');
 
     renderedWidth = 200;
@@ -102,7 +102,7 @@ describe('MultiHighlightThumbnail', () => {
     act(() => fireEvent.load(image));
     act(() => stubs.flushAnimationFrames());
 
-    const contentFrame = view.container.querySelector<HTMLElement>('[data-stepmark-image-content-frame]')!;
+    const contentFrame = view.container.querySelector<HTMLElement>('[data-howbeam-image-content-frame]')!;
     expect(contentFrame.style.left).toBe('10px');
     expect(contentFrame.style.top).toBe('45px');
     expect(contentFrame.style.width).toBe('100px');
@@ -196,7 +196,7 @@ describe('MultiHighlightThumbnail', () => {
     markers.forEach(expectElementInsideThumbnail);
     badges.forEach(expectElementInsideThumbnail);
 
-    const fullViewportFrame = view.container.querySelector<HTMLElement>('[data-stepmark-annotation-frame="5"]')!;
+    const fullViewportFrame = view.container.querySelector<HTMLElement>('[data-howbeam-annotation-frame="5"]')!;
     expect(fullViewportFrame.style.left).toBe('0px');
     expect(fullViewportFrame.style.top).toBe('0px');
     expect(fullViewportFrame.style.width).toBe('100px');
@@ -231,9 +231,9 @@ describe('MultiHighlightThumbnail', () => {
     act(() => stubs.flushAnimationFrames());
     expect(image.style.visibility).toBe('');
 
-    const frame = view.container.querySelector<HTMLElement>('[data-stepmark-annotation-frame="1"]')!;
+    const frame = view.container.querySelector<HTMLElement>('[data-howbeam-annotation-frame="1"]')!;
     const badge = view.container.querySelector<HTMLElement>('.pointer-events-none.font-semibold.shadow')!;
-    const redaction = view.container.querySelector<HTMLElement>('[data-stepmark-redaction="mask-1"]')!;
+    const redaction = view.container.querySelector<HTMLElement>('[data-howbeam-redaction="mask-1"]')!;
     expect(redaction.style.left).toBe('24px');
     expect(redaction.style.top).toBe('9px');
     expect(redaction.style.width).toBe('17px');

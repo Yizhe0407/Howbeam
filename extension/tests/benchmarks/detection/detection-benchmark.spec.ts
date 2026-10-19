@@ -117,7 +117,7 @@ function parsePreviewBounds(style: string | null): Rect | null {
 async function createStepPreviewReader(page: Page): Promise<{ read(): Promise<PreviewSnapshot>; close(): Promise<void> }> {
   const client: CDPSession = await page.context().newCDPSession(page);
   const { root } = await client.send('DOM.getDocument', { depth: -1, pierce: true }) as { root: CdpNode };
-  const host = findNode(root, (node) => attribute(node, 'data-stepmark-step-preview') !== null);
+  const host = findNode(root, (node) => attribute(node, 'data-howbeam-step-preview') !== null);
   const preview = host
     ? findNode(host, (node) => attribute(node, 'class')?.split(/\s+/).includes('preview') ?? false)
     : null;
@@ -474,7 +474,7 @@ test('measures target accuracy, preview latency, capture fidelity, and frame rel
 
   const summary = summarizeBenchmark(accuracy, replay);
   const baseline = JSON.parse(await readFile(BASELINE_PATH, 'utf8')) as BaselineFile;
-  if (process.env.STEPMARK_BENCHMARK_UPDATE === '1') await writeBaseline(summary, baseline);
+  if (process.env.HOWBEAM_BENCHMARK_UPDATE === '1') await writeBaseline(summary, baseline);
   const report: DetectionBenchmarkReport = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
@@ -512,7 +512,7 @@ test('measures target accuracy, preview latency, capture fidelity, and frame rel
     baseline.thresholds.replayMedianBoundsIoU,
   );
 
-  if (process.env.STEPMARK_BENCHMARK_STRICT_LATENCY === '1' && baseline.reference) {
+  if (process.env.HOWBEAM_BENCHMARK_STRICT_LATENCY === '1' && baseline.reference) {
     const activationLimit = Math.max(
       baseline.reference.activationHoverP95Ms * 1.25,
       baseline.reference.activationHoverP95Ms + 4,

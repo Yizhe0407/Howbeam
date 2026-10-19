@@ -50,7 +50,7 @@ function getSurface(): ToolbarSurface {
   if (surface && surface.host.ownerDocument === document) return surface;
   // A popover so it shares the top layer with the hover frame and the page's
   // own modals; plain z-index would always lose to either.
-  const host = createViewportOverlayHost('data-stepmark-recording-toolbar', { 'pointer-events': 'none', transition: REAPPEAR_TRANSITION }, { popover: true });
+  const host = createViewportOverlayHost('data-howbeam-recording-toolbar', { 'pointer-events': 'none', transition: REAPPEAR_TRANSITION }, { popover: true });
   const shadowRoot = host.attachShadow({ mode: 'closed' });
   const container = document.createElement('div');
   shadowRoot.append(container);

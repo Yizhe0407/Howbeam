@@ -10,7 +10,7 @@ vi.mock('@/lib/backup/use-folder-backup', () => ({
   useFolderBackup: (): FolderBackupState => ({
     supported: true,
     loading: false,
-    folderName: 'Stepmark Backup',
+    folderName: 'Howbeam Backup',
     availability: 'ready',
     lastRun: mocks.lastRun,
     busy: false,

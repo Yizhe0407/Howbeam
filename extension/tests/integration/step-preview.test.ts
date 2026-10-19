@@ -4,7 +4,7 @@ import { HIGHLIGHT_LINE_WIDTH, HIGHLIGHT_PADDING } from '@/lib/media/annotation-
 import { createStepPreview } from '@/lib/capture/step-preview';
 
 afterEach(() => {
-  document.documentElement.querySelectorAll('[data-stepmark-step-preview]').forEach((element) => element.remove());
+  document.documentElement.querySelectorAll('[data-howbeam-step-preview]').forEach((element) => element.remove());
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -18,7 +18,7 @@ describe('createStepPreview', () => {
       return shadowRoot;
     });
     const preview = createStepPreview();
-    const host = document.querySelector<HTMLElement>('[data-stepmark-step-preview]')!;
+    const host = document.querySelector<HTMLElement>('[data-howbeam-step-preview]')!;
     const box = shadowRoot!.querySelector<HTMLElement>('.preview')!;
 
     expect(host.style.getPropertyValue('pointer-events')).toBe('none');

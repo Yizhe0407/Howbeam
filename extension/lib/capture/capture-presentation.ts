@@ -1,5 +1,5 @@
 /**
- * Capture-only styling for Stepmark overlays and the top-level viewport
+ * Capture-only styling for Howbeam overlays and the top-level viewport
  * scrollbar. Everything stays in layout so fixed/sticky content and viewport
  * coordinates do not move while a screenshot is being composed.
  */
@@ -7,7 +7,7 @@
 export const REAPPEAR_TRANSITION = 'opacity 160ms ease';
 
 export const CAPTURE_PRESENTATION_CSS = `
-/* Stepmark's interaction layers are capture-only UI. Keep their hosts in
+/* Howbeam's interaction layers are capture-only UI. Keep their hosts in
  * the document so layout and viewport coordinates remain unchanged, and make
  * them fully transparent while captureVisibleTab samples the page.
  *
@@ -16,10 +16,10 @@ export const CAPTURE_PRESENTATION_CSS = `
  * selector) during a capture would fall through to the page element beneath
  * it and be executed and recorded there. Opacity on the host also hides the
  * whole subtree — no descendant can opt back into being painted. */
-[data-stepmark-snapshot-shield],
-[data-stepmark-step-preview],
-[data-stepmark-recording-toolbar],
-[data-stepmark-region-capture] {
+[data-howbeam-snapshot-shield],
+[data-howbeam-step-preview],
+[data-howbeam-recording-toolbar],
+[data-howbeam-region-capture] {
   opacity: 0 !important;
   /* Hiding must be instant or the overlay would still be partly visible in the
    * screenshot. Restoring is not: the toolbar and shield declare an opacity

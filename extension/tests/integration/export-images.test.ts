@@ -75,13 +75,13 @@ describe('image export', () => {
     expect(mocks.maxActive).toBe(1);
     expect(mocks.download).toHaveBeenCalledWith({
       url: 'blob:archive',
-      filename: expect.stringMatching(/^stepmark-images-\d{4}-\d{2}-\d{2}\.zip$/),
+      filename: expect.stringMatching(/^howbeam-images-\d{4}-\d{2}-\d{2}\.zip$/),
       saveAs: true,
     });
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:archive');
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(result).toEqual({
-      filename: expect.stringMatching(/^stepmark-images-\d{4}-\d{2}-\d{2}\.zip$/),
+      filename: expect.stringMatching(/^howbeam-images-\d{4}-\d{2}-\d{2}\.zip$/),
       itemCount: 3,
     });
   });

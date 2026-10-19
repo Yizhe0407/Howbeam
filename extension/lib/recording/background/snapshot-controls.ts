@@ -76,7 +76,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
       // toolbar; all-frames mirrors startup injection so stale child recorders tear down too.
       await recorderRuntime.injectRecorder(previous.tabId, true);
     } catch (error) {
-      console.error('[stepmark] failed to enter snapshot preparation state', error);
+      console.error('[howbeam] failed to enter snapshot preparation state', error);
       await setRunError(message.runId, t().background.nextSnapshotControlsFailed);
       return controlFailure(t().background.nextSnapshotPrepareFailed);
     }
@@ -151,7 +151,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
         },
       });
     } catch (error) {
-      console.error('[stepmark] failed to create next snapshot', error);
+      console.error('[howbeam] failed to create next snapshot', error);
       control.acceptingClicks = false;
       const rebuildingInvalidated = sourcePhase === 'invalidated';
       const errorMessage = rebuildingInvalidated ? t().background.rebuildSnapshotFailed : t().background.createSnapshotFailed;
@@ -176,7 +176,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
         try {
           await recorderRuntime.injectRecorder(state.tabId!, true);
         } catch (reinjectionError) {
-          console.error('[stepmark] failed to restore snapshot preparation toolbar', reinjectionError);
+          console.error('[howbeam] failed to restore snapshot preparation toolbar', reinjectionError);
         }
       }
       return controlFailure(errorMessage);
@@ -218,13 +218,13 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
     try {
       await recorderRuntime.injectRecorder(previous.tabId!, true);
     } catch (error) {
-      console.error('[stepmark] failed to switch to snapshot mode', describeBrowserError(error), error);
+      console.error('[howbeam] failed to switch to snapshot mode', describeBrowserError(error), error);
       await updateRunState(message.runId, () => previous);
       control.acceptingClicks = previous.phase === 'recording';
       try {
         await recorderRuntime.injectRecorder(previous.tabId!, true);
       } catch (restoreError) {
-        console.error('[stepmark] failed to restore the step recorder', describeBrowserError(restoreError), restoreError);
+        console.error('[howbeam] failed to restore the step recorder', describeBrowserError(restoreError), restoreError);
       }
       return controlFailure(t().background.switchToSnapshotFailed);
     }
@@ -292,7 +292,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
         },
       });
     } catch (error) {
-      console.error('[stepmark] failed to switch to steps mode', describeBrowserError(error), error);
+      console.error('[howbeam] failed to switch to steps mode', describeBrowserError(error), error);
       control.acceptingClicks = false;
       if (version === control.controlVersion) {
         await updateRunState(
@@ -309,7 +309,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
         try {
           await recorderRuntime.injectRecorder(previous.tabId!, true);
         } catch (reinjectionError) {
-          console.error('[stepmark] failed to restore snapshot preparation toolbar', reinjectionError);
+          console.error('[howbeam] failed to restore snapshot preparation toolbar', reinjectionError);
         }
       }
       return controlFailure(t().background.switchToStepsFailed);

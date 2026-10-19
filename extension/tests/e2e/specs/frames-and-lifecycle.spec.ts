@@ -98,7 +98,7 @@ test.describe('frames and recording lifecycle', () => {
         relayToken: 'forged-relay-token',
         rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
       }, '*');
-    }, `stepmark_step_frame_click_${extensionId}`);
+    }, `howbeam_step_frame_click_${extensionId}`);
 
     await expectSteady(async () => (await readSteps(popupPage)).length, 0);
 
@@ -298,7 +298,7 @@ test.describe('frames and recording lifecycle', () => {
 
     await expect.poll(async () => (await readRecordingState(popupPage)).isRecording).toBe(false);
     expect((await readRecordingState(popupPage)).error).toBe('錄製已停止，因為快照頁面已變更。');
-    await expect.poll(() => appPage.locator('[data-stepmark-snapshot-shield]').count()).toBe(0);
+    await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(0);
   });
 
   test('reinjects step recording after a top-level navigation', async ({
@@ -355,8 +355,8 @@ test.describe('frames and recording lifecycle', () => {
     // The document went into the back/forward cache with its recorder still live and never got the stop message; on restore it must tear itself down.
     await appPage.goBack();
     await appPage.waitForURL((url) => !url.href.includes('navigated'));
-    await expect.poll(() => appPage.locator('[data-stepmark-step-preview]').count()).toBe(0);
-    await expect.poll(() => appPage.locator('[data-stepmark-recording-toolbar]').count()).toBe(0);
+    await expect.poll(() => appPage.locator('[data-howbeam-step-preview]').count()).toBe(0);
+    await expect.poll(() => appPage.locator('[data-howbeam-recording-toolbar]').count()).toBe(0);
     await clickTarget(appPage, '#action-button span');
     await expect.poll(() => appPage.evaluate(() => window.fixtureState.actionClicks)).toBe(1);
     await expectSteady(async () => (await readSteps(popupPage)).length, 1);

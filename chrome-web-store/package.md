@@ -4,7 +4,7 @@
 
 | 項目 | 位置 | 為什麼 |
 | --- | --- | --- |
-| 移除 `console.log('[stepmark] recorder ready on', location.href)` | `extension/entrypoints/content.ts:325` | 會把使用者正在錄製的網址印到那個網頁的 console，網頁本身的程式也讀得到。這是全專案唯一一個 `console.log`。 |
+| 移除 `console.log('[howbeam] recorder ready on', location.href)` | `extension/entrypoints/content.ts:325` | 會把使用者正在錄製的網址印到那個網頁的 console，網頁本身的程式也讀得到。這是全專案唯一一個 `console.log`。 |
 | 確認版本號 | `extension/package.json` 的 `version`（目前是 `0.1.0`） | manifest 的版本號從這裡產生。第一次上架用 `0.1.0` 可以；之後每次上傳都必須比上一次大。 |
 
 ## 打包
@@ -20,7 +20,7 @@ pnpm zip        # 產生要上傳的 ZIP
 產生的檔案（版本號會跟著 `package.json` 變）：
 
 ```text
-extension/.output/stepmark-extension-0.1.0-chrome.zip
+extension/.output/howbeam-extension-0.1.0-chrome.zip
 ```
 
 2026-10-18 實測：ZIP 約 2.79 MB，`manifest.json` 在 ZIP 根目錄，符合官方要求。

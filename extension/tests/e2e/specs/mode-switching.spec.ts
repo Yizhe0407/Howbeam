@@ -24,12 +24,12 @@ test.describe('switching recording modes mid-run', () => {
     expect(await sendRecordingControl(popupPage, 'SWITCH_TO_SNAPSHOT_MODE')).toEqual({ ok: true });
     await expect.poll(async () => (await readRecordingState(popupPage)).phase).toBe('preparing-next');
     expect(await readRecordingState(popupPage)).toMatchObject({ mode: 'snapshot', itemCount: 0, groupAnchorId: null });
-    await expect.poll(() => appPage.locator('[data-stepmark-step-preview]').count()).toBe(0);
+    await expect.poll(() => appPage.locator('[data-howbeam-step-preview]').count()).toBe(0);
 
     expect(await sendRecordingControl(popupPage, 'SWITCH_TO_STEPS_MODE')).toEqual({ ok: true });
     await expect.poll(async () => (await readRecordingState(popupPage)).phase).toBe('recording');
     expect(await readRecordingState(popupPage)).toMatchObject({ mode: 'steps', itemCount: 0 });
-    await expect.poll(() => appPage.locator('[data-stepmark-step-preview]').count()).toBe(1);
+    await expect.poll(() => appPage.locator('[data-howbeam-step-preview]').count()).toBe(1);
 
     await clickTarget(appPage, '#plain-text');
     await expectStepCount(popupPage, 2);

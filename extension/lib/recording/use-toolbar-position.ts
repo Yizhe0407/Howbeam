@@ -73,7 +73,7 @@ export function useToolbarPosition({
 
   const persistCorner = (nextCorner: RecordingToolbarCorner) => {
     void browser.storage.local.set({ [RECORDING_TOOLBAR_CORNER_KEY]: nextCorner }).catch((error) => {
-      console.warn('[stepmark] failed to save recording toolbar position', error);
+      console.warn('[howbeam] failed to save recording toolbar position', error);
     });
   };
 
@@ -96,7 +96,7 @@ export function useToolbarPosition({
       setCorner(saved);
       setPosition(positionForToolbarCorner(saved, floatingSize(), viewport(), margin()));
     }).catch((error) => {
-      console.warn('[stepmark] failed to load recording toolbar position', error);
+      console.warn('[howbeam] failed to load recording toolbar position', error);
       if (active) setReady(true);
     });
     return () => { active = false; };

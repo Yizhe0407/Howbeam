@@ -262,7 +262,7 @@ export function normalizeRecordingState(stored: Partial<RecordingState> | undefi
 
 /** UI-only Project selection. RecordingState remains the durable owner of an
  * active capture transaction and must never be rewritten merely to navigate. */
-export const ACTIVE_PROJECT_ID_KEY = 'stepmark:activeProjectId';
+export const ACTIVE_PROJECT_ID_KEY = 'howbeam:activeProjectId';
 
 function normalizeActiveProjectId(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value : null;

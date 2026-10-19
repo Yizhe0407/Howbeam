@@ -26,11 +26,11 @@ export interface ProjectMarkdownArchive {
   imageCount: number;
 }
 
-export const DEFAULT_TITLE = 'Stepmark Project';
-const DEFAULT_FILENAME = 'stepmark-project';
+export const DEFAULT_TITLE = 'Howbeam Project';
+const DEFAULT_FILENAME = 'howbeam-project';
 export const IMAGE_MIME_TYPE = 'image/jpeg';
 /** The credit at the end of every document, in English whatever the interface language. */
-export const MADE_WITH = 'Made with Stepmark';
+export const MADE_WITH = 'Made with Howbeam';
 
 /** Shared by the HTML and PDF documents: black, white and greys only, so the
  * screenshots' red highlights are the one colour on the page. */
@@ -118,7 +118,7 @@ export function escapeProjectMarkdown(value: string): string {
 
 /** Longest stem in UTF-8 bytes. File systems cap a name at 255 bytes (not
  * characters), so this leaves room for an extension and for callers that
- * append a suffix (backup filenames add an id and `.stepmark`). */
+ * append a suffix (backup filenames add an id and `.howbeam`). */
 const FILENAME_STEM_MAX_BYTES = 200;
 
 /** Device names Windows refuses as a file's base name (with any extension). */

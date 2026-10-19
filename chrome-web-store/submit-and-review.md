@@ -24,7 +24,7 @@
 
 ## Test instructions 分頁
 
-官方說明：需要時提供測試說明與測試帳號。Stepmark 不用登入，但錄製流程不容易自己摸索，所以建議提供說明。
+官方說明：需要時提供測試說明與測試帳號。Howbeam 不用登入，但錄製流程不容易自己摸索，所以建議提供說明。
 
 **貼上：**
 
@@ -32,7 +32,7 @@
 No account or login is needed. All data stays in the browser.
 
 1. Open any regular website (for example https://example.com). Recording is not possible on chrome:// pages or the Chrome Web Store.
-2. Click the Stepmark toolbar icon, keep "Steps" selected and click "Start recording". Chrome may ask for access to all sites; this is optional and only lets recording follow you to other tabs. You can decline and keep testing in the current tab.
+2. Click the Howbeam toolbar icon, keep "Steps" selected and click "Start recording". Chrome may ask for access to all sites; this is optional and only lets recording follow you to other tabs. You can decline and keep testing in the current tab.
 3. Click a few links or buttons on the page. Each click is captured as a step with a screenshot and a red highlight. Use the control bar in the bottom-right corner to finish.
 4. The editor opens with the recorded steps. You can edit descriptions, open "Edit image" to add annotations, and use "Export" to download a PDF, HTML, Markdown or images.
 5. The library (from the popup) lists all projects. Settings (gear icon) has automatic backup to a local folder.
@@ -52,7 +52,7 @@ No account or login is needed. All data stays in the browser.
 
 - 官方說法：「For most extensions, review is completed within a few days, but it can take up to a few weeks.」大部分幾天內完成，最長可能要幾週。
 - 會拉長審核時間的情況：新開發者、新擴充功能、程式大幅變更、要求廣泛的 host 權限或敏感的執行權限。
-- Stepmark 是新開發者的新擴充功能，要預期審核會比較久。
+- Howbeam 是新開發者的新擴充功能，要預期審核會比較久。
 - ⚠ 未確認：`<all_urls>` 只放在選用權限（`optional_host_permissions`）時，會不會也被當成廣泛的 host 權限而拉長審核。官方頁面沒有說明。
 
 ## 被退件時
@@ -64,7 +64,7 @@ No account or login is needed. All data stays in the browser.
    - 表單會自動帶入擴充功能 ID 與違規內容，後續透過 email 聯絡。
    - 同一件事已經有申訴在處理時，不能再送一次。
 
-### 和 Stepmark 最相關的違規代碼
+### 和 Howbeam 最相關的違規代碼
 
 | 代碼 | 原因 | 對應文件 |
 | --- | --- | --- |

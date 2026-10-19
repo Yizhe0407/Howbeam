@@ -173,11 +173,11 @@ function EditorApp() {
       } catch (presentError) {
         // The run already settled in storage; only presenting its outcome failed,
         // so surface that instead of silently dropping it.
-        console.error('[stepmark] failed to present the recapture result', presentError);
+        console.error('[howbeam] failed to present the recapture result', presentError);
         setOperationError(t().editor.recapturePresentFailed);
       } finally {
         await ackStepRecaptureResult(result.runId, result.sessionId).catch((ackError) => {
-          console.warn('[stepmark] failed to acknowledge the recapture result', ackError);
+          console.warn('[howbeam] failed to acknowledge the recapture result', ackError);
         });
       }
     })();
@@ -187,7 +187,7 @@ function EditorApp() {
    * row flips the editor to the read-only deleted state when it was. */
   function checkProjectStillExists(): void {
     void syncProjectRow().catch((syncError) => {
-      console.warn('[stepmark] failed to re-read the project after a failed save', syncError);
+      console.warn('[howbeam] failed to re-read the project after a failed save', syncError);
     });
   }
 
@@ -196,7 +196,7 @@ function EditorApp() {
       await flushAll();
     } catch (saveError) {
       checkProjectStillExists();
-      console.error('[stepmark] failed to save descriptions before an editor operation', saveError);
+      console.error('[howbeam] failed to save descriptions before an editor operation', saveError);
       // A pending draft confirmation carries its own user-facing message; only
       // genuine save failures get the generic retry wording.
       setOperationError(
@@ -244,7 +244,7 @@ function EditorApp() {
   // pending-confirmation case); fill the banner only when nothing else already surfaced one.
   function selectEntrySafely(id: string): void {
     void selectEntry(id).catch((selectionError) => {
-      console.error('[stepmark] failed to switch steps', selectionError);
+      console.error('[howbeam] failed to switch steps', selectionError);
       setOperationError((current) => current ?? t().editor.selectFailed);
     });
   }
@@ -307,10 +307,10 @@ function EditorApp() {
   }
 
   const focusRecaptureSource = () =>
-    runRecaptureControl('[stepmark] failed to focus the recapture tab', focusStepRecaptureSource, t().editor.recaptureTabMissing);
+    runRecaptureControl('[howbeam] failed to focus the recapture tab', focusStepRecaptureSource, t().editor.recaptureTabMissing);
 
   const cancelRecapture = () =>
-    runRecaptureControl('[stepmark] failed to cancel recapture', cancelStepRecapture, t().editor.recaptureCancelFailed);
+    runRecaptureControl('[howbeam] failed to cancel recapture', cancelStepRecapture, t().editor.recaptureCancelFailed);
 
   async function publicationEntries(signal: AbortSignal) {
     if (!sessionId) throw new Error(t().editor.publishTargetMissing);

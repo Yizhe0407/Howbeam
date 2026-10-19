@@ -27,8 +27,8 @@ import {
 } from './content-script-constants';
 import { isFiniteRect } from '../shared/validation';
 import type {
-  StepmarkStepFrameResultMessage,
-  StepmarkStopMessage,
+  HowbeamStepFrameResultMessage,
+  HowbeamStopMessage,
   StepFrameRelayAbortMessage,
   StepFrameRelayBeginMessage,
   StepFrameRelayBeginResult,
@@ -71,11 +71,11 @@ const STEP_FRAME_TEXT_LIMIT = 200;
 const STEP_FRAME_TAG_LIMIT = 100;
 
 export function stepFrameClickMessageType(runtimeId: string): string {
-  return `stepmark_step_frame_click_${runtimeId}`;
+  return `howbeam_step_frame_click_${runtimeId}`;
 }
 
 export function snapshotFrameScrollPingType(runtimeId: string): string {
-  return `stepmark_snapshot_frame_scroll_${runtimeId}`;
+  return `howbeam_snapshot_frame_scroll_${runtimeId}`;
 }
 
 /** Page-visible payload; metadata stays in the background authorization. */
@@ -144,11 +144,11 @@ export function isStepFrameRelayMutationResult(value: unknown): value is StepFra
   return Boolean(value && typeof value === 'object' && typeof (value as { ok?: unknown }).ok === 'boolean');
 }
 
-export function isStepmarkStepFrameResultMessage(value: unknown): value is StepmarkStepFrameResultMessage {
+export function isHowbeamStepFrameResultMessage(value: unknown): value is HowbeamStepFrameResultMessage {
   if (!value || typeof value !== 'object') return false;
-  const message = value as Partial<StepmarkStepFrameResultMessage>;
+  const message = value as Partial<HowbeamStepFrameResultMessage>;
   return (
-    message.type === 'STEPMARK_STEP_FRAME_RESULT' &&
+    message.type === 'HOWBEAM_STEP_FRAME_RESULT' &&
     isBoundedRuntimeId(message.runId) &&
     isBoundedRuntimeId(message.captureId) &&
     typeof message.replay === 'boolean'
@@ -249,7 +249,7 @@ export function installStepFrameRecorder(runId: string, initiallyPaused: boolean
 
   const abortRelay = (captureId: string) => {
     void browser.runtime.sendMessage({
-      type: 'STEPMARK_STEP_FRAME_ABORT',
+      type: 'HOWBEAM_STEP_FRAME_ABORT',
       runId,
       captureId,
     } satisfies StepFrameRelayAbortMessage).catch(() => {});
@@ -302,7 +302,7 @@ export function installStepFrameRecorder(runId: string, initiallyPaused: boolean
         let result: unknown;
         try {
           result = await browser.runtime.sendMessage({
-            type: 'STEPMARK_STEP_FRAME_BEGIN',
+            type: 'HOWBEAM_STEP_FRAME_BEGIN',
             runId,
             captureId,
             rect,
@@ -377,7 +377,7 @@ export function installStepFrameRecorder(runId: string, initiallyPaused: boolean
 
   const rejectRelay = (payload: StepFrameHopPayload) => {
     void browser.runtime.sendMessage({
-      type: 'STEPMARK_STEP_FRAME_REJECT',
+      type: 'HOWBEAM_STEP_FRAME_REJECT',
       runId,
       captureId: payload.captureId,
       relayToken: payload.relayToken,
@@ -399,12 +399,12 @@ export function installStepFrameRecorder(runId: string, initiallyPaused: boolean
   };
 
   const onRuntimeMessage = (message: unknown) => {
-    if ((message as StepmarkStopMessage | null)?.type === 'STEPMARK_STOP') {
+    if ((message as HowbeamStopMessage | null)?.type === 'HOWBEAM_STOP') {
       cleanup();
       return;
     }
     if (
-      isStepmarkStepFrameResultMessage(message) &&
+      isHowbeamStepFrameResultMessage(message) &&
       message.runId === runId &&
       message.captureId === activeCaptureId
     ) {
@@ -489,8 +489,8 @@ export function installSnapshotFrameFreeze(): void {
     if (!findIframeForWindow(event.source)) return;
     ping();
   };
-  const onStop = (message: StepmarkStopMessage) => {
-    if (message?.type === 'STEPMARK_STOP') cleanup();
+  const onStop = (message: HowbeamStopMessage) => {
+    if (message?.type === 'HOWBEAM_STOP') cleanup();
   };
   const cleanup = () => {
     if (removed) return;

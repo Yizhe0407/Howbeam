@@ -40,7 +40,7 @@ export function createFollowMode(deps: { control: ControlPlane; runtime: Recorde
     followDebounceTimer = setTimeout(() => {
       followDebounceTimer = null;
       void queueLifecycle(() => followRecordingToTab(tabId)).catch((error) => {
-        console.error('[stepmark] failed to follow the activated tab', describeBrowserError(error), error);
+        console.error('[howbeam] failed to follow the activated tab', describeBrowserError(error), error);
       });
     }, FOLLOW_ACTIVATION_DEBOUNCE_MS);
   }
@@ -112,7 +112,7 @@ export function createFollowMode(deps: { control: ControlPlane; runtime: Recorde
         return 'moved';
       } catch (error) {
         console.warn(
-          '[stepmark] failed to move the recording into another tab',
+          '[howbeam] failed to move the recording into another tab',
           describeBrowserError(error),
           error,
         );
@@ -182,7 +182,7 @@ export function createFollowMode(deps: { control: ControlPlane; runtime: Recorde
     void browser.tabs.query({ active: true, lastFocusedWindow: true }).then(([focused]) => {
       if (focused?.id === tabId) scheduleRecordingFollow(tabId);
     }).catch((error) => {
-      console.warn('[stepmark] failed to inspect the focused window', error);
+      console.warn('[howbeam] failed to inspect the focused window', error);
     });
   }
 

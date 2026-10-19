@@ -66,14 +66,14 @@ export function createRecaptureSettlement(deps: RecaptureSettlementDeps) {
     await runtime.stopRecorderInTab(context.sourceTabId);
     if (context.sourceTabCreated) {
       await browser.tabs.remove(context.sourceTabId).catch((error) => {
-        console.warn('[stepmark] failed to close temporary recapture tab', error);
+        console.warn('[howbeam] failed to close temporary recapture tab', error);
       });
     }
     try {
       // Back to the single editor tab, at the entry this recapture worked on.
       await deps.openEditor({ sessionId: context.sessionId, entryId: context.entryId });
     } catch (error) {
-      console.error('[stepmark] failed to return to editor after recapture', error);
+      console.error('[howbeam] failed to return to editor after recapture', error);
     }
     return true;
   }

@@ -45,7 +45,7 @@ const LAST_RUN_KEY = 'lastRun';
 let databasePromise: Promise<IDBPDatabase<BackupDB>> | null = null;
 
 function database(): Promise<IDBPDatabase<BackupDB>> {
-  databasePromise ??= openDB<BackupDB>('stepmark-backup', 1, {
+  databasePromise ??= openDB<BackupDB>('howbeam-backup', 1, {
     upgrade(db) {
       db.createObjectStore('kv');
       db.createObjectStore('manifest');

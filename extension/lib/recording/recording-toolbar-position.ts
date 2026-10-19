@@ -1,6 +1,6 @@
 import { t } from '@/lib/shared/i18n';
 
-export const RECORDING_TOOLBAR_CORNER_KEY = 'stepmark:recordingToolbarCorner';
+export const RECORDING_TOOLBAR_CORNER_KEY = 'howbeam:recordingToolbarCorner';
 
 export type RecordingToolbarCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 

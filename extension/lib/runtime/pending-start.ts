@@ -12,7 +12,7 @@ export interface PendingStart {
   createdAt: number;
 }
 
-const STORAGE_KEY = 'stepmark:pending-start:v1';
+const STORAGE_KEY = 'howbeam:pending-start:v1';
 export const PENDING_START_TTL_MS = 2 * 60 * 1000;
 
 function normalize(value: unknown, now: number): PendingStart | null {

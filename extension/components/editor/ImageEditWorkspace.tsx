@@ -438,7 +438,7 @@ export default function ImageEditWorkspace({
           <div ref={viewport.setFrame} className="relative min-h-0 min-w-0 flex-1">
             <div
               ref={viewport.setScroller}
-              data-stepmark-edit-scroller=""
+              data-howbeam-edit-scroller=""
               className={`app-scrollbar absolute inset-0 overflow-auto outline-none ${viewport.panning ? "cursor-grabbing" : viewport.spaceHeld ? "cursor-grab" : ""}`}
               tabIndex={-1}
               {...viewport.scrollerHandlers}

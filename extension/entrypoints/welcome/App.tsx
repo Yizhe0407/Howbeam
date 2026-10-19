@@ -30,7 +30,7 @@ function PinIllustration() {
         <div className="px-3 py-1 text-muted-foreground">{t().welcome.pinMenuTitle}</div>
         <div className="flex items-center gap-2 bg-brand-bg-soft px-3 py-1.5 font-bold">
           <Mascot className="size-4" />
-          <span className="flex-1 truncate">Stepmark</span>
+          <span className="flex-1 truncate">Howbeam</span>
           <span className="flex size-6 items-center justify-center rounded-full border-2 border-border bg-tamago text-on-accent">
             <Pin className="size-3" />
           </span>
@@ -60,7 +60,7 @@ function StepCard({ number, title, done = false, children }: { number: number; t
 }
 
 /**
- * Step 1 follows the browser's own pin state: once Stepmark is on the
+ * Step 1 follows the browser's own pin state: once Howbeam is on the
  * toolbar the instructions give way to a confirmation, and they come back if
  * it is unpinned. A browser that cannot report the state keeps the
  * instructions. The live region announces the switch either way.

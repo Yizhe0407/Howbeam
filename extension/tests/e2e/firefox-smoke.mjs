@@ -34,7 +34,7 @@ try {
   const reloads = await runner.reloadAllExtensions();
   const failure = reloads.find((result) => result.reloadError);
   if (failure) throw failure.reloadError;
-  console.log('Firefox loaded and remotely reloaded the Stepmark extension.');
+  console.log('Firefox loaded and remotely reloaded the Howbeam extension.');
 } finally {
   try {
     // Keep the deadline armed through shutdown: web-ext exit can otherwise leave CI waiting on a wedged Firefox process.

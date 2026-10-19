@@ -117,7 +117,7 @@ describe('background runtime boundary', () => {
     null,
     [],
     { type: 'START_RECORDING', sessionId: '', mode: 'steps' },
-    { type: 'STEPMARK_CLICK', runId: 'run-1' },
+    { type: 'HOWBEAM_CLICK', runId: 'run-1' },
   ])('ignores malformed messages before any privileged work %#', async (message) => {
     const result = await mocks.messageListener?.(message, editorSender('project-a'));
 

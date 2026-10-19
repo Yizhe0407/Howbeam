@@ -1,6 +1,6 @@
-# Stepmark 擴充功能
+# Howbeam 擴充功能
 
-這個目錄包含 Stepmark 的 WXT + React 瀏覽器擴充功能。安裝與使用請見 [專案 README](../README.md)。
+這個目錄包含 Howbeam 的 WXT + React 瀏覽器擴充功能。安裝與使用請見 [專案 README](../README.md)。
 
 ## 環境
 
@@ -27,7 +27,7 @@ pnpm dev:firefox
 - 專案庫可管理多份 Project；Editor 只讀取 URL 指定 Project，不會追隨或顯示其他全域錄製內容。
 - 單筆步驟、章節與 Undo 使用 `contentRevision` CAS；完整 StepEntry／Snapshot group 於單一 IndexedDB transaction 更新。
 - 發佈支援 PDF、Markdown ZIP（`.md` + 圖片）、自包含 HTML 與圖片 ZIP，公開圖片統一走遮罩 fail-closed compositor。
-- `.stepmark` 是 ZIP（格式版本 4）：截圖以原始位元組存放、內容相同者依 SHA-256 只存一份；包含原始未遮罩圖，不應當作公開輸出。匯入只接受此格式。
+- `.howbeam` 是 ZIP（格式版本 4）：截圖以原始位元組存放、內容相同者依 SHA-256 只存一份；包含原始未遮罩圖，不應當作公開輸出。匯入只接受此格式。
 - HTML 與 PDF 排成單色正式文件（含章節標題與步驟編號）。
 - 錄製、編輯、發佈與縮圖 lazy mounting 全部在本機執行，不需要網路或後端。
 
@@ -77,7 +77,7 @@ pnpm build:firefox
 
 ## 模組結構
 
-- `.stepmark` archive 拆為 `lib/export/project-archive-contract.ts`、`-validation.ts`、`-serialize.ts` 與 `-import.ts`，沒有聚合入口；使用端直接 import 需要的模組。
+- `.howbeam` archive 拆為 `lib/export/project-archive-contract.ts`、`-validation.ts`、`-serialize.ts` 與 `-import.ts`，沒有聚合入口；使用端直接 import 需要的模組。
 - `lib/media/annotation-layout.ts` 是 annotation layout facade；純幾何、badge/callout collision placement、常數與型別分別位於相鄰的 `annotation-*.ts` 模組。
 - `lib/editor/use-editor-entry-workspace.ts` 封裝 Editor 的完整項目列表、單一目前項目與 view state；儲存、permission 與 undo transaction 仍由 `editor/App.tsx` 協調。
 - `lib/recording/background/recorder-runtime.ts` 提供 background state machine 使用的瀏覽器 capture/injection adapter，讓 retry 與 image scale 判定可獨立測試與重用。

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createStepFrameRelayBroker } from '@/lib/recording/background/step-frame-relay-broker';
 import type {
-  StepmarkStepFrameResultMessage,
+  HowbeamStepFrameResultMessage,
   StepFrameRelayAbortMessage,
   StepFrameRelayBeginMessage,
   StepFrameRelayClaimMessage,
@@ -10,7 +10,7 @@ import type {
 } from '@/lib/runtime/messages';
 
 const beginMessage: StepFrameRelayBeginMessage = {
-  type: 'STEPMARK_STEP_FRAME_BEGIN',
+  type: 'HOWBEAM_STEP_FRAME_BEGIN',
   runId: 'run-1',
   captureId: 'capture-1',
   rect: { x: 12.5, y: -4, width: 160, height: 48 },
@@ -24,7 +24,7 @@ const topSender = { tabId: 7, frameId: 0 };
 
 function claimMessage(relayToken: string): StepFrameRelayClaimMessage {
   return {
-    type: 'STEPMARK_STEP_FRAME_CLAIM',
+    type: 'HOWBEAM_STEP_FRAME_CLAIM',
     runId: beginMessage.runId,
     captureId: beginMessage.captureId,
     relayToken,
@@ -33,7 +33,7 @@ function claimMessage(relayToken: string): StepFrameRelayClaimMessage {
 
 function rejectMessage(relayToken: string): StepFrameRelayRejectMessage {
   return {
-    type: 'STEPMARK_STEP_FRAME_REJECT',
+    type: 'HOWBEAM_STEP_FRAME_REJECT',
     runId: beginMessage.runId,
     captureId: beginMessage.captureId,
     relayToken,
@@ -42,7 +42,7 @@ function rejectMessage(relayToken: string): StepFrameRelayRejectMessage {
 
 function settleMessage(settleToken: string, replay = true): StepFrameRelaySettleMessage {
   return {
-    type: 'STEPMARK_STEP_FRAME_SETTLE',
+    type: 'HOWBEAM_STEP_FRAME_SETTLE',
     runId: beginMessage.runId,
     captureId: beginMessage.captureId,
     settleToken,
@@ -51,7 +51,7 @@ function settleMessage(settleToken: string, replay = true): StepFrameRelaySettle
 }
 
 const abortMessage: StepFrameRelayAbortMessage = {
-  type: 'STEPMARK_STEP_FRAME_ABORT',
+  type: 'HOWBEAM_STEP_FRAME_ABORT',
   runId: beginMessage.runId,
   captureId: beginMessage.captureId,
 };
@@ -59,7 +59,7 @@ const abortMessage: StepFrameRelayAbortMessage = {
 interface SentResult {
   tabId: number;
   frameId: number;
-  message: StepmarkStepFrameResultMessage;
+  message: HowbeamStepFrameResultMessage;
 }
 
 function createHarness(tokens: string[]) {
@@ -160,7 +160,7 @@ describe('step frame relay broker', () => {
         tabId: originSender.tabId,
         frameId: originSender.frameId,
         message: {
-          type: 'STEPMARK_STEP_FRAME_RESULT',
+          type: 'HOWBEAM_STEP_FRAME_RESULT',
           runId: beginMessage.runId,
           captureId: beginMessage.captureId,
           replay: true,
@@ -181,7 +181,7 @@ describe('step frame relay broker', () => {
         tabId: originSender.tabId,
         frameId: originSender.frameId,
         message: {
-          type: 'STEPMARK_STEP_FRAME_RESULT',
+          type: 'HOWBEAM_STEP_FRAME_RESULT',
           runId: beginMessage.runId,
           captureId: beginMessage.captureId,
           replay: false,

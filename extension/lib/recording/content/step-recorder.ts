@@ -175,7 +175,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
     capture: actions.capture,
     cancelCapture: async () => {
       gesture.cancel();
-      await browser.runtime.sendMessage({ type: 'STEPMARK_CANCEL_CAPTURE', runId: session.runId, captureId: gesture.captureId });
+      await browser.runtime.sendMessage({ type: 'HOWBEAM_CANCEL_CAPTURE', runId: session.runId, captureId: gesture.captureId });
     },
     endGesture: () => {
       // Capture window closed: stop swallowing page events. The scroll pin
@@ -246,9 +246,9 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
           if (outcome.result === 'lost') session.toolbar?.showNotice(t().toolbar.regionNotRecorded);
           return;
         }
-        console.warn('[stepmark] region capture exceeded its failsafe budget and was cancelled');
+        console.warn('[howbeam] region capture exceeded its failsafe budget and was cancelled');
         try {
-          await browser.runtime.sendMessage({ type: 'STEPMARK_CANCEL_CAPTURE', runId: session.runId, captureId });
+          await browser.runtime.sendMessage({ type: 'HOWBEAM_CANCEL_CAPTURE', runId: session.runId, captureId });
         } catch {
           // A dead background cannot store the region either.
         }
@@ -258,7 +258,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       },
       onCancel: async () => {
         if (!captureSent) return;
-        await browser.runtime.sendMessage({ type: 'STEPMARK_CANCEL_CAPTURE', runId: session.runId, captureId });
+        await browser.runtime.sendMessage({ type: 'HOWBEAM_CANCEL_CAPTURE', runId: session.runId, captureId });
       },
       onClose: () => {
         if (session.regionCapture === controller) session.regionCapture = null;
@@ -312,7 +312,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
         captureId,
       );
     } catch (err) {
-      console.error('[stepmark] step capture failed', err);
+      console.error('[howbeam] step capture failed', err);
       return 'skipped';
     }
   };
@@ -328,7 +328,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
     lateClickSuppressor.onTrustedPointerDown();
     if (pe.button !== 0 || !pe.isPrimary) return;
     if (session.paused || session.regionCapture?.isActive()) return;
-    // Stepmark's own UI (the toolbar, even while it is see-through during a
+    // Howbeam's own UI (the toolbar, even while it is see-through during a
     // capture) is never a step; its input reaches it untouched.
     if (isExtensionOverlayEvent(pe)) return;
 
@@ -389,7 +389,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
         );
         if (outcome === 'cancelled') pressGate.abandon(press);
         if (outcome === 'timeout') {
-          console.warn('[stepmark] capture exceeded its failsafe budget; invalidated it before replaying the click');
+          console.warn('[howbeam] capture exceeded its failsafe budget; invalidated it before replaying the click');
         }
         reportStepDelivery(outcome, delivery);
       },
@@ -414,7 +414,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
     let claimResult: unknown;
     try {
       claimResult = await browser.runtime.sendMessage({
-        type: 'STEPMARK_STEP_FRAME_CLAIM',
+        type: 'HOWBEAM_STEP_FRAME_CLAIM',
         runId: session.runId,
         captureId: relayed.payload.captureId,
         relayToken: relayed.payload.relayToken,
@@ -437,14 +437,14 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       settlementStarted = true;
       try {
         const result: unknown = await browser.runtime.sendMessage({
-          type: 'STEPMARK_STEP_FRAME_SETTLE',
+          type: 'HOWBEAM_STEP_FRAME_SETTLE',
           runId: session.runId,
           captureId: relayed.payload.captureId,
           settleToken: claimResult.settleToken,
           replay,
         } satisfies StepFrameRelaySettleMessage);
         if (!isStepFrameRelayMutationResult(result) || !result.ok) {
-          console.warn('[stepmark] child-frame relay settlement was rejected');
+          console.warn('[howbeam] child-frame relay settlement was rejected');
         }
       } catch {
         // The child frame's local failsafe releases the gesture if the
@@ -488,13 +488,13 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       );
       if (!replayConfirmed) await settleRelay(false);
       if (outcome === 'timeout') {
-        console.warn('[stepmark] child-frame capture exceeded its failsafe budget; invalidated it before replaying the click');
+        console.warn('[howbeam] child-frame capture exceeded its failsafe budget; invalidated it before replaying the click');
       }
       reportStepDelivery(outcome, delivery);
     } catch (error) {
       gesture.release();
       await settleRelay(false);
-      console.warn('[stepmark] child-frame relay handling failed', error);
+      console.warn('[howbeam] child-frame relay handling failed', error);
     }
   };
 
@@ -516,7 +516,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
         !session.regionCapture?.isActive() &&
         Date.now() - relayed.payload.originTimestamp < STEP_FRAME_CLICK_FAILSAFE_MS,
       onSkipped: () => {
-        console.warn('[stepmark] skipped a relayed step-frame hop that went stale while queued');
+        console.warn('[howbeam] skipped a relayed step-frame hop that went stale while queued');
       },
       start: (gesture) => runRelayedFrameGesture(gesture, relayed),
     });

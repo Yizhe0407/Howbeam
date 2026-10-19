@@ -20,7 +20,7 @@ vi.mock('wxt/browser', async () => {
   const { makeExtensionPageRuntimeMock } = await import('../setup/browser-mocks');
   return {
     browser: {
-      runtime: makeExtensionPageRuntimeMock({ extensionHost: 'stepmark' }),
+      runtime: makeExtensionPageRuntimeMock({ extensionHost: 'howbeam' }),
       permissions: { request: vi.fn() },
     },
   };

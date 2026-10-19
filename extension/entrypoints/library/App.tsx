@@ -42,11 +42,11 @@ import { projectExportFilename } from '@/lib/export/project-export-contract';
 import { downloadBlobViaBrowser } from '@/lib/export/download-utils';
 import { useExtensionPageRegistration } from '@/lib/runtime/use-extension-page-registration';
 
-/** Derives the .stepmark archive name from the same stem the publication
+/** Derives the .howbeam archive name from the same stem the publication
  * exporters use; strips the extension the (unexported) stem helper's facade appends. */
 function exportFilename(title: string): string {
   const stem = projectExportFilename({ title }, 'html').replace(/\.html$/, '');
-  return `${stem}.stepmark`;
+  return `${stem}.howbeam`;
 }
 
 export default function App() {
@@ -71,7 +71,7 @@ export default function App() {
       setProjects(nextProjects);
       setOperationLocked(state.operation !== null || state.isRecording);
     } catch (refreshError) {
-      console.error('[stepmark] failed to load project library', refreshError);
+      console.error('[howbeam] failed to load project library', refreshError);
       setError(t().library.loadFailed);
     } finally {
       if (showLoading) setLoading(false);
@@ -128,7 +128,7 @@ export default function App() {
         if (options.refreshAfter !== false) await refresh({ showLoading: false });
         return true;
       } catch (operationError) {
-        const reason = reportError('[stepmark] library operation failed', operationError, t().library.operationFailed);
+        const reason = reportError('[howbeam] library operation failed', operationError, t().library.operationFailed);
         // Archive diagnostics are English; show the localized copy for their code.
         setError(operationError instanceof ProjectArchiveError ? t().library.archiveErrors[operationError.code] : reason);
         return false;
@@ -183,7 +183,7 @@ export default function App() {
     }
     await run('import', async () => {
       const imported = await importProjectArchive(file);
-      const fallbackTitle = file.name.replace(/\.stepmark$/i, '').slice(0, 120) || t().library.importedFallbackTitle;
+      const fallbackTitle = file.name.replace(/\.howbeam$/i, '').slice(0, 120) || t().library.importedFallbackTitle;
       const project = await createProjectFromSteps(
         imported.steps,
         {
@@ -211,7 +211,7 @@ export default function App() {
               // the accessibility tree it would be an unlabeled first stop.
               tabIndex={-1}
               aria-hidden="true"
-              accept=".stepmark,application/vnd.stepmark.project+zip"
+              accept=".howbeam,application/vnd.howbeam.project+zip"
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.currentTarget.value = '';

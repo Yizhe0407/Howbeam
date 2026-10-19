@@ -262,10 +262,10 @@ describe('createStepPressGate', () => {
     target = other;
   });
 
-  it('never swallows input aimed at Stepmark overlays, even mid-capture', () => {
+  it('never swallows input aimed at Howbeam overlays, even mid-capture', () => {
     const toolbarHost = document.createElement('div');
-    toolbarHost.setAttribute('data-stepmark-overlay', '');
-    toolbarHost.setAttribute('data-stepmark-recording-toolbar', '');
+    toolbarHost.setAttribute('data-howbeam-overlay', '');
+    toolbarHost.setAttribute('data-howbeam-recording-toolbar', '');
     document.body.append(toolbarHost);
     click();
     busy = true;

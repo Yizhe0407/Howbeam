@@ -55,7 +55,7 @@ describe('backupFilename', () => {
     const b = backupFilename({ id: 'bbbbbbbb-2222', title: '登入流程' });
     expect(a).not.toBe(b);
     expect(a).toBe(backupFilename({ id: 'aaaaaaaa-1111', title: '登入流程' }));
-    expect(a.endsWith('.stepmark')).toBe(true);
+    expect(a.endsWith('.howbeam')).toBe(true);
     expect(backupFilename({ id: 'aaaaaaaa-1111', title: 'a/b:c*?' })).not.toMatch(/[\\/:*?"<>|]/);
   });
 });
@@ -65,7 +65,7 @@ describe('backupFilename length', () => {
     for (const title of ['中'.repeat(120), '😀'.repeat(120), 'a'.repeat(300)]) {
       const name = backupFilename({ id: 'aaaaaaaa-1111', title });
       expect(new TextEncoder().encode(name).length).toBeLessThanOrEqual(255);
-      expect(name.endsWith('-aaaaaaaa.stepmark')).toBe(true);
+      expect(name.endsWith('-aaaaaaaa.howbeam')).toBe(true);
       expect(name).not.toContain('\uFFFD');
     }
   });
@@ -153,7 +153,7 @@ describe('runBackup', () => {
     expect([...files.keys()]).toEqual([backupFilename(projects[0])]);
   });
 
-  it('keeps the backup of a project that was deleted from Stepmark', async () => {
+  it('keeps the backup of a project that was deleted from Howbeam', async () => {
     const projects = [project('aaaaaaaa-1', 'One', 10), project('bbbbbbbb-2', 'Two', 20)];
     const { deps, files } = setup(projects);
     await runBackup(deps);

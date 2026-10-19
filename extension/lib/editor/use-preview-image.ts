@@ -68,7 +68,7 @@ export function usePreviewImage(
       if (!cancelled) setSettled({ source, key, redactions, privacyReviewRequired, blob });
     };
     getMaskedImage(source, redactions, screenshotScale, privacyReviewRequired).then(done, (error) => {
-      console.error('[stepmark] failed to mask the preview image', error);
+      console.error('[howbeam] failed to mask the preview image', error);
       done(null);
     });
     return () => {

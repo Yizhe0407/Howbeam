@@ -19,7 +19,7 @@ export function createUndoWindow() {
     try {
       await savePendingUndoRecord(record);
     } catch (persistError) {
-      console.warn('[stepmark] failed to persist the undo window', persistError);
+      console.warn('[howbeam] failed to persist the undo window', persistError);
     }
   }
 
@@ -35,7 +35,7 @@ export function createUndoWindow() {
   function discard(): void {
     pending = null;
     void clearPendingUndoRecord().catch((error) => {
-      console.warn('[stepmark] failed to clear the persisted undo record', error);
+      console.warn('[howbeam] failed to clear the persisted undo record', error);
     });
   }
 

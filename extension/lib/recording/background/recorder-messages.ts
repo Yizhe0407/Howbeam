@@ -62,7 +62,7 @@ export function createRecorderMessages(deps: { control: ControlPlane; runState: 
   }
 
   async function handleRecorderReady(
-    message: Extract<BackgroundMessage, { type: 'STEPMARK_READY' }>,
+    message: Extract<BackgroundMessage, { type: 'HOWBEAM_READY' }>,
     sender: Browser.runtime.MessageSender,
   ): Promise<boolean> {
     const validated = await validateRecorderMessageSender(message, sender, {
@@ -131,7 +131,7 @@ export function createRecorderMessages(deps: { control: ControlPlane; runState: 
   }
 
   async function handleCancelCapture(
-    message: Extract<BackgroundMessage, { type: 'STEPMARK_CANCEL_CAPTURE' }>,
+    message: Extract<BackgroundMessage, { type: 'HOWBEAM_CANCEL_CAPTURE' }>,
     sender: Browser.runtime.MessageSender,
   ): Promise<ClickCaptureResult> {
     // No version requirement: cancelling an already-doomed capture is harmless,

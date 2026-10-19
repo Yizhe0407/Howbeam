@@ -29,7 +29,7 @@ export function renderMarkdown(report: DetectionBenchmarkReport): string {
   const accuracyFailures = report.accuracy.filter((result) => result.status === 'wrong' || result.status === 'miss');
   const replayFailures = report.replay.filter((result) => !result.passed);
   const lines = [
-    '# Stepmark detection benchmark',
+    '# Howbeam detection benchmark',
     '',
     `- Generated: ${report.generatedAt}`,
     `- Commit: \`${report.commit}\``,

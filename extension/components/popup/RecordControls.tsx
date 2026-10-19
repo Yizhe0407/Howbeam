@@ -76,7 +76,7 @@ function useStartPreflight(onProbeError: (message: string) => void) {
         setActiveTabId(tab?.id != null && isRecordableTabUrl(tab.url) ? tab.id : null);
       })
       .catch((error) => {
-        console.error('[stepmark] failed to inspect the active tab', error);
+        console.error('[howbeam] failed to inspect the active tab', error);
         if (!disposed) {
           setRestrictedPage(true);
           onProbeError(t().popup.activeTabUnreadable);
@@ -91,7 +91,7 @@ function useStartPreflight(onProbeError: (message: string) => void) {
         ]);
         if (!disposed) setCrossTab(granted ? 'granted' : declined ? 'declined' : 'ungranted');
       } catch (error) {
-        console.warn('[stepmark] failed to read the cross-tab recording permission', error);
+        console.warn('[howbeam] failed to read the cross-tab recording permission', error);
         if (!disposed) setCrossTab('ungranted');
       }
     })();
@@ -142,7 +142,7 @@ export default function RecordControls({
             parkPendingStart(resumeStart),
             markCrossTabRecordingDeclined(),
           ]).then(() => true, (error) => {
-            console.warn('[stepmark] failed to park the pending recording start', error);
+            console.warn('[howbeam] failed to park the pending recording start', error);
             return false;
           })
         : Promise.resolve(false);
@@ -153,7 +153,7 @@ export default function RecordControls({
       else await markCrossTabRecordingDeclined();
       return { granted, parked };
     } catch (error) {
-      console.warn('[stepmark] failed to request the cross-tab recording permission', error);
+      console.warn('[howbeam] failed to request the cross-tab recording permission', error);
       return { granted: false, parked: false };
     }
   }
@@ -184,7 +184,7 @@ export default function RecordControls({
       await startRecordingIntoProject(mode, targetProjectId);
       onStarted?.();
     } catch (error) {
-      setControlError(reportError('[stepmark] failed to start recording', error, t().popup.startFailed));
+      setControlError(reportError('[howbeam] failed to start recording', error, t().popup.startFailed));
     } finally {
       setPending(false);
     }
@@ -200,7 +200,7 @@ export default function RecordControls({
       await focusTab(recording.tabId, tab.windowId);
       window.close();
     } catch (error) {
-      setControlError(reportError('[stepmark] failed to return to the recording tab', error, t().popup.returnToTabFailed));
+      setControlError(reportError('[howbeam] failed to return to the recording tab', error, t().popup.returnToTabFailed));
     }
   }
 

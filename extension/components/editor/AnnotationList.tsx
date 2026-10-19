@@ -48,7 +48,7 @@ function AnnotationRow({ step, index, onChange, onDelete, deleteDisabled, dragHa
     try {
       await onDelete(step);
     } catch (err) {
-      setActionError(reportError('[stepmark] failed to delete annotation', err, t().editor.annotations.deleteFailed));
+      setActionError(reportError('[howbeam] failed to delete annotation', err, t().editor.annotations.deleteFailed));
     } finally {
       setDeleting(false);
     }
@@ -150,7 +150,7 @@ export default function AnnotationList({
     {
       disabled: editingDisabled,
       itemNoun: t().sortable.annotationNoun,
-      logLabel: '[stepmark] failed to reorder snapshot annotations',
+      logLabel: '[howbeam] failed to reorder snapshot annotations',
     },
   );
 

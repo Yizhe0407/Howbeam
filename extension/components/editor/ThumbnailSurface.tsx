@@ -84,14 +84,14 @@ export default function ThumbnailSurface({
       )}
       {!privacyReviewRequired && children}
       {!privacyReviewRequired && contentFrame && imageCssSize && imageEdits.length > 0 && (
-        <div data-stepmark-image-edits className="pointer-events-none absolute z-[5]" style={contentFrame}>
+        <div data-howbeam-image-edits className="pointer-events-none absolute z-[5]" style={contentFrame}>
           <ImageEditsSvg edits={imageEdits} width={imageCssSize.width} height={imageCssSize.height} />
         </div>
       )}
       {!privacyReviewRequired && redactionBoxes.map((redaction) => (
         <div
           key={redaction.id}
-          data-stepmark-redaction={redaction.id}
+          data-howbeam-redaction={redaction.id}
           className="pointer-events-none absolute z-10"
           style={{
             left: redaction.left,
@@ -104,7 +104,7 @@ export default function ThumbnailSurface({
       ))}
       {overlay && contentFrame && (
         <div
-          data-stepmark-image-content-frame
+          data-howbeam-image-content-frame
           className="pointer-events-none absolute z-20"
           style={contentFrame}
         >

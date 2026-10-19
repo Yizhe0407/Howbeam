@@ -13,7 +13,7 @@ import {
   type Step,
 } from './models';
 
-export interface StepmarkDB extends DBSchema {
+export interface HowbeamDB extends DBSchema {
   steps: {
     key: string;
     value: Step;
@@ -26,8 +26,8 @@ export interface StepmarkDB extends DBSchema {
   };
 }
 
-export type ProjectStepsTransaction = IDBPTransaction<StepmarkDB, ['projects', 'steps'], 'readwrite'>;
-export type ReadonlyProjectStepsTransaction = IDBPTransaction<StepmarkDB, ['projects', 'steps'], 'readonly'>;
+export type ProjectStepsTransaction = IDBPTransaction<HowbeamDB, ['projects', 'steps'], 'readwrite'>;
+export type ReadonlyProjectStepsTransaction = IDBPTransaction<HowbeamDB, ['projects', 'steps'], 'readonly'>;
 
 interface GroupSummaryAccumulator {
   hasAnchorImage: boolean;
@@ -239,12 +239,12 @@ async function abortTransaction(tx: ProjectStepsTransaction, error: unknown): Pr
 /** 2: step text rewritten to the stored-text rule. */
 export const DATABASE_VERSION = 2;
 
-let databasePromise: Promise<IDBPDatabase<StepmarkDB>> | undefined;
-let databaseConnection: IDBPDatabase<StepmarkDB> | undefined;
+let databasePromise: Promise<IDBPDatabase<HowbeamDB>> | undefined;
+let databaseConnection: IDBPDatabase<HowbeamDB> | undefined;
 
-function getDatabase(): Promise<IDBPDatabase<StepmarkDB>> {
+function getDatabase(): Promise<IDBPDatabase<HowbeamDB>> {
   if (databasePromise) return databasePromise;
-  databasePromise = openDB<StepmarkDB>('stepmark', DATABASE_VERSION, {
+  databasePromise = openDB<HowbeamDB>('howbeam', DATABASE_VERSION, {
     async upgrade(db, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) {
         const steps = db.createObjectStore('steps', { keyPath: 'id' });
@@ -262,7 +262,7 @@ function getDatabase(): Promise<IDBPDatabase<StepmarkDB>> {
       }
     },
     blocked(currentVersion, blockedVersion) {
-      console.warn(`Stepmark database upgrade to ${blockedVersion ?? 'unknown'} is blocked by version ${currentVersion}.`);
+      console.warn(`Howbeam database upgrade to ${blockedVersion ?? 'unknown'} is blocked by version ${currentVersion}.`);
     },
     blocking(currentVersion, blockedVersion) {
       // A versionchange must never remain blocked by this long-lived extension
@@ -270,7 +270,7 @@ function getDatabase(): Promise<IDBPDatabase<StepmarkDB>> {
       databaseConnection?.close();
       databaseConnection = undefined;
       databasePromise = undefined;
-      console.warn(`Stepmark database version ${currentVersion} closed for version ${blockedVersion ?? 'unknown'}.`);
+      console.warn(`Howbeam database version ${currentVersion} closed for version ${blockedVersion ?? 'unknown'}.`);
     },
     terminated() {
       databaseConnection = undefined;
@@ -297,7 +297,7 @@ function isClosedConnectionError(error: unknown): boolean {
  * committed, retrying once against a freshly opened connection is safe and
  * transparently recovers autosaves and other in-flight callers. */
 export async function runWithDatabase<T>(
-  operation: (db: IDBPDatabase<StepmarkDB>) => Promise<T>,
+  operation: (db: IDBPDatabase<HowbeamDB>) => Promise<T>,
 ): Promise<T> {
   const db = await getDatabase();
   try {

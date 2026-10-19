@@ -64,7 +64,7 @@ export default function StepActions({
         copiedTimer.current = null;
       }, 2_000);
     } catch (err) {
-      setActionError(reportError('[stepmark] failed to copy image to clipboard', err, t().editor.actions.copyFailed));
+      setActionError(reportError('[howbeam] failed to copy image to clipboard', err, t().editor.actions.copyFailed));
     } finally {
       setCopying(false);
     }
@@ -77,7 +77,7 @@ export default function StepActions({
     try {
       await onRecapture();
     } catch (err) {
-      setActionError(reportError('[stepmark] failed to start recapture', err, t().editor.actions.recaptureStartFailed));
+      setActionError(reportError('[howbeam] failed to start recapture', err, t().editor.actions.recaptureStartFailed));
     } finally {
       setRecapturing(false);
     }
@@ -90,7 +90,7 @@ export default function StepActions({
     try {
       await onDelete();
     } catch (err) {
-      setActionError(reportError('[stepmark] failed to delete step', err, t().editor.actions.deleteFailed));
+      setActionError(reportError('[howbeam] failed to delete step', err, t().editor.actions.deleteFailed));
     } finally {
       setDeleting(false);
     }

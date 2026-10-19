@@ -122,6 +122,6 @@ describe('toolbar icon', () => {
     await importBackground();
     await flushAsyncWork();
 
-    expect(warn).toHaveBeenCalledWith('[stepmark] failed to update the toolbar icon', expect.any(Error));
+    expect(warn).toHaveBeenCalledWith('[howbeam] failed to update the toolbar icon', expect.any(Error));
   });
 });

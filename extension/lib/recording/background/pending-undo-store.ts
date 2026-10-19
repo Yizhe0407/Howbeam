@@ -20,7 +20,7 @@ interface PendingUndoDB extends DBSchema {
   };
 }
 
-const DB_NAME = 'stepmark-pending-undo';
+const DB_NAME = 'howbeam-pending-undo';
 const STORE_NAME = 'pending-undo';
 /** Undo is single-slot by design; a fixed key makes every save an overwrite. */
 const RECORD_KEY = 'current';

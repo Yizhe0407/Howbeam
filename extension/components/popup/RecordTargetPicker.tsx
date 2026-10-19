@@ -49,7 +49,7 @@ export default function RecordTargetPicker({ value, onChange, disabled = false, 
         })
         .catch((error) => {
           // Fail closed to "new project only": a missing list must never block recording.
-          console.warn('[stepmark] failed to read projects for the record target', error);
+          console.warn('[howbeam] failed to read projects for the record target', error);
         });
     };
     load();

@@ -27,8 +27,8 @@ import {
 } from '@/lib/recording/background/extension-page-tabs';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 
-const EDITOR_KEY = 'stepmark:extensionPageTab:editor';
-const LIBRARY_KEY = 'stepmark:extensionPageTab:library';
+const EDITOR_KEY = 'howbeam:extensionPageTab:editor';
+const LIBRARY_KEY = 'howbeam:extensionPageTab:library';
 
 beforeEach(() => {
   vi.clearAllMocks();

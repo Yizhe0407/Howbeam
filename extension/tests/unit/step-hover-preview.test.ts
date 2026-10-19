@@ -139,7 +139,7 @@ describe('step hover preview', () => {
 
   it('freezes on its last page target while the pointer is over recorder UI', async () => {
     await hover();
-    const overlayHost = createViewportOverlayHost('data-stepmark-recording-toolbar');
+    const overlayHost = createViewportOverlayHost('data-howbeam-recording-toolbar');
     document.body.append(overlayHost);
     makeVisible(overlayHost, { x: 400, y: 400, width: 200, height: 60 });
 

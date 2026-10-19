@@ -1,6 +1,6 @@
 # Chrome 線上應用程式商店上架資料
 
-這個資料夾放 Stepmark 送審 Chrome 線上應用程式商店（Chrome Web Store）需要的所有文字、規格與流程。目前只上架 Chrome，Firefox 暫不處理。
+這個資料夾放 Howbeam 送審 Chrome 線上應用程式商店（Chrome Web Store）需要的所有文字、規格與流程。目前只上架 Chrome，Firefox 暫不處理。
 
 所有規定都在 2026-10-18 對照 developer.chrome.com 與 blog.chromium.org 的官方頁面查證，每個檔案最後都附上來源網址。標示 **⚠ 未確認** 的項目，是官方文件沒有寫明、只能在後台實際畫面確認的部分，填寫時以後台為準，不要照本文件猜。部分來源是透過網頁摘要工具讀取的，正式引用原文前，請點連結核對一次。
 
@@ -41,7 +41,7 @@
 ### 四、打包與上傳
 
 - [ ] 在 `extension/` 執行 `pnpm validate`，全部通過。
-- [ ] 執行 `pnpm zip`，取得 `extension/.output/stepmark-extension-<版本>-chrome.zip`。
+- [ ] 執行 `pnpm zip`，取得 `extension/.output/howbeam-extension-<版本>-chrome.zip`。
 - [ ] 解壓縮後用「載入未封裝項目」實際試一次，確認就是要送審的版本。
 - [ ] 在 Developer Dashboard 按「Add new item」上傳 ZIP。
 

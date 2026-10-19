@@ -1,8 +1,8 @@
-/** Every UI language Stepmark ships a message catalog for. */
+/** Every UI language Howbeam ships a message catalog for. */
 export const SUPPORTED_LOCALES = ['zh-TW', 'en'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
-/** Used for any browser language Stepmark has no catalog for. */
+/** Used for any browser language Howbeam has no catalog for. */
 const FALLBACK_LOCALE: Locale = 'en';
 
 /**

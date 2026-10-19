@@ -38,7 +38,7 @@ vi.mock('wxt/browser', async () => {
         onMessage: (listener) => {
           browserApi.messageListener = listener;
         },
-        extensionHost: 'stepmark',
+        extensionHost: 'howbeam',
       }),
       tabs: {
         create: vi.fn(),
@@ -489,7 +489,7 @@ describe('Editor continuation on another page (改在其他頁面接續)', () =>
     mockContinuationPreflight();
     browserApi.tabsQuery.mockResolvedValue([
       { id: 21, windowId: 3, url: 'chrome://settings/', lastAccessed: 990 },
-      { id: 22, windowId: 3, url: 'chrome-extension://stepmark/editor.html', lastAccessed: 995 },
+      { id: 22, windowId: 3, url: 'chrome-extension://howbeam/editor.html', lastAccessed: 995 },
       // Most recently used recordable tab, but it shows the project's last-step
       // URL — the page the user just recorded — so it must not be preselected.
       { id: 26, windowId: 3, url: 'https://example.test/three', title: '來源頁面', lastAccessed: 900 },
@@ -565,7 +565,7 @@ describe('Editor continuation on another page (改在其他頁面接續)', () =>
     mockContinuationPreflight();
     browserApi.tabsQuery.mockResolvedValue([
       { id: 21, windowId: 3, url: 'chrome://settings/', lastAccessed: 990 },
-      { id: 22, windowId: 3, url: 'chrome-extension://stepmark/editor.html', lastAccessed: 995 },
+      { id: 22, windowId: 3, url: 'chrome-extension://howbeam/editor.html', lastAccessed: 995 },
       { id: 25, windowId: 4, lastAccessed: 999 },
     ]);
     const dialog = await openContinuationDialog();
@@ -698,7 +698,7 @@ describe('editor handoff answers (單一編輯器分頁)', () => {
   });
 
   it.each<[string, unknown, unknown]>([
-    ['another message type', { type: 'STEPMARK_STOP' }, {}],
+    ['another message type', { type: 'HOWBEAM_STOP' }, {}],
     ['a handoff without a Project', { type: 'EDITOR_HANDOFF' }, {}],
     ['a handoff relayed from a tab rather than the background', { type: 'EDITOR_HANDOFF', sessionId: 'project-2' }, { tab: { id: 9 } }],
   ])('leaves %s untouched instead of answering it', async (_label, message, sender) => {

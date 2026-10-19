@@ -135,7 +135,7 @@ export function createRunControls(deps: RunControlDependencies) {
     try {
       await editorOpen.openEditor({ sessionId: result.sessionId, entryId: result.entryId });
     } catch (error) {
-      console.error('[stepmark] failed to open editor after recording', error);
+      console.error('[howbeam] failed to open editor after recording', error);
       await control.writeStateForControl(version, markEditorOpenFailed);
       return { ok: true, finish: result };
     }
@@ -179,7 +179,7 @@ export function createRunControls(deps: RunControlDependencies) {
       await reclaimAbandonedAutoCreatedProject(state);
       return { ok: true };
     } catch (error) {
-      console.error('[stepmark] failed to discard current recording', error);
+      console.error('[howbeam] failed to discard current recording', error);
       await control.writeStateForControl(version, (current) => ({
         ...current,
         error: t().background.discardFailed,
@@ -200,7 +200,7 @@ export function createRunControls(deps: RunControlDependencies) {
         state.runId !== message.runId ||
         !isTrustedRecorderControlSender(sender, state.tabId)
       ) {
-        console.warn('[stepmark] rejected an untrusted recorder control message', message.type);
+        console.warn('[howbeam] rejected an untrusted recorder control message', message.type);
         return controlFailure(t().background.actionUnavailable);
       }
     }

@@ -203,17 +203,17 @@ describe('project export', () => {
 
   it('strips filesystem-unsafe characters and falls back for symbol-only titles', () => {
     expect(projectExportFilename({ title: 'a\\b:c*d?e"f<g>h|i' }, 'markdown')).toBe('a-b-c-d-e-f-g-h-i.md');
-    expect(projectExportFilename({ title: '  ！？＊  ' }, 'markdown')).toBe('stepmark-project.md');
-    expect(projectExportFilename({}, 'pdf')).toBe('stepmark-project.pdf');
+    expect(projectExportFilename({ title: '  ！？＊  ' }, 'markdown')).toBe('howbeam-project.md');
+    expect(projectExportFilename({}, 'pdf')).toBe('howbeam-project.pdf');
   });
 
   it('never produces a Windows reserved device name', () => {
     for (const title of ['CON', 'nul', 'Aux', 'PRN', 'com1', 'COM9', 'LPT5', 'ＣＯＮ']) {
       const name = projectExportFilename({ title }, 'html');
-      expect(name).toMatch(/^[a-z0-9]+-stepmark-project\.html$/);
+      expect(name).toMatch(/^[a-z0-9]+-howbeam-project\.html$/);
     }
     expect(projectExportFilename({ title: 'console' }, 'html')).toBe('console.html');
-    expect(projectExportFilename({ title: 'CON.' }, 'pdf')).toBe('con-stepmark-project.pdf');
+    expect(projectExportFilename({ title: 'CON.' }, 'pdf')).toBe('con-howbeam-project.pdf');
   });
 
   it('keeps voiced kana, Hangul and Indic marks composed in filenames', () => {
@@ -266,7 +266,7 @@ describe('project export', () => {
     // The step number is printed, not drawn in a badge.
     expect(drawnText).toContain('1.');
     // The credit is the last content line, before the footer's title and page number.
-    expect(drawnText.slice(-3)).toEqual(['Made with Stepmark', 'PDF project', '第 1 頁']);
+    expect(drawnText.slice(-3)).toEqual(['Made with Howbeam', 'PDF project', '第 1 頁']);
     expect(drawnText).not.toContain('Source');
     expect(drawnText).not.toContain('Step');
     expect(drawnText).not.toContain('Annotations');
@@ -511,9 +511,9 @@ describe('project export', () => {
   it('ends the HTML with a centred English credit whatever the interface language', async () => {
     const html = await generateProjectHtml([entry()], { title: 'Project' });
 
-    expect(html).toContain('<footer class="document-end">Made with Stepmark</footer>\n</main>');
+    expect(html).toContain('<footer class="document-end">Made with Howbeam</footer>\n</main>');
     expect(html).toMatch(/\.document-end \{[^}]*text-align: center;/);
-    expect(html).not.toContain('以 Stepmark 製作');
+    expect(html).not.toContain('以 Howbeam 製作');
   });
 
   it('renders a title-block metadata line with the step count and optional creation date', async () => {

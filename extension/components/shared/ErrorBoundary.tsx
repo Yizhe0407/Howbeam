@@ -29,7 +29,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error(
-      `[stepmark] unexpected render error in ${this.props.label ?? 'a surface'}`,
+      `[howbeam] unexpected render error in ${this.props.label ?? 'a surface'}`,
       error,
       errorInfo.componentStack,
     );

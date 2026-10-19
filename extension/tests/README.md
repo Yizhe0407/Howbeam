@@ -59,7 +59,7 @@ Benchmark 分三類量測：
 每個 hover case 量測三次端到端 latency；數值包含 Playwright、CDP 與瀏覽器事件／render round trip，所以適合做相同環境下的 regression comparison，不應解讀為 selector 純 CPU 時間。一般執行只 gate accuracy／IoU／exactly-once；若已有 reference baseline，可用下列方式啟用 latency regression gate：
 
 ```bash
-STEPMARK_BENCHMARK_STRICT_LATENCY=1 pnpm benchmark:detection
+HOWBEAM_BENCHMARK_STRICT_LATENCY=1 pnpm benchmark:detection
 ```
 
 結果寫入：

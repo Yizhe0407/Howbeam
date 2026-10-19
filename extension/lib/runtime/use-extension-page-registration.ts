@@ -22,7 +22,7 @@ export function useExtensionPageRegistration(): void {
           await browser.runtime.sendMessage({ type: 'REGISTER_EXTENSION_PAGE' });
         } catch (error) {
           // Non-fatal: the page still works, later opens just cannot reuse it.
-          console.warn('[stepmark] failed to register this extension page tab', error);
+          console.warn('[howbeam] failed to register this extension page tab', error);
         }
       })();
     };

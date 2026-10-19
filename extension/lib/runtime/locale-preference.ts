@@ -1,7 +1,7 @@
 import { browser } from 'wxt/browser';
 import { applyLocalePreference, SUPPORTED_LOCALES, type LocalePreference } from '@/lib/shared/i18n';
 
-const LOCALE_PREFERENCE_KEY = 'stepmark:localePreference';
+const LOCALE_PREFERENCE_KEY = 'howbeam:localePreference';
 
 function normalizePreference(value: unknown): LocalePreference {
   return value === 'auto' || (SUPPORTED_LOCALES as readonly unknown[]).includes(value)
@@ -38,7 +38,7 @@ export async function initLocalePreference(): Promise<() => void> {
   try {
     applyLocalePreference(await getLocalePreference());
   } catch (error) {
-    console.warn('[stepmark] failed to read the language preference', error);
+    console.warn('[howbeam] failed to read the language preference', error);
   }
   return () => browser.storage.onChanged.removeListener(listener);
 }

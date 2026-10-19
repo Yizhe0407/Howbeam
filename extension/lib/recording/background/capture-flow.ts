@@ -21,7 +21,7 @@ import { t } from '@/lib/shared/i18n';
 import { describeBrowserError, isMissingTabError } from '../../runtime/browser-errors';
 import { UserFacingError, userFacingErrorMessage } from '../../runtime/user-facing-errors';
 import { getRecordingState } from '../../storage/storage';
-import type { ClickCapture, ClickCaptureResult, StepmarkSnapshotActiveMessage } from '../../runtime/messages';
+import type { ClickCapture, ClickCaptureResult, HowbeamSnapshotActiveMessage } from '../../runtime/messages';
 import type { RecordingState, RecoverableRecordingError } from '../../storage/recording-state';
 import type { ControlPlane, SnapshotCaptureContext } from './control-plane';
 import type { RecorderRuntime } from './recorder-runtime';
@@ -114,7 +114,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
       await deleteStep(anchorId);
     } catch (cleanupError) {
       console.error(
-        '[stepmark] failed to remove incomplete snapshot:',
+        '[howbeam] failed to remove incomplete snapshot:',
         describeBrowserError(cleanupError),
         cleanupError,
       );
@@ -173,8 +173,8 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
       anchorPublished = true;
 
       control.acceptingClicks = true;
-      const activateMessage: StepmarkSnapshotActiveMessage = {
-        type: 'STEPMARK_SNAPSHOT_ACTIVE',
+      const activateMessage: HowbeamSnapshotActiveMessage = {
+        type: 'HOWBEAM_SNAPSHOT_ACTIVE',
         runId,
       };
       const activated = await browser.tabs.sendMessage(tabId, activateMessage, { frameId: 0 });
@@ -380,7 +380,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
           // The run can never accept another annotation; settle it once with a
           // recoverable error instead of failing every subsequent click.
           reason = 'snapshot-anchor-missing';
-          console.error('[stepmark] snapshot anchor is gone; settling the run:', err.message);
+          console.error('[howbeam] snapshot anchor is gone; settling the run:', err.message);
           await stopRunWithError(
             message.runId,
             snapshotAnchorMissingError().message,
@@ -395,7 +395,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
           // Not awaited: this runs inside the click queue, and the lifecycle
           // queue it enters can be waiting for queued clicks.
           void handleRecordedTabGone(tabId).catch((error) => {
-            console.error('[stepmark] failed to handle the closed recording tab', error);
+            console.error('[howbeam] failed to handle the closed recording tab', error);
           });
         } else if (err instanceof StaleCaptureError) {
           reason = `stale-capture: ${err.message}`;
@@ -403,7 +403,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
           const diagnostic = describeBrowserError(err);
           reason = diagnostic;
           console.error(
-            '[stepmark] failed to capture/annotate/save step:',
+            '[howbeam] failed to capture/annotate/save step:',
             diagnostic,
             err,
           );
@@ -415,7 +415,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
       } catch (recoveryError) {
         control.acceptingClicks = false;
         console.error(
-          '[stepmark] failed to persist capture failure:',
+          '[howbeam] failed to persist capture failure:',
           describeBrowserError(recoveryError),
           recoveryError,
         );

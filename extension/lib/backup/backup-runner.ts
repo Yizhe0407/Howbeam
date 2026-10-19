@@ -6,13 +6,13 @@ import type { BackupManifestEntry } from './backup-store';
  * projects with the same title never collide. The id part is what keeps the
  * name stable across runs; a rename of the project renames the file. */
 export function backupFilename(project: Pick<ProjectSummary, 'id' | 'title'>): string {
-  return `${projectFilenameStem({ title: project.title })}-${project.id.slice(0, 8)}.stepmark`;
+  return `${projectFilenameStem({ title: project.title })}-${project.id.slice(0, 8)}.howbeam`;
 }
 
 /** Plain-ASCII name used when the folder's file system rejects the readable
  * one (some systems cannot store non-Latin names). Still unique per project. */
 export function fallbackBackupFilename(project: Pick<ProjectSummary, 'id'>): string {
-  return `stepmark-${project.id.slice(0, 8)}.stepmark`;
+  return `howbeam-${project.id.slice(0, 8)}.howbeam`;
 }
 
 function isFilenameRejection(error: unknown): boolean {
@@ -62,7 +62,7 @@ async function writeFile(directory: FileSystemDirectoryHandle, name: string, blo
 
 /**
  * Writes every project that changed since its last successful backup. Backups
- * are additive: a project deleted from Stepmark keeps its file, because a
+ * are additive: a project deleted from Howbeam keeps its file, because a
  * backup that vanishes together with the original is not a backup. One failing
  * project never blocks the others, and is retried on the next run.
  */
@@ -111,7 +111,7 @@ export async function runBackup(deps: BackupRunDeps): Promise<BackupResult> {
       result.failed += 1;
       result.failedTitles.push(project.title);
       result.error = error instanceof Error ? error.message : String(error);
-      console.warn('[stepmark] backup of a project failed', project.id, filename, error);
+      console.warn('[howbeam] backup of a project failed', project.id, filename, error);
     }
   }
   return result;

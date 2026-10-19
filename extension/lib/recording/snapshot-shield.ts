@@ -185,7 +185,7 @@ export function createSnapshotShield(
   const frameKey = crypto.randomUUID();
   const tokenStorageKey = buildShieldTokenStorageKey(frameKey);
   const host = createViewportOverlayHost(
-    'data-stepmark-snapshot-shield',
+    'data-howbeam-snapshot-shield',
     {
       'min-width': '0',
       'min-height': '0',
@@ -209,7 +209,7 @@ export function createSnapshotShield(
   const shadowRoot = host.attachShadow({ mode: 'closed' });
   installBackdropStyles(shadowRoot);
   const frame = document.createElement('iframe');
-  frame.title = 'Stepmark snapshot input shield';
+  frame.title = 'Howbeam snapshot input shield';
   frame.tabIndex = -1;
   frame.referrerPolicy = 'no-referrer';
   hardenFrame(frame);
@@ -260,7 +260,7 @@ export function createSnapshotShield(
     try {
       if (onHover) preview = await onHover(message);
     } catch (error) {
-      console.error('[stepmark] failed to preview snapshot target', error);
+      console.error('[howbeam] failed to preview snapshot target', error);
     }
     if (isStale(generation)) return;
     post({ type: SNAPSHOT_SHIELD_PREVIEW, requestId: message.requestId, rect: preview.rect });
@@ -290,7 +290,7 @@ export function createSnapshotShield(
     try {
       selection = (await onPoint(message)) ?? null;
     } catch (error) {
-      console.error('[stepmark] failed to handle snapshot shield pointer', error);
+      console.error('[howbeam] failed to handle snapshot shield pointer', error);
     }
     completeSelection(selection, generation, message.captureId);
   };
@@ -300,7 +300,7 @@ export function createSnapshotShield(
     try {
       selection = (await onRegion?.(message)) ?? null;
     } catch (error) {
-      console.error('[stepmark] failed to handle snapshot shield region', error);
+      console.error('[howbeam] failed to handle snapshot shield region', error);
     }
     completeSelection(selection, generation, message.captureId);
   };
@@ -310,7 +310,7 @@ export function createSnapshotShield(
     try {
       if (onControl) result = await onControl(message);
     } catch (error) {
-      console.error('[stepmark] failed to handle snapshot toolbar command', error);
+      console.error('[howbeam] failed to handle snapshot toolbar command', error);
       result = { ok: false, error: t().runtime.shieldActionFailed };
     }
     if (isStale(generation)) return;
@@ -449,10 +449,10 @@ export function createSnapshotShield(
     const runtimeFailure = ready;
     const error = cause instanceof Error ? cause : new Error(message);
     remove();
-    console.error(`[stepmark] ${message}`, cause ?? '');
+    console.error(`[howbeam] ${message}`, cause ?? '');
     if (runtimeFailure && onFailure) {
       void Promise.resolve(onFailure(error)).catch((handlerError) => {
-        console.error('[stepmark] failed to recover from snapshot shield failure', handlerError);
+        console.error('[howbeam] failed to recover from snapshot shield failure', handlerError);
       });
     }
   };

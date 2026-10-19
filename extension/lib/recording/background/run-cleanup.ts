@@ -14,7 +14,7 @@ export async function reclaimAbandonedAutoCreatedProject(state: RecordingState):
     await discardPristineProject(state.autoCreatedProjectId);
   } catch (error) {
     console.error(
-      '[stepmark] failed to reclaim the abandoned auto-created project:',
+      '[howbeam] failed to reclaim the abandoned auto-created project:',
       describeBrowserError(error),
       error,
     );
@@ -38,7 +38,7 @@ export async function deleteEmptySnapshotAnchorBestEffort(state: RecordingState)
     await deleteEmptySnapshotAnchor(state);
   } catch (cleanupError) {
     console.error(
-      '[stepmark] failed to remove the empty snapshot anchor:',
+      '[howbeam] failed to remove the empty snapshot anchor:',
       describeBrowserError(cleanupError),
       cleanupError,
     );

@@ -15,7 +15,7 @@ function failedNames(run: { failedTitles?: string[] }): string {
 }
 
 /** Settings card for automatic folder backup: choose a folder once, then every
- * change is saved there as a .stepmark file. */
+ * change is saved there as a .howbeam file. */
 export default function BackupSettingsSection() {
   const backup = useFolderBackup();
   const [confirmOff, setConfirmOff] = useState(false);

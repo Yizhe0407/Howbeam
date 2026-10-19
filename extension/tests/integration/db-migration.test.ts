@@ -9,7 +9,7 @@ afterAll(closeDatabase);
 
 /** A version 1 database as an older build left it, holding text written under the old rule. */
 async function seedVersion1(steps: readonly Step[]): Promise<void> {
-  const db = await openDB('stepmark', 1, {
+  const db = await openDB('howbeam', 1, {
     upgrade(database) {
       database.createObjectStore('steps', { keyPath: 'id' }).createIndex('by-session', 'sessionId');
       database.createObjectStore('projects', { keyPath: 'id' }).createIndex('by-updated-at', 'updatedAt');

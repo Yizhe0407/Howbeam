@@ -36,7 +36,7 @@ test.describe('recording across tabs and unrecordable pages', () => {
     const state = await readRecordingState(popupPage);
     expect(state).toMatchObject({ isRecording: true, phase: 'recording' });
     expect((state.recoverableError as { code?: string } | null)?.code).not.toBe('RECORDED_TAB_CLOSED');
-    await expect.poll(() => appPage.locator('[data-stepmark-step-preview]').count()).toBe(1);
+    await expect.poll(() => appPage.locator('[data-howbeam-step-preview]').count()).toBe(1);
     await clickTarget(appPage, '#action-button span');
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
 
@@ -61,7 +61,7 @@ test.describe('recording across tabs and unrecordable pages', () => {
     // The user types a URL there.
     await blankPage.goto(`${FIXTURE_URL}navigated.html`);
     await expect.poll(async () => (await readRecordingState(popupPage)).tabId).not.toBe(firstTabId);
-    await expect.poll(() => blankPage.locator('[data-stepmark-step-preview]').count()).toBe(1);
+    await expect.poll(() => blankPage.locator('[data-howbeam-step-preview]').count()).toBe(1);
     await clickTarget(blankPage, 'h1');
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
 
@@ -85,7 +85,7 @@ test.describe('recording across tabs and unrecordable pages', () => {
 
     await appPage.goto(`${FIXTURE_URL}navigated.html`);
     await expect.poll(async () => (await readRecordingState(popupPage)).recoverableError).toBeNull();
-    await expect.poll(() => appPage.locator('[data-stepmark-step-preview]').count()).toBe(1);
+    await expect.poll(() => appPage.locator('[data-howbeam-step-preview]').count()).toBe(1);
     await clickTarget(appPage, 'h1');
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
 

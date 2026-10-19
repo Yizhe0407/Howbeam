@@ -136,7 +136,7 @@ describe('generateProjectPdf with the real pdf-lib', () => {
       .toBeGreaterThanOrEqual(entries.length);
     expect(canvasContext.arc).not.toHaveBeenCalled();
     expect(canvasContext.strokeRect).toHaveBeenCalledTimes(entries.length);
-    expect(drawnText).toContain('Made with Stepmark');
+    expect(drawnText).toContain('Made with Howbeam');
 
     // Hybrid embedding: each page has its rasterized background JPEG plus the
     // screenshot embedded as its own full-resolution JPEG (two DCT streams per

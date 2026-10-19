@@ -173,7 +173,7 @@ export default function PublishProjectDialog(props: PublishProjectDialogProps) {
       if (isAbortError(actionError) || controller.signal.aborted) {
         setNotice(t().editor.publish.cancelled);
       } else {
-        console.error(`[stepmark] project export failed: ${action}`, actionError);
+        console.error(`[howbeam] project export failed: ${action}`, actionError);
         setError(failureMessage(action, actionError));
       }
     } finally {

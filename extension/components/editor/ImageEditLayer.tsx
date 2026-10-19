@@ -107,7 +107,7 @@ function CropShade({ bounds, size }: { bounds: { x: number; y: number; width: nu
   const rightStart = percent(bounds.x + bounds.width, size.width);
   const shade = 'pointer-events-none absolute bg-black/55';
   return (
-    <div aria-hidden="true" data-stepmark-crop-shade className="pointer-events-none absolute inset-0">
+    <div aria-hidden="true" data-howbeam-crop-shade className="pointer-events-none absolute inset-0">
       <div className={shade} style={{ left: 0, top: 0, width: '100%', height: top }} />
       <div className={shade} style={{ left: 0, top: bottomStart, width: '100%', bottom: 0 }} />
       <div className={shade} style={{ left: 0, top, width: left, height: percent(bounds.height, size.height) }} />
@@ -159,7 +159,7 @@ function TextEditor({
     <>
     <textarea
       ref={ref}
-      data-stepmark-text-editor
+      data-howbeam-text-editor
       defaultValue={item.text}
       maxLength={IMAGE_EDIT_LIMITS.maxTextLength}
       aria-label={t().editor.imageEdit.textInput}
@@ -195,7 +195,7 @@ function TextEditor({
     {atLimit && (
       <span
         role="status"
-        data-stepmark-text-limit
+        data-howbeam-text-limit
         className="pointer-events-none absolute -translate-y-full rounded-sm bg-card px-1.5 py-0.5 text-xs font-bold text-foreground shadow"
         style={{ left, top }}
       >
@@ -272,8 +272,8 @@ export default function ImageEditLayer({
   }
 
   function focusItem(id: string) {
-    const chrome = Array.from(layerRef.current?.querySelectorAll<HTMLElement>('[data-stepmark-edit-item]') ?? []);
-    chrome.find((element) => element.dataset.stepmarkEditItem === id)?.focus({ preventScroll: true });
+    const chrome = Array.from(layerRef.current?.querySelectorAll<HTMLElement>('[data-howbeam-edit-item]') ?? []);
+    chrome.find((element) => element.dataset.howbeamEditItem === id)?.focus({ preventScroll: true });
   }
 
   function beginCreate(event: PointerEvent) {
@@ -425,8 +425,8 @@ export default function ImageEditLayer({
         tabIndex={disabled || isNew || inert ? -1 : 0}
         aria-label={t().editor.imageEdit.itemLabel(item.kind)}
         aria-pressed={selected}
-        data-stepmark-edit-item={item.id}
-        data-stepmark-edit-kind={item.kind}
+        data-howbeam-edit-item={item.id}
+        data-howbeam-edit-kind={item.kind}
         className={cn(
           'absolute box-border outline-none',
           (strokeOnly || passThrough) && 'pointer-events-none',
@@ -448,7 +448,7 @@ export default function ImageEditLayer({
         {selected && !disabled && itemHandles(item).map((handle) => (
           <span
             key={handle}
-            data-stepmark-edit-handle={handle}
+            data-howbeam-edit-handle={handle}
             className={cn(
               'pointer-events-auto absolute size-2.5 border-2 border-focus bg-card',
               handle === 'from' || handle === 'to' ? '-translate-x-1/2 -translate-y-1/2 cursor-move rounded-full' : HANDLE_POSITION[handle],
@@ -468,7 +468,7 @@ export default function ImageEditLayer({
   return (
     <div
       ref={layerRef}
-      data-stepmark-image-edit-layer
+      data-howbeam-image-edit-layer
       className={cn(
         'pointer-events-auto absolute inset-0 touch-none select-none',
         disabled

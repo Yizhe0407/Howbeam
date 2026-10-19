@@ -77,8 +77,8 @@ function open(opened: StepEntry) {
 
 const toolButton = (name: string) =>
   within(screen.getByRole('toolbar', { name: '圖片編輯工具' })).getByRole('button', { name }) as HTMLButtonElement;
-const layer = () => document.querySelector('[data-stepmark-image-edit-layer]') as HTMLElement;
-const editItem = (id: string) => document.querySelector(`[data-stepmark-edit-item="${id}"]`);
+const layer = () => document.querySelector('[data-howbeam-image-edit-layer]') as HTMLElement;
+const editItem = (id: string) => document.querySelector(`[data-howbeam-edit-item="${id}"]`);
 
 function drawMask() {
   fireEvent.click(toolButton('遮罩'));

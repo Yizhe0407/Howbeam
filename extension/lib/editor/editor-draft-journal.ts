@@ -2,7 +2,7 @@ import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
 
 /** Common localStorage key prefix for every draft-journal record. Exported so
  * cross-tab `storage` listeners can filter on it without hardcoding a copy. */
-export const DESCRIPTION_DRAFT_KEY_PREFIX = 'stepmark:editor-description-draft:';
+export const DESCRIPTION_DRAFT_KEY_PREFIX = 'howbeam:editor-description-draft:';
 
 const METADATA_PREFIX = `${DESCRIPTION_DRAFT_KEY_PREFIX}v2:meta:`;
 const CHUNK_PREFIX = `${DESCRIPTION_DRAFT_KEY_PREFIX}v2:chunk:`;

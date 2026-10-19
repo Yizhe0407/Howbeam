@@ -63,7 +63,7 @@ export function useProjectMutations({
   clearUndo,
 }: UseProjectMutationsOptions) {
   function showStructureMutationError(operation: ProjectMutationOperation, mutationError: unknown): void {
-    console.error(`[stepmark] project mutation failed: ${operation}`, mutationError);
+    console.error(`[howbeam] project mutation failed: ${operation}`, mutationError);
     setOperationError(
       mutationError instanceof ProjectContentConflictError
         ? t().editor.mutations.conflict
@@ -106,7 +106,7 @@ export function useProjectMutations({
         try {
           await refreshEditorData();
         } catch (refreshError) {
-          console.error(`[stepmark] reload after failed ${operation} failed`, refreshError);
+          console.error(`[howbeam] reload after failed ${operation} failed`, refreshError);
         } finally {
           if (!optimistic) setOptimisticEntries(null);
         }
@@ -119,7 +119,7 @@ export function useProjectMutations({
       try {
         await refreshEditorData();
       } catch (reloadError) {
-        console.error(`[stepmark] reload after ${operation} failed`, reloadError);
+        console.error(`[howbeam] reload after ${operation} failed`, reloadError);
         setOperationError(t().editor.mutations.reloadFailed);
       }
       if (undo) offerUndo(undo, sessionId, takenUndo);
@@ -437,14 +437,14 @@ export function useProjectMutations({
         setSelectedEntryId(undoAction.restoreSelectionId);
       }
     } catch (undoError) {
-      console.error('[stepmark] failed to undo editor operation', undoError);
+      console.error('[howbeam] failed to undo editor operation', undoError);
       clearUndo();
       setOperationError(
         undoError instanceof ProjectContentConflictError
           ? t().editor.undo.conflict
           : t().editor.undo.failed,
       );
-      await refreshEditorData().catch((refreshError) => console.error('[stepmark] reload after failed undo failed', refreshError));
+      await refreshEditorData().catch((refreshError) => console.error('[howbeam] reload after failed undo failed', refreshError));
     } finally {
       endDataOperation();
     }

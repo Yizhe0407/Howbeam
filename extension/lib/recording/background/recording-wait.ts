@@ -8,7 +8,7 @@ import { t } from '@/lib/shared/i18n';
  * not ended: it waits, and picks up again once its tab (or a tab it follows
  * into) shows a recordable page.
  * - 'restricted-page': a browser/extension page or other non-web URL.
- * - 'site-access': Stepmark holds no host permission for the page, so the
+ * - 'site-access': Howbeam holds no host permission for the page, so the
  *   browser hides its URL and refuses injection.
  * - 'page-failed': the navigation failed and the tab shows the browser's
  *   error page.
@@ -59,7 +59,7 @@ export function clearRecordingWait(state: RecordingState): RecordingState {
 
 /**
  * Why a tab URL cannot host the recorder, or null when it can. Without the
- * `tabs` permission the browser reports no URL for a page Stepmark has no host
+ * `tabs` permission the browser reports no URL for a page Howbeam has no host
  * access to; with the <all_urls> grant a missing URL can only be a non-web
  * page (browser pages fall outside <all_urls>), so it is restricted, not a
  * permission problem.

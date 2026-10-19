@@ -28,9 +28,9 @@ declare const chrome: {
  * activation, so a failed spec's console log shows how the run moved.
  */
 function traceRecordingInWorker(recordingStateKey: string): void {
-  const scope = globalThis as typeof globalThis & { __stepmarkE2eTrace?: true };
-  if (scope.__stepmarkE2eTrace) return;
-  scope.__stepmarkE2eTrace = true;
+  const scope = globalThis as typeof globalThis & { __howbeamE2eTrace?: true };
+  if (scope.__howbeamE2eTrace) return;
+  scope.__howbeamE2eTrace = true;
   chrome.storage.onChanged.addListener((changes, area) => {
     const change = changes[recordingStateKey];
     if (area !== 'local' || !change) return;
@@ -109,7 +109,7 @@ export const test = base.extend<Fixtures & Options>({
   recordTrace: [true, { option: true }],
 
   extensionContext: async ({ nativeScrollbars, recordTrace }, use, testInfo) => {
-    const userDataDir = await mkdtemp(path.join(os.tmpdir(), 'stepmark-playwright-'));
+    const userDataDir = await mkdtemp(path.join(os.tmpdir(), 'howbeam-playwright-'));
     const context = await chromium.launchPersistentContext(userDataDir, {
       channel: 'chromium',
       headless: process.env.PW_HEADED !== '1',

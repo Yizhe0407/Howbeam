@@ -33,7 +33,7 @@ async function flushMicrotasks(): Promise<void> {
 }
 
 afterEach(() => {
-  document.querySelectorAll('[data-stepmark-region-capture]').forEach((element) => element.remove());
+  document.querySelectorAll('[data-howbeam-region-capture]').forEach((element) => element.remove());
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });

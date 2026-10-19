@@ -61,7 +61,7 @@ const recordedPageSender = {
 
 function clickMessage(): Record<string, unknown> {
   return {
-    type: 'STEPMARK_CLICK',
+    type: 'HOWBEAM_CLICK',
     captureKind: 'element',
     captureId: 'capture-1',
     runId: 'run-1',
@@ -254,7 +254,7 @@ describe('annotation clicks against a run whose anchor disappeared mid-run', () 
     );
     // The recorder in the tab is torn down so the user is not left clicking
     // into a shield whose run is already broken.
-    expect(mocks.tabsSendMessage).toHaveBeenCalledWith(4, { type: 'STEPMARK_STOP' });
+    expect(mocks.tabsSendMessage).toHaveBeenCalledWith(4, { type: 'HOWBEAM_STOP' });
   });
 });
 

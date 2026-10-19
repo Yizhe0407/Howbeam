@@ -166,7 +166,7 @@ export function useRecordingSession(
     try {
       await refreshSteps(sid);
     } catch (error) {
-      console.error('[stepmark] failed to refresh recording steps', error);
+      console.error('[howbeam] failed to refresh recording steps', error);
     }
   }, [refreshSteps]);
 
@@ -203,7 +203,7 @@ export function useRecordingSession(
       })
       .catch((error) => {
         if (disposed) return;
-        console.error('[stepmark] failed to read recording state', error);
+        console.error('[howbeam] failed to read recording state', error);
         setDataError(t().runtime.recordingStateUnreadable);
       });
 

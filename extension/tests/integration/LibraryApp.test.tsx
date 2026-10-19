@@ -289,8 +289,8 @@ describe('專案庫', () => {
     render(<LibraryApp />);
 
     fireEvent.click(await screen.findByRole('button', { name: '匯出 安全教學' }));
-    expect(screen.getByText(/安全教學\.stepmark/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '下載 .stepmark' }));
+    expect(screen.getByText(/安全教學\.howbeam/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '下載 .howbeam' }));
 
     await waitFor(() => expect(archive.exportProjectArchive).toHaveBeenCalledWith(steps, {
       metadata: {
@@ -302,7 +302,7 @@ describe('專案庫', () => {
     }));
     expect(downloads.download).toHaveBeenCalledWith({
       url: 'blob:archive',
-      filename: '安全教學.stepmark',
+      filename: '安全教學.howbeam',
       saveAs: true,
     });
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:archive');
@@ -317,7 +317,7 @@ describe('專案庫', () => {
     render(<LibraryApp />);
 
     fireEvent.click(await screen.findByRole('button', { name: '匯出 安全教學' }));
-    fireEvent.click(screen.getByRole('button', { name: '下載 .stepmark' }));
+    fireEvent.click(screen.getByRole('button', { name: '下載 .howbeam' }));
 
     expect((await screen.findByRole('alert')).textContent).toContain('匯出空間不足');
     expect(screen.getByDisplayValue(project.title)).toBeTruthy();
@@ -334,7 +334,7 @@ describe('專案庫', () => {
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');
     await waitFor(() => expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.change(input!, {
-      target: { files: [new File(['broken'], 'broken.stepmark')] },
+      target: { files: [new File(['broken'], 'broken.howbeam')] },
     });
 
     expect((await screen.findByRole('alert')).textContent).toContain('檔案內容損毀');
@@ -343,7 +343,7 @@ describe('專案庫', () => {
     expect(database.getProjectSummaries).toHaveBeenCalledOnce();
   });
 
-  it('匯入的 .stepmark 錯誤依 code 顯示在地化訊息，而不是英文原文', async () => {
+  it('匯入的 .howbeam 錯誤依 code 顯示在地化訊息，而不是英文原文', async () => {
     silenceIntentionalErrorLogs();
     archive.importProjectArchive.mockRejectedValue(
       new ProjectArchiveError('INVALID_JSON', 'The project archive is not valid JSON.'),
@@ -352,7 +352,7 @@ describe('專案庫', () => {
 
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');
     await waitFor(() => expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false));
-    fireEvent.change(input!, { target: { files: [new File(['broken'], 'broken.stepmark')] } });
+    fireEvent.change(input!, { target: { files: [new File(['broken'], 'broken.howbeam')] } });
 
     const alert = (await screen.findByRole('alert')).textContent ?? '';
     expect(alert).toContain('專案檔案的內容無法讀取');
@@ -413,7 +413,7 @@ describe('專案庫', () => {
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');
     expect(input).toBeTruthy();
     await waitFor(() => expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false));
-    const file = new File(['archive'], 'fallback.stepmark', { type: 'application/vnd.stepmark.project+zip' });
+    const file = new File(['archive'], 'fallback.howbeam', { type: 'application/vnd.howbeam.project+zip' });
     fireEvent.change(input!, { target: { files: [file] } });
 
     await waitFor(() => expect(archive.importProjectArchive).toHaveBeenCalledWith(file));

@@ -9,7 +9,7 @@ import { cn } from '@/lib/shared/utils';
 
 interface Props {
   /**
-   * This page's crumb after Stepmark. Omitted on the library, which is the
+   * This page's crumb after Howbeam. Omitted on the library, which is the
    * extension's home: there the brand itself is the current location.
    */
   current?: string;
@@ -35,7 +35,7 @@ const crumbClass = 'flex min-w-0 items-center gap-2 rounded-sm px-1.5 py-1 text-
 
 /**
  * The one header every full-page surface shares. It answers "where am I" with
- * a breadcrumb rooted at the library (Stepmark › page) and keeps settings in
+ * a breadcrumb rooted at the library (Howbeam › page) and keeps settings in
  * the same corner everywhere, so any page reaches any other in one step —
  * within the same tab.
  */
@@ -50,7 +50,7 @@ export default function AppHeader({ current, currentHeading, status, actions, is
   const brand = (
     <>
       <Mascot />
-      <span className={cn('shrink-0', !isHome && 'hidden min-[420px]:inline')}>Stepmark</span>
+      <span className={cn('shrink-0', !isHome && 'hidden min-[420px]:inline')}>Howbeam</span>
     </>
   );
 

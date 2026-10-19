@@ -1,5 +1,5 @@
 /**
- * Canonical Stepmark brand colors for TS-injected styles (toolbar, region
+ * Canonical Howbeam brand colors for TS-injected styles (toolbar, region
  * capture). CSS files cannot import TS, so assets/tailwind.css (--sora) and
  * entrypoints/snapshot-shield/style.css keep literal copies; change them together.
  *

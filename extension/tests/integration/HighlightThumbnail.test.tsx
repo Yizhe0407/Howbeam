@@ -102,7 +102,7 @@ describe('HighlightThumbnail', () => {
 
     act(() => fireEvent.load(image));
 
-    const contentFrame = view.container.querySelector<HTMLElement>('[data-stepmark-image-content-frame]')!;
+    const contentFrame = view.container.querySelector<HTMLElement>('[data-howbeam-image-content-frame]')!;
     expect(contentFrame.style.left).toBe('10px');
     expect(contentFrame.style.top).toBe('45px');
     expect(contentFrame.style.width).toBe('100px');
@@ -134,7 +134,7 @@ describe('HighlightThumbnail', () => {
     expect(image.style.visibility).toBe('');
 
     const highlight = view.container.querySelector<HTMLElement>('.pointer-events-none.absolute.box-border')!;
-    const redaction = view.container.querySelector<HTMLElement>('[data-stepmark-redaction="mask-1"]')!;
+    const redaction = view.container.querySelector<HTMLElement>('[data-howbeam-redaction="mask-1"]')!;
     expect(redaction.style.left).toBe('24px');
     expect(redaction.style.top).toBe('9px');
     expect(redaction.style.width).toBe('17px');
@@ -188,7 +188,7 @@ describe('HighlightThumbnail', () => {
     stubImageMetrics(image, { naturalWidth: 200, naturalHeight: 100, rendered: { width: 100, height: 50 } });
     act(() => fireEvent.load(image));
     act(() => stubs.flushAnimationFrames());
-    const initialLeft = view.container.querySelector<HTMLElement>('[data-stepmark-redaction="mask-1"]')!.style.left;
+    const initialLeft = view.container.querySelector<HTMLElement>('[data-howbeam-redaction="mask-1"]')!.style.left;
 
     view.rerender(
       <HighlightThumbnail
@@ -204,7 +204,7 @@ describe('HighlightThumbnail', () => {
 
     expect(image.style.visibility).toBe('');
     expect(stubs.animationFrames.size).toBe(0);
-    expect(view.container.querySelector<HTMLElement>('[data-stepmark-redaction="mask-1"]')!.style.left).not.toBe(initialLeft);
+    expect(view.container.querySelector<HTMLElement>('[data-howbeam-redaction="mask-1"]')!.style.left).not.toBe(initialLeft);
   });
 
   // When the image element is exactly the image's box (the zoomable editor), a
@@ -227,7 +227,7 @@ describe('HighlightThumbnail', () => {
     stubImageMetrics(image, { naturalWidth: 200, naturalHeight: 100, rendered: { width: 400, height: 200 } });
     act(() => fireEvent.load(image));
 
-    const mask = view.container.querySelector<HTMLElement>('[data-stepmark-redaction="mask-1"]')!;
+    const mask = view.container.querySelector<HTMLElement>('[data-howbeam-redaction="mask-1"]')!;
     // The 2px safety margin around the mask is part of the box: (50-2)/200, (20-2)/100, (30+4)/200, (40+4)/100.
     expect(mask.style.left).toBe('24%');
     expect(mask.style.top).toBe('18%');
@@ -236,6 +236,6 @@ describe('HighlightThumbnail', () => {
 
     act(() => stubs.triggerResize());
     expect(image.style.visibility).toBe('');
-    expect(view.container.querySelector('[data-stepmark-redaction="mask-1"]')).toBe(mask);
+    expect(view.container.querySelector('[data-howbeam-redaction="mask-1"]')).toBe(mask);
   });
 });

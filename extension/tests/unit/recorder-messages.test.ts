@@ -80,9 +80,9 @@ beforeEach(() => {
   });
 });
 
-describe('STEPMARK_READY', () => {
+describe('HOWBEAM_READY', () => {
   const ready = (snapshotContext?: unknown) =>
-    ({ type: 'STEPMARK_READY', runId: RUN_ID, ...(snapshotContext ? { snapshotContext } : {}) }) as never;
+    ({ type: 'HOWBEAM_READY', runId: RUN_ID, ...(snapshotContext ? { snapshotContext } : {}) }) as never;
 
   it('opens the startup gate that waits for this recorder and keeps its snapshot context', async () => {
     const context = { url: PAGE_URL, viewport: VIEWPORT, devicePixelRatio: 2, timestamp: 1 };
@@ -178,8 +178,8 @@ describe('SNAPSHOT_RECORDER_FAILED', () => {
   });
 });
 
-describe('STEPMARK_CANCEL_CAPTURE', () => {
-  const cancel = { type: 'STEPMARK_CANCEL_CAPTURE', runId: RUN_ID, captureId: 'capture-9' } as never;
+describe('HOWBEAM_CANCEL_CAPTURE', () => {
+  const cancel = { type: 'HOWBEAM_CANCEL_CAPTURE', runId: RUN_ID, captureId: 'capture-9' } as never;
 
   it('cancels the capture for the recorded tab’s recorder', async () => {
     await expect(messages.handleCancelCapture(cancel, sender())).resolves.toEqual({ ok: true });

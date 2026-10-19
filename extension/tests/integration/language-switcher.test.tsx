@@ -78,7 +78,7 @@ describe('language switcher', () => {
 
     await waitFor(() => expect(screen.getByText('Start recording')).toBeTruthy());
     expect(screen.getByRole('combobox', { name: 'Language' })).toBeTruthy();
-    expect(storage.values['stepmark:localePreference']).toBe('en');
+    expect(storage.values['howbeam:localePreference']).toBe('en');
   });
 
   it('follows the browser again when switched back to automatic', async () => {
@@ -87,7 +87,7 @@ describe('language switcher', () => {
     await waitFor(() => expect(getLocale()).toBe('en'));
 
     await pick('Match browser');
-    expect(storage.values['stepmark:localePreference']).toBe('auto');
+    expect(storage.values['howbeam:localePreference']).toBe('auto');
     // The suite pins the browser language to zh-TW.
     await waitFor(() => expect(screen.getByText('開始錄製')).toBeTruthy());
   });
@@ -95,20 +95,20 @@ describe('language switcher', () => {
 
 describe('initLocalePreference', () => {
   it('applies the stored choice and follows changes made in other contexts', async () => {
-    storage.values['stepmark:localePreference'] = 'en';
+    storage.values['howbeam:localePreference'] = 'en';
     const stop = await initLocalePreference();
     expect(getLocale()).toBe('en');
 
-    await storage.set({ 'stepmark:localePreference': 'zh-TW' });
+    await storage.set({ 'howbeam:localePreference': 'zh-TW' });
     expect(getLocale()).toBe('zh-TW');
 
     stop();
-    await storage.set({ 'stepmark:localePreference': 'en' });
+    await storage.set({ 'howbeam:localePreference': 'en' });
     expect(getLocale()).toBe('zh-TW');
   });
 
   it('ignores an unknown stored value', async () => {
-    storage.values['stepmark:localePreference'] = 'klingon';
+    storage.values['howbeam:localePreference'] = 'klingon';
     await initLocalePreference();
     expect(getLocale()).toBe('zh-TW');
   });

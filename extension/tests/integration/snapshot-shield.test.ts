@@ -41,7 +41,7 @@ vi.mock('wxt/browser', () => ({
 import { createSnapshotShield } from '@/lib/recording/snapshot-shield';
 
 afterEach(() => {
-  document.documentElement.querySelectorAll('[data-stepmark-snapshot-shield]').forEach((element) => element.remove());
+  document.documentElement.querySelectorAll('[data-howbeam-snapshot-shield]').forEach((element) => element.remove());
   vi.restoreAllMocks();
 });
 

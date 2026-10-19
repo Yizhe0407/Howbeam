@@ -27,14 +27,14 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 vi.mock('@/lib/recording/snapshot-targeting', () => ({
-  CLEANUP_EVENT: 'stepmark_cleanup_test-extension',
+  CLEANUP_EVENT: 'howbeam_cleanup_test-extension',
   resolveSnapshotTargetAtPoint: mocks.resolveTarget,
 }));
 vi.mock('@/lib/capture/step-preview', () => ({
   createStepPreview: () => mocks.preview,
 }));
 vi.mock('@/lib/runtime/keep-alive', () => ({
-  KEEPALIVE_PORT_NAME: 'stepmark-keepalive',
+  KEEPALIVE_PORT_NAME: 'howbeam-keepalive',
   startKeepAlive: vi.fn(() => ({ stop: mocks.keepAliveStop })),
 }));
 vi.mock('@/lib/storage/storage', () => ({
@@ -109,7 +109,7 @@ async function flush(times = 6): Promise<void> {
 }
 
 function targetMessages() {
-  return mocks.sendMessage.mock.calls.filter(([message]) => message?.type === 'STEPMARK_RECAPTURE_TARGET');
+  return mocks.sendMessage.mock.calls.filter(([message]) => message?.type === 'HOWBEAM_RECAPTURE_TARGET');
 }
 
 async function install(): Promise<void> {
@@ -120,8 +120,8 @@ beforeEach(() => {
   vi.stubGlobal('crypto', { randomUUID: () => 'capture-1' });
   mocks.stateListeners.length = 0;
   mocks.sendMessage.mockReset().mockImplementation(async (message: { type: string }) => {
-    if (message.type === 'STEPMARK_RECAPTURE_READY') return true;
-    if (message.type === 'STEPMARK_RECAPTURE_TARGET') return { ok: true, status: 'replaced' };
+    if (message.type === 'HOWBEAM_RECAPTURE_READY') return true;
+    if (message.type === 'HOWBEAM_RECAPTURE_TARGET') return { ok: true, status: 'replaced' };
     if (message.type === 'CANCEL_STEP_RECAPTURE') return { ok: true, status: 'cancelled' };
     return true;
   });
@@ -138,7 +138,7 @@ beforeEach(() => {
 afterEach(() => {
   // Tear down any recorder a test left installed so listeners never leak.
   emitState({ operation: null, recapture: null });
-  document.querySelectorAll('[data-stepmark-recording-toolbar]').forEach((node) => node.remove());
+  document.querySelectorAll('[data-howbeam-recording-toolbar]').forEach((node) => node.remove());
   vi.unstubAllGlobals();
 });
 
@@ -147,9 +147,9 @@ describe('installRecaptureRecorder', () => {
     await install();
 
     expect(mocks.sendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'STEPMARK_RECAPTURE_READY', runId: RUN_ID }),
+      expect.objectContaining({ type: 'HOWBEAM_RECAPTURE_READY', runId: RUN_ID }),
     );
-    expect(document.querySelector('[data-stepmark-recording-toolbar]')).not.toBeNull();
+    expect(document.querySelector('[data-howbeam-recording-toolbar]')).not.toBeNull();
 
     pointerDown();
     await flush();
@@ -160,12 +160,12 @@ describe('installRecaptureRecorder', () => {
 
   it('tears down immediately when the background refuses readiness', async () => {
     mocks.sendMessage.mockImplementation(async (message: { type: string }) =>
-      message.type === 'STEPMARK_RECAPTURE_READY' ? false : true,
+      message.type === 'HOWBEAM_RECAPTURE_READY' ? false : true,
     );
 
     await install();
 
-    expect(document.querySelector('[data-stepmark-recording-toolbar]')).toBeNull();
+    expect(document.querySelector('[data-howbeam-recording-toolbar]')).toBeNull();
     expect(mocks.preview.remove).toHaveBeenCalled();
     expect(mocks.keepAliveStop).toHaveBeenCalled();
   });
@@ -173,7 +173,7 @@ describe('installRecaptureRecorder', () => {
   it('swallows clicks while a capture is in flight', async () => {
     let settle!: (value: unknown) => void;
     mocks.sendMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'STEPMARK_RECAPTURE_READY') return true;
+      if (message.type === 'HOWBEAM_RECAPTURE_READY') return true;
       return new Promise((resolve) => {
         settle = resolve;
       });
@@ -194,7 +194,7 @@ describe('installRecaptureRecorder', () => {
 
   it('re-arms immediately when the background rejects the selected target', async () => {
     mocks.sendMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'STEPMARK_RECAPTURE_READY') return true;
+      if (message.type === 'HOWBEAM_RECAPTURE_READY') return true;
       return { ok: false, status: 'rejected' };
     });
     await install();
@@ -228,7 +228,7 @@ describe('installRecaptureRecorder', () => {
   it('keeps the busy flag through a repeated awaiting-target notification', async () => {
     let settle!: (value: unknown) => void;
     mocks.sendMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'STEPMARK_RECAPTURE_READY') return true;
+      if (message.type === 'HOWBEAM_RECAPTURE_READY') return true;
       return new Promise((resolve) => {
         settle = resolve;
       });
@@ -254,7 +254,7 @@ describe('installRecaptureRecorder', () => {
 
     emitState({ operation: null, recapture: null });
 
-    expect(document.querySelector('[data-stepmark-recording-toolbar]')).toBeNull();
+    expect(document.querySelector('[data-howbeam-recording-toolbar]')).toBeNull();
     expect(mocks.preview.remove).toHaveBeenCalled();
     expect(mocks.keepAliveStop).toHaveBeenCalled();
     expect(mocks.unsubscribe).toHaveBeenCalled();

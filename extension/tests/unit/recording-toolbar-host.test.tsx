@@ -23,7 +23,7 @@ const lastProps = () => (mocks.render.mock.calls.at(-1)?.[0] as ReactElement<Rec
 
 afterEach(() => {
   vi.useRealTimers();
-  document.documentElement.querySelectorAll('[data-stepmark-recording-toolbar]').forEach((node) => node.remove());
+  document.documentElement.querySelectorAll('[data-howbeam-recording-toolbar]').forEach((node) => node.remove());
 });
 
 describe('mountRecordingToolbar', () => {
@@ -41,7 +41,7 @@ describe('mountRecordingToolbar', () => {
     expect(mocks.createRoot).toHaveBeenCalledTimes(1);
     expect(third.host).toBe(first.host);
     expect(third.host.isConnected).toBe(true);
-    expect(document.querySelectorAll('[data-stepmark-recording-toolbar]')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-howbeam-recording-toolbar]')).toHaveLength(1);
     third.remove();
   });
 

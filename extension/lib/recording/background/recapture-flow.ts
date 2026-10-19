@@ -34,8 +34,8 @@ import type {
   ClickCapture,
   FocusStepRecaptureSourceMessage,
   FocusStepRecaptureSourceResult,
-  StepmarkRecaptureReadyMessage,
-  StepmarkRecaptureTargetMessage,
+  HowbeamRecaptureReadyMessage,
+  HowbeamRecaptureTargetMessage,
   PreflightStepRecaptureSourcePermissionMessage,
   PreflightStepRecaptureSourcePermissionResult,
   StartStepRecaptureMessage,
@@ -159,7 +159,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
   }
 
   async function handleRecaptureReady(
-    message: StepmarkRecaptureReadyMessage,
+    message: HowbeamRecaptureReadyMessage,
     sender: Browser.runtime.MessageSender,
   ): Promise<boolean> {
     const context = (await getRecordingState()).recapture;
@@ -325,7 +325,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
           },
         });
       } catch (error) {
-        console.error('[stepmark] failed to start recapture recorder', error);
+        console.error('[howbeam] failed to start recapture recorder', error);
         if (version === control.controlVersion) {
           await failStepRecapture(runId, 'INJECTION_FAILED', t().recaptureFlow.injectFailed, version);
         }
@@ -450,7 +450,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
   }
 
   async function handleRecaptureTarget(
-    message: StepmarkRecaptureTargetMessage,
+    message: HowbeamRecaptureTargetMessage,
     sender: Browser.runtime.MessageSender,
     expectedControlVersion: number,
   ): Promise<StepRecaptureTargetResult> {
@@ -544,7 +544,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
           ? recaptureTargetErrorMessage(error.code, context.target.kind)
           // 原本內容 (not 原內容) matches the editor's own recapture wording.
           : userFacingErrorMessage(error, t().recaptureFlow.failedUnchanged);
-      console.error('[stepmark] failed to replace step capture', error);
+      console.error('[howbeam] failed to replace step capture', error);
       if (expectedControlVersion === control.controlVersion) {
         const version = control.bumpVersion();
         await settleStepRecapture(message.runId, 'failed', version, errorCode, errorMessage);

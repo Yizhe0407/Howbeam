@@ -92,7 +92,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
       // this worker): the run can still continue in another tab. Not awaited —
       // clicks wait for this recovery, and the lifecycle queue can wait for clicks.
       void handleRecordedTabGone(state.tabId).catch((error) => {
-        console.error('[stepmark] failed to settle the recording whose tab is gone', error);
+        console.error('[howbeam] failed to settle the recording whose tab is gone', error);
       });
       return;
     }
@@ -250,7 +250,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
       try {
         await focusTab(tab.id!, tab.windowId);
       } catch (error) {
-        console.error('[stepmark] failed to focus the continuation source tab', error);
+        console.error('[howbeam] failed to focus the continuation source tab', error);
         await control.writeStateForControl(version, (current) =>
           startFailureState(current, message.mode, 'SOURCE_TAB_FAILED', t().background.sourceTabSwitchFailed));
         return;
@@ -331,7 +331,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
         },
       });
     } catch (err) {
-      console.error('[stepmark] failed to inject recorder:', describeBrowserError(err), err);
+      console.error('[howbeam] failed to inject recorder:', describeBrowserError(err), err);
       // The anchor was already published to the run state, so it must be
       // withdrawn before its row can go.
       if (startupAnchorId) await captureFlow.withdrawAnchorThenDelete(runId, startupAnchorId, version, true);
@@ -341,7 +341,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
       } catch (recoveryError) {
         control.acceptingClicks = false;
         console.error(
-          '[stepmark] failed to persist recording startup failure:',
+          '[howbeam] failed to persist recording startup failure:',
           describeBrowserError(recoveryError),
           recoveryError,
         );
@@ -407,7 +407,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
       }
       return { ok: true, contentRevision: updated.contentRevision };
     } catch (error) {
-      console.error('[stepmark] failed to reset Project', error);
+      console.error('[howbeam] failed to reset Project', error);
       return { ok: false, error: t().background.resetFailedReload };
     }
   }

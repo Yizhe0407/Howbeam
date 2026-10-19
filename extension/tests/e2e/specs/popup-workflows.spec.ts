@@ -15,15 +15,15 @@ declare const chrome: {
 
 async function readActiveProjectId(page: import('@playwright/test').Page): Promise<string | null> {
   return page.evaluate(async () => {
-    const stored = await chrome.storage.local.get('stepmark:activeProjectId');
-    const value = stored['stepmark:activeProjectId'];
+    const stored = await chrome.storage.local.get('howbeam:activeProjectId');
+    const value = stored['howbeam:activeProjectId'];
     return typeof value === 'string' && value.length > 0 ? value : null;
   });
 }
 
 async function readProjectIds(page: import('@playwright/test').Page): Promise<string[]> {
   return page.evaluate(async () => new Promise<string[]>((resolve, reject) => {
-    const request = indexedDB.open('stepmark', 2);
+    const request = indexedDB.open('howbeam', 2);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const db = request.result;
@@ -97,7 +97,7 @@ test.describe('popup workflows', () => {
     await expect.poll(async () => (await readRecordingState(statePage)).phase).toBe('recording');
     await expect.poll(async () => (await readRecordingState(statePage)).mode).toBe('snapshot');
     await expect.poll(async () => (await readRecordingState(statePage)).numbered).toBe(true);
-    await expect.poll(() => appPage.locator('[data-stepmark-snapshot-shield]').count()).toBe(1);
+    await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(1);
 
     // Popup start always records into a brand-new Project (Scribe/Tango convention); the previously selected Project is never appended to.
     const runSessionId = (await readRecordingState(statePage)).sessionId;
@@ -109,7 +109,7 @@ test.describe('popup workflows', () => {
     await expect(popupPage.getByRole('button', { name: '停止錄製' })).toHaveCount(0);
     await stopRecording(statePage);
     await expect.poll(async () => (await readRecordingState(statePage)).isRecording).toBe(false);
-    await expect.poll(() => appPage.locator('[data-stepmark-snapshot-shield]').count()).toBe(0);
+    await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(0);
 
     // The run captured nothing, so the auto-created Project is reclaimed: only the seeded Project survives and the selection is cleared.
     await expect.poll(() => readProjectIds(statePage)).toEqual([seededProjectId]);
@@ -127,8 +127,8 @@ test.describe('popup workflows', () => {
       const extensionChrome = globalThis as typeof globalThis & {
         chrome: { storage: { local: { get(keys: string): Promise<Record<string, unknown>> } } };
       };
-      const stored = await extensionChrome.chrome.storage.local.get('stepmark:activeProjectId');
-      return stored['stepmark:activeProjectId'];
+      const stored = await extensionChrome.chrome.storage.local.get('howbeam:activeProjectId');
+      return stored['howbeam:activeProjectId'];
     });
     if (typeof activeProjectId !== 'string' || activeProjectId.length === 0) {
       throw new Error('Expected reset data to select an empty Project.');

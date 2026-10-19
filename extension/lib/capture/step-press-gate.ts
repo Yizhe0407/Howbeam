@@ -125,7 +125,7 @@ export interface StepPressGateOptions {
   isTrusted?: (event: Event) => boolean;
 }
 
-/** True for input aimed at Stepmark's own UI (the recording toolbar, the
+/** True for input aimed at Howbeam's own UI (the recording toolbar, the
  * region selector). Closed shadow roots retarget to their host, which carries
  * the overlay marker, so the composed path always exposes it. */
 export function isExtensionOverlayEvent(event: Event): boolean {
@@ -345,7 +345,7 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
 
     handleEvent(event) {
       if (!isTrusted(event)) return;
-      // Stepmark's own controls must always receive their input, even while a
+      // Howbeam's own controls must always receive their input, even while a
       // capture is in flight; they are never part of a recorded gesture.
       if (isExtensionOverlayEvent(event)) return;
       const press = current;

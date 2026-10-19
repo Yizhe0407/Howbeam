@@ -68,7 +68,7 @@ let pendingInitEvents: MessageEvent[] | null = [];
 function consume(event: Event): void {
   if (
     event.target instanceof Element &&
-    event.target.closest('[data-stepmark-shield-toolbar],[data-stepmark-region-capture]')
+    event.target.closest('[data-howbeam-shield-toolbar],[data-howbeam-region-capture]')
   ) {
     return;
   }
@@ -89,7 +89,7 @@ function tryInitialize(event: MessageEvent): void {
   const theme = event.data.theme;
   const overlay = createOverlay();
   const toolbarContainer = document.createElement('div');
-  toolbarContainer.setAttribute('data-stepmark-shield-toolbar', '');
+  toolbarContainer.setAttribute('data-howbeam-shield-toolbar', '');
   document.body.append(toolbarContainer);
   const toolbarRoot = createRoot(toolbarContainer);
   interface PendingControl {
@@ -126,7 +126,7 @@ function tryInitialize(event: MessageEvent): void {
       port.postMessage(message);
       return true;
     } catch (error) {
-      console.error('[stepmark] snapshot shield channel failed', error);
+      console.error('[howbeam] snapshot shield channel failed', error);
       failShieldChannel();
       return false;
     }
@@ -206,7 +206,7 @@ function tryInitialize(event: MessageEvent): void {
     }
     // Over the toolbar the highlight freezes on its last target instead of clearing,
     // since reaching undo/crop crosses the frozen page and would drop the aimed box.
-    if (event.target instanceof Element && event.target.closest('[data-stepmark-shield-toolbar]')) return;
+    if (event.target instanceof Element && event.target.closest('[data-howbeam-shield-toolbar]')) return;
     ensureKeyboardFocus();
     hover.pointerMove(event.clientX, event.clientY);
   };
@@ -246,7 +246,7 @@ function tryInitialize(event: MessageEvent): void {
     if (regionCapture?.isActive()) return;
     if (
       event.target instanceof Element &&
-      event.target.closest('[data-stepmark-shield-toolbar],[data-stepmark-region-capture]')
+      event.target.closest('[data-howbeam-shield-toolbar],[data-howbeam-region-capture]')
     ) {
       return;
     }
@@ -403,7 +403,7 @@ function tryInitialize(event: MessageEvent): void {
     if (regionCapture?.isActive()) return;
     if (!featureFlags.snapshotKeyboardNav) return;
     const target = event.target;
-    if (target instanceof Element && target.closest('[data-stepmark-shield-toolbar]')) return;
+    if (target instanceof Element && target.closest('[data-howbeam-shield-toolbar]')) return;
     if (event.key === 'Escape') {
       if (!liveRegion) return;
       // Escape leaves candidate traversal and hands the keyboard to the recording controls.
@@ -578,7 +578,7 @@ void (async () => {
     if (!isSnapshotShieldTokenRecord(record)) return;
     expectedToken = record.token;
   } catch (error) {
-    console.error('[stepmark] failed to load the snapshot shield init token', error);
+    console.error('[howbeam] failed to load the snapshot shield init token', error);
     return;
   }
   const queued = pendingInitEvents ?? [];

@@ -56,8 +56,8 @@ async function openEditor(
   expectedEntries: number,
 ): Promise<Page> {
   const sessionId = await popupPage.evaluate(async () => {
-    const stored = await chrome.storage.local.get('stepmark:activeProjectId');
-    return stored['stepmark:activeProjectId'];
+    const stored = await chrome.storage.local.get('howbeam:activeProjectId');
+    return stored['howbeam:activeProjectId'];
   });
   if (typeof sessionId !== 'string' || sessionId.length === 0) {
     throw new Error('No active E2E Project was initialized.');
@@ -202,7 +202,7 @@ test.describe('editor workflows', () => {
     await recordSnapshotTargets(appPage, popupPage, ['#action-button', '#disabled-button']);
     await popupPage.evaluate(async () => {
       await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('stepmark', 2);
+        const request = indexedDB.open('howbeam', 2);
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {
           const db = request.result;
@@ -230,7 +230,7 @@ test.describe('editor workflows', () => {
     });
 
     const editor = await openEditor(extensionContext, extensionId, popupPage, 1);
-    const frames = editor.locator('main [data-stepmark-annotation-frame]');
+    const frames = editor.locator('main [data-howbeam-annotation-frame]');
     await expect(frames).toHaveCount(2);
     const first = await frames.nth(0).boundingBox();
     const second = await frames.nth(1).boundingBox();
@@ -443,7 +443,7 @@ test.describe('editor workflows', () => {
     expect(html).toContain('<h2 class="section-heading">畫面重點</h2>');
     expect(html.indexOf('畫面重點')).toBeLessThan(html.indexOf('<span class="step-number">3.</span>'));
     expect(html).not.toContain('（未填寫說明）');
-    expect(html).toContain('Made with Stepmark');
+    expect(html).toContain('Made with Howbeam');
   });
 
   test('keeps the editor usable at 320px and 768px without horizontal overflow', async ({
@@ -519,7 +519,7 @@ test.describe('editor workflows', () => {
     // The elsewhere path shows an explicit tab picker; navigated.html differs from the project's last-step URL, so it is preselected.
     const picker = dialog.getByRole('radiogroup', { name: '選擇要接續錄製的分頁' });
     await expect(picker).toBeVisible();
-    const preselected = picker.getByRole('radio', { name: /Stepmark Navigated Fixture/ });
+    const preselected = picker.getByRole('radio', { name: /Howbeam Navigated Fixture/ });
     await expect(preselected).toHaveAttribute('aria-checked', 'true');
     // Extension pages (editor, popup) are never offered as recording targets.
     await expect(picker.getByRole('radio')).toHaveCount(1);
@@ -528,7 +528,7 @@ test.describe('editor workflows', () => {
     await expect.poll(async () => (await readRecordingState(popupPage)).isRecording).toBe(true);
     // The elsewhere path records the already-open navigated.html tab; the source-locked default would have reopened the stored index URL.
     expect(extensionContext.pages().length).toBe(pagesBefore);
-    await expect.poll(() => appPage.locator('[data-stepmark-step-preview]').count()).toBe(1);
+    await expect.poll(() => appPage.locator('[data-howbeam-step-preview]').count()).toBe(1);
     expect(appPage.url()).toBe(`${FIXTURE_URL}navigated.html`);
 
     await clickTarget(appPage, 'h1');

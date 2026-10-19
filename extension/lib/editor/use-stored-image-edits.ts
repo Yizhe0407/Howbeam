@@ -120,7 +120,7 @@ export function useStoredImageEdits(
       }
       running = check()
         .catch((error) => {
-          console.warn('[stepmark] failed to check for image edits made elsewhere', error);
+          console.warn('[howbeam] failed to check for image edits made elsewhere', error);
         })
         .finally(() => {
           running = null;
