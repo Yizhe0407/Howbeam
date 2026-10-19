@@ -56,7 +56,6 @@ describe('catalogs', () => {
     expect(en.mode.steps.itemCount(1)).toBe('1 step');
     expect(en.mode.steps.itemCount(3)).toBe('3 steps');
     expect(en.library.screenCount(1)).toBe('1 screen');
-    expect(en.export.stepCount(2)).toBe('2 steps');
   });
 });
 

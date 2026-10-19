@@ -699,8 +699,6 @@ export const en: Messages = {
   export: {
     missingDescription: '(No description)',
     imageAlt: 'Step screenshot',
-    stepCount: (count: number) => plural(count, 'step', 'steps'),
-    createdAt: (date: string) => `Created ${date}`,
     pageNumber: (page: number) => `Page ${page}`,
     downloadNotStarted: 'The browser didn’t start the download. Please try again.',
   },

@@ -1,7 +1,6 @@
 import { repairProjectSections, type ProjectSection } from '../project/project-sections';
 import { type StepEntry } from '../storage/models';
 import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
-import { intlLocale } from '@/lib/shared/i18n';
 
 export interface ProjectExportMetadata {
   /** 未指定 filename 時亦作為檔名來源。 */
@@ -10,8 +9,6 @@ export interface ProjectExportMetadata {
   /** 副檔名由 projectExportFilename 加入。 */
   filename?: string;
   sections?: readonly ProjectSection[];
-  /** 僅供顯示的 epoch 毫秒，不影響檔名。 */
-  createdAt?: number;
 }
 
 export interface ProjectExportOptions {
@@ -163,18 +160,6 @@ export function projectFilenameStem(metadata: ProjectExportMetadata): string {
   // `con.md` is invalid on Windows exactly like `con`; keep the name readable
   // but no longer a device name.
   return WINDOWS_RESERVED_NAMES.test(bounded) ? `${bounded}-${DEFAULT_FILENAME}` : bounded;
-}
-
-/** 時間戳缺少或無效時回傳空字串。 */
-export function formatProjectCreatedAt(timestamp: unknown): string {
-  if (typeof timestamp !== 'number' || !Number.isFinite(timestamp)) return '';
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return '';
-  try {
-    return new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'long' }).format(date);
-  } catch {
-    return date.toISOString().slice(0, 10);
-  }
 }
 
 export function textValue(value: unknown): string {

@@ -269,7 +269,7 @@ describe('project export', () => {
     expect(drawnText).toContain('Shared page');
     expect(drawnText).toContain('1. ');
     expect(drawnText).toContain('First annotation');
-    expect(drawnText).toContain('共 1 個步驟');
+    expect(drawnText).not.toContain('共 1 個步驟');
     expect(drawnText).toContain('第 1 頁');
     // The step number is printed, not drawn in a badge.
     expect(drawnText).toContain('1.');
@@ -530,14 +530,11 @@ describe('project export', () => {
     expect(html).not.toContain('以 Howbeam 製作');
   });
 
-  it('renders a title-block metadata line with the step count and optional creation date', async () => {
-    const html = await generateProjectHtml([entry()], { title: 'Project', createdAt: Date.UTC(2026, 6, 26, 12) });
-    expect(html).toContain('共 1 個步驟');
-    expect(html).toContain('建立於');
+  it('leaves the step count out of the title block', async () => {
+    const html = await generateProjectHtml([entry()], { title: 'Project' });
 
-    const withoutDate = await generateProjectHtml([entry()], { title: 'Project' });
-    expect(withoutDate).toContain('共 1 個步驟');
-    expect(withoutDate).not.toContain('建立於');
+    expect(html).not.toContain('document-meta');
+    expect(html).not.toContain('共 1 個步驟');
   });
 
   it('wraps a compositing failure with the failing step ordinal and stays fail-closed', async () => {

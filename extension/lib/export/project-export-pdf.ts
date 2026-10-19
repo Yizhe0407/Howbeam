@@ -7,7 +7,6 @@ import {
   PROJECT_EXPORT_THEME,
   ProjectExportLimitError,
   IMAGE_MIME_TYPE,
-  formatProjectCreatedAt,
   sectionsByStartEntry,
   textOrDefault,
   textValue,
@@ -73,11 +72,7 @@ export async function generateProjectPdf(
   await paginator.addParagraph(title, PDF_TITLE_TEXT);
   const projectDescription = textValue(metadata.description);
   if (projectDescription) await paginator.addParagraph(projectDescription, PDF_PROJECT_DESCRIPTION_TEXT);
-  const metaParts = [t().export.stepCount(entries.length)];
-  const createdAt = formatProjectCreatedAt(metadata.createdAt);
-  if (createdAt) metaParts.push(t().export.createdAt(createdAt));
-  await paginator.addParagraph(metaParts.join(' · '), PDF_META_TEXT);
-  await paginator.addRule(0, PDF_HEADER_RULE_GAP_AFTER, PDF_HEADER_RULE_THICKNESS, PDF_COLOR_TEXT);
+  await paginator.addRule(PDF_HEADER_RULE_GAP_BEFORE, PDF_HEADER_RULE_GAP_AFTER, PDF_HEADER_RULE_THICKNESS, PDF_COLOR_TEXT);
 
   const sections = sectionsByStartEntry(metadata.sections, entries);
   let renderedCount = 0;
@@ -174,6 +169,7 @@ const PDF_FOOTER_TEXT_Y = PDF_PAGE_HEIGHT - 92;
 const PDF_STEP_INDENT = 66;
 const PDF_STEP_CONTENT_WIDTH = PDF_CONTENT_WIDTH - PDF_STEP_INDENT;
 const PDF_HEADER_RULE_THICKNESS = 4;
+const PDF_HEADER_RULE_GAP_BEFORE = 10;
 const PDF_HEADER_RULE_GAP_AFTER = 34;
 const PDF_SECTION_RULE_THICKNESS = 2;
 const PDF_SECTION_RULE_GAP_AFTER = 28;
@@ -220,14 +216,6 @@ const PDF_PROJECT_DESCRIPTION_TEXT: PdfTextStyle = {
   weight: 400,
   gapBefore: 0,
   gapAfter: 12,
-};
-const PDF_META_TEXT: PdfTextStyle = {
-  fontSize: 23,
-  lineHeight: 36,
-  color: PDF_COLOR_MUTED,
-  weight: 400,
-  gapBefore: 6,
-  gapAfter: 18,
 };
 const PDF_SECTION_TEXT: PdfTextStyle = {
   fontSize: 36,

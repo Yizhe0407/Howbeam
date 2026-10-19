@@ -7,7 +7,6 @@ import {
   MADE_WITH,
   PROJECT_EXPORT_THEME,
   escapeProjectHtml,
-  formatProjectCreatedAt,
   sectionsByStartEntry,
   textOrDefault,
   textValue,
@@ -38,15 +37,9 @@ export async function generateProjectHtml(
 
   const title = textOrDefault(metadata.title, DEFAULT_TITLE);
   const description = textValue(metadata.description);
-  // renderEntryImages yields every entry or throws, so the count is known
-  // before the first image is rendered.
-  const metaParts = [t().export.stepCount(entries.length)];
-  const createdAt = formatProjectCreatedAt(metadata.createdAt);
-  if (createdAt) metaParts.push(t().export.createdAt(createdAt));
   const header = [
     `<h1>${escapeProjectHtml(title)}</h1>`,
     description ? `<p class="document-description">${htmlText(description)}</p>` : '',
-    `<p class="document-meta">${metaParts.map((part) => `<span>${escapeProjectHtml(part)}</span>`).join('')}</p>`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -180,8 +173,6 @@ h1, h2, h3, p, li { margin: 0; overflow-wrap: anywhere; }
 .document-header { padding-bottom: 20px; border-bottom: 2px solid var(--rule-strong); }
 h1 { font-size: 30px; line-height: 1.35; font-weight: 700; }
 .document-description { margin-top: 10px; color: var(--text-secondary); }
-.document-meta { margin-top: 14px; color: var(--text-muted); font-size: 14px; }
-.document-meta span + span::before { content: "・"; margin: 0 4px; }
 .section-heading { margin-top: 44px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); font-size: 21px; line-height: 1.45; font-weight: 700; }
 .step { margin-top: 32px; }
 .step-title { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); font-size: 17px; line-height: 1.7; font-weight: 600; }
