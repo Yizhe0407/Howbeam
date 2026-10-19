@@ -156,7 +156,7 @@ export default function StepStage({
   }
 
   const headerRow = (
-    <div className="flex shrink-0 items-center justify-between gap-3 mb-3.5">
+    <div className="mb-3.5 flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
       <div className="flex min-w-0 items-center gap-2">
         {sectionTitle && (
           <span
@@ -197,7 +197,7 @@ export default function StepStage({
           type="button"
           onClick={() => setImageEditorOpen(true)}
           disabled={editingDisabled}
-          className="flex h-10 items-center gap-1.5 rounded-md border-2 border-border bg-card px-3 text-xs font-bold text-foreground outline-none transition-colors focus-ring hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
+          className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border-2 border-border bg-card px-3 text-xs font-bold text-foreground outline-none transition-colors focus-ring hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
         >
           <PencilRuler className="size-4" />
           {privacy.reviewRequired ? t().editor.imageEdit.openReview : t().editor.imageEdit.open}
@@ -269,13 +269,13 @@ export default function StepStage({
 
   if (entry.kind === 'single') {
     return (
-      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-y-auto bg-background px-4 pt-4 pb-6 sm:px-6 lg:overflow-hidden lg:px-10 lg:pt-5 lg:pb-16">
+      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-y-auto bg-background px-4 pt-4 pb-6 sm:px-6 lg:px-10 lg:pt-5 lg:pb-16">
         <div className="flex w-full max-w-[1180px] flex-none flex-col gap-3 lg:min-h-0 lg:flex-1">
           <div className="flex-none">{titleAndTagRow}</div>
           <div className="flex-none">{headerRow}</div>
           {errorNotice && <div className="flex-none">{errorNotice}</div>}
           {privacyReviewNotice && <div className="flex-none">{privacyReviewNotice}</div>}
-          <div className="flex w-full flex-none items-center justify-center p-1 lg:min-h-0 lg:flex-1">
+          <div className="flex w-full flex-none items-center justify-center p-1 lg:min-h-[14rem] lg:flex-1">
             {imageFrame(t().editor.stage.stepAlt(index + 1))}
           </div>
           <div className="flex-none">
@@ -293,12 +293,12 @@ export default function StepStage({
   }
 
   return (
-    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto bg-background px-4 pt-4 pb-6 sm:px-6 lg:overflow-hidden lg:px-10 lg:pt-5 lg:pb-16">
+    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto bg-background px-4 pt-4 pb-6 sm:px-6 lg:px-10 lg:pt-5 lg:pb-16">
       <div className="flex-none">{titleAndTagRow}</div>
       <div className="flex-none">{headerRow}</div>
       {errorNotice && <div className="flex-none">{errorNotice}</div>}
       {privacyReviewNotice && <div className="flex-none">{privacyReviewNotice}</div>}
-      <div className="flex flex-none flex-col gap-5 lg:min-h-0 lg:flex-1 lg:flex-row lg:gap-[22px]">
+      <div className="flex flex-none flex-col gap-5 lg:min-h-[14rem] lg:flex-1 lg:flex-row lg:gap-[22px]">
         <div className="flex min-w-0 flex-none items-center justify-center p-1 lg:min-h-0 lg:flex-1">
           {imageFrame(t().editor.stage.snapshotAlt(index + 1))}
         </div>
