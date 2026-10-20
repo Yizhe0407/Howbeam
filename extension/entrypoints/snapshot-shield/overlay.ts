@@ -3,12 +3,11 @@ import {
   type SnapshotShieldRect,
   type SnapshotShieldSelection,
 } from '@/lib/recording/snapshot-shield-protocol';
-import { BADGE_RADIUS, HIGHLIGHT_LINE_WIDTH, HIGHLIGHT_RADIUS, LEADER_LINE_WIDTH, MARKER_INNER_RADIUS, MARKER_RADIUS, MARKER_RING_WIDTH } from '@/lib/media/annotation-contract';
-import { fitHighlightFrame, getBadgeFontSize } from '@/lib/media/annotation-geometry';
-import { layoutAnnotations } from '@/lib/media/annotation-layout';
+import { BADGE_RADIUS, type AnnotationLayout, HIGHLIGHT_LINE_WIDTH, HIGHLIGHT_RADIUS, LEADER_LINE_WIDTH, MARKER_INNER_RADIUS, MARKER_RADIUS, MARKER_RING_WIDTH } from '@/lib/media/annotation-contract';
+import { getBadgeFontSize } from '@/lib/media/annotation-geometry';
+import { layoutWithProvisional } from '@/lib/media/annotation-layout';
 
-function positionBox(element: HTMLElement, rect: SnapshotShieldRect): void {
-  const frame = fitHighlightFrame(rect, window.innerWidth, window.innerHeight);
+function placeBox(element: HTMLElement, frame: SnapshotShieldRect): void {
   element.style.left = `${frame.x}px`;
   element.style.top = `${frame.y}px`;
   element.style.width = `${frame.width}px`;
@@ -42,6 +41,7 @@ export function createOverlay(): SnapshotOverlay {
   const committedIds = new Set<number>();
   const committedSelections: Array<SnapshotShieldSelection & { id: number }> = [];
   const committedRectKeys = new Set<string>();
+  let previewRect: SnapshotShieldRect | null = null;
 
   const svgElement = <K extends keyof SVGElementTagNameMap>(name: K): SVGElementTagNameMap[K] =>
     document.createElementNS('http://www.w3.org/2000/svg', name);
@@ -88,7 +88,7 @@ export function createOverlay(): SnapshotOverlay {
     setAttribute(leader, 'points', points);
   };
 
-  const reconcileTarget = (group: SVGGElement, layout: ReturnType<typeof layoutAnnotations>[number]) => {
+  const reconcileTarget = (group: SVGGElement, layout: AnnotationLayout) => {
     const wantsMarker = layout.markerOnly;
     const hasMarker = group.firstElementChild?.classList.contains('snapshot-annotation__marker') ?? false;
     if (!group.firstElementChild || wantsMarker !== hasMarker) {
@@ -151,14 +151,18 @@ export function createOverlay(): SnapshotOverlay {
   const renderCommitted = () => {
     committedLayer.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
     committedLayer.setAttribute('preserveAspectRatio', 'none');
-    const layouts = layoutAnnotations(
+    const pendingRect = previewRect && !isCommittedRect(previewRect) ? previewRect : null;
+    const { layouts, provisionalFrame } = layoutWithProvisional(
       committedSelections.map((selection) => ({
         bounds: selection.rect,
         order: selection.id,
       })),
       window.innerWidth,
       window.innerHeight,
+      pendingRect,
     );
+    preview.hidden = !provisionalFrame;
+    if (provisionalFrame) placeBox(preview, provisionalFrame);
     const selectionById = new Map(committedSelections.map((selection) => [selection.id, selection]));
 
     for (const layout of layouts) {
@@ -184,9 +188,10 @@ export function createOverlay(): SnapshotOverlay {
 
   return {
     preview(rect: SnapshotShieldRect | null) {
-      preview.hidden = !rect || isCommittedRect(rect);
       document.body.classList.toggle('has-preview-target', Boolean(rect));
-      if (rect && !preview.hidden) positionBox(preview, rect);
+      if ((rect && previewRect && snapshotRectKey(rect) === snapshotRectKey(previewRect)) || (!rect && !previewRect)) return;
+      previewRect = rect;
+      renderCommitted();
     },
     commit(selection: SnapshotShieldSelection & { id: number }) {
       if (committedIds.has(selection.id)) return;

@@ -40,6 +40,22 @@ export function layoutAnnotations(
   viewportWidth: number,
   viewportHeight: number,
 ): AnnotationLayout[] {
+  return layoutWithProvisional(annotations, viewportWidth, viewportHeight, null).layouts;
+}
+
+/**
+ * Same layout, plus one not-yet-committed target (the hover preview). It is
+ * framed and padded as a single and every badge dodges it, exactly as if it
+ * were committed — but it never joins a group and gets no badge, so hovering
+ * cannot flip a committed target into a marker. `provisionalFrame` is the
+ * frame it will have once committed.
+ */
+export function layoutWithProvisional(
+  annotations: Annotation[],
+  viewportWidth: number,
+  viewportHeight: number,
+  provisional: Bounds | null,
+): { layouts: AnnotationLayout[]; provisionalFrame: Bounds | null } {
   const count = annotations.length;
   const parent = Array.from({ length: count }, (_, index) => index);
   const find = (index: number): number => {
@@ -107,6 +123,7 @@ export function layoutAnnotations(
   // targets never visually collide; the obstacle index and perimeter-badge
   // picker below both build on these final frames.
   const singleRawBounds = singles.map((index) => annotations[index].bounds);
+  if (provisional) singleRawBounds.push(provisional);
   const singlePaddings = adaptiveSidePaddings(singleRawBounds);
   const singleFrames = singleRawBounds.map((bounds, position) =>
     fitBoundsInViewport(
@@ -280,5 +297,8 @@ export function layoutAnnotations(
     });
   });
 
-  return layouts.sort((a, b) => a.order - b.order);
+  return {
+    layouts: layouts.sort((a, b) => a.order - b.order),
+    provisionalFrame: provisional ? singleFrames[singles.length] : null,
+  };
 }

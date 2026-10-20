@@ -5,8 +5,8 @@ vi.mock('@/lib/capture/raster-image-validation', () => ({
 }));
 import { BADGE_RADIUS, HIGHLIGHT_PADDING, LEADER_LINE_WIDTH, MARKER_RADIUS, REDACTION_COLOR, REDACTION_EXPANSION, type AnnotationLayout } from '@/lib/media/annotation-contract';
 import { compositeHighlight, compositeMultiHighlight, getExpandedRedactionBounds } from '@/lib/media/annotation-composite';
-import { getBadgeFontSize } from '@/lib/media/annotation-geometry';
-import { layoutAnnotations } from '@/lib/media/annotation-layout';
+import { distanceToBounds, getBadgeFontSize } from '@/lib/media/annotation-geometry';
+import { layoutAnnotations, layoutWithProvisional } from '@/lib/media/annotation-layout';
 
 interface Point {
   x: number;
@@ -267,6 +267,39 @@ describe('layoutAnnotations', () => {
 
     expect(layouts).toHaveLength(2);
     layouts.forEach(expectFiniteLayout);
+  });
+
+  it('moves a badge off a provisional target without turning it into a group member', () => {
+    const search = { x: 648, y: 113, width: 334, height: 64 };
+    const icon = { x: 1000, y: 113, width: 55, height: 64 };
+    const committedOnly = layoutWithProvisional([{ bounds: search, order: 6 }], 1_920, 1_080, null);
+    const withHover = layoutWithProvisional([{ bounds: search, order: 6 }], 1_920, 1_080, icon);
+    const committedBoth = layoutAnnotations(
+      [{ bounds: search, order: 6 }, { bounds: icon, order: 7 }],
+      1_920,
+      1_080,
+    );
+
+    expect(distanceToBounds(committedOnly.layouts[0].badgeAnchor, committedBoth[1].frame)).toBeLessThan(15);
+    expect(distanceToBounds(withHover.layouts[0].badgeAnchor, withHover.provisionalFrame!)).toBeGreaterThanOrEqual(15);
+    expect(withHover.layouts).toHaveLength(1);
+    expect(withHover.layouts[0].markerOnly).toBe(false);
+    expect(withHover.layouts[0].badgeAnchor).toEqual(committedBoth[0].badgeAnchor);
+    expect(withHover.provisionalFrame).toEqual(committedBoth[1].frame);
+  });
+
+  it('keeps a committed target framed when the provisional one coincides with it', () => {
+    const bounds = { x: 300, y: 200, width: 120, height: 40 };
+    const { layouts, provisionalFrame } = layoutWithProvisional(
+      [{ bounds, order: 1 }],
+      1_280,
+      800,
+      { ...bounds, x: bounds.x + 10 },
+    );
+
+    expect(layouts).toHaveLength(1);
+    expect(layouts[0].markerOnly).toBe(false);
+    expect(provisionalFrame).not.toBeNull();
   });
 
   it('routes a horizontal cluster to a horizontal lane in step order without leader crossings', () => {
