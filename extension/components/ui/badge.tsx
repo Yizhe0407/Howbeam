@@ -19,7 +19,7 @@ const badgeVariants = cva(
         status: 'gap-1.5 border-recording bg-danger-soft px-2.5 py-1 text-xs text-danger',
         /** A dashed "add" control, for actions that create something. */
         dashedAction:
-          'relative h-8 gap-1 overflow-visible border-transparent bg-transparent px-3 py-1 text-muted-foreground hover:border-border hover:bg-secondary hover:text-foreground',
+          'relative gap-1 overflow-visible border-transparent bg-transparent px-2.5 py-0.5 text-muted-foreground hover:border-border hover:bg-secondary hover:text-foreground',
       },
     },
     defaultVariants: {
