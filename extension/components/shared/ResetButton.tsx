@@ -6,6 +6,7 @@ import { cn } from '@/lib/shared/utils';
 import { useState, type ComponentProps } from 'react';
 import ConfirmationDialog from './ConfirmationDialog';
 import { t } from '@/lib/shared/i18n';
+import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 
 interface Props {
   hasSteps: boolean;
@@ -28,6 +29,7 @@ export default function ResetButton({
   onReset,
 }: Props) {
   const [resetting, setResetting] = useState(false);
+  const resettingShown = useDeferredBusy(resetting);
   const [resetError, setResetError] = useState<string | null>(null);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
 
@@ -58,16 +60,16 @@ export default function ResetButton({
             setResetError(null);
             setConfirmationOpen(true);
           }}
-          disabled={!hasSteps || !sessionId || disabled || resetting}
-          aria-label={resetting ? t().reset.pendingLabel : t().reset.actionLabel}
+          disabled={!hasSteps || !sessionId || disabled || resettingShown}
+          aria-label={resettingShown ? t().reset.pendingLabel : t().reset.actionLabel}
           className={cn(
             'hover:bg-danger-soft hover:text-danger',
             variant === 'outline' && 'hover:border-recording',
             className,
           )}
         >
-          {resetting ? <Loader2 className="animate-spin" /> : <RotateCcw />}
-          <span>{resetting ? t().reset.pending : t().reset.label}</span>
+          {resettingShown ? <Loader2 className="animate-spin" /> : <RotateCcw />}
+          <span>{resettingShown ? t().reset.pending : t().reset.label}</span>
         </Button>
       </div>
       <ConfirmationDialog

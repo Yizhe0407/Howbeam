@@ -30,3 +30,6 @@ web-ext.config.ts
 
 # Vitest coverage output
 coverage
+
+# Pinned font sources downloaded by scripts/pdf-fonts/build.py
+scripts/pdf-fonts/.cache

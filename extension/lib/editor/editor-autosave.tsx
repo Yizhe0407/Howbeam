@@ -116,7 +116,6 @@ function logAutosaveFailure(message: string): (error: unknown) => void {
  * foreign drafts require an explicit load and confirmation. */
 export function useStepDescriptionAutosave(
   step: Step,
-  onChange: () => void | Promise<void>,
   delay = 650,
 ): DescriptionAutosaveResult {
   const { register } = useEditorSaveRegistry();
@@ -146,19 +145,10 @@ export function useStepDescriptionAutosave(
   const lastExternalValue = useRef(step.description);
   const stepId = useRef(step.id);
   const sessionId = useRef(step.sessionId);
-  const onChangeRef = useRef(onChange);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeSave = useRef<Promise<void> | null>(null);
   const mounted = useRef(true);
   const confirmationRequired = useRef(initial.confirmationRequired);
-
-  // Writing a ref during render breaks under concurrent rendering, where a
-  // render can be discarded. Committing it in an effect keeps the latest
-  // callback available to the save loop, which only ever runs from a timer,
-  // a blur, or an explicit flush — always after the commit.
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  });
 
   const clearTimer = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -257,13 +247,6 @@ export function useStepDescriptionAutosave(
           storedDescription,
         );
         refreshRecoveries();
-        try {
-          await onChangeRef.current();
-        } catch (refreshError) {
-          // The IndexedDB commit is authoritative. A failed UI refresh must not
-          // misreport a successfully persisted draft as data loss.
-          console.warn('[howbeam] description saved, but refreshing editor data failed', refreshError);
-        }
       }
     })();
 

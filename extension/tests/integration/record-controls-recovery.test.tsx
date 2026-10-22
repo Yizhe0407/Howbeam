@@ -81,7 +81,7 @@ describe('record controls recovery', () => {
     expect(screen.queryByRole('button', { name: /^開始/ })).toBeNull();
   });
 
-  it('offers a retry and stable pending state after automatic navigation fails', () => {
+  it('offers a retry and stable pending state after automatic navigation fails', async () => {
     render(
       <RecordControls
         recording={recoveryState({ code: 'EDITOR_OPEN_FAILED', message: 'failed' })}
@@ -90,7 +90,8 @@ describe('record controls recovery', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: '正在開啟編輯器' }).hasAttribute('disabled')).toBe(true);
+    // The opening state shows once it proves slow; until then the button only ignores clicks.
+    expect((await screen.findByRole('button', { name: '正在開啟編輯器' })).hasAttribute('disabled')).toBe(true);
     expect(screen.queryByRole('button', { name: /^開始/ })).toBeNull();
   });
 

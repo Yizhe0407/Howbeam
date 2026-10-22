@@ -5,6 +5,7 @@ import { getEntryPrivacyState, type StepEntry } from '@/lib/storage/models';
 import { t } from '@/lib/shared/i18n';
 import InlineAlert from '@/components/shared/InlineAlert';
 import { reportError } from '@/components/shared/report-error';
+import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Props {
@@ -38,6 +39,7 @@ export default function StepActions({
   const [recapturing, setRecapturing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const privacyReviewRequired = getEntryPrivacyState(entry).reviewRequired;
+  const busyShown = useDeferredBusy(copying || deleting || recapturing);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -105,11 +107,11 @@ export default function StepActions({
             <button
               type="button"
               onClick={handleCopy}
-              disabled={operationsDisabled || privacyReviewRequired || copying || deleting || recapturing}
+              disabled={operationsDisabled || privacyReviewRequired || busyShown}
               aria-label={t().editor.actions.copyImage}
               className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
             >
-              {copying ? <Loader2 className="size-4 animate-spin" /> : copied ? <Check className="size-4 text-brand-text" /> : <Copy className="size-4" />}
+              {copying && busyShown ? <Loader2 className="size-4 animate-spin" /> : copied ? <Check className="size-4 text-brand-text" /> : <Copy className="size-4" />}
             </button>
           </TooltipTrigger>
           <TooltipContent>{privacyReviewRequired ? t().editor.privacyReviewTooltip : t().editor.actions.copyImage}</TooltipContent>
@@ -119,11 +121,11 @@ export default function StepActions({
             <button
               type="button"
               onClick={() => void handleRecapture()}
-              disabled={!onRecapture || operationsDisabled || recapturing || deleting || copying || Boolean(recaptureDisabledReason)}
+              disabled={!onRecapture || operationsDisabled || busyShown || Boolean(recaptureDisabledReason)}
               aria-label={t().editor.actions.recapture}
               className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
             >
-              {recapturing ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
+              {recapturing && busyShown ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
             </button>
           </TooltipTrigger>
           <TooltipContent>{recaptureDisabledReason ?? (operationsDisabled ? t().editor.actions.recaptureUnavailable : t().editor.actions.recapture)}</TooltipContent>
@@ -134,11 +136,11 @@ export default function StepActions({
             <button
               type="button"
               onClick={handleDelete}
-              disabled={deleteDisabled || operationsDisabled || deleting || copying || recapturing}
+              disabled={deleteDisabled || operationsDisabled || busyShown}
               aria-label={t().editor.actions.deleteStep}
               className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-danger-soft hover:text-danger disabled:pointer-events-none disabled:opacity-40"
             >
-              {deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+              {deleting && busyShown ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
             </button>
           </TooltipTrigger>
           <TooltipContent>{deleteDisabled ? t().editor.actions.deleteDisabled : t().common.delete}</TooltipContent>

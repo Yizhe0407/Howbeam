@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { AlertCircle, Library, Loader2 } from 'lucide-react';
+import { AlertCircle, Library } from 'lucide-react';
 import { useRecordingSession } from '@/lib/recording/use-recording-session';
 import { useEditorProjectData } from '@/lib/editor/use-editor-project-data';
-import { EMPTY_STEP_ENTRIES } from '@/lib/editor/editor-app-model';
+import { EditingBlockedError, EMPTY_STEP_ENTRIES, type OptimisticChange } from '@/lib/editor/editor-app-model';
+import { useSerialOperations } from '@/lib/editor/use-serial-operations';
 import { entryId, type StepEntry } from '@/lib/storage/models';
 import { sectionOfEntry } from '@/lib/project/project-sections';
 import { updateProject, type ProjectMetadataChanges } from '@/lib/storage/project-repository';
 import { ProjectNotFoundError } from '@/lib/storage/database';
-import { type ProjectStructureSnapshot } from '@/lib/storage/project-structure';
 import { DraftConfirmationRequiredError, EditorSaveProvider, useEditorSaveRegistry } from '@/lib/editor/editor-autosave';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import EditorHeader from '@/components/editor/EditorHeader';
@@ -22,8 +22,8 @@ import { Button } from '@/components/ui/button';
 import Lightbox from '@/components/editor/Lightbox';
 import RecaptureProgressDialog from '@/components/editor/RecaptureProgressDialog';
 import SourcePermissionDialog from '@/components/editor/SourcePermissionDialog';
-import UndoSnackbar from '@/components/editor/UndoSnackbar';
-import PublishProjectDialog from '@/components/editor/PublishProjectDialog';
+import { useBusyNotice, useUndoNotice } from '@/components/editor/use-notices';
+import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import SectionTitleDialog, { type SectionDialogRequest } from '@/components/editor/SectionTitleDialog';
 import { usePermissionFlow } from '@/components/editor/use-permission-flow';
 import { useProjectUndo } from '@/components/editor/use-project-undo';
@@ -49,35 +49,40 @@ import { reportError } from '@/components/shared/report-error';
 
 function EditorApp() {
   const viewedSessionId = useMemo(() => getEditorSessionIdFromUrl(window.location.href), []);
-  const { sessionId, tabId, steps, error, dataError, refresh, recording } = useRecordingSession(viewedSessionId);
+  const { sessionId, tabId, error, dataError, recording } = useRecordingSession(viewedSessionId);
   const {
     project,
     canonicalSnapshot,
     projectLoadState,
     projectDeleted,
-    syncProjectRow,
     reload,
+    requestReload,
+    adoptCommitted,
     adoptProject,
-  } = useEditorProjectData(sessionId, steps);
+  } = useEditorProjectData(sessionId);
   const operationBelongsToViewedProject = Boolean(sessionId && recording.sessionId === sessionId);
   const operationActive = operationBelongsToViewedProject && recording.operation !== null;
   const ordinaryRecordingActive = operationBelongsToViewedProject && recording.operation === 'recording';
   const recaptureActive = operationBelongsToViewedProject && recording.operation === 'recapture' && recording.recapture !== null;
   const { flushAll } = useEditorSaveRegistry();
   const dbEntries = canonicalSnapshot?.entries ?? EMPTY_STEP_ENTRIES;
+  const operations = useSerialOperations();
+  const [exporting, setExporting] = useState(false);
 
-
-  // Optimistic reorder state: shows the new order immediately, then resets to
-  // null once the canonical DB entries change so we converge to the source of truth.
-  const [optimisticEntries, setOptimisticEntries] = useState<StepEntry[] | null>(null);
-  const [dataOperation, setDataOperation] = useState<string | null>(null);
-  const dataOperationLock = useRef(false);
+  // What queued edits will do, each shown from its click over the stored entries until it settles.
+  const [optimisticChanges, setOptimisticChanges] = useState<readonly { id: number; apply: OptimisticChange }[]>([]);
+  const optimisticIds = useRef(0);
+  const showOptimistic = useCallback((apply: OptimisticChange) => {
+    const id = ++optimisticIds.current;
+    setOptimisticChanges((current) => [...current, { id, apply }]);
+    return () => setOptimisticChanges((current) => current.filter((change) => change.id !== id));
+  }, []);
+  const entries = useMemo(
+    () => optimisticChanges.reduce((shown, change) => change.apply(shown), dbEntries),
+    [dbEntries, optimisticChanges],
+  );
   const [operationError, setOperationError] = useState<string | null>(null);
   const handledRecaptureResult = useRef<string | null>(null);
-  useEffect(() => {
-    if (!dataOperation) setOptimisticEntries(null);
-  }, [dbEntries, dataOperation]);
-  const entries = optimisticEntries ?? dbEntries;
 
   const {
     preparedPermission,
@@ -102,7 +107,7 @@ function EditorApp() {
   } = usePermissionFlow({
     sessionId,
     operationActive,
-    isDataOperationLocked: () => dataOperationLock.current,
+    whenIdle: operations.idle,
     flushDescriptions,
     requireSelectedEntry,
     setOperationError,
@@ -112,7 +117,6 @@ function EditorApp() {
     },
   });
 
-  const [publishOpen, setPublishOpen] = useState(false);
   /** The section being named; the rail seam, the stage and a heading's menu all open the same dialog. */
   const [sectionDialog, setSectionDialog] = useState<SectionDialogRequest | null>(null);
   const {
@@ -126,7 +130,7 @@ function EditorApp() {
   } = useEditorEntryWorkspace({
     entries,
     flushDescriptions,
-    isSelectionBlocked: () => dataOperationLock.current || permissionPending || continueElsewherePending,
+    isSelectionBlocked: () => permissionPending || continueElsewherePending,
     onSelectionInteraction: () => {
       if (isPermissionFlowLocked()) clearPreparedPermission();
     },
@@ -149,7 +153,7 @@ function EditorApp() {
     if (!selectedEntry) setZoomOpen(false);
   }, [selectedEntry, setZoomOpen]);
 
-  const { undoAction, offerUndo, takeUndo, returnUndo, finalizeUndo, clearUndo } = useProjectUndo({
+  const { undoAction, offeredUndo, offerUndo, takeUndo, returnUndo, finalizeUndo, clearUndo } = useProjectUndo({
     project,
     operationActive,
     projectDeleted,
@@ -159,43 +163,26 @@ function EditorApp() {
     const result = recording.recaptureResult;
     if (!result || result.sessionId !== sessionId || handledRecaptureResult.current === result.runId) return;
     handledRecaptureResult.current = result.runId;
-    void (async () => {
-      try {
-        await refresh();
-        setSelectedEntryId(result.entryId);
-        setZoomOpen(false);
-        setOperationError(result.status === 'failed' ? result.message ?? t().editor.recaptureFailed : null);
-        if (result.status === 'replaced') {
-          toast.success(t().editor.recaptureReplaced);
-        } else if (result.status === 'cancelled') {
-          toast(t().editor.recaptureCancelled);
-        }
-      } catch (presentError) {
-        // The run already settled in storage; only presenting its outcome failed,
-        // so surface that instead of silently dropping it.
-        console.error('[howbeam] failed to present the recapture result', presentError);
-        setOperationError(t().editor.recapturePresentFailed);
-      } finally {
-        await ackStepRecaptureResult(result.runId, result.sessionId).catch((ackError) => {
-          console.warn('[howbeam] failed to acknowledge the recapture result', ackError);
-        });
-      }
-    })();
-  }, [recording.recaptureResult, refresh, sessionId, setSelectedEntryId, setZoomOpen]);
-
-  /** A failed save may mean the Project was deleted elsewhere; re-reading its
-   * row flips the editor to the read-only deleted state when it was. */
-  function checkProjectStillExists(): void {
-    void syncProjectRow().catch((syncError) => {
-      console.warn('[howbeam] failed to re-read the project after a failed save', syncError);
+    // The replaced image reaches the screen through the change broadcast like any other write.
+    setSelectedEntryId(result.entryId);
+    setZoomOpen(false);
+    setOperationError(result.status === 'failed' ? result.message ?? t().editor.recaptureFailed : null);
+    if (result.status === 'replaced') {
+      toast.success(t().editor.recaptureReplaced);
+    } else if (result.status === 'cancelled') {
+      toast(t().editor.recaptureCancelled);
+    }
+    void ackStepRecaptureResult(result.runId, result.sessionId).catch((ackError) => {
+      console.warn('[howbeam] failed to acknowledge the recapture result', ackError);
     });
-  }
+  }, [recording.recaptureResult, sessionId, setSelectedEntryId, setZoomOpen]);
 
   async function flushDescriptions(): Promise<void> {
     try {
       await flushAll();
     } catch (saveError) {
-      checkProjectStillExists();
+      // A failed save may mean the Project was deleted elsewhere; a fresh read shows it read-only when it was.
+      requestReload();
       console.error('[howbeam] failed to save descriptions before an editor operation', saveError);
       // A pending draft confirmation carries its own user-facing message; only
       // genuine save failures get the generic retry wording.
@@ -221,16 +208,9 @@ function EditorApp() {
     }
   }
 
-  function beginDataOperation(label: string): boolean {
-    if (projectDeleted || dataOperationLock.current || isPermissionFlowLocked() || operationActive) return false;
-    dataOperationLock.current = true;
-    setDataOperation(label);
-    return true;
-  }
-
-  function endDataOperation(): void {
-    dataOperationLock.current = false;
-    setDataOperation(null);
+  /** The Project can't be changed at all: it is gone, being recorded, or a permission flow holds it. */
+  function editingBlocked(): boolean {
+    return projectDeleted || operationActive || isPermissionFlowLocked();
   }
 
   function requireSelectedEntry(expectedEntryId?: string): StepEntry {
@@ -249,13 +229,6 @@ function EditorApp() {
     });
   }
 
-  // Load/fallback semantics live in useEditorProjectData; this only prepends the
-  // recording-session refresh so steps and structure move together.
-  async function refreshEditorData(): Promise<ProjectStructureSnapshot | null> {
-    await refresh();
-    return reload();
-  }
-
   const {
     handleReorderEntries,
     handleReorderAnnotations,
@@ -271,17 +244,17 @@ function EditorApp() {
     project,
     entries,
     selectedEntryId,
-    beginDataOperation,
-    endDataOperation,
-    setOptimisticEntries,
+    runOperation: operations.run,
+    editingBlocked,
+    showOptimistic,
     flushDescriptions,
-    refreshEditorData,
-    adoptProject,
+    adoptCommitted,
     requireSelectedEntry,
     setSelectedEntryId,
     setZoomOpen,
     setOperationError,
     undoAction,
+    offeredUndo,
     offerUndo,
     takeUndo,
     returnUndo,
@@ -312,29 +285,37 @@ function EditorApp() {
   const cancelRecapture = () =>
     runRecaptureControl('[howbeam] failed to cancel recapture', cancelStepRecapture, t().editor.recaptureCancelFailed);
 
+  /** Runs an export as one queued operation, so the Project can't change under it
+   * and editing shows as locked while it runs. */
+  function runExport<T>(task: () => Promise<T>): Promise<T> {
+    if (editingBlocked()) return Promise.reject(new EditingBlockedError());
+    return operations.run(null, async () => {
+      setExporting(true);
+      try {
+        return await task();
+      } finally {
+        setExporting(false);
+      }
+    });
+  }
+
+  /** Runs inside the export's queued turn. */
   async function publicationEntries(signal: AbortSignal) {
     if (!sessionId) throw new Error(t().editor.publishTargetMissing);
-    if (!beginDataOperation(t().editor.preparingPublication)) {
-      throw new Error(t().editor.publishBusy);
-    }
-    try {
-      await flushDescriptions();
-      throwIfAborted(signal);
-      const snapshot = await reload();
-      if (!snapshot) throw new Error(t().editor.publishTargetMissing);
-      throwIfAborted(signal);
-      return {
-        entries: snapshot.entries,
-        metadata: {
-          title: snapshot.project.title,
-          description: snapshot.project.description,
-          filename: snapshot.project.title,
-          sections: snapshot.project.sections,
-        },
-      };
-    } finally {
-      endDataOperation();
-    }
+    await flushDescriptions();
+    throwIfAborted(signal);
+    const snapshot = await reload();
+    if (!snapshot) throw new Error(t().editor.publishTargetMissing);
+    throwIfAborted(signal);
+    return {
+      entries: snapshot.entries,
+      metadata: {
+        title: snapshot.project.title,
+        description: snapshot.project.description,
+        filename: snapshot.project.title,
+        sections: snapshot.project.sections,
+      },
+    };
   }
 
   async function setSelectedEntryNumbered(id: string, numbered: boolean): Promise<void> {
@@ -354,33 +335,56 @@ function EditorApp() {
   // must roll back to the stored value, so it needs the failure directly.
   async function updateProjectMetadata(changes: ProjectMetadataChanges): Promise<void> {
     if (!project || projectDeleted) throw new Error(t().editor.editTargetMissing);
-    if (isPermissionFlowLocked() || dataOperationLock.current || operationActive) {
-      throw new Error(t().editor.editBusy);
-    }
-    try {
-      adoptProject(await updateProject(project.id, changes));
-    } catch (updateError) {
-      if (updateError instanceof ProjectNotFoundError) checkProjectStillExists();
-      throw updateError;
-    }
+    if (editingBlocked()) throw new Error(t().editor.editBusy);
+    const projectId = project.id;
+    await operations.run(null, async () => {
+      try {
+        adoptProject(await updateProject(projectId, changes));
+      } catch (updateError) {
+        if (updateError instanceof ProjectNotFoundError) requestReload();
+        throw updateError;
+      }
+    });
   }
 
-  const editingLocked = projectDeleted || dataOperation !== null || permissionFlowActive;
+  // Queued edits never lock the screen; only an export does, once it proves slow.
+  const exportShown = useDeferredBusy(exporting);
+  const loadingShown = useDeferredBusy(projectLoadState === 'loading');
+  const editingLocked = projectDeleted || exportShown || permissionFlowActive;
+
+  useBusyNotice(operations.running?.label ?? null);
+  useUndoNotice({
+    action: undoAction,
+    pending: operations.running !== null,
+    onUndo: () => void handleUndo(),
+    onDismiss: clearUndo,
+  });
 
   return (
-    <div className="flex h-screen flex-col">
+    // The editor's layout numbers, read by the stage, the step rail and the notices alike: the content gutter,
+    // the step strip fixed along the bottom below lg, and the room the stage keeps clear for notices.
+    <div className={`flex h-screen flex-col [--content-gutter:1rem] sm:[--content-gutter:1.5rem] lg:[--content-gutter:2.5rem] [--step-rail-height:8rem] [--notice-lane:5rem] ${entries.length > 0 ? 'max-lg:[--bottom-bar-height:var(--step-rail-height)]' : ''}`}>
       <AppToaster />
       <EditorHeader
         operationActive={operationActive}
         editingDisabled={editingLocked}
         operation={recording.operation}
-        steps={steps}
+        hasSteps={entries.length > 0}
         sessionId={sessionId}
         projectTitle={project?.title ?? null}
         projectActionsAvailable={projectLoadState !== 'missing' && !projectDeleted}
         beforeNavigate={leaveEditor}
-        onOpenPublish={() => { if (!isPermissionFlowLocked()) setPublishOpen(true); }}
-        onReset={async () => { await refreshEditorData(); }}
+        publish={{
+          runExport,
+          getProjectEntries: publicationEntries,
+          metadata: {
+            title: project?.title,
+            description: project?.description,
+            filename: project?.title,
+            sections: project?.sections,
+          },
+          onExportImages: exportImages,
+        }}
       />
       <RecaptureProgressDialog
         open={recaptureActive}
@@ -437,10 +441,11 @@ function EditorApp() {
           </Alert>
         </div>
       )}
-      <div className="flex min-h-0 flex-1 pb-32 lg:pb-0">
+      <div className="flex min-h-0 flex-1 pb-[var(--step-rail-height,8rem)] lg:pb-0">
         {projectLoadState === 'loading' ? (
-          <main role="status" className="flex min-w-0 flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-            {t().editor.loading}
+          // A quick first read shows nothing here rather than a message that is gone at once.
+          <main role={loadingShown ? 'status' : undefined} className="flex min-w-0 flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+            {loadingShown && t().editor.loading}
           </main>
         ) : projectLoadState === 'missing' ? (
           <main className="flex min-w-0 flex-1 items-center justify-center p-8 text-center">
@@ -505,7 +510,6 @@ function EditorApp() {
                 }
                 projectTitle={project?.title}
                 onTitleChange={(title) => updateProjectMetadata({ title })}
-                onChange={refresh}
                 onDelete={deleteEntry}
                 onDeleteAnnotation={handleDeleteAnnotation}
                 onZoom={() => setZoomOpen(true)}
@@ -545,38 +549,6 @@ function EditorApp() {
           setSectionDialog(null);
         }}
       />
-      <PublishProjectDialog
-        open={publishOpen}
-        onOpenChange={setPublishOpen}
-        getProjectEntries={publicationEntries}
-        metadata={{
-          title: project?.title,
-          description: project?.description,
-          filename: project?.title,
-          sections: project?.sections,
-        }}
-        onExportImages={exportImages}
-      />
-      {dataOperation && (
-        <div
-          role="status"
-          className={`pointer-events-none fixed bottom-4 left-4 z-50 flex min-h-9 items-center gap-2 rounded-full border-2 border-border bg-card px-3.5 py-1.5 text-xs font-bold text-foreground ${entries.length > 0 ? 'max-lg:bottom-36' : ''}`}
-        >
-          <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-          <span className="min-w-0 truncate">{dataOperation}</span>
-        </div>
-      )}
-      {undoAction && (
-        <UndoSnackbar
-          key={undoAction.id}
-          message={undoAction.message}
-          note={undoAction.supersedes ? t().editor.undo.previousFinal(undoAction.supersedes) : undefined}
-          pending={dataOperation !== null}
-          aboveMobileRail={entries.length > 0}
-          onUndo={() => void handleUndo()}
-          onDismiss={clearUndo}
-        />
-      )}
     </div>
   );
 }

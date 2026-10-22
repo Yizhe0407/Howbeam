@@ -40,7 +40,8 @@ describe('ResetButton', () => {
 
     await waitFor(() => expect(mocks.resetSession).toHaveBeenCalledWith('project-1'));
     expect(onReset).toHaveBeenCalledOnce();
-    expect(screen.getByRole('button', { name: '處理中' }).hasAttribute('disabled')).toBe(true);
+    // The pending label shows once the reset proves slow.
+    expect((await screen.findByRole('button', { name: '處理中' })).hasAttribute('disabled')).toBe(true);
 
     finishRefresh?.();
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '重置目前錄製？' })).toBeNull());

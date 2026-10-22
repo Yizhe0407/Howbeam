@@ -1,5 +1,6 @@
 import type { StepRecaptureTarget } from '../storage/recording-state';
 import { type StepEntry } from '../storage/models';
+import type { ProjectStructureMutationResult } from '../storage/project-structure';
 
 export const EMPTY_STEP_ENTRIES: StepEntry[] = [];
 
@@ -9,7 +10,8 @@ export interface UndoAction {
   projectId: string;
   expectedRevision: number;
   restoreSelectionId?: string;
-  restore: () => Promise<void>;
+  /** Puts the Project back and returns the structure that commit left, to show at once. */
+  restore: () => Promise<ProjectStructureMutationResult>;
   /** Message of the earlier undo this one replaced. Only one undo is offered at
    * a time, so that earlier action is now final and the snackbar says so. */
   supersedes?: string;
@@ -54,3 +56,14 @@ export function equalIds(left: readonly string[], right: readonly string[]): boo
   return left.length === right.length && left.every((id, index) => id === right[index]);
 }
 
+
+/** The Project can't be changed right now (it is gone, being recorded, or held by a permission flow). */
+export class EditingBlockedError extends Error {
+  constructor() {
+    super('The project cannot be changed right now.');
+    this.name = 'EditingBlockedError';
+  }
+}
+
+/** What a queued edit will do to the entry list, shown on top of the stored entries until it settles. */
+export type OptimisticChange = (entries: StepEntry[]) => StepEntry[];

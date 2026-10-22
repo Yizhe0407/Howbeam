@@ -1,14 +1,18 @@
+import type { Dispatch, SetStateAction } from 'react';
 import {
   equalIds,
+  type OptimisticChange,
   type PendingUndoAction,
   type UndoAction,
 } from '@/lib/editor/editor-app-model';
-import { addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, ProjectContentConflictError, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically, setProjectEntriesNumberedAtomically, type ProjectStructureSnapshot } from '@/lib/storage/project-structure';
+import { addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, ProjectContentConflictError, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically, setProjectEntriesNumberedAtomically, type ProjectStructureMutationResult, type ProjectStructureSnapshot } from '@/lib/storage/project-structure';
 import { entryId, type Project, type Step, type StepEntry } from '@/lib/storage/models';
 import { t, type Messages } from '@/lib/shared/i18n';
 
 /** A structural edit with its own progress/failure copy in the i18n catalog. */
-type ProjectMutationOperation = Exclude<keyof Messages['editor']['mutations'], 'conflict' | 'reloadFailed'>;
+type ProjectMutationOperation = Exclude<keyof Messages['editor']['mutations'], 'conflict'>;
+
+type GroupEntry = Extract<StepEntry, { kind: 'group' }>;
 
 interface UseProjectMutationsOptions {
   sessionId: string | null;
@@ -16,18 +20,23 @@ interface UseProjectMutationsOptions {
   /** The rendered (optimistic-first) entry list. */
   entries: StepEntry[];
   selectedEntryId: string | null;
-  beginDataOperation: (label: string) => boolean;
-  endDataOperation: () => void;
-  setOptimisticEntries: (entries: StepEntry[] | null) => void;
+  /** Queues `operation` behind every data operation asked for before it. */
+  runOperation: <T>(label: string | null, operation: () => Promise<T>) => Promise<T>;
+  /** True while the Project can't be changed at all (deleted, being recorded, or in a permission flow). */
+  editingBlocked: () => boolean;
+  /** Shows `change` on top of the stored entries; the returned function takes it back. */
+  showOptimistic: (change: OptimisticChange) => () => void;
   flushDescriptions: () => Promise<void>;
-  refreshEditorData: () => Promise<ProjectStructureSnapshot | null>;
-  /** Publishes the fresh Project a successful compare-and-swap returned. */
-  adoptProject: (project: Project | null) => void;
+  /** Shows the structure a write just committed. */
+  adoptCommitted: (result: ProjectStructureMutationResult) => void;
   requireSelectedEntry: (expectedEntryId?: string) => StepEntry;
-  setSelectedEntryId: (id: string | null) => void;
+  setSelectedEntryId: Dispatch<SetStateAction<string | null>>;
   setZoomOpen: (open: boolean) => void;
   setOperationError: (message: string | null) => void;
+  /** The undo on screen. */
   undoAction: UndoAction | null;
+  /** The undo that can be used right now. */
+  offeredUndo: () => UndoAction | null;
   offerUndo: (pending: PendingUndoAction, projectId: string, superseded?: UndoAction | null) => void;
   takeUndo: () => UndoAction | null;
   returnUndo: (taken: UndoAction | null) => void;
@@ -35,27 +44,35 @@ interface UseProjectMutationsOptions {
   clearUndo: () => void;
 }
 
+/** Puts items in the order of `ids`; items it doesn't name keep their relative place at the end. */
+function inOrder<T>(ids: readonly string[], idOf: (item: T) => string): (items: T[]) => T[] {
+  const rank = new Map(ids.map((id, index) => [id, index]));
+  return (items) => [...items].sort((left, right) => (rank.get(idOf(left)) ?? ids.length) - (rank.get(idOf(right)) ?? ids.length));
+}
+
 /**
- * The editor's structural mutations: each takes the data lock, flushes pending descriptions, reads a
- * fresh snapshot, compare-and-swaps against its revision, reloads, then offers an undo — rolling back
- * any optimistic entry swap first if the round-trip fails.
+ * The editor's structural mutations. Each shows its result at once where it can
+ * (an optimistic change over the stored entries), then takes its turn in the
+ * operation queue: flush pending descriptions, read a fresh snapshot,
+ * compare-and-swap against its revision, show the committed structure and offer
+ * an undo. Its optimistic change goes away when it settles, whichever way.
  */
 export function useProjectMutations({
   sessionId,
   project,
   entries,
   selectedEntryId,
-  beginDataOperation,
-  endDataOperation,
-  setOptimisticEntries,
+  runOperation,
+  editingBlocked,
+  showOptimistic,
   flushDescriptions,
-  refreshEditorData,
-  adoptProject,
+  adoptCommitted,
   requireSelectedEntry,
   setSelectedEntryId,
   setZoomOpen,
   setOperationError,
   undoAction,
+  offeredUndo,
   offerUndo,
   takeUndo,
   returnUndo,
@@ -72,72 +89,74 @@ export function useProjectMutations({
   }
 
   /**
-   * Shared lock/flush/reload/error contract for every structural edit; only `mutate` (the compare-and-swap
-   * step) differs per operation. `optimistic` swaps the rendered entry list before the round-trip and
-   * restores it on failure. `rethrow` is for callers whose child component renders its own inline failure state.
+   * Shared queue/flush/error contract for every structural edit; only `mutate` (the compare-and-swap
+   * step) differs per operation. `optimistic` is shown from the click until the mutation settles, and
+   * `atClick` runs with it (the selection). Whether editing is allowed is decided at the click; once
+   * queued, an edit runs, and storage's revision check refuses it if the Project moved meanwhile.
+   * `rethrow` is for callers that keep their own failure state open (the section dialog).
    */
   async function runProjectMutation({
     operation,
     optimistic,
+    atClick,
     rethrow = false,
     mutate,
   }: {
     /** Names the operation's progress and failure copy in the i18n catalog. */
     operation: ProjectMutationOperation;
-    optimistic?: { next: StepEntry[]; previous: StepEntry[] };
+    optimistic?: OptimisticChange;
+    atClick?: () => void;
     rethrow?: boolean;
     mutate: (snapshot: ProjectStructureSnapshot, projectId: string) => Promise<PendingUndoAction | void>;
   }): Promise<void> {
-    if (!sessionId || !beginDataOperation(t().editor.mutations[operation].pending)) return;
-    // Only one undo is offered at a time: this mutation either replaces the pending one
-    // (and says it is now final), makes it final without a replacement, or hands it back on failure.
-    const takenUndo = takeUndo();
-    setOperationError(null);
-    if (optimistic) setOptimisticEntries(optimistic.next);
-    try {
-      let undo: PendingUndoAction | void;
+    if (!sessionId || editingBlocked()) return;
+    const hideOptimistic = optimistic && showOptimistic(optimistic);
+    atClick?.();
+    await runOperation(t().editor.mutations[operation].pending, async () => {
+      // Only one undo is offered at a time: this mutation either replaces the pending one
+      // (and says it is now final), makes it final without a replacement, or hands it back on failure.
+      const takenUndo = takeUndo();
+      setOperationError(null);
       try {
-        await flushDescriptions();
-        const snapshot = await getProjectStructureSnapshot(sessionId);
-        undo = await mutate(snapshot, sessionId);
-      } catch (mutationError) {
-        if (optimistic) setOptimisticEntries(optimistic.previous);
-        showStructureMutationError(operation, mutationError);
+        let undo: PendingUndoAction | void;
         try {
-          await refreshEditorData();
-        } catch (refreshError) {
-          console.error(`[howbeam] reload after failed ${operation} failed`, refreshError);
-        } finally {
-          if (!optimistic) setOptimisticEntries(null);
+          await flushDescriptions();
+          const snapshot = await getProjectStructureSnapshot(sessionId);
+          undo = await mutate(snapshot, sessionId);
+        } catch (mutationError) {
+          showStructureMutationError(operation, mutationError);
+          returnUndo(takenUndo);
+          if (rethrow) throw mutationError;
+          return;
         }
-        returnUndo(takenUndo);
-        if (rethrow) throw mutationError;
-        return;
+        if (undo) offerUndo(undo, sessionId, takenUndo);
+        else finalizeUndo(takenUndo);
+      } finally {
+        // On success the committed structure is already shown, so taking this back changes nothing on screen.
+        hideOptimistic?.();
       }
-      // The compare-and-swap committed, so a failed reload must not roll back the now-accurate
-      // optimistic entries or report the operation itself as failed — only that the screen may be stale.
-      try {
-        await refreshEditorData();
-      } catch (reloadError) {
-        console.error(`[howbeam] reload after ${operation} failed`, reloadError);
-        setOperationError(t().editor.mutations.reloadFailed);
-      }
-      if (undo) offerUndo(undo, sessionId, takenUndo);
-      else finalizeUndo(takenUndo);
-    } finally {
-      endDataOperation();
-    }
+    });
+  }
+
+  /** Moves the selection from an entry that is going away to the one that takes
+   * its place, unless the selection already moved elsewhere. */
+  function selectInsteadOf(removedId: string, previousEntryIds: readonly string[], nextEntryIds: readonly string[]) {
+    const previousIndex = previousEntryIds.indexOf(removedId);
+    const nextIndex = Math.min(Math.max(previousIndex, 0), nextEntryIds.length - 1);
+    const next = nextIndex >= 0 ? nextEntryIds[nextIndex] : null;
+    setSelectedEntryId((current) => (current === removedId ? next : current));
+    setZoomOpen(false);
   }
 
   async function handleReorderEntries(newEntries: StepEntry[]) {
     if (!project) return;
-    const previousEntries = entries;
+    const previousEntryIds = entries.map(entryId);
     const expectedRevision = project.contentRevision;
     await runProjectMutation({
       operation: 'reorderSteps',
-      optimistic: { next: newEntries, previous: previousEntries },
+      optimistic: inOrder(newEntries.map(entryId), entryId),
       mutate: async (snapshot, projectId) => {
-        if (!equalIds(snapshot.entryIds, previousEntries.map(entryId))) {
+        if (!equalIds(snapshot.entryIds, previousEntryIds)) {
           throw new ProjectContentConflictError(projectId, expectedRevision, snapshot.project.contentRevision);
         }
         const result = await reorderProjectEntriesAtomically(
@@ -145,7 +164,7 @@ export function useProjectMutations({
           newEntries.map(entryId),
           snapshot.project.contentRevision,
         );
-        adoptProject(result.project);
+        adoptCommitted(result);
         return {
           message: t().editor.mutations.reorderSteps.done,
           expectedRevision: result.project.contentRevision,
@@ -153,7 +172,7 @@ export function useProjectMutations({
             projectId,
             result.previousEntryIds,
             result.project.contentRevision,
-          ).then(() => undefined),
+          ),
         };
       },
     });
@@ -161,26 +180,24 @@ export function useProjectMutations({
 
   async function handleReorderAnnotations(anchorId: string, reordered: Step[]) {
     requireSelectedEntry(anchorId);
-    const previousEntries = entries;
-    const previousGroup = previousEntries.find(
-      (entry): entry is Extract<StepEntry, { kind: 'group' }> => entry.kind === 'group' && entry.anchor.id === anchorId,
+    const previousGroup = entries.find(
+      (entry): entry is GroupEntry => entry.kind === 'group' && entry.anchor.id === anchorId,
     );
     if (!previousGroup) throw new Error(t().editor.mutations.reorderAnnotations.groupMissing);
-    const nextEntries = previousEntries.map((entry) => (
-      entry.kind === 'group' && entry.anchor.id === anchorId ? { ...entry, annotations: reordered } : entry
-    ));
+    const previousAnnotationIds = previousGroup.annotations.map((annotation) => annotation.id);
     await runProjectMutation({
       operation: 'reorderAnnotations',
-      optimistic: { next: nextEntries, previous: previousEntries },
-      rethrow: true,
+      optimistic: (shown) => {
+        const order = inOrder(reordered.map((annotation) => annotation.id), (annotation: Step) => annotation.id);
+        return shown.map((entry) => (
+          entry.kind === 'group' && entry.anchor.id === anchorId ? { ...entry, annotations: order(entry.annotations) } : entry
+        ));
+      },
       mutate: async (snapshot, projectId) => {
         const freshGroup = snapshot.entries.find(
-          (entry): entry is Extract<StepEntry, { kind: 'group' }> => entry.kind === 'group' && entry.anchor.id === anchorId,
+          (entry): entry is GroupEntry => entry.kind === 'group' && entry.anchor.id === anchorId,
         );
-        if (!freshGroup || !equalIds(
-          freshGroup.annotations.map((annotation) => annotation.id),
-          previousGroup.annotations.map((annotation) => annotation.id),
-        )) {
+        if (!freshGroup || !equalIds(freshGroup.annotations.map((annotation) => annotation.id), previousAnnotationIds)) {
           throw new ProjectContentConflictError(
             projectId,
             project?.contentRevision ?? snapshot.project.contentRevision,
@@ -193,7 +210,7 @@ export function useProjectMutations({
           reordered.map((annotation) => annotation.id),
           snapshot.project.contentRevision,
         );
-        adoptProject(result.project);
+        adoptCommitted(result);
         return {
           message: t().editor.mutations.reorderAnnotations.done,
           expectedRevision: result.project.contentRevision,
@@ -203,7 +220,7 @@ export function useProjectMutations({
             anchorId,
             result.previousAnnotationIds,
             result.project.contentRevision,
-          ).then(() => undefined),
+          ),
         };
       },
     });
@@ -213,7 +230,6 @@ export function useProjectMutations({
     const currentEntryId = entryId(requireSelectedEntry());
     await runProjectMutation({
       operation: 'deleteStep',
-      rethrow: true,
       mutate: async (snapshot, projectId) => {
         const deletingEntry = snapshot.entries.find((entry) => entryId(entry) === currentEntryId);
         if (!deletingEntry) throw new Error(t().editor.mutations.deleteStep.changed);
@@ -223,10 +239,8 @@ export function useProjectMutations({
           [currentEntryId],
           snapshot.project.contentRevision,
         );
-        adoptProject(result.project);
-        const nextIndex = Math.min(Math.max(deletingIndex, 0), result.entryIds.length - 1);
-        setSelectedEntryId(nextIndex >= 0 ? result.entryIds[nextIndex] : null);
-        setZoomOpen(false);
+        adoptCommitted(result);
+        selectInsteadOf(currentEntryId, snapshot.entryIds, result.entryIds);
         const deletedSteps = deletingEntry.kind === 'single'
           ? [deletingEntry.step]
           : [deletingEntry.anchor, ...deletingEntry.annotations];
@@ -240,7 +254,7 @@ export function useProjectMutations({
             snapshot.entryIds,
             snapshot.project.sections,
             result.project.contentRevision,
-          ).then(() => undefined),
+          ),
         };
       },
     });
@@ -251,20 +265,20 @@ export function useProjectMutations({
     if (currentEntry.kind !== 'group') throw new Error(t().editor.mutations.deleteAnnotation.notSnapshot);
     const groupId = step.groupId;
     if (!groupId) return;
-    const previousEntries = entries;
-    const deletingGroup = previousEntries.find(
-      (entry): entry is Extract<StepEntry, { kind: 'group' }> => entry.kind === 'group' && entry.anchor.id === groupId,
-    );
-    const annotationIndex = deletingGroup?.annotations.findIndex((annotation) => annotation.id === step.id) ?? -1;
-    const nextEntries = previousEntries.flatMap((entry) => {
+    const annotationIndex = currentEntry.annotations.findIndex((annotation) => annotation.id === step.id);
+    const withoutMarker: OptimisticChange = (shown) => shown.flatMap((entry) => {
       if (entry.kind !== 'group' || entry.anchor.id !== groupId) return [entry];
-      if (entry.annotations.length === 1) return [];
-      return [{ ...entry, annotations: entry.annotations.filter((annotation) => annotation.id !== step.id) }];
+      const remaining = entry.annotations.filter((annotation) => annotation.id !== step.id);
+      return remaining.length === 0 ? [] : [{ ...entry, annotations: remaining }];
     });
     await runProjectMutation({
       operation: 'deleteAnnotation',
-      optimistic: { next: nextEntries, previous: previousEntries },
-      rethrow: true,
+      optimistic: withoutMarker,
+      // Deleting a snapshot's last marker takes the snapshot off the list at once, so the selection moves with it.
+      atClick: () => {
+        const after = withoutMarker(entries);
+        if (after.length < entries.length) selectInsteadOf(groupId, entries.map(entryId), after.map(entryId));
+      },
       mutate: async (snapshot, projectId) => {
         const result = await deleteProjectAnnotationAtomically(
           projectId,
@@ -272,13 +286,8 @@ export function useProjectMutations({
           step.id,
           snapshot.project.contentRevision,
         );
-        adoptProject(result.project);
-        if (result.removedEntry) {
-          const previousIndex = result.previousEntryIds.indexOf(groupId);
-          const nextIndex = Math.min(Math.max(previousIndex, 0), result.entryIds.length - 1);
-          setSelectedEntryId(nextIndex >= 0 ? result.entryIds[nextIndex] : null);
-          setZoomOpen(false);
-        }
+        adoptCommitted(result);
+        if (result.removedEntry) selectInsteadOf(groupId, result.previousEntryIds, result.entryIds);
         const deletedAnnotation = result.deletedSteps.find((deleted) => deleted.id === step.id);
         if (!deletedAnnotation) throw new Error(t().editor.mutations.deleteAnnotation.restoreDataMissing);
         const restoredIndex = result.previousAnnotationIds.indexOf(step.id);
@@ -293,14 +302,14 @@ export function useProjectMutations({
                 result.previousEntryIds,
                 result.previousSections,
                 result.project.contentRevision,
-              ).then(() => undefined)
+              )
             : () => restoreProjectAnnotationAtomically(
                 projectId,
                 groupId,
                 deletedAnnotation,
                 result.previousAnnotationIds,
                 result.project.contentRevision,
-              ).then(() => undefined),
+              ),
         };
       },
     });
@@ -308,16 +317,18 @@ export function useProjectMutations({
 
   async function setEntriesNumbered(entryIdsToUpdate: readonly string[], numbered: boolean) {
     if (entryIdsToUpdate.length === 0) return;
+    const selectedIds = new Set(entryIdsToUpdate);
     await runProjectMutation({
       operation: 'numbering',
-      rethrow: true,
+      optimistic: (shown) => shown.map((entry) => (
+        entry.kind === 'group' && selectedIds.has(entry.anchor.id)
+          ? { ...entry, anchor: { ...entry.anchor, numbered } }
+          : entry
+      )),
       mutate: async (snapshot, projectId) => {
-        const selectedIds = new Set(entryIdsToUpdate);
         const previousValues = new Set(
           snapshot.entries
-            .filter((entry): entry is Extract<StepEntry, { kind: 'group' }> => (
-              entry.kind === 'group' && selectedIds.has(entry.anchor.id)
-            ))
+            .filter((entry): entry is GroupEntry => entry.kind === 'group' && selectedIds.has(entry.anchor.id))
             .map((entry) => entry.anchor.numbered ?? false),
         );
         const result = await setProjectEntriesNumberedAtomically(
@@ -326,7 +337,7 @@ export function useProjectMutations({
           numbered,
           snapshot.project.contentRevision,
         );
-        adoptProject(result.project);
+        adoptCommitted(result);
         // A mixed selection has no single value to restore, and a no-op change has nothing to undo.
         const previousValue = previousValues.size === 1 ? [...previousValues][0] : undefined;
         if (result.affectedEntryIds.length === 0 || previousValue === undefined || previousValue === numbered) return;
@@ -339,7 +350,7 @@ export function useProjectMutations({
             result.affectedEntryIds,
             previousValue,
             result.project.contentRevision,
-          ).then(() => undefined),
+          ),
         };
       },
     });
@@ -356,7 +367,7 @@ export function useProjectMutations({
           title,
           snapshot.project.contentRevision,
         );
-        adoptProject(result.project);
+        adoptCommitted(result);
         const added = result.project.sections.find((section) => section.startEntryId === startEntryId);
         if (!added) return;
         return {
@@ -366,7 +377,7 @@ export function useProjectMutations({
             projectId,
             added.id,
             result.project.contentRevision,
-          ).then(() => undefined),
+          ),
         };
       },
     });
@@ -377,13 +388,12 @@ export function useProjectMutations({
       operation: 'renameSection',
       rethrow: true,
       mutate: async (snapshot, projectId) => {
-        const result = await renameProjectSectionAtomically(
+        adoptCommitted(await renameProjectSectionAtomically(
           projectId,
           sectionId,
           title,
           snapshot.project.contentRevision,
-        );
-        adoptProject(result.project);
+        ));
       },
     });
   }
@@ -391,7 +401,6 @@ export function useProjectMutations({
   async function deleteSection(sectionId: string) {
     await runProjectMutation({
       operation: 'deleteSection',
-      rethrow: true,
       mutate: async (snapshot, projectId) => {
         const deletedSection = snapshot.project.sections.find((section) => section.id === sectionId);
         const result = await deleteProjectSectionAtomically(
@@ -399,7 +408,7 @@ export function useProjectMutations({
           sectionId,
           snapshot.project.contentRevision,
         );
-        adoptProject(result.project);
+        adoptCommitted(result);
         if (!deletedSection) return;
         // A section's display position derives from its start entry, so re-creating it with the
         // same start entry and title puts it back exactly where it was.
@@ -411,43 +420,46 @@ export function useProjectMutations({
             deletedSection.startEntryId,
             deletedSection.title,
             result.project.contentRevision,
-          ).then(() => undefined),
+          ),
         };
       },
     });
   }
 
   async function handleUndo() {
-    if (!undoAction || !beginDataOperation(t().editor.undo.inProgress)) return;
-    setOperationError(null);
-    try {
-      const snapshot = await getProjectStructureSnapshot(undoAction.projectId);
-      if (snapshot.project.contentRevision !== undoAction.expectedRevision) {
-        throw new ProjectContentConflictError(
-          undoAction.projectId,
-          undoAction.expectedRevision,
-          snapshot.project.contentRevision,
+    const clicked = undoAction;
+    if (!clicked || editingBlocked()) return;
+    // The undo notice shows its own progress.
+    await runOperation(null, async () => {
+      // An edit queued before this click may have replaced that undo, and a second click finds it used:
+      // only the undo still offered when this turn comes is acted on.
+      const action = offeredUndo();
+      if (!action || action.id !== clicked.id) return;
+      setOperationError(null);
+      try {
+        const snapshot = await getProjectStructureSnapshot(action.projectId);
+        if (snapshot.project.contentRevision !== action.expectedRevision) {
+          throw new ProjectContentConflictError(
+            action.projectId,
+            action.expectedRevision,
+            snapshot.project.contentRevision,
+          );
+        }
+        const result = await action.restore();
+        // Cleared before the restored structure moves the revision, so the spent undo isn't announced as "now final".
+        clearUndo();
+        adoptCommitted(result);
+        if (action.restoreSelectionId) setSelectedEntryId(action.restoreSelectionId);
+      } catch (undoError) {
+        console.error('[howbeam] failed to undo editor operation', undoError);
+        clearUndo();
+        setOperationError(
+          undoError instanceof ProjectContentConflictError
+            ? t().editor.undo.conflict
+            : t().editor.undo.failed,
         );
       }
-      await undoAction.restore();
-      // Cleared before the reload moves the revision, so the spent undo isn't announced as "now final".
-      clearUndo();
-      await refreshEditorData();
-      if (undoAction.restoreSelectionId) {
-        setSelectedEntryId(undoAction.restoreSelectionId);
-      }
-    } catch (undoError) {
-      console.error('[howbeam] failed to undo editor operation', undoError);
-      clearUndo();
-      setOperationError(
-        undoError instanceof ProjectContentConflictError
-          ? t().editor.undo.conflict
-          : t().editor.undo.failed,
-      );
-      await refreshEditorData().catch((refreshError) => console.error('[howbeam] reload after failed undo failed', refreshError));
-    } finally {
-      endDataOperation();
-    }
+    });
   }
 
   return {

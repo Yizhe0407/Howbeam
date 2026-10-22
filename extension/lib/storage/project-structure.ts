@@ -18,6 +18,7 @@ import {
   type Step,
   type StepEntry,
 } from './models';
+import { notifyProjectsChanged } from './change-notifier';
 import {
   ProjectNotFoundError,
   requireWritableProject,
@@ -47,6 +48,8 @@ export interface ProjectStructureSnapshot {
 
 export interface ProjectStructureMutationResult {
   project: Project;
+  /** The committed structure, so the caller can show it without reading it back. */
+  entries: StepEntry[];
   entryIds: string[];
   affectedEntryIds: string[];
 }
@@ -179,19 +182,20 @@ async function commitProjectStructure(
   nextSections: readonly ProjectSection[],
   affectedEntryIds: readonly string[],
 ): Promise<ProjectStructureMutationResult> {
-  const denseSteps = flattenEntrySteps(nextEntries).map((step, order) => (
-    step.order === order ? step : { ...step, order }
-  ));
-  const completeEntries = buildCompleteStepEntries(denseSteps, structure.project.id);
   const previousById = new Map(structure.steps.map((step) => [step.id, step]));
+  // Rows exactly as stored, so the returned structure is what a later read would see.
+  const denseSteps = flattenEntrySteps(nextEntries).map((step, order) => {
+    const ordered = step.order === order ? step : { ...step, order };
+    return previousById.get(ordered.id) === ordered ? ordered : sanitizeStepForStorage(ordered);
+  });
+  const completeEntries = buildCompleteStepEntries(denseSteps, structure.project.id);
   const nextIds = new Set(denseSteps.map((step) => step.id));
 
   for (const previous of structure.steps) {
     if (!nextIds.has(previous.id)) await tx.objectStore('steps').delete(previous.id);
   }
   for (const step of denseSteps) {
-    const previous = previousById.get(step.id);
-    if (previous !== step) await tx.objectStore('steps').put(sanitizeStepForStorage(step));
+    if (previousById.get(step.id) !== step) await tx.objectStore('steps').put(step);
   }
 
   const now = Date.now();
@@ -205,6 +209,7 @@ async function commitProjectStructure(
   await tx.objectStore('projects').put(project);
   return {
     project,
+    entries: completeEntries,
     entryIds: completeEntries.map(entryId),
     affectedEntryIds: [...new Set(affectedEntryIds)],
   };
@@ -291,6 +296,7 @@ export async function repairEmptySnapshotAnchors(sessionId: string): Promise<num
     const orphans = steps.filter((step) => step.groupId === step.id && stepRole(step) === 'anchor' && !annotated.has(step.id));
     for (const orphan of orphans) await store.delete(orphan.id);
     await tx.done;
+    if (orphans.length > 0) notifyProjectsChanged();
     return orphans.length;
   });
 }
@@ -531,7 +537,7 @@ export async function setProjectEntriesNumberedAtomically(
       };
     });
     if (affected.length === 0) {
-      return { project: structure.project, entryIds: structure.entryIds, affectedEntryIds: [] };
+      return { project: structure.project, entries: structure.entries, entryIds: structure.entryIds, affectedEntryIds: [] };
     }
     return commitProjectStructure(tx, structure, nextEntries, structure.project.sections, affected);
   });

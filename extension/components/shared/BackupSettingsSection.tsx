@@ -42,8 +42,8 @@ export default function BackupSettingsSection() {
       ) : backup.loading ? null : !enabled ? (
         <div className="flex flex-col gap-2">
           <div>
-            <Button variant="outline" onClick={() => void backup.choose()} disabled={backup.busy}>
-              {backup.busy ? <Loader2 className="animate-spin" /> : <FolderOpen />}{copy.choose}
+            <Button variant="outline" onClick={() => void backup.choose()} disabled={backup.busyShown}>
+              {backup.busyShown ? <Loader2 className="animate-spin" /> : <FolderOpen />}{copy.choose}
             </Button>
           </div>
           <p className="text-xs leading-relaxed text-muted-foreground">{copy.folderHint}</p>
@@ -61,16 +61,16 @@ export default function BackupSettingsSection() {
           </div>
           <div className="flex flex-wrap gap-2">
             {availability === 'needs-permission' ? (
-              <Button onClick={() => void backup.reauthorize()} disabled={backup.busy}>
-                {backup.busy ? <Loader2 className="animate-spin" /> : <ShieldAlert />}{copy.reauthorize}
+              <Button onClick={() => void backup.reauthorize()} disabled={backup.busyShown}>
+                {backup.busyShown ? <Loader2 className="animate-spin" /> : <ShieldAlert />}{copy.reauthorize}
               </Button>
             ) : (
-              <Button variant="outline" onClick={() => void backup.backUpNow()} disabled={backup.busy}>
-                {backup.busy ? <Loader2 className="animate-spin" /> : <RefreshCw />}{copy.backUpNow}
+              <Button variant="outline" onClick={() => void backup.backUpNow()} disabled={backup.busyShown}>
+                {backup.busyShown ? <Loader2 className="animate-spin" /> : <RefreshCw />}{copy.backUpNow}
               </Button>
             )}
-            <Button variant="outline" onClick={() => void backup.choose()} disabled={backup.busy}>{copy.change}</Button>
-            <Button variant="outline" onClick={() => setConfirmOff(true)} disabled={backup.busy}>{copy.turnOff}</Button>
+            <Button variant="outline" onClick={() => void backup.choose()} disabled={backup.busyShown}>{copy.change}</Button>
+            <Button variant="outline" onClick={() => setConfirmOff(true)} disabled={backup.busyShown}>{copy.turnOff}</Button>
           </div>
         </div>
       )}

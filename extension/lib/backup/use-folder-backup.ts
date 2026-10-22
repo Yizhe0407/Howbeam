@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDeferredBusy } from '../shared/use-deferred-busy';
 import { subscribeProjectsChanged } from '../storage/change-notifier';
 import { isFolderBackupSupported, pickBackupDirectory, requestBackupPermission } from './directory-handle';
 import {
@@ -72,6 +73,8 @@ export interface FolderBackupState {
   availability: BackupAvailability;
   lastRun: BackupLastRun | null;
   busy: boolean;
+  /** `busy` once the work proves slow: what to render as in progress. */
+  busyShown: boolean;
   error: boolean;
   /** Picks a folder, starts backing up straight away. */
   choose: () => Promise<void>;
@@ -88,6 +91,8 @@ export function useFolderBackup(): FolderBackupState {
   const [availability, setAvailability] = useState<BackupAvailability>('off');
   const [lastRun, setLastRun] = useState<BackupLastRun | null>(null);
   const [busy, setBusy] = useState(false);
+  const busyShown = useDeferredBusy(busy);
+  const inFlight = useRef(false);
   const [error, setError] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -110,6 +115,8 @@ export function useFolderBackup(): FolderBackupState {
   }, [refresh]);
 
   const guarded = useCallback(async (action: () => Promise<void>) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(false);
     try {
@@ -119,6 +126,7 @@ export function useFolderBackup(): FolderBackupState {
       console.error('[howbeam] folder backup action failed', actionError);
       setError(true);
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }, [refresh]);
@@ -142,5 +150,5 @@ export function useFolderBackup(): FolderBackupState {
 
   const turnOff = useCallback(() => guarded(clearBackupConfig), [guarded]);
 
-  return { supported, loading, folderName, availability, lastRun, busy, error, choose, reauthorize, backUpNow, turnOff };
+  return { supported, loading, folderName, availability, lastRun, busy, busyShown, error, choose, reauthorize, backUpNow, turnOff };
 }

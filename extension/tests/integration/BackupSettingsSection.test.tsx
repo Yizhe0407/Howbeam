@@ -14,6 +14,7 @@ vi.mock('@/lib/backup/use-folder-backup', () => ({
     availability: 'ready',
     lastRun: mocks.lastRun,
     busy: false,
+    busyShown: false,
     error: false,
     choose: vi.fn(),
     reauthorize: vi.fn(),

@@ -11,7 +11,7 @@ export default function BackupPausedNotice() {
   return (
     <Alert className="mb-4 flex flex-wrap items-center justify-between gap-3">
       <AlertDescription>{t().settings.backup.paused}</AlertDescription>
-      <Button size="sm" onClick={() => void backup.reauthorize()} disabled={backup.busy}>
+      <Button size="sm" onClick={() => void backup.reauthorize()} disabled={backup.busyShown}>
         {t().settings.backup.reauthorize}
       </Button>
     </Alert>

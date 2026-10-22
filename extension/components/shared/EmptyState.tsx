@@ -9,6 +9,7 @@ import { byMostRecentlyAccessed } from '@/lib/editor/continuation-tabs';
 import { focusTab } from '@/lib/runtime/navigation';
 import { isRecordableTab } from '@/lib/shared/restricted-urls';
 import { t } from '@/lib/shared/i18n';
+import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 
 interface Props {
   isRecording?: boolean;
@@ -17,6 +18,7 @@ interface Props {
 
 export default function EmptyState({ isRecording = false, recordingTabId = null }: Props) {
   const [pending, setPending] = useState(false);
+  const pendingShown = useDeferredBusy(pending);
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function returnToRecordingPage() {
@@ -56,9 +58,9 @@ export default function EmptyState({ isRecording = false, recordingTabId = null 
         <p className="text-sm leading-relaxed text-muted-foreground">
           {t().emptyState.body}
         </p>
-        <Button onClick={returnToRecordingPage} disabled={pending} className="mt-2">
-          {pending ? <Loader2 className="animate-spin" /> : <ExternalLink />}
-          {pending ? t().emptyState.opening : isRecording ? t().emptyState.returnToRecordingTab : t().emptyState.returnToPage}
+        <Button onClick={returnToRecordingPage} disabled={pendingShown} className="mt-2">
+          {pendingShown ? <Loader2 className="animate-spin" /> : <ExternalLink />}
+          {pendingShown ? t().emptyState.opening : isRecording ? t().emptyState.returnToRecordingTab : t().emptyState.returnToPage}
         </Button>
         {actionError && <InlineAlert className="text-left">{actionError}</InlineAlert>}
       </div>

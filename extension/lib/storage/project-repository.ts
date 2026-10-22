@@ -30,6 +30,7 @@ import { t } from '../shared/i18n';
 export async function createProject(initial?: Partial<Pick<Project, 'title' | 'description'>>): Promise<Project> {
   const project = newProject(crypto.randomUUID(), Date.now(), initial);
   await runWithDatabase((db) => db.add('projects', project));
+  notifyProjectsChanged();
   return project;
 }
 
@@ -47,6 +48,7 @@ export async function ensureProject(id: string, createdAt = Date.now()): Promise
     try {
       await tx.store.add(project);
       await tx.done;
+      notifyProjectsChanged();
       return project;
     } catch (error) {
       await tx.done.catch(() => undefined);

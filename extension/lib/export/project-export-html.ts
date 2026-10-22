@@ -13,7 +13,9 @@ import {
   type ProjectExportMetadata,
   type ProjectExportOptions,
 } from './project-export-contract';
+import { chooseAnnotationColumns } from './annotation-columns';
 import { encodeBase64Parts } from './base64';
+import { segmentText, wrapText } from './text-wrap';
 import { entryHeading, renderEntryImages, type RenderedEntryContent } from './project-export-render';
 import { documentLang, t } from '@/lib/shared/i18n';
 
@@ -114,12 +116,76 @@ function renderHtmlEntry(entry: RenderedEntryContent, imageSrc: string): string 
 }
 
 function renderHtmlAnnotations(entry: RenderedEntryContent): string {
-  const items = entry.annotations
-    .map((annotation) => `<li>${htmlText(textOrDefault(annotation.description, t().export.missingDescription))}</li>`)
-    .join('\n');
-  return `<ol class="annotations">
+  const texts = entry.annotations.map((annotation) => textOrDefault(annotation.description, t().export.missingDescription));
+  const { listAttributes, spans } = annotationColumns(texts);
+  const items = texts.map((text, index) => `<li${spans[index] ? ' data-span' : ''}>${htmlText(text)}</li>`).join('\n');
+  return `<ol class="annotations"${listAttributes}>
 ${items}
 </ol>`;
+}
+
+/** The document's geometry; the stylesheet and the marker columns are both computed from it. */
+const PAGE = Object.freeze({
+  /** Body text, in px. */
+  fontSize: 16,
+  lineHeight: 1.75,
+  /** The document column at its widest, in px. */
+  maxWidth: 760,
+  /** Where a step's title, screenshot and markers start, in em. */
+  stepIndent: 2.2,
+});
+
+/** The marker list's geometry, in em at the body size. */
+const LIST = Object.freeze({
+  /** The list at its widest: the document column less the step indent. */
+  width: PAGE.maxWidth / PAGE.fontSize - PAGE.stepIndent,
+  columnGap: 2,
+  /** Room left of each description for its number. */
+  marker: 1.4,
+  itemGap: 0.25,
+});
+
+const WIDE_CHARACTER = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\u3000-\u303f\uff01-\uff60\uffe0-\uffe6]/u;
+const PICTOGRAPH = /\p{Extended_Pictographic}/u;
+
+/** Typical advance of each character in em for the document's sans-serif stack. */
+function estimatedWidth(text: string): number {
+  let width = 0;
+  for (const grapheme of segmentText(text, 'grapheme')) {
+    if (PICTOGRAPH.test(grapheme)) width += 1.4;
+    else if (WIDE_CHARACTER.test(grapheme)) width += 1;
+    else if (/\p{Lu}/u.test(grapheme)) width += 0.65;
+    else width += 0.55;
+  }
+  return width;
+}
+
+const columnWidth = (columns: number) => (LIST.width - LIST.columnGap * (columns - 1)) / columns;
+
+/**
+ * Columns are chosen by the PDF's rule, for the document at its widest. The
+ * document carries no script and the reader's fonts aren't known here, so the
+ * descriptions are measured with typical character widths. The browser is given
+ * the narrowest column that keeps every marker on as few lines as at that width,
+ * so a window too narrow for it shows fewer columns instead of more wrapping.
+ * A marker too long for a column spans the full width between them.
+ */
+function annotationColumns(texts: readonly string[]): { listAttributes: string; spans: boolean[] } {
+  const { columns, lines, spans } = chooseAnnotationColumns(
+    (count) => texts.map((text) => wrapText(estimatedWidth, text, columnWidth(count) - LIST.marker)),
+    (lineCount) => lineCount * PAGE.lineHeight + LIST.itemGap,
+  );
+  if (columns === 1) return { listAttributes: '', spans };
+  const keepsLines = (width: number) =>
+    texts.every((text, index) => spans[index] || wrapText(estimatedWidth, text, width).length <= lines[index].length);
+  let narrow = 0;
+  let wide = columnWidth(columns) - LIST.marker;
+  while (wide - narrow > 0.05) {
+    const middle = (narrow + wide) / 2;
+    if (keepsLines(middle)) wide = middle;
+    else narrow = middle;
+  }
+  return { listAttributes: ` data-columns style="columns: ${Math.ceil((wide + LIST.marker) * 10) / 10}em ${columns}"`, spans };
 }
 
 function htmlText(value: string): string {
@@ -164,23 +230,26 @@ const BASE_STYLE = `
 html, body { margin: 0; background: var(--paper); color: var(--text); }
 body {
   font-family: ${PROJECT_EXPORT_THEME.fontFamily};
-  font-size: 16px;
-  line-height: 1.75;
+  font-size: ${PAGE.fontSize}px;
+  line-height: ${PAGE.lineHeight};
   -webkit-font-smoothing: antialiased;
 }
 h1, h2, h3, p, li { margin: 0; overflow-wrap: anywhere; }
-.document { width: min(100% - 32px, 760px); margin: 0 auto; padding: 56px 0 48px; }
+.document { width: min(100% - 32px, ${PAGE.maxWidth}px); margin: 0 auto; padding: 56px 0 48px; }
 .document-header { padding-bottom: 20px; border-bottom: 2px solid var(--rule-strong); }
 h1 { font-size: 30px; line-height: 1.35; font-weight: 700; }
 .document-description { margin-top: 10px; color: var(--text-secondary); }
 .section-heading { margin-top: 44px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); font-size: 21px; line-height: 1.45; font-weight: 700; }
 .step { margin-top: 32px; }
-.step-title { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); font-size: 17px; line-height: 1.7; font-weight: 600; }
+.step-title { display: grid; grid-template-columns: ${PAGE.stepIndent}em minmax(0, 1fr); font-size: 17px; line-height: 1.7; font-weight: 600; }
 .step-number { font-variant-numeric: tabular-nums; }
-figure { margin: 14px 0 0 2.2em; }
+figure { margin: 14px 0 0 ${PAGE.stepIndent}em; }
 img { display: block; max-width: 100%; height: auto; border: 1px solid var(--image-border); border-radius: ${PROJECT_EXPORT_THEME.imageRadius}px; }
-.annotations { margin: 12px 0 0 2.2em; padding-left: 1.4em; color: var(--text-secondary); }
-.annotations li + li { margin-top: 4px; }
+.annotations { margin: 12px 0 0 ${PAGE.stepIndent}em; padding-left: ${LIST.marker}em; color: var(--text-secondary); }
+.annotations li + li { margin-top: ${LIST.itemGap}em; }
+.annotations[data-columns] { padding-left: 0; column-gap: ${LIST.columnGap}em; }
+.annotations[data-columns] li { margin: 0 0 ${LIST.itemGap}em ${LIST.marker}em; break-inside: avoid; }
+.annotations[data-columns] li[data-span] { column-span: all; }
 .document-end { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--rule); color: var(--text-muted); font-size: 13px; text-align: center; }
 @media (max-width: 560px) {
   .document { padding-top: 28px; }

@@ -373,6 +373,7 @@ test.describe('editor workflows', () => {
     await editor.getByRole('button', { name: '匯出', exact: true }).click();
     const publishDialog = editor.getByRole('dialog', { name: '匯出' });
     await expect(publishDialog).toBeVisible();
+    await publishDialog.getByRole('radio', { name: '圖片', exact: true }).click();
     const browserDownload = editor.waitForEvent('download');
     await publishDialog.getByRole('button', { name: '下載圖片' }).click();
     const download = await browserDownload;
@@ -435,6 +436,7 @@ test.describe('editor workflows', () => {
     // The section starts at a Mark entry; the published document says so and has no placeholder heading.
     await editor.getByRole('button', { name: '匯出', exact: true }).click();
     const publishDialog = editor.getByRole('dialog', { name: '匯出' });
+    await publishDialog.getByRole('radio', { name: 'HTML', exact: true }).click();
     const browserDownload = editor.waitForEvent('download');
     await publishDialog.getByRole('button', { name: '下載 HTML 網頁' }).click();
     const htmlPath = await (await browserDownload).path();
@@ -465,8 +467,8 @@ test.describe('editor workflows', () => {
       await publishButton.click();
       const publishDialog = editor.getByRole('dialog', { name: '匯出' });
       await expect(publishDialog).toBeVisible();
-      await expect(publishDialog.getByRole('button', { name: '下載圖片' })).toBeVisible();
-      await publishDialog.getByRole('button', { name: '關閉', exact: true }).last().click();
+      await expect(publishDialog.getByRole('button', { name: '下載 PDF' })).toBeVisible();
+      await editor.keyboard.press('Escape');
       await expect(publishDialog).not.toBeVisible();
       const layout = await editor.evaluate(() => {
         const nav = document.querySelector('nav[aria-label="步驟導覽"]')!.getBoundingClientRect();

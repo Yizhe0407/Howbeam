@@ -8,11 +8,10 @@ import { t } from '@/lib/shared/i18n';
 
 interface Props {
   step: Step;
-  onChange: () => void | Promise<void>;
   disabled?: boolean;
 }
 
-export default function DescriptionField({ step, onChange, disabled = false }: Props) {
+export default function DescriptionField({ step, disabled = false }: Props) {
   const {
     description,
     setDescription,
@@ -24,7 +23,7 @@ export default function DescriptionField({ step, onChange, disabled = false }: P
     discardRecovery,
     flush,
     confirmOverwrite,
-  } = useStepDescriptionAutosave(step, onChange);
+  } = useStepDescriptionAutosave(step);
 
   return (
     <div className="mt-4 flex w-full flex-col gap-2">

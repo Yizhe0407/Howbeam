@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render as rtlRender, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { type ScreenshotStep, type Step, type StepEntry } from '@/lib/storage/models';
@@ -21,12 +21,10 @@ vi.mock('@/components/editor/AnnotationList', () => ({
   default: ({
     numbered,
     onSetNumbered,
-    numberingPending,
     editingDisabled,
   }: {
     numbered: boolean;
     onSetNumbered: (next: boolean) => void;
-    numberingPending: boolean;
     editingDisabled: boolean;
   }) => (
     <button
@@ -34,7 +32,7 @@ vi.mock('@/components/editor/AnnotationList', () => ({
       role="switch"
       aria-label="顯示編號"
       aria-checked={numbered}
-      disabled={numberingPending || editingDisabled}
+      disabled={editingDisabled}
       onClick={() => onSetNumbered(!numbered)}
     />
   ),
@@ -118,7 +116,6 @@ function stage({
       index={0}
       sectionTitle={sectionTitle}
       onStartSection={onStartSection}
-      onChange={vi.fn()}
       onDelete={vi.fn().mockResolvedValue(undefined)}
       onDeleteAnnotation={vi.fn().mockResolvedValue(undefined)}
       onZoom={onZoom}
@@ -155,22 +152,17 @@ describe('StepStage numbered snapshots', () => {
     expect(singleHint.parentElement?.dataset.testid).toBe('single-image-frame');
   });
 
-  it('submits the parent atomic callback only once while the update is pending', async () => {
+  it('hands the new value to the editor without locking the switch while it saves', () => {
     const pending = deferred();
     const onSetNumbered = vi.fn().mockReturnValue(pending.promise);
     renderStage({ onSetNumbered });
 
     const toggle = screen.getByRole('switch', { name: '顯示編號' });
     fireEvent.click(toggle);
-    fireEvent.click(toggle);
 
-    expect(onSetNumbered).toHaveBeenCalledOnce();
     expect(onSetNumbered).toHaveBeenCalledWith('group-1', false);
-    expect((toggle as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByLabelText('正在儲存編號設定')).toBeTruthy();
-
-    pending.resolve();
-    await waitFor(() => expect((toggle as HTMLButtonElement).disabled).toBe(false));
+    // The editor shows the new value at once and queues the save, so the switch stays usable.
+    expect((toggle as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('surfaces the rejection message when the parent callback rejects with an Error', async () => {

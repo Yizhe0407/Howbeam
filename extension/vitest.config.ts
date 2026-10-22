@@ -3,9 +3,11 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('.', import.meta.url)),
-    },
+    alias: [
+      { find: '@', replacement: fileURLToPath(new URL('.', import.meta.url)) },
+      // The PDF export ships pdfkit's browser build; tests run that same build instead of its Node one.
+      { find: /^pdfkit$/, replacement: fileURLToPath(new URL('./node_modules/pdfkit/js/pdfkit.browser.mjs', import.meta.url)) },
+    ],
   },
   test: {
     include: ['tests/unit/**/*.test.{ts,tsx}', 'tests/integration/**/*.test.{ts,tsx}'],

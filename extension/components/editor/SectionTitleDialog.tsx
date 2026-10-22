@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { PROJECT_SECTION_LIMITS, sanitizeProjectSectionTitle } from '@/lib/project/project-sections';
 import { t } from '@/lib/shared/i18n';
+import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 
 /** What the dialog is naming: a new section starting at a step, or an existing one. */
 export type SectionDialogRequest =
@@ -45,11 +46,13 @@ function SectionTitleFields({ request, onClose, onSubmit }: Props & { request: S
   const initialTitle = request.kind === 'rename' ? request.title : '';
   const [draft, setDraft] = useState(initialTitle);
   const [pending, setPending] = useState(false);
+  const pendingShown = useDeferredBusy(pending);
   const [failed, setFailed] = useState(false);
   const inputId = useId();
   const copy = t().editor.sections;
   const title = sanitizeProjectSectionTitle(draft);
-  const canSubmit = Boolean(title) && title !== initialTitle && !pending;
+  const titleChanged = Boolean(title) && title !== initialTitle;
+  const canSubmit = titleChanged && !pending;
 
   async function submit() {
     if (!canSubmit) return;
@@ -92,7 +95,7 @@ function SectionTitleFields({ request, onClose, onSubmit }: Props & { request: S
           autoFocus
           value={draft}
           maxLength={PROJECT_SECTION_LIMITS.maxTitleLength}
-          disabled={pending}
+          disabled={pendingShown}
           onChange={(event) => setDraft(event.target.value)}
           onFocus={(event) => event.currentTarget.select()}
         />
@@ -102,11 +105,11 @@ function SectionTitleFields({ request, onClose, onSubmit }: Props & { request: S
           </InlineAlert>
         )}
         <DialogFooter className="mt-6">
-          <Button type="button" variant="outline" disabled={pending} onClick={onClose}>
+          <Button type="button" variant="outline" disabled={pendingShown} onClick={onClose}>
             {t().common.cancel}
           </Button>
-          <Button type="submit" disabled={!canSubmit}>
-            {pending && <Loader2 className="animate-spin" />}
+          <Button type="submit" disabled={!titleChanged || pendingShown}>
+            {pendingShown && <Loader2 className="animate-spin" />}
             {request.kind === 'add' ? copy.create : t().common.save}
           </Button>
         </DialogFooter>

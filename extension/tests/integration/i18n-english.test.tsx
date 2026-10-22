@@ -47,9 +47,9 @@ describe('English UI', () => {
       <EditorHeader
         operationActive
         operation="recording"
-        steps={[]}
+        hasSteps={false}
         sessionId="project"
-        onOpenPublish={() => {}}
+        publish={{ runExport: (task) => task(), getProjectEntries: () => [] }}
       />,
     );
     expect(screen.getByRole('navigation', { name: 'Location' })).toBeTruthy();

@@ -78,9 +78,18 @@ pnpm build:firefox
 ## 模組結構
 
 - `.howbeam` archive 拆為 `lib/export/project-archive-contract.ts`、`-validation.ts`、`-serialize.ts` 與 `-import.ts`，沒有聚合入口；使用端直接 import 需要的模組。
+- `lib/export/pdf/` 是 PDF 匯出：`pdf-layout.ts` 只負責排版並輸出頁面區塊資料（標題、段落、清單、圖片、裝飾），`pdf-render.ts` 用 PDFKit 把區塊畫成 tagged PDF（結構樹、圖片替代文字、書籤），`pdf-spec.ts` 是版面規格，`pdf-fonts.ts` 載入內建字型（建置方式見 [scripts/pdf-fonts/README.md](./scripts/pdf-fonts/README.md)）。
+- `lib/export/text-wrap.ts` 依量測寬度換行（含中日文禁則），PDF 用實際字型量測，HTML 用估計字寬決定分欄。
+- `lib/export/annotation-columns.ts` 決定標記清單分幾欄，PDF 與 HTML 共用同一規則：多一欄要讓清單至少矮兩行，每欄至少兩項，欄內最多折兩行；更長的項目橫跨整寬，前後的項目各自分欄。
 - `lib/media/annotation-layout.ts` 是 annotation layout facade；純幾何、badge/callout collision placement、常數與型別分別位於相鄰的 `annotation-*.ts` 模組。
 - `lib/editor/use-editor-entry-workspace.ts` 封裝 Editor 的完整項目列表、單一目前項目與 view state；儲存、permission 與 undo transaction 仍由 `editor/App.tsx` 協調。
+- `lib/editor/use-editor-project-data.ts` 是 Editor 唯一的專案資料來源：開啟時讀一次；之後收到任何寫入的變更廣播，先讀專案列比對 revision，有變才重讀結構；本頁寫入直接採用 transaction 回傳的結構，畫面只依 revision 前進。`lib/editor/use-serial-operations.ts` 讓 Editor 的資料操作依序排隊執行，不會拒絕點擊。
 - `lib/recording/background/recorder-runtime.ts` 提供 background state machine 使用的瀏覽器 capture/injection adapter，讓 retry 與 image scale 判定可獨立測試與重用。
+
+## 字型
+
+- UI 使用 Huninn（`public/fonts/Huninn-Regular.woff2`，OFL，授權文字在同一目錄）。
+- PDF 匯出使用 Howbeam Sans TC，由官方 Noto Sans TC 產出的子集（OFL）；來源、重新產生與授權說明見 [scripts/pdf-fonts/README.md](./scripts/pdf-fonts/README.md)。
 
 ## 封裝
 

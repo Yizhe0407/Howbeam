@@ -21,10 +21,7 @@ import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 function App() {
-  // Opts out of step reads: the full hook re-fetches every step (screenshot
-  // Blobs included) on each state change, which a 320px popup never shows.
-  const { recording, isRecording, sessionId, error, recoverableError, dataError } =
-    useRecordingSession(undefined, { withSteps: false });
+  const { recording, isRecording, sessionId, error, recoverableError, dataError } = useRecordingSession();
   const [openingEditor, setOpeningEditor] = useState(false);
   const [editorOpenError, setEditorOpenError] = useState<string | null>(null);
   // The 「錄到哪裡」 selection (null = 新專案). Reset acts on exactly this project,

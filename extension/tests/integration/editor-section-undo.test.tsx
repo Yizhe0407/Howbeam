@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
-// The editor renders controls (UndoSnackbar, EditorHeader, ...) that use the
+// The editor renders controls (EditorHeader, ...) that use the
 // shadcn Tooltip, which requires a TooltipProvider ancestor — wrap every
 // render() the same way the app roots do.
 function render(ui: Parameters<typeof rtlRender>[0], options?: Parameters<typeof rtlRender>[1]) {
@@ -71,7 +71,7 @@ vi.mock('@/components/editor/StepRail', () => ({
 vi.mock('@/components/editor/StepStage', () => ({ default: () => null }));
 vi.mock('@/components/shared/EmptyState', () => ({ default: () => <div>EmptyState</div> }));
 vi.mock('@/components/editor/Lightbox', () => ({ default: () => null }));
-vi.mock('@/components/editor/PublishProjectDialog', () => ({ default: () => null }));
+vi.mock('@/components/editor/ExportPopover', () => ({ default: ({ trigger }: { trigger: unknown }) => trigger }));
 
 import EditorApp from '@/entrypoints/editor/App';
 
@@ -131,14 +131,11 @@ const idleRecording = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  recordingSession.refresh.mockResolvedValue(undefined);
   recordingSession.useRecordingSession.mockReturnValue({
     sessionId: 'project-1',
     tabId: 17,
-    steps: entries,
     error: null,
     dataError: null,
-    refresh: recordingSession.refresh,
     recording: idleRecording,
   });
   window.history.replaceState({}, '', '/editor.html?sessionId=project-1');
@@ -161,12 +158,12 @@ describe('section delete undo', () => {
     database.deleteProjectSectionAtomically.mockImplementation(async () => {
       snapshotSections = [];
       snapshotRevision = 8;
-      return { project: makeProject(8, []), entryIds: entries.map(database.entryId) };
+      return { project: makeProject(8, []), entries, entryIds: entries.map(database.entryId) };
     });
     database.addProjectSectionAtomically.mockImplementation(async () => {
       snapshotSections = [{ ...section, id: 'section-restored' }];
       snapshotRevision = 9;
-      return { project: makeProject(9, snapshotSections), entryIds: entries.map(database.entryId) };
+      return { project: makeProject(9, snapshotSections), entries, entryIds: entries.map(database.entryId) };
     });
 
     render(<EditorApp />);
@@ -202,7 +199,7 @@ describe('section delete undo', () => {
     database.deleteProjectSectionAtomically.mockImplementation(async () => {
       snapshotSections = [];
       snapshotRevision = 8;
-      return { project: makeProject(8, []), entryIds: entries.map(database.entryId) };
+      return { project: makeProject(8, []), entries, entryIds: entries.map(database.entryId) };
     });
 
     render(<EditorApp />);
@@ -238,12 +235,12 @@ describe('section dialog', () => {
     database.addProjectSectionAtomically.mockImplementation(async () => {
       snapshotSections = [section, { id: 'section-2', title: '操作', startEntryId: 'entry-2' }];
       snapshotRevision = 8;
-      return { project: makeProject(8, snapshotSections), entryIds: entries.map(database.entryId) };
+      return { project: makeProject(8, snapshotSections), entries, entryIds: entries.map(database.entryId) };
     });
     database.deleteProjectSectionAtomically.mockImplementation(async () => {
       snapshotSections = [section];
       snapshotRevision = 9;
-      return { project: makeProject(9, snapshotSections), entryIds: entries.map(database.entryId) };
+      return { project: makeProject(9, snapshotSections), entries, entryIds: entries.map(database.entryId) };
     });
 
     render(<EditorApp />);
@@ -288,6 +285,7 @@ describe('section dialog', () => {
     }));
     database.renameProjectSectionAtomically.mockImplementation(async () => ({
       project: makeProject(8, [{ ...section, title: '前置作業' }]),
+      entries,
       entryIds: entries.map(database.entryId),
     }));
 

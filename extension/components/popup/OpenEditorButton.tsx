@@ -1,5 +1,6 @@
 import { Loader2, PencilLine } from 'lucide-react';
 import { t } from '@/lib/shared/i18n';
+import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 
 interface Props {
   /** Copy while idle. The pending copy is owned here because it is identical on
@@ -19,17 +20,18 @@ interface Props {
  * between the idle nav, the editor-recovery branch and the live-run exit.
  */
 export default function OpenEditorButton({ label, pending, onOpen, className }: Props) {
+  const pendingShown = useDeferredBusy(pending);
   return (
     <button
       type="button"
-      onClick={() => void onOpen?.()}
-      disabled={pending || !onOpen}
+      onClick={() => !pending && void onOpen?.()}
+      disabled={pendingShown || !onOpen}
       className={className}
     >
-      {pending
+      {pendingShown
         ? <Loader2 className="animate-spin" />
         : <PencilLine />}
-      {pending ? t().common.openingEditor : label}
+      {pendingShown ? t().common.openingEditor : label}
     </button>
   );
 }

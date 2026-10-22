@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react';
-import { Loader2, Trash2 } from 'lucide-react';
+import { type ReactNode } from 'react';
+import { Trash2 } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { PERSISTED_STEP_LIMITS } from '@/lib/storage/persistence-limits';
@@ -8,8 +8,6 @@ import { restrictToVerticalAxis, useSortableReorder } from '@/lib/editor/dnd';
 import { useStepDescriptionAutosave } from '@/lib/editor/editor-autosave';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import InlineAlert from '@/components/shared/InlineAlert';
-import { reportError } from '@/components/shared/report-error';
 import DescriptionDraftRecoveries from './DescriptionDraftRecoveries';
 import DescriptionSaveIssue from './DescriptionSaveIssue';
 import SortableItem from './SortableItem';
@@ -20,13 +18,14 @@ import { DashedOutline } from '@/components/ui/dashed-outline';
 interface RowProps {
   step: Step;
   index: number;
-  onChange: () => void | Promise<void>;
   onDelete: (step: Step) => Promise<void>;
   deleteDisabled: boolean;
   dragHandle: ReactNode;
 }
 
-function AnnotationRow({ step, index, onChange, onDelete, deleteDisabled, dragHandle }: RowProps) {
+/** One marker. Deleting it takes the row off the list at once; a failed delete
+ * brings it back and is reported with the editor's other edits. */
+function AnnotationRow({ step, index, onDelete, deleteDisabled, dragHandle }: RowProps) {
   const {
     description,
     setDescription,
@@ -38,21 +37,11 @@ function AnnotationRow({ step, index, onChange, onDelete, deleteDisabled, dragHa
     discardRecovery,
     flush,
     confirmOverwrite,
-  } = useStepDescriptionAutosave(step, onChange);
-  const [deleting, setDeleting] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+  } = useStepDescriptionAutosave(step);
 
-  async function handleDelete() {
-    if (deleting || deleteDisabled) return;
-    setDeleting(true);
-    setActionError(null);
-    try {
-      await onDelete(step);
-    } catch (err) {
-      setActionError(reportError('[howbeam] failed to delete annotation', err, t().editor.annotations.deleteFailed));
-    } finally {
-      setDeleting(false);
-    }
+  function handleDelete() {
+    if (deleteDisabled) return;
+    void onDelete(step).catch((error) => console.error('[howbeam] failed to delete annotation', error));
   }
 
   return (
@@ -68,7 +57,7 @@ function AnnotationRow({ step, index, onChange, onDelete, deleteDisabled, dragHa
           maxLength={PERSISTED_STEP_LIMITS.maxAnnotationDescriptionLength}
           onChange={(e) => setDescription(e.target.value)}
           onBlur={() => void flush().catch(() => undefined)}
-          disabled={deleteDisabled || deleting}
+          disabled={deleteDisabled}
           placeholder={t().editor.annotations.placeholder}
           className="min-w-0 flex-1 rounded-md border-none bg-transparent px-1.5 py-1 text-sm text-foreground outline-none focus-ring placeholder:text-muted-foreground"
         />
@@ -77,13 +66,17 @@ function AnnotationRow({ step, index, onChange, onDelete, deleteDisabled, dragHa
             <TooltipTrigger asChild>
               <button
                 type="button"
-                onClick={handleDelete}
+                // The row leaves the list on the first press and the next row slides under the pointer,
+                // so a double click's second press must not delete that one too.
+                onClick={(event) => {
+                  if (event.detail <= 1) handleDelete();
+                }}
                 onPointerDown={(event) => event.preventDefault()}
-                disabled={deleteDisabled || deleting}
+                disabled={deleteDisabled}
                 aria-label={t().editor.annotations.delete(index + 1)}
                 className="flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors focus-ring hover:bg-danger-soft hover:text-danger disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                <Trash2 className="size-3.5" />
               </button>
             </TooltipTrigger>
             <TooltipContent>{deleteDisabled ? t().editor.annotations.deleteDisabled : t().editor.annotations.deleteTooltip}</TooltipContent>
@@ -96,7 +89,7 @@ function AnnotationRow({ step, index, onChange, onDelete, deleteDisabled, dragHa
         savedDescription={savedDescription}
         onOverwrite={confirmOverwrite}
         onKeepSaved={keepSaved}
-        disabled={deleteDisabled || deleting}
+        disabled={deleteDisabled}
         className="mt-2 ml-9"
       />
       <DescriptionDraftRecoveries
@@ -104,21 +97,9 @@ function AnnotationRow({ step, index, onChange, onDelete, deleteDisabled, dragHa
         onRestore={restoreRecovery}
         onDiscard={discardRecovery}
         onConfirmOverwrite={() => confirmOverwrite()}
-        disabled={deleteDisabled || deleting}
+        disabled={deleteDisabled}
         className="mt-2 ml-9"
       />
-      {actionError && (
-        <InlineAlert className="ml-9">
-          {actionError}
-          <button
-            type="button"
-            onClick={() => void handleDelete()}
-            className="ml-2 rounded-md px-1.5 py-0.5 font-bold text-brand-text underline underline-offset-2 outline-none focus-ring"
-          >
-            {t().editor.annotations.retryDelete}
-          </button>
-        </InlineAlert>
-      )}
     </div>
   );
 }
@@ -126,9 +107,7 @@ function AnnotationRow({ step, index, onChange, onDelete, deleteDisabled, dragHa
 interface Props {
   annotations: Step[];
   numbered?: boolean;
-  onSetNumbered?: (numbered: boolean) => void | Promise<void>;
-  numberingPending?: boolean;
-  onChange: () => void | Promise<void>;
+  onSetNumbered?: (numbered: boolean) => void;
   onDelete: (step: Step) => Promise<void>;
   onReorder: (reordered: Step[]) => Promise<void>;
   editingDisabled?: boolean;
@@ -138,8 +117,6 @@ export default function AnnotationList({
   annotations,
   numbered = false,
   onSetNumbered,
-  numberingPending = false,
-  onChange,
   onDelete,
   onReorder,
   editingDisabled = false,
@@ -170,8 +147,8 @@ export default function AnnotationList({
           {t().editor.annotations.numbering}
           <Switch
             checked={numbered}
-            onCheckedChange={(checked) => void onSetNumbered?.(checked)}
-            disabled={editingDisabled || numberingPending || !onSetNumbered}
+            onCheckedChange={(checked) => onSetNumbered?.(checked)}
+            disabled={editingDisabled || !onSetNumbered}
           />
         </label>
       </div>
@@ -191,7 +168,6 @@ export default function AnnotationList({
                     <AnnotationRow
                       step={step}
                       index={index}
-                      onChange={onChange}
                       onDelete={onDelete}
                       deleteDisabled={editingDisabled}
                       dragHandle={handle}

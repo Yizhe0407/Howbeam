@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bookmark, Loader2, Pencil, Plus, PencilRuler, ZoomIn } from 'lucide-react';
+import { Bookmark, Pencil, Plus, PencilRuler, ZoomIn } from 'lucide-react';
 import { entryId, getEntryPrivacyState, type Step, type StepEntry } from '@/lib/storage/models';
 import ImageEditWorkspace from './ImageEditWorkspace';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,6 @@ interface Props {
   onStartSection?: () => void;
   projectTitle?: string;
   onTitleChange?: (title: string) => Promise<void>;
-  onChange: () => void | Promise<void>;
   onDelete: () => Promise<void>;
   onDeleteAnnotation: (step: Step) => Promise<void>;
   onZoom: () => void;
@@ -41,7 +40,6 @@ export default function StepStage({
   onStartSection,
   projectTitle,
   onTitleChange,
-  onChange,
   onDelete,
   onDeleteAnnotation,
   onZoom,
@@ -50,7 +48,6 @@ export default function StepStage({
   onSetNumbered,
   editingDisabled = false,
 }: Props) {
-  const [numberingPending, setNumberingPending] = useState(false);
   const [stageError, setStageError] = useState<string | null>(null);
   const privacy = getEntryPrivacyState(entry);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
@@ -73,17 +70,13 @@ export default function StepStage({
     </div>
   );
 
-  async function setNumbered(next: boolean) {
-    if (entry.kind !== 'group' || numberingPending || editingDisabled) return;
-    setNumberingPending(true);
+  function setNumbered(next: boolean) {
+    if (entry.kind !== 'group' || editingDisabled) return;
     setStageError(null);
-    try {
-      await onSetNumbered(entryId(entry), next);
-    } catch (err) {
+    // The switch flips at once; a failed save is reported with the editor's other edits.
+    void onSetNumbered(entryId(entry), next).catch((err) => {
       setStageError(reportError('[howbeam] failed to update annotation numbering', err, t().editor.stage.numberingSaveFailed));
-    } finally {
-      setNumberingPending(false);
-    }
+    });
   }
 
   const headerRow = (
@@ -122,7 +115,6 @@ export default function StepStage({
         )}
       </div>
       <div className="flex items-center gap-3">
-        {numberingPending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-label={t().editor.stage.savingNumbering} />}
         {/* Also the way out of a pending mask review: the editor is where masks are checked and confirmed. */}
         <button
           type="button"
@@ -188,19 +180,14 @@ export default function StepStage({
     <ImageEditWorkspace
       entry={entry}
       number={index + 1}
-      onClose={() => {
-        setImageEditorOpen(false);
-        // The editor wrote its changes straight to storage; load them into the screen once.
-        void Promise.resolve(onChange()).catch((reloadError) => {
-          setStageError(reportError('[howbeam] failed to reload after image edits', reloadError, t().editor.imageEdit.saveFailed));
-        });
-      }}
+      // Its saves reach this screen through the change broadcast like any other write.
+      onClose={() => setImageEditorOpen(false)}
     />
   );
 
   if (entry.kind === 'single') {
     return (
-      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-y-auto bg-background px-4 pt-4 pb-6 sm:px-6 lg:px-10 lg:pt-5 lg:pb-16">
+      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-y-auto bg-background px-[var(--content-gutter,1rem)] pt-4 pb-[var(--notice-lane,5rem)] lg:pt-5">
         <div className="flex w-full max-w-[1180px] flex-none flex-col gap-3 lg:min-h-0 lg:flex-1">
           <div className="flex-none">{titleRow}</div>
           <div className="flex-none">{headerRow}</div>
@@ -213,7 +200,6 @@ export default function StepStage({
             <DescriptionField
               key={entry.step.id}
               step={entry.step}
-              onChange={onChange}
               disabled={editingDisabled}
             />
           </div>
@@ -224,7 +210,7 @@ export default function StepStage({
   }
 
   return (
-    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto bg-background px-4 pt-4 pb-6 sm:px-6 lg:px-10 lg:pt-5 lg:pb-16">
+    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto bg-background px-[var(--content-gutter,1rem)] pt-4 pb-[var(--notice-lane,5rem)] lg:pt-5">
       <div className="flex-none">{titleRow}</div>
       <div className="flex-none">{headerRow}</div>
       {errorNotice && <div className="flex-none">{errorNotice}</div>}
@@ -237,9 +223,7 @@ export default function StepStage({
           <AnnotationList
             annotations={entry.annotations}
             numbered={entry.anchor.numbered ?? false}
-            onSetNumbered={(next) => setNumbered(next)}
-            numberingPending={numberingPending}
-            onChange={onChange}
+            onSetNumbered={setNumbered}
             onDelete={onDeleteAnnotation}
             onReorder={onReorderAnnotations}
             editingDisabled={editingDisabled}

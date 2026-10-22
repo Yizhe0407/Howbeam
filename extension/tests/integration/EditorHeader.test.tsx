@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Step } from '@/lib/storage/models';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 // EditorHeader's buttons use the shadcn Tooltip, which requires a
@@ -17,16 +16,14 @@ vi.mock('@/lib/runtime/page-navigation', () => ({ navigateInPlace: mocks.navigat
 
 import EditorHeader from '@/components/editor/EditorHeader';
 
-const steps = [{ id: 'step-1' }] as Step[];
-
 function renderHeader(overrides: Partial<React.ComponentProps<typeof EditorHeader>> = {}) {
   return render(
     <EditorHeader
       operationActive={false}
-      steps={steps}
+      hasSteps
       sessionId="project-1"
       projectTitle="新增成員"
-      onOpenPublish={vi.fn()}
+      publish={{ runExport: (task) => task(), getProjectEntries: () => [] }}
       {...overrides}
     />,
   );
@@ -111,8 +108,8 @@ describe('EditorHeader', () => {
   it.each<[string, Partial<React.ComponentProps<typeof EditorHeader>>]>([
     ['an operation is running', { operationActive: true }],
     ['editing is disabled', { editingDisabled: true }],
-    ['the project has no steps', { steps: [] }],
-    ['no publish handler is wired', { onOpenPublish: undefined }],
+    ['the project has no steps', { hasSteps: false }],
+    ['no publish handler is wired', { publish: undefined }],
   ])('disables 匯出 when %s', (_label, overrides) => {
     renderHeader(overrides);
 

@@ -1,0 +1,45 @@
+{
+  "generatedBy": "scripts/pdf-fonts/build.py",
+  "fonttools": "4.67.0",
+  "source": {
+    "repository": "https://github.com/google/fonts",
+    "commit": "3be1884c48c3e45b52ecc725676a08f87776373e",
+    "files": {
+      "font": {
+        "path": "ofl/notosanstc/NotoSansTC[wght].ttf",
+        "bytes": 11941968,
+        "sha256": "864727d210d54f2537bbe23b3a839436c3992af72de9322af5270897246bd44f"
+      },
+      "license": {
+        "path": "ofl/notosanstc/OFL.txt",
+        "bytes": 4388,
+        "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+      }
+    }
+  },
+  "codepoints": 6575,
+  "license": {
+    "file": "OFL.txt",
+    "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+  },
+  "fonts": [
+    {
+      "file": "HowbeamSansTC-Regular.ttf",
+      "family": "Howbeam Sans TC",
+      "style": "Regular",
+      "weight": 400,
+      "glyphs": 6387,
+      "bytes": 2006676,
+      "sha256": "ae360b6cc49106ed017fe7fdca11bd9664a61254c421f4798a231fb0efe8ec7e"
+    },
+    {
+      "file": "HowbeamSansTC-Bold.ttf",
+      "family": "Howbeam Sans TC",
+      "style": "Bold",
+      "weight": 700,
+      "glyphs": 6387,
+      "bytes": 2003876,
+      "sha256": "d8a0b1967b8697912253b3b8962eade4af834eb92b4d37237958a19c54cae370"
+    }
+  ]
+}

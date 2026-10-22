@@ -71,7 +71,7 @@ describe('editor description autosave', () => {
     mocks.saveStepDescription.mockImplementationOnce(storeAfter(pending));
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
 
@@ -99,7 +99,7 @@ describe('editor description autosave', () => {
     mocks.saveStepDescription.mockImplementationOnce(storeAfter(firstWrite)).mockImplementation(storeAsSent);
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
 
@@ -128,7 +128,7 @@ describe('editor description autosave', () => {
   it('flushes immediately for a parent operation before the debounce expires', async () => {
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
         <FlushButton />
       </EditorSaveProvider>,
     );
@@ -151,7 +151,7 @@ describe('editor description autosave', () => {
     mocks.saveStepDescription.mockRejectedValueOnce(saveError).mockImplementation(storeAsSent);
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
 
@@ -183,7 +183,7 @@ describe('editor description autosave', () => {
     mocks.saveStepDescription.mockImplementationOnce(storeAfter(interruptedWrite)).mockImplementation(storeAsSent);
     const first = render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
 
@@ -192,7 +192,7 @@ describe('editor description autosave', () => {
 
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
     expect(screen.getByDisplayValue('關閉前最後輸入')).toBeTruthy();
@@ -214,7 +214,7 @@ describe('editor description autosave', () => {
     writeDescriptionDraft(base, '分頁 B 草稿', 'foreign-b', localStorage, now + 1);
     render(
       <EditorSaveProvider>
-        <DescriptionField step={base} onChange={vi.fn()} />
+        <DescriptionField step={base} />
       </EditorSaveProvider>,
     );
 
@@ -244,7 +244,7 @@ describe('editor description autosave', () => {
     writeDescriptionDraft(base, '替代版本', 'foreign-c', localStorage, now);
     render(
       <EditorSaveProvider>
-        <DescriptionField step={base} onChange={vi.fn()} />
+        <DescriptionField step={base} />
       </EditorSaveProvider>,
     );
 
@@ -268,7 +268,7 @@ describe('editor description autosave', () => {
     mocks.saveStepDescription.mockImplementationOnce(storeAfter(firstWrite)).mockImplementation(storeAsSent);
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
     const field = screen.getByLabelText('說明');
@@ -294,7 +294,7 @@ describe('editor description autosave', () => {
     mocks.saveStepDescription.mockRejectedValue(new StepNotFoundError('step-1'));
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
 
@@ -320,7 +320,7 @@ describe('editor description autosave', () => {
       .mockImplementation(storeAsSent);
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
 
@@ -355,7 +355,7 @@ describe('editor description autosave', () => {
     const oversized = 'x'.repeat(100_001);
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
 
@@ -367,24 +367,6 @@ describe('editor description autosave', () => {
     });
 
     expect(mocks.saveStepDescription).toHaveBeenCalledWith('step-1', oversized, '');
-  });
-
-  it('treats refresh failure after an IndexedDB commit as saved data', async () => {
-    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    render(
-      <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn().mockRejectedValue(new Error('refresh failed'))} />
-      </EditorSaveProvider>,
-    );
-    fireEvent.change(screen.getByLabelText('說明'), { target: { value: '已寫入資料庫' } });
-    await act(async () => {
-      vi.advanceTimersByTime(650);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    expect(screen.queryByText('已儲存')).toBeNull();
-    expect(localStorage.length).toBe(0);
-    warning.mockRestore();
   });
 
   async function settle(ms = 650) {
@@ -399,7 +381,7 @@ describe('editor description autosave', () => {
   it('saves text containing control characters and keeps saving what is typed afterwards', async () => {
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
     const field = screen.getByLabelText('說明');
@@ -419,7 +401,7 @@ describe('editor description autosave', () => {
     mocks.saveStepDescription.mockImplementationOnce(async () => '儲存後的值');
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
     const field = screen.getByLabelText('說明');
@@ -440,7 +422,7 @@ describe('editor description autosave', () => {
       .mockImplementation(storeAsSent);
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
     const field = screen.getByLabelText('說明');
@@ -470,7 +452,7 @@ describe('editor description autosave', () => {
     mocks.saveStepDescription.mockRejectedValueOnce(new StepDescriptionConflictError('step-1', '', '分頁 A 的版本'));
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
     const field = screen.getByLabelText('說明');
@@ -493,7 +475,7 @@ describe('editor description autosave', () => {
     mocks.saveStepDescription.mockRejectedValue(new StepNotFoundError('step-1'));
     render(
       <EditorSaveProvider>
-        <DescriptionField step={makeStep()} onChange={vi.fn()} />
+        <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
 

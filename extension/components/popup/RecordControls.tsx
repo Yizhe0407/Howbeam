@@ -22,6 +22,7 @@ import {
   markCrossTabRecordingDeclined,
 } from '@/lib/runtime/cross-tab-recording';
 import { claimPendingStart, discardPendingStart, parkPendingStart } from '@/lib/runtime/pending-start';
+import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -124,6 +125,7 @@ export default function RecordControls({
     onTargetProjectChange?.(projectId);
   }, [onTargetProjectChange]);
   const [pending, setPending] = useState(false);
+  const pendingShown = useDeferredBusy(pending);
   const [controlError, setControlError] = useState<string | null>(null);
   const { crossTab, setCrossTab, restrictedPage, setRestrictedPage, activeTabId } = useStartPreflight(setControlError);
 
@@ -297,7 +299,7 @@ export default function RecordControls({
                       aria-checked={mode === candidate}
                       aria-describedby={descriptionId}
                       onClick={() => setMode(candidate)}
-                      disabled={pending}
+                      disabled={pendingShown}
                       className={cn(
                         'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-sm border-2 text-sm font-bold outline-none transition-colors focus-ring',
                         // Pastel fill + ink text in both themes, like every selection.
@@ -322,7 +324,7 @@ export default function RecordControls({
             );
           })}
         </div>
-        <RecordTargetPicker value={targetProjectId} onChange={setTargetProjectId} disabled={pending} />
+        <RecordTargetPicker value={targetProjectId} onChange={setTargetProjectId} disabled={pendingShown} />
         {/* Passive affordance, never a nag: shown whenever the grant is absent
             (even after a remembered decline), and the request runs directly in
             the click handler so the browser accepts it as a user gesture. */}
@@ -331,8 +333,8 @@ export default function RecordControls({
             {t().popup.singleTabOnly}
             <button
               type="button"
-              onClick={() => void requestCrossTabPermission()}
-              disabled={pending}
+              onClick={() => !pending && void requestCrossTabPermission()}
+              disabled={pendingShown}
               className="ml-0.5 rounded-sm font-bold text-brand-text underline underline-offset-2 outline-none focus-ring disabled:pointer-events-none"
             >
               {t().popup.enableCrossTab}
@@ -353,7 +355,7 @@ export default function RecordControls({
       <button
         type="button"
         onClick={start}
-        disabled={pending || restrictedPage}
+        disabled={pendingShown || restrictedPage}
         // A blocked page greys the sticker out entirely; a dimmed red would
         // still read as "ready to record".
         className={cn(
@@ -361,12 +363,12 @@ export default function RecordControls({
           restrictedPage && 'border-border-soft bg-secondary text-muted-foreground disabled:opacity-100',
         )}
       >
-        {pending ? (
+        {pendingShown ? (
           <Loader2 className="size-4 animate-spin" />
         ) : (
           <span className="size-3 rounded-full border-2 border-current bg-current/40" aria-hidden="true" />
         )}
-        {pending
+        {pendingShown
           ? activeMode.startingLabel
           : targetProjectId === null
             ? t().common.startRecording

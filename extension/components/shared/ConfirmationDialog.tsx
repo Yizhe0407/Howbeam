@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { t } from '@/lib/shared/i18n';
+import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 
 interface Props {
   open: boolean;
@@ -42,6 +43,7 @@ export default function ConfirmationDialog({
   onOpenChange,
   onConfirm,
 }: Props) {
+  const pendingShown = useDeferredBusy(pending);
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
       <DialogContent
@@ -58,12 +60,12 @@ export default function ConfirmationDialog({
         </DialogHeader>
         {error && <InlineAlert className="mt-4">{error}</InlineAlert>}
         <DialogFooter className="mt-6">
-          <Button type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" disabled={pendingShown} onClick={() => !pending && onOpenChange(false)}>
             {t().common.cancel}
           </Button>
-          <Button type="button" variant={confirmVariant} disabled={pending} onClick={() => void onConfirm()}>
-            {pending && <Loader2 className="animate-spin" />}
-            {pending ? pendingLabel : confirmLabel}
+          <Button type="button" variant={confirmVariant} disabled={pendingShown} onClick={() => !pending && void onConfirm()}>
+            {pendingShown && <Loader2 className="animate-spin" />}
+            {pendingShown ? pendingLabel : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

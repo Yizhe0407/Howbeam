@@ -1,4 +1,5 @@
 import { Check, Loader2, Maximize, Redo2, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { IMAGE_EDIT_TOOLS, type ImageEditToolId } from '@/lib/editor/image-edit-tools';
 import { roomForKind, type ItemRoom } from '@/lib/editor/image-edit-items';
 import { cn } from '@/lib/shared/utils';
@@ -104,6 +105,7 @@ export default function ImageEditToolbar({ tool, onToolChange, room = { masks: t
 
 /** History, zoom, save status and Done. */
 export function ImageEditHeaderActions(props: HeaderProps) {
+  const savingShown = useDeferredBusy(props.saving);
   const copy = t().editor.imageEdit;
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -124,7 +126,7 @@ export function ImageEditHeaderActions(props: HeaderProps) {
       <span className="hidden text-xs text-muted-foreground sm:inline" aria-live="polite">{copy.count(props.itemCount)}</span>
 
       <div className="ml-auto flex items-center gap-3">
-        {props.saving && (
+        {savingShown && (
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground" role="status">
             <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />{copy.saving}
           </span>

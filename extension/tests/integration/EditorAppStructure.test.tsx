@@ -125,11 +125,11 @@ vi.mock('@/components/editor/StepStage', () => ({
 }));
 vi.mock('@/components/shared/EmptyState', () => ({ default: () => <div>EmptyState</div> }));
 vi.mock('@/components/editor/Lightbox', () => ({ default: () => null }));
-vi.mock('@/components/editor/UndoSnackbar', () => ({ default: () => null }));
-vi.mock('@/components/editor/PublishProjectDialog', () => ({ default: () => null }));
+vi.mock('@/components/editor/ExportPopover', () => ({ default: ({ trigger }: { trigger: unknown }) => trigger }));
 
 import EditorApp from '@/entrypoints/editor/App';
 import { notifyProjectsChanged } from '@/lib/storage/change-notifier';
+import { ProjectNotFoundError } from '@/lib/storage/database';
 // Resolves to the mocked module above, so `instanceof` in the handoff matches.
 import { DraftConfirmationRequiredError } from '@/lib/editor/editor-autosave';
 
@@ -196,8 +196,6 @@ const project = {
   metadataRevision: 3,
 };
 
-const emptyEntries: any[] = [];
-
 const idleRecording = {
   sessionId: null,
   operation: null,
@@ -211,9 +209,7 @@ function editorSessionResult() {
   return {
     sessionId: 'project-1',
     tabId: 17,
-    steps: entries,
     error: null,
-    refresh: recordingSession.refresh,
     recording: idleRecording,
   };
 }
@@ -223,7 +219,6 @@ beforeEach(() => {
   rendered.stepRailProps = null;
   rendered.stepStageProps = null;
   editorSave.flushAll.mockResolvedValue(undefined);
-  recordingSession.refresh.mockResolvedValue(undefined);
   recordingSession.useRecordingSession.mockImplementation((explicitSessionId?: string | null) => {
     if (explicitSessionId === 'project-1') return editorSessionResult();
     if (explicitSessionId === undefined) {
@@ -236,9 +231,7 @@ beforeEach(() => {
     return {
       sessionId: null,
       tabId: null,
-      steps: emptyEntries,
       error: null,
-      refresh: recordingSession.refresh,
       recording: { ...idleRecording, sessionId: 'global-project' },
     };
   });
@@ -254,6 +247,8 @@ beforeEach(() => {
   browserApi.requestPermission.mockResolvedValue(true);
   database.setProjectEntriesNumberedAtomically.mockResolvedValue({
     project: { ...project, contentRevision: 8 },
+    entries,
+    entryIds: entries.map(database.entryId),
     affectedEntryIds: ['entry-1'],
   });
   window.history.replaceState({}, '', '/editor.html?sessionId=project-1');
@@ -290,6 +285,8 @@ describe('Editor App structure wiring', () => {
   browserApi.requestPermission.mockResolvedValue(true);
   database.setProjectEntriesNumberedAtomically.mockResolvedValue({
       project: { ...project, contentRevision: 42 },
+      entries,
+      entryIds: entries.map(database.entryId),
       affectedEntryIds: ['entry-1'],
     });
     render(<EditorApp />);
@@ -400,7 +397,9 @@ describe('Editor App and changes from other tabs', () => {
     render(<EditorApp />);
     await waitFor(() => expect(screen.getByLabelText('StepStage test double').getAttribute('data-editing-disabled')).toBe('false'));
 
+    silenceIntentionalErrorLogs();
     database.getProject.mockResolvedValue(undefined);
+    database.getProjectStructureSnapshot.mockRejectedValue(new ProjectNotFoundError('project-1'));
     notifyProjectsChanged();
 
     expect(await screen.findByText(/專案已被刪除/)).toBeTruthy();
@@ -413,10 +412,13 @@ describe('Editor App and changes from other tabs', () => {
     render(<EditorApp />);
     await waitFor(() => expect(rendered.stepStageProps?.projectTitle).toBe('結構測試教學'));
 
-    database.getProject.mockResolvedValue({ ...project, title: '別的分頁改的標題', contentRevision: 99, metadataRevision: project.metadataRevision + 1 });
+    database.getProjectStructureSnapshot.mockClear();
+    database.getProject.mockResolvedValue({ ...project, title: '別的分頁改的標題', metadataRevision: project.metadataRevision + 1 });
     notifyProjectsChanged();
 
     await waitFor(() => expect(rendered.stepStageProps.projectTitle).toBe('別的分頁改的標題'));
+    // Only the title changed, so the structure is not read again.
+    expect(database.getProjectStructureSnapshot).not.toHaveBeenCalled();
   });
 
   it('sends a title edit as a single metadata update', async () => {

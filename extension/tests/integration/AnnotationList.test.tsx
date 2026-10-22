@@ -47,7 +47,6 @@ describe('AnnotationList', () => {
     const { container } = render(
       <AnnotationList
         annotations={[makeAnnotation()]}
-        onChange={vi.fn()}
         onDelete={vi.fn().mockResolvedValue(undefined)}
         onReorder={vi.fn().mockResolvedValue(undefined)}
       />,
@@ -59,34 +58,45 @@ describe('AnnotationList', () => {
   });
 
   it('says a snapshot has no markers yet', () => {
-    render(<AnnotationList annotations={[]} onChange={vi.fn()} onDelete={vi.fn()} onReorder={vi.fn()} />);
+    render(<AnnotationList annotations={[]} onDelete={vi.fn()} onReorder={vi.fn()} />);
 
     expect(screen.getByText(t().editor.annotations.empty)).toBeTruthy();
   });
 
-  it('reports a failed delete and retries it from the notice', async () => {
+  it('hands the marker to delete to the editor, which reports any failure itself', async () => {
     silenceIntentionalErrorLogs();
-    const onDelete = vi.fn().mockRejectedValueOnce('locked').mockResolvedValueOnce(undefined);
-    render(<AnnotationList annotations={[makeAnnotation()]} onChange={vi.fn()} onDelete={onDelete} onReorder={vi.fn()} />);
+    const onDelete = vi.fn().mockRejectedValue(new Error('not selected'));
+    const annotation = makeAnnotation();
+    render(<AnnotationList annotations={[annotation]} onDelete={onDelete} onReorder={vi.fn()} />);
 
     fireEvent.click(screen.getByLabelText(t().editor.annotations.delete(1)));
-    fireEvent.click(await screen.findByText(t().editor.annotations.retryDelete));
 
-    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.queryByText(t().editor.annotations.deleteFailed)).toBeNull());
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith(annotation));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('deletes one marker for a double click, since the next row slides under the pointer', () => {
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    render(<AnnotationList annotations={[makeAnnotation()]} onDelete={onDelete} onReorder={vi.fn()} />);
+    const button = screen.getByLabelText(t().editor.annotations.delete(1));
+
+    fireEvent.click(button, { detail: 1 });
+    fireEvent.click(button, { detail: 2 });
+
+    expect(onDelete).toHaveBeenCalledOnce();
   });
 
   it('switches numbering, and locks it while editing is disabled', () => {
     const onSetNumbered = vi.fn();
     const { rerender } = render(
-      <AnnotationList annotations={[makeAnnotation()]} onSetNumbered={onSetNumbered} onChange={vi.fn()} onDelete={vi.fn()} onReorder={vi.fn()} />,
+      <AnnotationList annotations={[makeAnnotation()]} onSetNumbered={onSetNumbered} onDelete={vi.fn()} onReorder={vi.fn()} />,
     );
 
     fireEvent.click(screen.getByRole('switch'));
     expect(onSetNumbered).toHaveBeenCalledWith(true);
 
     rerender(
-      <AnnotationList annotations={[makeAnnotation()]} onSetNumbered={onSetNumbered} editingDisabled onChange={vi.fn()} onDelete={vi.fn()} onReorder={vi.fn()} />,
+      <AnnotationList annotations={[makeAnnotation()]} onSetNumbered={onSetNumbered} editingDisabled onDelete={vi.fn()} onReorder={vi.fn()} />,
     );
     expect((screen.getByRole('switch') as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByLabelText(t().editor.annotations.delete(1)) as HTMLButtonElement).disabled).toBe(true);

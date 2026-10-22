@@ -29,6 +29,7 @@ import BackupPausedNotice from '@/components/shared/BackupPausedNotice';
 import { useAutoFolderBackup } from '@/lib/backup/use-folder-backup';
 import { reportError } from '@/components/shared/report-error';
 import { usePendingAction } from '@/components/shared/use-pending-action';
+import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { PERSISTED_PROJECT_LIMITS } from '@/lib/storage/persistence-limits';
 import { intlLocale, t } from '@/lib/shared/i18n';
 import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
@@ -50,7 +51,8 @@ export default function App() {
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const [loading, setLoading] = useState(true);
-  const { pendingKey: pendingId, runExclusive } = usePendingAction<string>();
+  const loadingShown = useDeferredBusy(loading);
+  const { pendingKey: pendingId, shownKey: shownId, runExclusive } = usePendingAction<string>();
   const [deleteTarget, setDeleteTarget] = useState<ProjectSummary | null>(null);
   const [exportTarget, setExportTarget] = useState<ProjectSummary | null>(null);
   const importInput = useRef<HTMLInputElement>(null);
@@ -184,7 +186,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    // The page's layout numbers, read by its content and by the notices: the content gutter and the room kept clear for notices.
+    <div className="min-h-screen bg-background text-foreground [--content-gutter:1rem] sm:[--content-gutter:2rem] [--notice-lane:5rem]">
       <AppToaster />
       <AppHeader
         actions={
@@ -210,9 +213,9 @@ export default function App() {
               aria-label={t().library.import}
               className="px-2.5 sm:px-3.5"
               onClick={() => importInput.current?.click()}
-              disabled={loading || operationLocked || pendingId !== null}
+              disabled={loading || operationLocked || shownId !== null}
             >
-              {pendingId === 'import' ? <Loader2 className="animate-spin" /> : <Upload />}
+              {shownId === 'import' ? <Loader2 className="animate-spin" /> : <Upload />}
               <span className="hidden sm:inline">{t().library.import}</span>
             </Button>
             <Button
@@ -220,9 +223,9 @@ export default function App() {
               aria-label={t().library.create}
               className="px-2.5 sm:px-3.5"
               onClick={() => void createNewProject()}
-              disabled={loading || operationLocked || pendingId !== null}
+              disabled={loading || operationLocked || shownId !== null}
             >
-              {pendingId === 'new' ? <Loader2 className="animate-spin" /> : <Plus />}
+              {shownId === 'new' ? <Loader2 className="animate-spin" /> : <Plus />}
               <span className="hidden sm:inline">{t().library.create}</span>
             </Button>
           </>
@@ -232,7 +235,7 @@ export default function App() {
       {/* Full-width like every page under the shared header, so the content
           shares its gutter; the project grid fills columns by a minimum card
           width instead of breakpoints. */}
-      <main className="flex flex-col px-4 pt-6 pb-10 sm:px-8">
+      <main className="flex flex-col px-[var(--content-gutter,1rem)] pt-6 pb-[var(--notice-lane,5rem)]">
         <h1 className="mb-5 text-2xl leading-tight font-bold text-foreground">{t().library.title}</h1>
         <BackupPausedNotice />
         {operationLocked && (
@@ -258,8 +261,9 @@ export default function App() {
           </div>
 
         {loading ? (
-          <div role="status" className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
-            <Loader2 className="mr-2 size-5 animate-spin" />{t().library.loading}
+          // A quick first read shows nothing here rather than a spinner that is gone at once.
+          <div role={loadingShown ? 'status' : undefined} className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
+            {loadingShown && <><Loader2 className="mr-2 size-5 animate-spin" />{t().library.loading}</>}
           </div>
         ) : visibleProjects.length === 0 ? (
           <div className="relative flex min-h-72 flex-col items-center justify-center gap-2 rounded-md bg-card px-6 py-10 text-center">
@@ -276,11 +280,11 @@ export default function App() {
         ) : (
           <ul className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-4">
             {visibleProjects.map((project) => {
-              const pending = pendingId === project.id;
+              const pending = shownId === project.id;
               // While any operation is in flight, `run` rejects further actions;
               // disabling the other cards makes that lock visible instead of a silent no-op.
-              const actionsLocked = operationLocked || pendingId !== null;
-              const otherActionPending = pendingId !== null && !pending;
+              const actionsLocked = operationLocked || shownId !== null;
+              const otherActionPending = shownId !== null && !pending;
               const lockedTitle = (title: string) => (otherActionPending ? t().library.otherActionPending : title);
               return (
                 <li

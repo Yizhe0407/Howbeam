@@ -23,8 +23,8 @@ import { t } from '@/lib/shared/i18n';
 interface UsePermissionFlowOptions {
   sessionId: string | null;
   operationActive: boolean;
-  /** True while a structural data operation holds the editor's data lock. */
-  isDataOperationLocked: () => boolean;
+  /** Resolves once every queued data operation has finished; a flow starts only after them. */
+  whenIdle: () => Promise<void>;
   flushDescriptions: () => Promise<void>;
   requireSelectedEntry: (expectedEntryId?: string) => StepEntry;
   setOperationError: (message: string | null) => void;
@@ -43,13 +43,14 @@ interface FlowToken {
  * The source-permission state machine for recapture and continuation runs.
  * - `generation` increments on every begin/clear; async continuations re-check it via FlowToken
  *   so a cancelled or superseded flow can never apply stale state or errors.
- * - `lock` is held from preflight until the flow clears, blocking data operations and re-entrant preflights.
+ * - `lock` is held from preflight until the flow clears, blocking new data operations and re-entrant preflights;
+ *   operations queued before it finish first (`whenIdle`).
  * - `flowEntryId`/`flowSessionId` bind a prepared grant to its entry/Project; a selection or session change cancels it.
  */
 export function usePermissionFlow({
   sessionId,
   operationActive,
-  isDataOperationLocked,
+  whenIdle,
   flushDescriptions,
   requireSelectedEntry,
   setOperationError,
@@ -107,9 +108,9 @@ export function usePermissionFlow({
   }, [clearPreparedPermission]);
 
   /** Whether a new flow may begin: the editor must be viewing a Project with no
-   * data operation, no live run, and no flow already holding the lock. */
+   * live run and no flow already holding the lock. */
   function canBeginFlow(): boolean {
-    return Boolean(sessionId) && !isDataOperationLocked() && !lock.current && !operationActive;
+    return Boolean(sessionId) && !lock.current && !operationActive;
   }
 
   /**
@@ -309,6 +310,8 @@ export function usePermissionFlow({
     if (flow == null) return;
     let prepared: PreparedCapturePermission | null = null;
     try {
+      await whenIdle();
+      if (!flow.isCurrent()) return;
       prepared = await requestRecapturePreflight(sessionId!, target, targetEntryId);
     } catch (recaptureError) {
       failFlow(flow, '[howbeam] failed to verify recapture source', recaptureError, t().editor.permission.recaptureSourceUnverified);
@@ -327,6 +330,8 @@ export function usePermissionFlow({
     setContinuationMode(entryMode(afterEntryId));
     let prepared: PreparedCapturePermission | null = null;
     try {
+      await whenIdle();
+      if (!flow.isCurrent()) return;
       prepared = await requestContinuationPreflight(sessionId!, afterEntryId);
     } catch (continuationError) {
       failFlow(flow, '[howbeam] failed to verify continuation source', continuationError, t().editor.permission.continuationSourceUnverified);

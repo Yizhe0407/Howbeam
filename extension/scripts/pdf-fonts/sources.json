@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/google/fonts",
+  "rawBase": "https://raw.githubusercontent.com/google/fonts",
+  "commit": "3be1884c48c3e45b52ecc725676a08f87776373e",
+  "files": {
+    "font": {
+      "path": "ofl/notosanstc/NotoSansTC[wght].ttf",
+      "bytes": 11941968,
+      "sha256": "864727d210d54f2537bbe23b3a839436c3992af72de9322af5270897246bd44f"
+    },
+    "license": {
+      "path": "ofl/notosanstc/OFL.txt",
+      "bytes": 4388,
+      "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+    }
+  }
+}

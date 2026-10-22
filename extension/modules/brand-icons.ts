@@ -34,7 +34,11 @@ export function composeBrandIcon(spec: BrandIconSpec, artwork: BrandArtwork): st
 }
 
 export function renderBrandIcon(spec: BrandIconSpec, artwork: BrandArtwork): Uint8Array {
-  return new Resvg(composeBrandIcon(spec, artwork), { fitTo: { mode: 'width', value: spec.size } }).render().asPng();
+  // The artwork is pure vector: scanning the machine's fonts for each icon only slows the render and
+  // would let the installed fonts decide the output.
+  return new Resvg(composeBrandIcon(spec, artwork), { fitTo: { mode: 'width', value: spec.size }, font: { loadSystemFonts: false } })
+    .render()
+    .asPng();
 }
 
 export async function loadBrandArtwork(root: string): Promise<BrandArtwork> {

@@ -34,7 +34,7 @@ function renderFlow(overrides: Record<string, unknown> = {}) {
   const options = {
     sessionId: 'g1',
     operationActive: false,
-    isDataOperationLocked: () => false,
+    whenIdle: () => Promise.resolve(),
     flushDescriptions: vi.fn().mockResolvedValue(undefined),
     requireSelectedEntry: vi.fn(() => selectedEntry),
     setOperationError: vi.fn(),
@@ -53,6 +53,27 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe('starting a flow', () => {
+  it('lets queued edits finish before it checks the source page', async () => {
+    let finishQueued!: () => void;
+    const queued = new Promise<void>((resolve) => { finishQueued = resolve; });
+    const { result } = renderFlow({ whenIdle: () => queued });
+
+    let started!: Promise<void>;
+    act(() => { started = result.current.handleRecapture(); });
+    // Held from the click, so no new edit can start meanwhile, but nothing is asked yet.
+    expect(result.current.isPermissionFlowLocked()).toBe(true);
+    expect(mocks.sendMessage).not.toHaveBeenCalled();
+
+    await act(async () => {
+      finishQueued();
+      await started;
+    });
+    expect(mocks.sendMessage).toHaveBeenCalledOnce();
+    expect(result.current.preparedPermission).not.toBeNull();
+  });
 });
 
 describe('confirmPreparedPermission', () => {

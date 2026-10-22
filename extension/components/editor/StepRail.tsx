@@ -21,7 +21,7 @@ import SortableItem from './SortableItem';
 import ProjectSectionHeading from './ProjectSectionHeading';
 
 
-const SEAM_PILL = 'relative flex h-[18px] scale-90 items-center gap-1 rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
+const SEAM_PILL = 'relative flex h-[18px] min-w-0 scale-90 items-center gap-1 whitespace-nowrap rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
 
 /**
  * The seam between two steps. It takes no room of its own: a zero-height row
@@ -42,8 +42,9 @@ function SeamActions({
 }) {
   return (
     <li className="relative z-10 -mt-1 hidden h-0 shrink-0 lg:block">
-      {/* The thumbnails' own padding makes the visible seam sit 2px below this row, hence -top-1.5 rather than -top-2. */}
-      <div className="group/slot absolute inset-x-0 -top-1.5 flex h-4 items-center justify-center gap-1">
+      {/* The thumbnails' own padding makes the visible seam sit 2px below this row, hence -top-1.5 rather than -top-2.
+          The pills share the rail's width and truncate rather than overflow it, whatever a locale's label length. */}
+      <div className="group/slot absolute inset-x-0 -top-1.5 flex h-4 items-center justify-center gap-1 px-2">
         <span
           aria-hidden="true"
           className="absolute inset-x-2 top-1/2 origin-center scale-x-0 border-t-2 border-dashed border-border opacity-0 transition-[transform,opacity] duration-200 ease-out group-hover/slot:scale-x-100 group-hover/slot:opacity-100 group-focus-within/slot:scale-x-100 group-focus-within/slot:opacity-100 motion-reduce:transition-none"
@@ -56,7 +57,7 @@ function SeamActions({
             aria-label={t().editor.rail.insertAfter(afterStep)}
             className={cn(SEAM_PILL, 'bg-sora')}
           >
-            <Plus className="size-3" strokeWidth={3} aria-hidden="true" />{t().editor.rail.insertHere}
+            <Plus className="size-3 shrink-0" strokeWidth={3} aria-hidden="true" /><span className="truncate">{t().editor.rail.insertHere}</span>
           </button>
         )}
         {onStartSection && (
@@ -67,7 +68,7 @@ function SeamActions({
             aria-label={t().editor.sections.addAt(afterStep + 1)}
             className={cn(SEAM_PILL, 'bg-matcha')}
           >
-            <Plus className="size-3" strokeWidth={3} aria-hidden="true" />{t().editor.sections.add}
+            <Plus className="size-3 shrink-0" strokeWidth={3} aria-hidden="true" /><span className="truncate">{t().editor.sections.addShort}</span>
           </button>
         )}
       </div>
@@ -204,7 +205,7 @@ export default function StepRail({
     <nav
       ref={railRef}
       aria-label={t().editor.rail.label}
-      className="fixed inset-x-0 bottom-0 z-30 flex h-32 shrink-0 flex-col border-t-2 border-border bg-card lg:static lg:z-auto lg:my-6 lg:ml-6 lg:h-auto lg:max-h-[calc(100%-3rem)] lg:min-h-0 lg:w-[200px] lg:min-w-[200px] lg:shrink-0 lg:self-start lg:basis-[200px] lg:rounded-md lg:border-2"
+      className="fixed inset-x-0 bottom-0 z-30 flex h-[var(--step-rail-height,8rem)] shrink-0 flex-col border-t-2 border-border bg-card lg:static lg:z-auto lg:my-6 lg:ml-6 lg:h-auto lg:max-h-[calc(100%-3rem)] lg:min-h-0 lg:w-[200px] lg:min-w-[200px] lg:shrink-0 lg:self-start lg:basis-[200px] lg:rounded-md lg:border-2"
     >
       <div className="flex shrink-0 items-center justify-between gap-2 px-3.5 pt-3 pb-2 text-xs font-bold text-muted-foreground">
         <span>{t().editor.rail.count(entries.length)}</span>

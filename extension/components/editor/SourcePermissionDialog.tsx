@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import ContinuationTabPicker from '@/components/editor/ContinuationTabPicker';
 import InlineAlert from '@/components/shared/InlineAlert';
 import { t } from '@/lib/shared/i18n';
+import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import type { ContinuationTabOption } from '@/lib/editor/editor-app-model';
 import type { RecordingMode } from '@/lib/storage/recording-state';
 import { recordingModeCopy } from '@/lib/recording/recording-mode-copy';
@@ -74,6 +75,9 @@ export default function SourcePermissionDialog({
   onConfirm,
 }: Props) {
   const anyPending = pending || continueElsewherePending;
+  const pendingShown = useDeferredBusy(pending);
+  const continueElsewhereShown = useDeferredBusy(continueElsewherePending);
+  const anyShown = pendingShown || continueElsewhereShown;
   const sourceUnavailable = sourceUnavailableReason !== null;
   const pickerOpen = continuationTabs !== null;
   return (
@@ -117,8 +121,8 @@ export default function SourcePermissionDialog({
                 type="button"
                 role="radio"
                 aria-checked={continuationMode === mode}
-                disabled={anyPending}
-                onClick={() => onContinuationModeChange(mode)}
+                disabled={anyShown}
+                onClick={() => !anyPending && onContinuationModeChange(mode)}
                 className={cn(
                   'flex h-9 flex-1 items-center justify-center rounded-sm border-2 text-sm font-bold outline-none transition-colors focus-ring disabled:pointer-events-none disabled:opacity-50',
                   continuationMode === mode
@@ -152,16 +156,16 @@ export default function SourcePermissionDialog({
         )}
 
         <DialogFooter className="mt-6">
-          <Button type="button" variant="outline" disabled={anyPending} onClick={onCancel}>
+          <Button type="button" variant="outline" disabled={anyShown} onClick={() => !anyPending && onCancel()}>
             <X />{t().common.cancel}
           </Button>
           {pickerOpen ? (
             <Button
               type="button"
-              disabled={anyPending || selectedContinuationTabId === null}
-              onClick={onConfirmContinueElsewhere}
+              disabled={anyShown || selectedContinuationTabId === null}
+              onClick={() => !anyPending && onConfirmContinueElsewhere?.()}
             >
-              {continueElsewherePending ? <Loader2 className="animate-spin" /> : <Video />}
+              {continueElsewhereShown ? <Loader2 className="animate-spin" /> : <Video />}
               {t().common.startRecording}
             </Button>
           ) : (
@@ -170,17 +174,17 @@ export default function SourcePermissionDialog({
                 <Button
                   type="button"
                   variant={sourceUnavailable ? 'default' : 'outline'}
-                  disabled={anyPending}
-                  onClick={onContinueElsewhere}
+                  disabled={anyShown}
+                  onClick={() => !anyPending && onContinueElsewhere()}
                 >
-                  {continueElsewherePending ? <Loader2 className="animate-spin" /> : <ExternalLink />}
+                  {continueElsewhereShown ? <Loader2 className="animate-spin" /> : <ExternalLink />}
                   {t().editor.permission.continueElsewhere}
                 </Button>
               )}
               {!sourceUnavailable && (
-                <Button type="button" disabled={anyPending} onClick={onConfirm}>
-                  {pending && <Loader2 className="animate-spin" />}
-                  {pending ? t().editor.permission.authorizing : t().editor.permission.allowAndStart}
+                <Button type="button" disabled={anyShown} onClick={() => !anyPending && onConfirm()}>
+                  {pendingShown && <Loader2 className="animate-spin" />}
+                  {pendingShown ? t().editor.permission.authorizing : t().editor.permission.allowAndStart}
                 </Button>
               )}
             </>

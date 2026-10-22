@@ -17,13 +17,17 @@ export function useProjectUndo({ project, operationActive, projectDeleted = fals
   projectDeleted?: boolean;
 }) {
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
-  // The ref is the source of truth so a mutation can take the pending undo synchronously.
+  // Refs are the source of truth so a mutation can take the pending undo synchronously.
+  /** The undo in play: it can be used, and it ends when the Project moves on. */
   const current = useRef<UndoAction | null>(null);
+  /** The undo on screen, which stays while a mutation that took it runs. Null once the user closed it. */
+  const displayed = useRef<UndoAction | null>(null);
   const latestProject = useRef(project);
   const undoSequence = useRef(0);
 
   const publish = useCallback((next: UndoAction | null) => {
     current.current = next;
+    displayed.current = next;
     setUndoAction(next);
   }, []);
 
@@ -46,38 +50,50 @@ export function useProjectUndo({ project, operationActive, projectDeleted = fals
   }, [project, invalidity, publish]);
 
   /** Offers a new undo. `superseded` is the earlier undo this mutation took (see `takeUndo`),
-   * which is now final; the new snackbar says so. */
+   * which is now final; the new snackbar says so unless the user had already closed it. */
   const offerUndo = useCallback((pending: PendingUndoAction, projectId: string, superseded?: UndoAction | null) => {
+    const stillShown = superseded != null && displayed.current === superseded;
     publish({
       ...pending,
       id: ++undoSequence.current,
       projectId,
-      ...(superseded ? { supersedes: superseded.message } : {}),
+      ...(stillShown ? { supersedes: superseded.message } : {}),
     });
   }, [publish]);
 
-  /** Takes the pending undo off screen while another mutation runs. The caller hands it back
-   * through `offerUndo` (as `superseded`), `returnUndo` (the mutation failed) or `finalizeUndo`. */
+  /** Takes the pending undo out of play while another mutation runs: it can no longer expire or
+   * be invalidated. It stays on screen until the mutation's outcome replaces it, so the notice
+   * updates in place instead of vanishing and coming back. The caller settles it through `offerUndo`
+   * (as `superseded`), `returnUndo` (the mutation failed) or `finalizeUndo`. */
   const takeUndo = useCallback((): UndoAction | null => {
     const taken = current.current;
-    publish(null);
+    current.current = null;
     return taken;
-  }, [publish]);
+  }, []);
 
-  /** Puts a taken undo back after a mutation that changed nothing, if it is still valid. */
+  /** Puts a taken undo back after a mutation that changed nothing, if it is still valid and on screen. */
   const returnUndo = useCallback((taken: UndoAction | null) => {
-    if (!taken || current.current) return;
+    if (!taken || current.current || displayed.current !== taken) return;
     const reason = invalidity(taken);
-    if (!reason) publish(taken);
-    else if (reason === 'moved') toast(t().editor.undo.nowFinal(taken.message));
+    if (!reason) {
+      publish(taken);
+      return;
+    }
+    publish(null);
+    if (reason === 'moved') toast(t().editor.undo.nowFinal(taken.message));
   }, [invalidity, publish]);
 
   /** Tells the user a taken undo became final without a new undo to say it on. */
   const finalizeUndo = useCallback((taken: UndoAction | null) => {
-    if (taken) toast(t().editor.undo.nowFinal(taken.message));
-  }, []);
+    if (!taken || displayed.current !== taken) return;
+    publish(null);
+    toast(t().editor.undo.nowFinal(taken.message));
+  }, [publish]);
 
   const clearUndo = useCallback(() => publish(null), [publish]);
 
-  return { undoAction, offerUndo, takeUndo, returnUndo, finalizeUndo, clearUndo };
+  /** The undo that can be used right now, if any. */
+  const offeredUndo = useCallback(() => current.current, []);
+
+  return { undoAction, offeredUndo, offerUndo, takeUndo, returnUndo, finalizeUndo, clearUndo };
 }

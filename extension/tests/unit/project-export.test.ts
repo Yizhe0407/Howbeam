@@ -4,29 +4,14 @@ import { type StepEntry } from '@/lib/storage/models';
 
 const mocks = vi.hoisted(() => ({
   composite: vi.fn(),
-  pdfCreate: vi.fn(),
-  pdfEmbedJpg: vi.fn(),
-  pdfAddPage: vi.fn(),
-  pdfDrawImage: vi.fn(),
-  pdfSave: vi.fn(),
-  pdfSetTitle: vi.fn(),
 }));
 
 vi.mock('@/lib/export/entry-render', () => ({
   compositeStepEntry: mocks.composite,
 }));
 
-vi.mock('pdf-lib', () => ({
-  PDFDocument: { create: mocks.pdfCreate },
-  pushGraphicsState: vi.fn(),
-  popGraphicsState: vi.fn(),
-  moveTo: vi.fn(),
-  lineTo: vi.fn(),
-  appendBezierCurve: vi.fn(),
-  closePath: vi.fn(),
-  clip: vi.fn(),
-  endPath: vi.fn(),
-}));
+vi.mock('@/lib/export/pdf/pdf-fonts', async (original) => (await import('../setup/pdf-fonts')).withDiskFonts(await original()));
+
 
 import { PROJECT_EXPORT_LIMITS, ProjectExportLimitError, projectExportFilename, type ProjectExportMetadata } from '@/lib/export/project-export-contract';
 import { generateProjectHtml as generateProjectHtmlBlob } from '@/lib/export/project-export-html';
@@ -34,7 +19,8 @@ import { generateProjectMarkdownArchive } from '@/lib/export/project-export-mark
 import { generateProjectPdf } from '@/lib/export/project-export-pdf';
 import { RedactionReviewRequiredError, StepImageError } from '@/lib/export/export-errors';
 import { renderEntryImages } from '@/lib/export/project-export-render';
-import { stubPdfCanvas } from '../setup/pdf-canvas';
+import { jpegOfSize } from '../setup/jpeg-fixture';
+import { readPdf } from '../setup/pdf-extract';
 import { PERSISTED_STEP_LIMITS } from '@/lib/storage/persistence-limits';
 
 /** The document as text; the generator itself returns a Blob. */
@@ -166,17 +152,6 @@ afterEach(() => {
 
 beforeEach(() => {
   mocks.composite.mockReset().mockResolvedValue(new Blob(['annotated'], { type: 'image/jpeg' }));
-  mocks.pdfDrawImage.mockReset();
-  mocks.pdfEmbedJpg.mockReset().mockResolvedValue({ width: 1, height: 1 });
-  mocks.pdfAddPage.mockReset().mockReturnValue({ drawImage: mocks.pdfDrawImage, pushOperators: vi.fn() });
-  mocks.pdfSetTitle.mockReset();
-  mocks.pdfSave.mockReset().mockResolvedValue(new Uint8Array([0x25, 0x50, 0x44, 0x46]));
-  mocks.pdfCreate.mockReset().mockResolvedValue({
-    embedJpg: mocks.pdfEmbedJpg,
-    addPage: mocks.pdfAddPage,
-    save: mocks.pdfSave,
-    setTitle: mocks.pdfSetTitle,
-  });
 });
 
 describe('project export', () => {
@@ -189,7 +164,8 @@ describe('project export', () => {
       // its HTML/PDF export on the identical payload.
       maxTotalImageBytes: 128 * 1024 * 1024,
       maxPdfPages: 4_000,
-      maxPdfBytes: 128 * 1024 * 1024,
+      // The screenshots a PDF embeds as they are, plus 16 MB for fonts and page structure.
+      maxPdfBytes: 144 * 1024 * 1024,
     });
     expect(PERSISTED_STEP_LIMITS.maxStepsPerProject).toBe(2_000);
     expect(PERSISTED_STEP_LIMITS.maxScreenshotBytes).toBe(16 * 1024 * 1024);
@@ -242,87 +218,6 @@ describe('project export', () => {
       expect(stem.isWellFormed()).toBe(true);
     }
     expect([...projectExportFilename({ title: '漢'.repeat(300) }, 'html')].length).toBe(66 + '.html'.length);
-  });
-
-  it('generates a raster PDF without Source, Step, or Annotations labels', async () => {
-    const { fillText, bitmapClose } = stubPdfCanvas();
-
-    const pdf = await generateProjectPdf([groupEntry()], { title: 'PDF project' });
-    const drawnText = fillText.mock.calls.map(([text]) => String(text));
-
-    expect(pdf.type).toBe('application/pdf');
-    expect(mocks.pdfSetTitle).toHaveBeenCalledWith('PDF project');
-    expect(Array.from(new Uint8Array(await pdf.arrayBuffer()))).toEqual([0x25, 0x50, 0x44, 0x46]);
-    expect(mocks.composite).toHaveBeenCalledOnce();
-    // Hybrid raster: the page background JPEG plus the screenshot embedded as
-    // its own image so it keeps native resolution.
-    expect(mocks.pdfEmbedJpg).toHaveBeenCalledTimes(2);
-    expect(mocks.pdfAddPage).toHaveBeenCalledWith([595.28, 841.89]);
-    expect(mocks.pdfDrawImage).toHaveBeenCalledTimes(2);
-    const [pagePlacement, screenshotPlacement] = mocks.pdfDrawImage.mock.calls.map(([, placement]) => placement);
-    expect(pagePlacement).toEqual({ x: 0, y: 0, width: 595.28, height: 841.89 });
-    expect(screenshotPlacement.x).toBeGreaterThan(0);
-    expect(screenshotPlacement.y).toBeGreaterThan(0);
-    expect(screenshotPlacement.width).toBeLessThan(595.28);
-    expect(screenshotPlacement.height).toBeLessThan(841.89);
-    expect(drawnText).toContain('PDF project');
-    expect(drawnText).toContain('Shared page');
-    expect(drawnText).toContain('1. ');
-    expect(drawnText).toContain('First annotation');
-    expect(drawnText).not.toContain('共 1 個步驟');
-    expect(drawnText).toContain('第 1 頁');
-    // The step number is printed, not drawn in a badge.
-    expect(drawnText).toContain('1.');
-    // The credit sits in the running footer between the title and the page number.
-    expect(drawnText.slice(-3)).toEqual(['PDF project', 'Made with Howbeam', '第 1 頁']);
-    expect(drawnText).not.toContain('Source');
-    expect(drawnText).not.toContain('Step');
-    expect(drawnText).not.toContain('Annotations');
-    expect(bitmapClose).toHaveBeenCalledOnce();
-  });
-
-  it('wraps PDF text at word boundaries instead of splitting English mid-word', async () => {
-    const { fillText } = stubPdfCanvas();
-    const description = Array.from({ length: 20 }, () => 'documentation').join(' ');
-
-    await generateProjectPdf([entry({ description })], { title: 'T' });
-
-    const lines = fillText.mock.calls.map(([text]) => String(text)).filter((text) => text.includes('documentation'));
-    expect(lines.length).toBeGreaterThan(1);
-    for (const line of lines) {
-      expect(line).toMatch(/^documentation( documentation)*$/);
-      expect(Array.from(line).length).toBeLessThanOrEqual(76);
-    }
-    expect(lines.join(' ')).toBe(description);
-  });
-
-  it('never splits grapheme clusters such as ZWJ emoji when wrapping PDF text', async () => {
-    const { fillText } = stubPdfCanvas();
-    const cluster = '👩‍👩‍👧‍👦';
-    const description = cluster.repeat(30);
-
-    await generateProjectPdf([entry({ description })], { title: 'T' });
-
-    const lines = fillText.mock.calls.map(([text]) => String(text)).filter((text) => text.includes('👩'));
-    expect(lines.length).toBeGreaterThan(1);
-    for (const line of lines) {
-      expect(line).toMatch(/^(?:👩‍👩‍👧‍👦)+$/u);
-    }
-    expect(lines.join('')).toBe(description);
-  });
-
-  it('wraps long CJK paragraphs without losing or duplicating characters', async () => {
-    const { fillText } = stubPdfCanvas();
-    const description = '點擊瀏覽器工具列上的擴充功能圖示開啟設定頁面'.repeat(8);
-
-    await generateProjectPdf([entry({ description })], { title: 'T' });
-
-    const lines = fillText.mock.calls.map(([text]) => String(text)).filter((text) => text.includes('點擊'));
-    expect(lines.length).toBeGreaterThan(1);
-    for (const line of lines) {
-      expect(Array.from(line).length).toBeLessThanOrEqual(76);
-    }
-    expect(lines.join('')).toBe(description);
   });
 
   it('packs one Markdown file and every composited image into a portable ZIP', async () => {
@@ -554,7 +449,6 @@ describe('project export', () => {
     ['html', (entries: StepEntry[]) => generateProjectHtml(entries)],
     ['pdf', (entries: StepEntry[]) => generateProjectPdf(entries)],
   ])('refuses %s export naming every step whose masks still need review', async (_format, generate) => {
-    stubPdfCanvas();
     const entries = [
       entry({ redactionReviewRequired: true }),
       entry({ id: 'step-2', order: 2 }),
@@ -649,6 +543,50 @@ describe('project export', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 
+  describe('HTML marker columns', () => {
+    const listTag = async (notes: string[]) => (await generateProjectHtml([markEntry('mark', 1, notes)], { title: 'P' })).match(/<ol class="annotations"[^>]*>/)![0];
+
+    it('picks the columns by the PDF rule at the document width, each column only as wide as its markers need', async () => {
+      // Three columns would wrap every English description to two lines; two keep each on one.
+      expect(await listTag(Array.from({ length: 16 }, () => 'Mark an area of the page'))).toBe('<ol class="annotations" data-columns style="columns: 14.8em 2">');
+      expect(await listTag(Array.from({ length: 16 }, () => '標記頁面區域'))).toBe('<ol class="annotations" data-columns style="columns: 7.5em 3">');
+    });
+
+    it('lets a longer description wrap to two lines in its column', async () => {
+      const short = Array.from({ length: 7 }, () => 'Save');
+      expect(await listTag([...short, 'Open the account settings page to change the password'])).toContain('columns: 16.3em 2');
+    });
+
+    it('runs a description too long for a column across the full width', async () => {
+      const long = 'Open the account settings page, choose Security, then change the password and confirm it with the code sent to your phone.';
+      const html = await generateProjectHtml([markEntry('mark', 1, [...Array.from({ length: 7 }, () => 'Save'), long])], { title: 'P' });
+
+      expect(html).toMatch(/<ol class="annotations" data-columns style="columns: [\d.]+em \d">/);
+      expect(html).toContain(`<li data-span>${long}</li>`);
+      expect(html.match(/<li data-span>/g)).toHaveLength(1);
+    });
+
+    const LONG = 'Open the account settings page, choose Security, then change the password and confirm it with the code sent to your phone.';
+    const spanned = async (notes: string[]) => {
+      const html = await generateProjectHtml([markEntry('mark', 1, notes)], { title: 'P' });
+      return [...html.matchAll(/<li( data-span)?>/g)].map((match) => Boolean(match[1]));
+    };
+
+    it('runs markers between long ones across the full width when they are too few for two rows of columns', async () => {
+      const url = 'https://example.com/a/very/long/url/without/any/spaces/that/cannot/wrap/anywhere/at/all/really';
+      expect(await spanned(['Save', 'Menu', 'OK', url, 'Help', 'Tab', 'Back', 'Next'])).toEqual([true, true, true, true, false, false, false, false]);
+    });
+
+    it('keeps one column when long and short descriptions alternate', async () => {
+      expect(await listTag(['Save', LONG, 'Menu', LONG, 'OK', LONG, 'Help'])).toBe('<ol class="annotations">');
+      expect((await spanned(['Save', LONG, 'Menu', LONG, 'OK', LONG, 'Help'])).some(Boolean)).toBe(false);
+    });
+
+    it('gives every column at least two markers', async () => {
+      expect(await listTag(['One', 'Two', 'Three', 'Four', 'Five'])).toContain(' 2">');
+      expect(await listTag(['One', 'Two', 'Three'])).toBe('<ol class="annotations">');
+    });
+  });
 
   describe('projects that mix Steps and Mark entries', () => {
     it('gives a Mark entry its number and annotations in HTML, never the missing-description placeholder', async () => {
@@ -667,16 +605,16 @@ describe('project export', () => {
     });
 
     it('prints a Mark entry as a number then its annotation list in the PDF', async () => {
-      const { fillText } = stubPdfCanvas();
+      mocks.composite.mockImplementation(async () => new Blob([jpegOfSize(1_200, 700)], { type: 'image/jpeg' }));
 
-      await generateProjectPdf(mixedProject(), { title: 'Mixed', sections: MIXED_SECTIONS });
-      const drawnText = fillText.mock.calls.map(([text]) => String(text));
+      const read = await readPdf(await generateProjectPdf(mixedProject(), { title: 'Mixed', sections: MIXED_SECTIONS }));
+      const text = read.pages.flatMap((page) => page.lines).join('\n');
 
-      expect(drawnText).not.toContain('（未填寫說明）');
-      for (const number of ['1.', '2.', '3.', '4.']) expect(drawnText).toContain(number);
-      expect(drawnText).toContain('Tour the page');
-      expect(drawnText.indexOf('Search box')).toBeLessThan(drawnText.indexOf('History tab'));
-      expect(drawnText.indexOf('History tab')).toBeLessThan(drawnText.indexOf('Click history'));
+      expect(text).not.toContain('（未填寫說明）');
+      for (const number of ['1.', '2.', '3.', '4.']) expect(text).toContain(number);
+      expect(text).toContain('Tour the page');
+      expect(text.indexOf('Search box')).toBeLessThan(text.indexOf('History tab'));
+      expect(text.indexOf('History tab')).toBeLessThan(text.indexOf('Click history'));
     });
 
     it('leaves the Mark entry without a placeholder line in Markdown', async () => {
@@ -691,12 +629,12 @@ describe('project export', () => {
       const blank = [entry({ id: 'blank', description: '' })];
       const html = await generateProjectHtml(blank, { title: 'Blank' });
       const markdown = await archiveMarkdown(blank, { title: 'Blank' });
-      const { fillText } = stubPdfCanvas();
-      await generateProjectPdf(blank, { title: 'Blank' });
+      mocks.composite.mockImplementation(async () => new Blob([jpegOfSize(1_200, 700)], { type: 'image/jpeg' }));
+      const pdfText = (await readPdf(await generateProjectPdf(blank, { title: 'Blank' }))).pages.flatMap((page) => page.lines).join('\n');
 
       expect(html).toContain('<span>（未填寫說明）</span>');
       expect(markdown).toContain('（未填寫說明）');
-      expect(fillText.mock.calls.map(([text]) => String(text))).toContain('（未填寫說明）');
+      expect(pdfText).toContain('（未填寫說明）');
     });
   });
 });

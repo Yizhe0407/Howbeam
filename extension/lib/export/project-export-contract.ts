@@ -41,14 +41,18 @@ export const PROJECT_EXPORT_THEME = Object.freeze({
   imageBorder: '#cfcfcf',
   /** Corner radius of exported screenshots, in CSS pixels. */
   imageRadius: 10,
-  /** CJK-capable system font stack shared by HTML text and PDF canvas rasterization. */
+  /** CJK-capable system font stack for the HTML document's text; the PDF embeds its own font. */
   fontFamily:
     '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Helvetica Neue", Arial, sans-serif',
 });
 
+/** What a PDF adds to its screenshots: the embedded fonts and the page structure. */
+const PDF_STRUCTURE_HEADROOM_BYTES = 16 * 1024 * 1024;
+
 /** Derived from the persisted-step limits so every project accepted by storage
  * remains exportable; PDF budgets carry headroom (spill pages beyond one per
- * step, page rasters on top of the screenshot payload). The image total allows
+ * step, fonts and page structure on top of the screenshot payload, which a PDF
+ * embeds as it is). The image total allows
  * twice the persisted screenshot payload — the same re-encode headroom as the
  * image-ZIP export, because both feed the renderEntryImages pipeline whose
  * annotated re-encodes can exceed their raw sources. */
@@ -57,7 +61,7 @@ export const PROJECT_EXPORT_LIMITS = Object.freeze({
   maxImageBytes: PERSISTED_STEP_LIMITS.maxScreenshotBytes,
   maxTotalImageBytes: PERSISTED_STEP_LIMITS.maxTotalScreenshotBytes * 2,
   maxPdfPages: PERSISTED_STEP_LIMITS.maxStepsPerProject * 2,
-  maxPdfBytes: PERSISTED_STEP_LIMITS.maxTotalScreenshotBytes * 2,
+  maxPdfBytes: PERSISTED_STEP_LIMITS.maxTotalScreenshotBytes * 2 + PDF_STRUCTURE_HEADROOM_BYTES,
 });
 
 export class ProjectExportLimitError extends Error {

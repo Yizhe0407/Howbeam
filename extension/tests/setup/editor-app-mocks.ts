@@ -12,29 +12,17 @@ import { vi } from 'vitest';
  * The tables are supersets; suites use the slice they care about.
  */
 export function makeEditorDatabaseMocks() {
-  class ProjectContentConflictError extends Error {}
-
   const entryId = (entry: any) => (entry.kind === 'single' ? entry.step.id : entry.anchor.id);
 
   return {
-    ProjectContentConflictError,
     addProjectSectionAtomically: vi.fn(),
-    buildStepEntries: vi.fn((steps: any[]) => steps),
-    deleteProjectAnnotationAtomically: vi.fn(),
-    deleteProjectEntriesAtomically: vi.fn(),
     deleteProjectSectionAtomically: vi.fn(),
     entryId,
     getProject: vi.fn(),
     getProjectStructureSnapshot: vi.fn(),
-    getSteps: vi.fn(),
     renameProjectSectionAtomically: vi.fn(),
-    reorderProjectAnnotationsAtomically: vi.fn(),
-    reorderProjectEntriesAtomically: vi.fn(),
-    restoreProjectAnnotationAtomically: vi.fn(),
-    restoreProjectEntriesAtomically: vi.fn(),
     setProjectEntriesNumberedAtomically: vi.fn(),
     updateProject: vi.fn(),
-    updateStepsAtomically: vi.fn(),
   };
 }
 
@@ -44,6 +32,5 @@ export type EditorDatabaseMocks = ReturnType<typeof makeEditorDatabaseMocks>;
 export function makeRecordingSessionMocks() {
   return {
     useRecordingSession: vi.fn(),
-    refresh: vi.fn(),
   };
 }

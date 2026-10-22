@@ -79,26 +79,26 @@ function createEditor() {
       project,
       entries,
       selectedEntryId: editor.selectedEntryId,
-      beginDataOperation: () => true,
-      endDataOperation: () => undefined,
-      setOptimisticEntries: () => undefined,
+      runOperation: (_label, operation) => operation(),
+      editingBlocked: () => false,
+      showOptimistic: () => () => undefined,
       flushDescriptions: async () => undefined,
-      refreshEditorData: async () => getProjectStructureSnapshot(sessionId),
-      adoptProject: () => undefined,
+      adoptCommitted: () => undefined,
       requireSelectedEntry: (expected?: string) => {
         const wanted = expected ?? editor.selectedEntryId;
         const entry = entries.find((candidate) => entryId(candidate) === wanted);
         if (!entry) throw new Error(`no entry ${wanted}`);
         return entry;
       },
-      setSelectedEntryId: (id) => {
-        editor.selectedEntryId = id;
+      setSelectedEntryId: (next) => {
+        editor.selectedEntryId = typeof next === 'function' ? next(editor.selectedEntryId) : next;
       },
       setZoomOpen: () => undefined,
       setOperationError: (message) => {
         editor.operationError = message;
       },
       undoAction: undo,
+      offeredUndo: () => undo,
       offerUndo: (pending: PendingUndoAction, projectId: string) => {
         undo = { ...pending, id: ++undoIds, projectId };
       },
