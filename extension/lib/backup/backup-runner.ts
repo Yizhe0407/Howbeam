@@ -1,12 +1,12 @@
 import { projectFilenameStem } from '../export/project-export-contract';
-import type { ProjectSummary } from '../storage/models';
+import { projectDisplayTitle, type ProjectSummary } from '../storage/models';
 import type { BackupManifestEntry } from './backup-store';
 
 /** One backup file per project, named so a person can recognise it and so two
  * projects with the same title never collide. The id part is what keeps the
  * name stable across runs; a rename of the project renames the file. */
 export function backupFilename(project: Pick<ProjectSummary, 'id' | 'title'>): string {
-  return `${projectFilenameStem({ title: project.title })}-${project.id.slice(0, 8)}.howbeam`;
+  return `${projectFilenameStem({ title: projectDisplayTitle(project.title) })}-${project.id.slice(0, 8)}.howbeam`;
 }
 
 /** Plain-ASCII name used when the folder's file system rejects the readable
@@ -109,7 +109,7 @@ export async function runBackup(deps: BackupRunDeps): Promise<BackupResult> {
       result.written += 1;
     } catch (error) {
       result.failed += 1;
-      result.failedTitles.push(project.title);
+      result.failedTitles.push(projectDisplayTitle(project.title));
       result.error = error instanceof Error ? error.message : String(error);
       console.warn('[howbeam] backup of a project failed', project.id, filename, error);
     }

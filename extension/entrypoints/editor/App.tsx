@@ -5,7 +5,7 @@ import { useRecordingSession } from '@/lib/recording/use-recording-session';
 import { useEditorProjectData } from '@/lib/editor/use-editor-project-data';
 import { EditingBlockedError, EMPTY_SECTIONS, EMPTY_STEP_ENTRIES, type OptimisticChange } from '@/lib/editor/editor-app-model';
 import { useSerialOperations } from '@/lib/editor/use-serial-operations';
-import { entryId, type StepEntry } from '@/lib/storage/models';
+import { entryId, projectDisplayTitle, type StepEntry } from '@/lib/storage/models';
 import { sectionOfEntry } from '@/lib/project/project-sections';
 import { updateProject, type ProjectMetadataChanges } from '@/lib/storage/project-repository';
 import { ProjectNotFoundError } from '@/lib/storage/database';
@@ -312,9 +312,9 @@ function EditorApp() {
     return {
       entries: snapshot.entries,
       metadata: {
-        title: snapshot.project.title,
+        title: projectDisplayTitle(snapshot.project.title),
         description: snapshot.project.description,
-        filename: snapshot.project.title,
+        filename: projectDisplayTitle(snapshot.project.title),
         sections: snapshot.project.sections,
       },
     };
@@ -380,9 +380,9 @@ function EditorApp() {
           runExport,
           getProjectEntries: publicationEntries,
           metadata: {
-            title: project?.title,
+            title: project ? projectDisplayTitle(project.title) : undefined,
             description: project?.description,
-            filename: project?.title,
+            filename: project ? projectDisplayTitle(project.title) : undefined,
             sections: project?.sections,
           },
           onExportImages: exportImages,

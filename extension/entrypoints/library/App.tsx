@@ -12,8 +12,7 @@ import {
 } from 'lucide-react';
 import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
-import { getProjectStructureSnapshot } from '@/lib/storage/project-structure';
-import { type ProjectSummary, type StepEntry } from '@/lib/storage/models';
+import { projectDisplayTitle, type ProjectSummary } from '@/lib/storage/models';
 import { clearSelectedProject, createAndSelectProject, openSelectedProjectInEditor } from '@/lib/project/project-actions';
 import { subscribeProjectsChanged } from '@/lib/storage/change-notifier';
 import { getRecordingState, onRecordingStateChange } from '@/lib/storage/storage';
@@ -26,8 +25,6 @@ import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import EditableTitle from '@/components/shared/EditableTitle';
 import AppHeader from '@/components/shared/AppHeader';
 import Mascot from '@/components/shared/Mascot';
-import LazyPreview from '@/components/shared/LazyPreview';
-import EntryThumbnail from '@/components/editor/EntryThumbnail';
 import BackupPausedNotice from '@/components/shared/BackupPausedNotice';
 import { useAutoFolderBackup } from '@/lib/backup/use-folder-backup';
 import { reportError } from '@/components/shared/report-error';
@@ -49,35 +46,11 @@ function exportFilename(title: string): string {
   return `${stem}.howbeam`;
 }
 
-/** The project's first step, so a card can be recognised at a glance. */
-function ProjectCover({ project }: { project: ProjectSummary }) {
-  return (
-    <div className="aspect-[16/9] w-full shrink-0 overflow-hidden border-b-2 border-border bg-secondary">
-      {project.entryCount > 0 && (
-        <LazyPreview eager={false}>
-          <FirstEntry projectId={project.id} revision={`${project.contentRevision}:${project.stepEditRevision}`} />
-        </LazyPreview>
-      )}
-    </div>
-  );
-}
-
-function FirstEntry({ projectId, revision }: { projectId: string; revision: string }) {
-  const [entry, setEntry] = useState<StepEntry | null>(null);
-  useEffect(() => {
-    let active = true;
-    getProjectStructureSnapshot(projectId)
-      .then((snapshot) => { if (active) setEntry(snapshot.entries[0] ?? null); })
-      .catch((error) => console.warn('[howbeam] failed to read the project cover', error));
-    return () => { active = false; };
-  }, [projectId, revision]);
-  return entry && <EntryThumbnail entry={entry} alt="" fit="cover" loading="lazy" decoding="async" className="size-full" />;
-}
-
 export default function App() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
+  const editedAt = useMemo(() => new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' }), []);
   const [loading, setLoading] = useState(true);
   const loadingShown = useDeferredBusy(loading);
   const { pendingKey: pendingId, shownKey: shownId, runExclusive } = usePendingAction<string>();
@@ -131,7 +104,7 @@ export default function App() {
   const visibleProjects = useMemo(() => {
     const normalized = deferredQuery.trim().toLocaleLowerCase(intlLocale());
     return projects.filter((project) => {
-      return !normalized || `${project.title}\n${project.description}`.toLocaleLowerCase(intlLocale()).includes(normalized);
+      return !normalized || `${projectDisplayTitle(project.title)}\n${project.description}`.toLocaleLowerCase(intlLocale()).includes(normalized);
     });
   }, [deferredQuery, projects]);
 
@@ -173,7 +146,7 @@ export default function App() {
       });
       // Keeps the object URL alive until the download settles; a download that
       // never starts rejects into the page-level alert below.
-      await downloadBlobViaBrowser(blob, exportFilename(project.title));
+      await downloadBlobViaBrowser(blob, exportFilename(projectDisplayTitle(project.title)));
       toast.success(t().library.exportStarted(project.title));
     }, { refreshAfter: false });
     // A failed export reports through the page-level live alert. Close the
@@ -200,11 +173,11 @@ export default function App() {
     }
     await run('import', async () => {
       const imported = await importProjectArchive(file);
-      const fallbackTitle = file.name.replace(/\.howbeam$/i, '') || t().library.importedFallbackTitle;
       const project = await createProjectFromSteps(
         imported.steps,
         {
-          title: imported.metadata.title || fallbackTitle,
+          // Howbeam always writes the title; an empty one is an unnamed project and stays unnamed.
+          title: imported.metadata.title,
           description: imported.metadata.description,
         },
         { sections: imported.metadata.sections },
@@ -319,12 +292,12 @@ export default function App() {
                   key={project.id}
                   className="group flex flex-col overflow-hidden rounded-md border-2 border-border bg-card transition-transform duration-200 hover:-translate-y-0.5"
                 >
-                  <ProjectCover project={project} />
                   <div className="flex flex-1 flex-col gap-2.5 p-4">
                     <EditableTitle
                       value={project.title}
                       maxLength={PERSISTED_PROJECT_LIMITS.maxTitleLength}
                       fallback={t().common.untitledProject}
+                      clamp
                       label={t().library.titleLabel}
                       disabled={actionsLocked}
                       // `run` reports the reason via the page-level alert and returns
@@ -340,7 +313,9 @@ export default function App() {
                         {project.description}
                       </p>
                     )}
-                    <p className="text-xs font-bold text-muted-foreground">{t().library.stepCount(project.entryCount)}</p>
+                    <p className="text-xs font-bold text-muted-foreground">
+                      {editedAt.format(project.updatedAt)} · {t().library.stepCount(project.entryCount)}
+                    </p>
                     <div className="flex-1" />
                     <div className="mt-1 flex items-center gap-1 border-t-2 border-border-soft pt-3">
                       <Button

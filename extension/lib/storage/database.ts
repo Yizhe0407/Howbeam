@@ -1,9 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from 'idb';
 import { notifyProjectsChanged } from './change-notifier';
-import { conformStepToStoredTextRule } from './stored-text-migration';
 import {
   STEP_STORAGE_LIMITS,
-  isDefaultProjectTitle,
   getEffectiveBounds,
   requireStorageIdentifier,
   sanitizeProject,
@@ -137,10 +135,8 @@ export function newProject(
 /**
  * True while a (sanitized) Project is still exactly the empty shell newProject
  * leaves behind with no initial metadata: nothing recorded, and no
- * user-entered title, description, or sections. sanitizeProject always
- * substitutes the timestamped untitled placeholder for an empty title, so on
- * a sanitized project "unnamed" is exactly a placeholder derived from createdAt
- * (in any locale) — any user-typed title differs from it. contentRevision is
+ * user-entered title, description, or sections. An unnamed project's title
+ * is empty (see sanitizeProject). contentRevision is
  * deliberately not consulted: transient rows such as a snapshot run's deleted
  * empty anchor bump it without leaving any user content behind.
  */
@@ -148,7 +144,7 @@ export function isPristineProject(project: Project): boolean {
   return (
     project.stepCount === 0 &&
     project.entryCount === 0 &&
-    isDefaultProjectTitle(project.title, project.createdAt) &&
+    project.title === '' &&
     project.description === '' &&
     project.sections.length === 0
   );
@@ -234,7 +230,7 @@ async function abortTransaction(tx: ProjectStepsTransaction, error: unknown): Pr
   throw error;
 }
 
-/** 2: step text rewritten to the stored-text rule. */
+// Older databases are not upgraded. It stays 2 because lowering it would stop browsers that already hold version 2 from opening.
 export const DATABASE_VERSION = 2;
 
 let databasePromise: Promise<IDBPDatabase<HowbeamDB>> | undefined;
@@ -243,21 +239,12 @@ let databaseConnection: IDBPDatabase<HowbeamDB> | undefined;
 function getDatabase(): Promise<IDBPDatabase<HowbeamDB>> {
   if (databasePromise) return databasePromise;
   databasePromise = openDB<HowbeamDB>('howbeam', DATABASE_VERSION, {
-    async upgrade(db, oldVersion, _newVersion, transaction) {
-      if (oldVersion < 1) {
-        const steps = db.createObjectStore('steps', { keyPath: 'id' });
-        steps.createIndex('by-session', 'sessionId');
-        const projects = db.createObjectStore('projects', { keyPath: 'id' });
-        projects.createIndex('by-updated-at', 'updatedAt');
-      }
-      if (oldVersion >= 1 && oldVersion < 2) {
-        let cursor = await transaction.objectStore('steps').openCursor();
-        while (cursor) {
-          const conformed = conformStepToStoredTextRule(cursor.value);
-          if (conformed) await cursor.update(conformed);
-          cursor = await cursor.continue();
-        }
-      }
+    upgrade(db, oldVersion) {
+      if (oldVersion >= 1) return;
+      const steps = db.createObjectStore('steps', { keyPath: 'id' });
+      steps.createIndex('by-session', 'sessionId');
+      const projects = db.createObjectStore('projects', { keyPath: 'id' });
+      projects.createIndex('by-updated-at', 'updatedAt');
     },
     blocked(currentVersion, blockedVersion) {
       console.warn(`Howbeam database upgrade to ${blockedVersion ?? 'unknown'} is blocked by version ${currentVersion}.`);

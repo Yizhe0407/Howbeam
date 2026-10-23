@@ -22,7 +22,7 @@ test.describe('popup record target picker', () => {
     expect(listBox!.x).toBeGreaterThanOrEqual(triggerBox!.x - 1);
     expect(listBox!.x + listBox!.width).toBeLessThanOrEqual(triggerBox!.x + triggerBox!.width + 1);
 
-    // Truncated titles still leave the screen count readable on every option.
+    // Long titles wrap and still leave the step count readable on every option.
     for (const option of await list.getByRole('option').all()) {
       const box = await option.boundingBox();
       expect(box!.x + box!.width).toBeLessThanOrEqual(triggerBox!.x + triggerBox!.width + 1);

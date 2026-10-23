@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { en } from '@/lib/shared/i18n/messages/en';
 import { zhTW } from '@/lib/shared/i18n/messages/zh-TW';
 import { applyLocalePreference, getLocale, intlLocale, messagesFor, resolveLocale, setLocale, t } from '@/lib/shared/i18n';
-import { defaultProjectTitle, isDefaultProjectTitle } from '@/lib/storage/models';
+import { projectDisplayTitle } from '@/lib/storage/models';
 
 const CJK = /[\u3400-\u9fff\u3000-\u303f\uff00-\uffef]/;
 
@@ -96,14 +96,11 @@ describe('active locale', () => {
     }
   });
 
-  it('recognizes an untitled placeholder written under any locale', () => {
-    const createdAt = Date.UTC(2026, 9, 15, 3, 4);
-    setLocale('en');
-    const englishTitle = defaultProjectTitle(createdAt);
-    expect(englishTitle.startsWith('Untitled project · ')).toBe(true);
+  it('shows an unnamed project in the active language', () => {
     setLocale('zh-TW');
-    expect(isDefaultProjectTitle(englishTitle, createdAt)).toBe(true);
-    expect(isDefaultProjectTitle(defaultProjectTitle(createdAt), createdAt)).toBe(true);
-    expect(isDefaultProjectTitle('My project', createdAt)).toBe(false);
+    expect(projectDisplayTitle('')).toBe('未命名專案');
+    setLocale('en');
+    expect(projectDisplayTitle('  ')).toBe('Untitled project');
+    expect(projectDisplayTitle('My project')).toBe('My project');
   });
 });

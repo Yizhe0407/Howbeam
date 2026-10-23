@@ -78,11 +78,12 @@ export default function AppHeader({ current, currentHeading, status, actions, is
             <li aria-current="page" className="flex min-w-0 items-center gap-1">
               <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               {currentHeading ? (
-                <h1 id={currentHeading.id} tabIndex={currentHeading.id ? -1 : undefined} className={cn(crumbClass, 'block min-w-0 truncate text-foreground outline-none focus-ring')}>
+                // The crumb truncates on narrow windows; the tooltip keeps the full name reachable.
+                <h1 id={currentHeading.id} tabIndex={currentHeading.id ? -1 : undefined} title={current} className={cn(crumbClass, 'block min-w-0 truncate text-foreground outline-none focus-ring')}>
                   {current}
                 </h1>
               ) : (
-                <span className={cn(crumbClass, 'block min-w-0 truncate text-foreground')}>{current}</span>
+                <span title={current} className={cn(crumbClass, 'block min-w-0 truncate text-foreground')}>{current}</span>
               )}
             </li>
           )}

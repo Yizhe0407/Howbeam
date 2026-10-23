@@ -8,7 +8,6 @@
  */
 export const zhTW = {
   common: {
-    thumbnailPending: '縮圖尚未載入',
     appName: 'Howbeam',
     cancel: '取消',
     close: '關閉',
@@ -35,7 +34,6 @@ export const zhTW = {
     paused: '已暫停',
     untitledProject: '未命名專案',
     /** Separates the untitled placeholder from its timestamp. */
-    untitledProjectWithStamp: (stamp: string) => `未命名專案 · ${stamp}`,
     duplicateTitle: (title: string) => `${title}（副本）`,
     quoted: (text: string) => `「${text}」`,
   },
@@ -156,7 +154,6 @@ export const zhTW = {
     operationFailed: '操作失敗，請再試一次。',
     exportStarted: (title: string) => `「${title}」的備份已開始下載。`,
     importTooLarge: '匯入檔案超過 128 MB 安全上限。',
-    importedFallbackTitle: '匯入的專案',
     // Keyed by ProjectArchiveError.code, so the archive layer keeps its English
     // diagnostics for logs while the UI speaks the active language.
     archiveErrors: {
@@ -262,6 +259,7 @@ export const zhTW = {
       label: '步驟導覽',
       count: (count: number) => `步驟 · ${count}`,
       listLabel: '可重新排序的步驟清單',
+      thumbnailPending: '縮圖尚未載入',
       openStep: (number: number) => `開啟步驟 ${number}`,
       continueRecording: '接續錄製',
       insertHere: '錄製',

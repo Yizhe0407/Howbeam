@@ -5,6 +5,7 @@ import { focusTab } from '../../runtime/navigation';
 import { getStep } from '../../storage/step-repository';
 import { getProject, resetProject } from '../../storage/project-repository';
 import { t } from '@/lib/shared/i18n';
+import { projectDisplayTitle } from '@/lib/storage/models';
 import { describeBrowserError } from '../../runtime/browser-errors';
 import { getRecordingState, resetRunStateToIdle } from '../../storage/storage';
 import { recordedTabClosedError } from '../recording-recovery';
@@ -262,9 +263,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
     // Shown in the in-page toolbar only when the run appends to an existing Project.
     const targetProject = message.autoCreatedProject === true ? null : await getProject(message.sessionId);
     if (version !== control.controlVersion) return;
-    const targetProjectTitle = targetProject
-      ? targetProject.title.trim() || t().common.untitledProject
-      : null;
+    const targetProjectTitle = targetProject ? projectDisplayTitle(targetProject.title) : null;
     const insertAfterStepId = message.insertAfterEntryId === undefined
       ? null
       : (await resolveProjectContinuationAnchor(message.sessionId, message.insertAfterEntryId))?.afterStepId ?? null;

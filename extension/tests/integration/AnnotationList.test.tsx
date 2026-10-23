@@ -12,10 +12,12 @@ function render(ui: Parameters<typeof rtlRender>[0], options?: Parameters<typeof
   return rtlRender(ui, { wrapper: TooltipProvider, ...options });
 }
 
+const autosave = vi.hoisted(() => ({ setDescription: vi.fn() }));
+
 vi.mock('@/lib/editor/editor-autosave', () => ({
   useStepDescriptionAutosave: (step: Step) => ({
     description: step.description,
-    setDescription: vi.fn(),
+    setDescription: autosave.setDescription,
     recoveries: [],
     restoreRecovery: vi.fn(),
     discardRecovery: vi.fn(),
@@ -43,6 +45,22 @@ function makeAnnotation(): Step {
 afterEach(cleanup);
 
 describe('AnnotationList', () => {
+  it('shows a long marker label in a field that wraps, kept to one line of text', () => {
+    render(
+      <AnnotationList
+        annotations={[makeAnnotation()]}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+        onReorder={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    const field = screen.getByLabelText('標註 1 說明');
+    expect(field.tagName).toBe('TEXTAREA');
+    fireEvent.change(field, { target: { value: '第一行\n第二行' } });
+    expect(autosave.setDescription).toHaveBeenLastCalledWith('第一行 第二行');
+    expect(fireEvent.keyDown(field, { key: 'Enter' })).toBe(false);
+  });
+
   it('不在已儲存的標註說明下方顯示打勾圖示或已儲存文字', () => {
     const { container } = render(
       <AnnotationList

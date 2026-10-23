@@ -8,7 +8,7 @@ import { PERSISTED_PROJECT_LIMITS, PERSISTED_STEP_LIMITS } from './persistence-l
 import { normalizeStoredText } from './stored-text';
 import { cloneImageEdit, IMAGE_EDIT_LIMITS, readImageEdits, type ImageEdit } from './image-edit-model';
 export type { ImageEdit } from './image-edit-model';
-import { getLocale, messagesFor, SUPPORTED_LOCALES, type Locale } from '../shared/i18n';
+import { t } from '../shared/i18n';
 export type { ProjectSection } from './project-section-model';
 
 export interface Bounds {
@@ -207,27 +207,9 @@ function sanitizeProjectText(value: unknown, maximum: number): string {
     : '';
 }
 
-function untitledProjectTitle(createdAt: number, locale: Locale): string {
-  const copy = messagesFor(locale).common;
-  const date = new Date(createdAt);
-  return Number.isFinite(date.getTime())
-    ? copy.untitledProjectWithStamp(
-      new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date),
-    )
-    : copy.untitledProject;
-}
-
-/** The timestamped placeholder an untitled project is stored with, written in
- * the locale active when the project was created. */
-export function defaultProjectTitle(createdAt: number): string {
-  return untitledProjectTitle(createdAt, getLocale());
-}
-
-/** Whether `title` is the untitled placeholder for a project created at
- * `createdAt`, in any shipped locale: a project created under one UI language
- * stays recognizably untitled after the user switches to another. */
-export function isDefaultProjectTitle(title: string, createdAt: number): boolean {
-  return SUPPORTED_LOCALES.some((locale) => title === untitledProjectTitle(createdAt, locale));
+/** An unnamed project stores an empty title; this is what to show for one. */
+export function projectDisplayTitle(title: string): string {
+  return title.trim() || t().common.untitledProject;
 }
 
 function nonNegativeInteger(value: unknown): number {
@@ -262,7 +244,7 @@ function sanitizeProjectSectionsShape(value: unknown): ProjectSection[] {
 export function sanitizeProject(project: Project): Project {
   const createdAt = Number.isFinite(project.createdAt) ? project.createdAt : Date.now();
   const updatedAt = Number.isFinite(project.updatedAt) ? Math.max(project.updatedAt, createdAt) : createdAt;
-  const title = sanitizeProjectText(project.title, PERSISTED_PROJECT_LIMITS.maxTitleLength) || defaultProjectTitle(createdAt);
+  const title = sanitizeProjectText(project.title, PERSISTED_PROJECT_LIMITS.maxTitleLength);
   return {
     id: project.id,
     title,

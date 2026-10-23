@@ -13,11 +13,15 @@ interface Props {
   maxLength: number;
   disabled?: boolean;
   className?: string;
+  /** For cards: at most two lines, with the full title in the tooltip. Otherwise the title wraps in full. */
+  clamp?: boolean;
 }
 
 /**
- * Owns its draft while focused; an empty, unchanged, or rejected commit
- * reverts the field, so what's displayed always matches what's stored.
+ * Shows the title as wrapping text and turns into a field when clicked, so a
+ * long title is never cut off the way a one-line input cuts it. Owns its draft
+ * while editing; an empty, unchanged, or rejected commit reverts the field, so
+ * what's displayed always matches what's stored.
  */
 export default function EditableTitle({
   value,
@@ -28,11 +32,13 @@ export default function EditableTitle({
   maxLength,
   disabled = false,
   className,
+  clamp = false,
 }: Props) {
   const committed = value || fallback;
   const [draft, setDraft] = useState(committed);
   const [editing, setEditing] = useState(false);
   const committing = useRef(false);
+  const field = useRef<HTMLTextAreaElement | null>(null);
   // `blur()` dispatches focusout synchronously before React re-renders, so
   // this ref is what tells the blur commit that Escape already cancelled it.
   const cancelled = useRef(false);
@@ -42,6 +48,13 @@ export default function EditableTitle({
   useEffect(() => {
     if (!editing) setDraft(committed);
   }, [committed, editing]);
+
+  useEffect(() => {
+    const element = field.current;
+    if (!editing || !element) return;
+    element.focus();
+    element.setSelectionRange(element.value.length, element.value.length);
+  }, [editing]);
 
   async function commit() {
     if (cancelled.current) {
@@ -65,17 +78,34 @@ export default function EditableTitle({
     }
   }
 
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          cancelled.current = false;
+          setEditing(true);
+        }}
+        title={clamp ? committed : undefined}
+        className={cn('cursor-text text-left break-words', className)}
+      >
+        <span className="sr-only">{label} </span>
+        <span className={cn(clamp && 'line-clamp-2')}>{committed}</span>
+      </button>
+    );
+  }
+
   return (
-    <input
+    <textarea
+      ref={field}
       aria-label={label}
       value={draft}
+      rows={1}
       maxLength={maxLength}
       disabled={disabled}
-      onChange={(event) => setDraft(event.target.value)}
-      onFocus={() => {
-        cancelled.current = false;
-        setEditing(true);
-      }}
+      // A title is one line; a pasted line break becomes a space.
+      onChange={(event) => setDraft(event.target.value.replace(/\s*[\r\n]+\s*/g, ' '))}
       onBlur={() => {
         setEditing(false);
         void commit();
@@ -93,7 +123,7 @@ export default function EditableTitle({
           event.currentTarget.blur();
         }
       }}
-      className={cn('bg-transparent outline-none', className)}
+      className={cn('resize-none bg-transparent outline-none [field-sizing:content]', className)}
     />
   );
 }

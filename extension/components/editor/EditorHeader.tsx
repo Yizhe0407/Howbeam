@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import ExportPopover, { type ExportPopoverProps } from './ExportPopover';
 import { t } from '@/lib/shared/i18n';
+import { projectDisplayTitle } from '@/lib/storage/models';
 
 interface Props {
   operationActive: boolean;
@@ -51,7 +52,7 @@ export default function EditorHeader({
 
   return (
     <AppHeader
-      current={projectTitle == null ? t().common.editor : projectTitle.trim() || t().common.untitledProject}
+      current={projectTitle == null ? t().common.editor : projectDisplayTitle(projectTitle)}
       currentHeading={{ id: 'howbeam-editor-title' }}
       beforeNavigate={beforeNavigate}
       status={operationActive && (
@@ -65,7 +66,7 @@ export default function EditorHeader({
           <ResetButton
             hasSteps={hasSteps}
             sessionId={sessionId}
-            projectTitle={projectTitle?.trim() || undefined}
+            projectTitle={projectTitle == null ? undefined : projectDisplayTitle(projectTitle)}
             disabled={unavailable}
           />
           {publish ? <ExportPopover {...publish} trigger={exportButton} /> : exportButton}

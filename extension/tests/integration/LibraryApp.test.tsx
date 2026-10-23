@@ -51,7 +51,6 @@ vi.mock('@/lib/storage/project-repository', () => ({
   updateProject: database.updateProject,
 }));
 vi.mock('@/lib/storage/step-repository', () => ({ getSteps: database.getSteps }));
-vi.mock('@/lib/storage/project-structure', () => ({ getProjectStructureSnapshot: async () => ({ entries: [] }) }));
 vi.mock('@/lib/project/project-actions', () => projectActions);
 vi.mock('@/lib/storage/storage', () => storage);
 vi.mock('@/lib/export/project-archive-serialize', () => ({ exportProjectArchive: archive.exportProjectArchive }));
@@ -151,7 +150,7 @@ describe('專案庫', () => {
   // the same action. The header button is the one that is always visible.
   it('專案卡片格線只保留標題列的新增入口', async () => {
     render(<LibraryApp />);
-    await screen.findByDisplayValue('安全教學');
+    await screen.findByText('安全教學');
 
     projectActions.createAndSelectProject.mockResolvedValue({ id: 'new-project' });
     const createButtons = screen.getAllByRole('button', { name: '新增' });
@@ -164,22 +163,23 @@ describe('專案庫', () => {
 
   it('專案庫只顯示必要的專案資訊', async () => {
     render(<LibraryApp />);
-    await screen.findByDisplayValue('安全教學');
+    await screen.findByText('安全教學');
 
     expect(screen.queryByText('所有內容只保存在這個瀏覽器設定檔中。')).toBeNull();
     expect(screen.queryByText('1 個專案 · 100 B')).toBeNull();
     expect(screen.queryByText('100 B')).toBeNull();
     expect(screen.queryByText(/更新於/)).toBeNull();
 
-    const count = screen.getByText('2 個步驟');
-    expect(count.getAttribute('title')).toBeNull();
+    // The edit date replaces the old timestamp in untitled names; the count uses the editor's word.
+    const meta = screen.getByText('2 個步驟', { exact: false });
+    expect(meta.textContent).toMatch(/^\d{4}年\d{1,2}月\d{1,2}日 .+ · 2 個步驟$/);
   });
 
   it('專案沒有說明時不加入預設提示文字', async () => {
     database.getProjectSummaries.mockResolvedValue([{ ...project, description: '' }]);
     render(<LibraryApp />);
 
-    await screen.findByDisplayValue('安全教學');
+    await screen.findByText('安全教學');
     expect(screen.queryByText('尚未加入專案說明')).toBeNull();
   });
 
@@ -216,19 +216,19 @@ describe('專案庫', () => {
     fireEvent.click(await screen.findByRole('button', { name: '複製' }));
 
     await waitFor(() => expect(database.getProjectSummaries).toHaveBeenCalledTimes(2));
-    expect(screen.getByDisplayValue(project.title)).toBeTruthy();
+    expect(screen.getByText(project.title)).toBeTruthy();
     expect(screen.queryByText('讀取專案庫…')).toBeNull();
 
     await act(async () => { resolveRefresh([]); });
-    await waitFor(() => expect(screen.queryByDisplayValue(project.title)).toBeNull());
+    await waitFor(() => expect(screen.queryByText(project.title)).toBeNull());
   });
 
   it('失焦時提交重新命名的標題', async () => {
     database.updateProject.mockResolvedValue(undefined);
     render(<LibraryApp />);
 
-    const input = await screen.findByDisplayValue('安全教學');
-    input.focus();
+    fireEvent.click(await screen.findByText('安全教學'));
+    const input = screen.getByRole('textbox', { name: '專案名稱' });
     fireEvent.change(input, { target: { value: '更新後的標題' } });
     fireEvent.blur(input);
 
@@ -240,18 +240,19 @@ describe('專案庫', () => {
   it('Escape 取消重新命名而不寫入', async () => {
     render(<LibraryApp />);
 
-    const input = await screen.findByDisplayValue('安全教學') as HTMLInputElement;
-    input.focus();
+    fireEvent.click(await screen.findByText('安全教學'));
+    const input = screen.getByRole('textbox', { name: '專案名稱' });
     fireEvent.change(input, { target: { value: '不想保留的標題' } });
     fireEvent.keyDown(input, { key: 'Escape' });
 
-    await waitFor(() => expect(input.value).toBe('安全教學'));
+    await screen.findByText('安全教學');
+    expect(screen.queryByRole('textbox', { name: '專案名稱' })).toBeNull();
     expect(database.updateProject).not.toHaveBeenCalled();
   });
 
   it('視窗重新取得焦點時在背景重新整理專案庫', async () => {
     render(<LibraryApp />);
-    await screen.findByDisplayValue('安全教學');
+    await screen.findByText('安全教學');
     expect(database.getProjectSummaries).toHaveBeenCalledTimes(1);
 
     fireEvent.focus(window);
@@ -299,7 +300,7 @@ describe('專案庫', () => {
     fireEvent.click(screen.getByRole('button', { name: '下載 .howbeam' }));
 
     expect((await screen.findByRole('alert')).textContent).toContain('匯出空間不足');
-    expect(screen.getByDisplayValue(project.title)).toBeTruthy();
+    expect(screen.getByText(project.title)).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect((screen.getByRole('button', { name: '下載「安全教學」的備份' }) as HTMLButtonElement).disabled).toBe(false);
     expect(database.getProjectSummaries).toHaveBeenCalledOnce();
@@ -317,7 +318,7 @@ describe('專案庫', () => {
     });
 
     expect((await screen.findByRole('alert')).textContent).toContain('檔案內容損毀');
-    expect(screen.getByDisplayValue(project.title)).toBeTruthy();
+    expect(screen.getByText(project.title)).toBeTruthy();
     expect(database.createProjectFromSteps).not.toHaveBeenCalled();
     expect(database.getProjectSummaries).toHaveBeenCalledOnce();
   });
@@ -340,7 +341,7 @@ describe('專案庫', () => {
 
   it('隱藏的檔案輸入不在 Tab 順序也不在無障礙樹中', async () => {
     render(<LibraryApp />);
-    await screen.findByDisplayValue(project.title);
+    await screen.findByText(project.title);
 
     const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
     expect(input.tabIndex).toBe(-1);
@@ -349,7 +350,7 @@ describe('專案庫', () => {
 
   it('其他頁面寫入專案後即時更新專案庫（例如錄製後的步驟數）', async () => {
     render(<LibraryApp />);
-    await screen.findByDisplayValue(project.title);
+    await screen.findByText(project.title);
     expect(screen.getByText('2 個步驟', { exact: false })).toBeTruthy();
     expect(changes.listeners.size).toBeGreaterThan(0);
 

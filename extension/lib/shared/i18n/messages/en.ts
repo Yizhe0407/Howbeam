@@ -6,7 +6,6 @@ const plural = (count: number, one: string, other: string) => `${count} ${count 
  * function signature must match it exactly. */
 export const en: Messages = {
   common: {
-    thumbnailPending: 'Thumbnail not loaded yet',
     appName: 'Howbeam',
     cancel: 'Cancel',
     close: 'Close',
@@ -32,7 +31,6 @@ export const en: Messages = {
     recapturing: 'Retaking',
     paused: 'Paused',
     untitledProject: 'Untitled project',
-    untitledProjectWithStamp: (stamp: string) => `Untitled project · ${stamp}`,
     duplicateTitle: (title: string) => `${title} (copy)`,
     quoted: (text: string) => `“${text}”`,
   },
@@ -152,7 +150,6 @@ export const en: Messages = {
     operationFailed: 'Something went wrong. Please try again.',
     exportStarted: (title: string) => `Downloading the backup of “${title}”.`,
     importTooLarge: 'This file is over the 128 MB import limit.',
-    importedFallbackTitle: 'Imported project',
     archiveErrors: {
       ARCHIVE_TOO_LARGE: 'This project file is over the 128 MB safety limit.',
       BROKEN_GROUP_REFERENCE: 'The project file’s step groups are damaged.',
@@ -262,6 +259,7 @@ export const en: Messages = {
       label: 'Steps',
       count: (count: number) => `Steps · ${count}`,
       listLabel: 'Reorderable list of steps',
+      thumbnailPending: 'Thumbnail not loaded yet',
       openStep: (number: number) => `Open step ${number}`,
       continueRecording: 'Continue recording',
       insertHere: 'Record',
