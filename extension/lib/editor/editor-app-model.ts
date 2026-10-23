@@ -1,8 +1,10 @@
 import type { StepRecaptureTarget } from '../storage/recording-state';
 import { type StepEntry } from '../storage/models';
 import type { ProjectStructureMutationResult } from '../storage/project-structure';
+import type { ProjectSection } from '../storage/project-section-model';
 
 export const EMPTY_STEP_ENTRIES: StepEntry[] = [];
+export const EMPTY_SECTIONS: readonly ProjectSection[] = [];
 
 export interface UndoAction {
   id: number;
@@ -65,5 +67,11 @@ export class EditingBlockedError extends Error {
   }
 }
 
-/** What a queued edit will do to the entry list, shown on top of the stored entries until it settles. */
-export type OptimisticChange = (entries: StepEntry[]) => StepEntry[];
+/** The structure the editor shows: entries and the sections over them. */
+export interface ShownStructure {
+  entries: StepEntry[];
+  sections: readonly ProjectSection[];
+}
+
+/** What a queued edit will do to the structure, shown on top of the stored one until it settles. */
+export type OptimisticChange = (shown: ShownStructure) => ShownStructure;

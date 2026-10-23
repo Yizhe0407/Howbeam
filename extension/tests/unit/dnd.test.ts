@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reorderById, restrictToHorizontalAxis, restrictToVerticalAxis } from '@/lib/editor/dnd';
+import { reorderById } from '@/lib/editor/dnd';
 
 describe('reorderById', () => {
   const items = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
@@ -13,19 +13,5 @@ describe('reorderById', () => {
     expect(reorderById(items, 'a', 'a', getId)).toBeNull();
     expect(reorderById(items, 'a', undefined, getId)).toBeNull();
     expect(reorderById(items, 'missing', 'b', getId)).toBeNull();
-  });
-});
-
-describe('drag axis modifiers', () => {
-  const input = {
-    transform: { x: 12, y: 24, scaleX: 1, scaleY: 1 },
-  } as Parameters<typeof restrictToVerticalAxis>[0];
-
-  it('keeps desktop rail movement vertical', () => {
-    expect(restrictToVerticalAxis(input)).toMatchObject({ x: 0, y: 24 });
-  });
-
-  it('keeps mobile rail movement horizontal', () => {
-    expect(restrictToHorizontalAxis(input)).toMatchObject({ x: 12, y: 0 });
   });
 });

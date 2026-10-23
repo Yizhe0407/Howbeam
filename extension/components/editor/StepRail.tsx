@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Camera, Plus, Video } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import {
@@ -7,17 +8,17 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { entryId, type StepEntry } from '@/lib/storage/models';
-import type { ProjectSection } from '@/lib/project/project-sections';
+import { railRows, type ProjectSection, type RailRow } from '@/lib/project/project-sections';
 import {
-  restrictToHorizontalAxis,
-  restrictToVerticalAxis,
+  horizontalListModifiers,
   useSortableReorder,
+  verticalListModifiers,
 } from '@/lib/editor/dnd';
 import { t } from '@/lib/shared/i18n';
 import { cn } from '@/lib/shared/utils';
 import { useAutoHideScrollbar } from '@/lib/editor/use-auto-hide-scrollbar';
 import EntryThumbnail from './EntryThumbnail';
-import SortableItem from './SortableItem';
+import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import ProjectSectionHeading from './ProjectSectionHeading';
 
 
@@ -76,6 +77,11 @@ function SeamActions({
   );
 }
 
+/** Sortable ids for the rail's rows; entry and section ids are separate id spaces, so each gets its kind. */
+function rowId(row: RailRow): string {
+  return `${row.kind}:${row.id}`;
+}
+
 function LazyRailPreview({ eager, children }: { eager: boolean; children: ReactNode }) {
   const host = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(eager);
@@ -110,6 +116,40 @@ function LazyRailPreview({ eager, children }: { eager: boolean; children: ReactN
   );
 }
 
+// Sits on top of a screenshot, so it wears the same solid sticker chip as the step number.
+const RAIL_HANDLE = 'size-6 rounded-full border-2 border-border bg-card text-foreground hover:bg-secondary [&_svg]:size-3.5';
+
+/** An entry's screenshot with its step number, as the rail and a dragged entry's copy show it. */
+function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: number; active: boolean }) {
+  return (
+    <div className="pointer-events-none relative z-[1] aspect-[16/9] w-full overflow-hidden rounded-sm border-2 border-border bg-secondary">
+      <LazyRailPreview eager={active}>
+        <EntryThumbnail
+          entry={entry}
+          alt=""
+          fit="contain"
+          loading="lazy"
+          decoding="async"
+          className="size-full"
+        />
+      </LazyRailPreview>
+      <span className={cn(
+        'absolute top-1.5 left-1.5 z-30 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-border px-1 text-xs font-bold tabular-nums transition-colors',
+        active ? 'bg-selected text-on-accent' : 'bg-card text-foreground',
+      )}>
+        {number}
+      </span>
+      {entry.kind === 'group' && (
+        <span
+          className="absolute bottom-1.5 left-1.5 z-30 flex size-6 items-center justify-center rounded-full border-2 border-border bg-card text-foreground"
+          aria-hidden="true"
+        >
+          <Camera className="size-3" />
+        </span>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   entries: StepEntry[];
@@ -121,7 +161,8 @@ interface Props {
   onDeleteSection?: (sectionId: string) => Promise<void>;
   /** Asks for the add-section dialog at an entry that does not begin a section yet. */
   onStartSection?: (startEntryId: string) => void;
-  onReorder: (reordered: StepEntry[]) => Promise<void>;
+  /** Gets the rail as the drop left it: entries in their new order, each section heading where it was left. */
+  onReorder: (rows: RailRow[]) => Promise<void>;
   /** Starts a continuation; `afterEntryId` inserts after that entry, omitted appends at the end. */
   onContinueRecording?: (afterEntryId?: string) => void;
   reorderDisabled?: boolean;
@@ -139,16 +180,21 @@ export default function StepRail({
   onContinueRecording,
   reorderDisabled = false,
 }: Props) {
-  const { sensors, accessibility, handleDragEnd, itemIds } = useSortableReorder(
-    entries,
-    entryId,
+  const labelled = Boolean(onRenameSection && onDeleteSection);
+  const rows = railRows(entries, labelled ? sections : []);
+  const { sensors, accessibility, handlers, itemIds, overlayHost, setOverlayHost, previewPositionOf } = useSortableReorder(
+    rows,
+    rowId,
     onReorder,
     {
       disabled: reorderDisabled,
       itemNoun: t().sortable.stepNoun,
       logLabel: '[howbeam] failed to reorder project entries',
+      isFixed: (row) => row.kind === 'section',
     },
   );
+  const entryById = new Map(entries.map((entry) => [entryId(entry), entry]));
+  const sectionById = new Map(sections.map((section) => [section.id, section]));
   const selectedItem = useRef<HTMLButtonElement | null>(null);
   const railRef = useRef<HTMLElement | null>(null);
   const scrollbar = useAutoHideScrollbar<HTMLUListElement>();
@@ -213,9 +259,9 @@ export default function StepRail({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
+        {...handlers}
         accessibility={accessibility}
-        modifiers={[isDesktop ? restrictToVerticalAxis : restrictToHorizontalAxis]}
+        modifiers={isDesktop ? verticalListModifiers : horizontalListModifiers}
       >
         <SortableContext
           items={itemIds}
@@ -226,92 +272,77 @@ export default function StepRail({
             aria-label={t().editor.rail.listLabel}
             className="app-scrollbar-autohide flex flex-1 flex-row gap-1 overflow-x-auto px-2 pb-2 lg:min-h-0 lg:flex-col lg:gap-1 lg:overflow-x-visible lg:overflow-y-auto lg:px-2 lg:pb-2"
           >
-            {entries.map((entry, index) => {
-              const id = entryId(entry);
+            {rows.map((row) => {
+              if (row.kind === 'section') {
+                const section = sectionById.get(row.id);
+                if (!section || !onRenameSection || !onDeleteSection) return null;
+                return (
+                  // The mobile rail is a fixed-height strip, so a heading sits beside its first step there instead of above it.
+                  <SortableItem key={rowId(row)} id={rowId(row)} fixed className="w-36 shrink-0 self-center lg:w-auto lg:self-auto">
+                    {() => (
+                      <ProjectSectionHeading
+                        section={section}
+                        disabled={reorderDisabled}
+                        onRename={onRenameSection}
+                        onDelete={onDeleteSection}
+                      />
+                    )}
+                  </SortableItem>
+                );
+              }
+              const entry = entryById.get(row.id);
+              if (!entry) return null;
+              const id = row.id;
+              const index = entries.indexOf(entry);
               const active = id === selectedEntryId;
-              const section = sectionByStartId.get(id);
-              const labelled = Boolean(section && onRenameSection && onDeleteSection);
+              const number = previewPositionOf(rowId(row));
               return (
-                <Fragment key={id}>
+                <Fragment key={rowId(row)}>
                 <SortableItem
-                  id={id}
+                  id={rowId(row)}
                   disabled={reorderDisabled}
-                  className={cn(
-                    'shrink-0 [content-visibility:auto] [contain-intrinsic-size:128px_78px] lg:w-full lg:min-w-0',
-                    labelled ? 'w-auto' : 'w-32',
-                  )}
-                  // Sits on top of a screenshot, so it wears the same solid sticker chip as the step number.
-                  handleClassName="size-6 rounded-full border-2 border-border bg-card text-foreground hover:bg-secondary [&_svg]:size-3.5"
+                  overlayHost={overlayHost}
+                  className="w-32 shrink-0 [content-visibility:auto] [contain-intrinsic-size:128px_78px] lg:w-full lg:min-w-0"
+                  handleClassName={RAIL_HANDLE}
                 >
-                  {(handle, { isDragging }) => (
-                    // The mobile rail is a fixed-height strip, so a section label sits beside its first step there instead of above it.
-                    <div className="flex min-w-0 flex-row items-center gap-1 lg:flex-col lg:items-stretch">
-                      {section && onRenameSection && onDeleteSection && (
-                        <div className="w-36 shrink-0 lg:w-auto">
-                          <ProjectSectionHeading
-                            section={section}
-                            disabled={reorderDisabled}
-                            onRename={onRenameSection}
-                            onDelete={onDeleteSection}
-                          />
-                        </div>
+                  {(handle, overlay) => (
+                    <div
+                      data-active={active || undefined}
+                      className={cn(
+                        // p-1 puts the thumbnail exactly 4px inside, the inset its `rounded-sm` is drawn for.
+                        'group relative flex w-32 min-w-0 shrink-0 cursor-pointer items-center rounded-md p-1 transition-colors lg:w-auto lg:shrink',
+                        active ? 'bg-card' : 'bg-transparent hover:bg-secondary',
                       )}
-                      <div
-                        data-active={active || undefined}
-                        className={cn(
-                          // p-1 puts the thumbnail exactly 4px inside, the inset its `rounded-sm` is drawn for.
-                          'group relative flex w-32 min-w-0 shrink-0 cursor-pointer items-center rounded-md p-1 transition-colors lg:w-auto lg:shrink',
-                          active ? 'bg-card' : 'bg-transparent hover:bg-secondary',
-                          // Lifts the row being moved off the list so the reflow underneath reads as the drop preview.
-                          isDragging && 'bg-card outline-2 outline-dashed outline-border',
-                        )}
-                      >
-                        <button
-                          ref={active ? selectedItem : undefined}
-                          type="button"
-                          onClick={() => onSelect(id)}
-                          aria-label={t().editor.rail.openStep(index + 1)}
-                          aria-current={active ? 'step' : undefined}
-                          className="absolute inset-0 z-0 rounded-md outline-none focus-ring"
+                    >
+                      <button
+                        ref={active ? selectedItem : undefined}
+                        type="button"
+                        onClick={() => onSelect(id)}
+                        aria-label={t().editor.rail.openStep(index + 1)}
+                        aria-current={active ? 'step' : undefined}
+                        className="absolute inset-0 z-0 rounded-md outline-none focus-ring"
+                      />
+                      {active && (
+                        <span
+                          aria-hidden="true"
+                          data-howbeam-selected-step-outline
+                          className="howbeam-selected-step-outline pointer-events-none absolute inset-0 z-10 rounded-md border-2"
                         />
-                        {active && (
-                          <span
-                            aria-hidden="true"
-                            data-howbeam-selected-step-outline
-                            className="howbeam-selected-step-outline pointer-events-none absolute inset-0 z-10 rounded-md border-2"
-                          />
-                        )}
-                        <div className="pointer-events-none relative z-[1] aspect-[16/9] w-full overflow-hidden rounded-sm border-2 border-border bg-secondary">
-                          <LazyRailPreview eager={active}>
-                            <EntryThumbnail
-                              entry={entry}
-                              alt=""
-                              fit="contain"
-                              loading="lazy"
-                              decoding="async"
-                              className="size-full"
-                            />
-                          </LazyRailPreview>
-                          <span className={cn(
-                            'absolute top-1.5 left-1.5 z-30 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-border px-1 text-xs font-bold tabular-nums transition-colors',
-                            active ? 'bg-selected text-on-accent' : 'bg-card text-foreground',
-                          )}>
-                            {index + 1}
+                      )}
+                      <RailThumbnail entry={entry} number={number} active={active} />
+                      {/* Always rendered: a hover-only handle is invisible on touch; rests dimmed to not compete with the thumbnail. */}
+                      <span className="absolute top-2.5 right-2.5 z-20 opacity-80 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                        {handle}
+                      </span>
+                      {overlay && createPortal(
+                        <div className="relative flex size-full items-center rounded-md bg-card p-1">
+                          <RailThumbnail entry={entry} number={number} active={active} />
+                          <span className="absolute top-2.5 right-2.5 z-20">
+                            <StaticHandle className={RAIL_HANDLE} />
                           </span>
-                          {entry.kind === 'group' && (
-                            <span
-                              className="absolute bottom-1.5 left-1.5 z-30 flex size-6 items-center justify-center rounded-full border-2 border-border bg-card text-foreground"
-                              aria-hidden="true"
-                            >
-                              <Camera className="size-3" />
-                            </span>
-                          )}
-                        </div>
-                        {/* Always rendered: a hover-only handle is invisible on touch; rests dimmed to not compete with the thumbnail. */}
-                        <span className="absolute top-2.5 right-2.5 z-20 opacity-80 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                          {handle}
-                        </span>
-                      </div>
+                        </div>,
+                        overlay,
+                      )}
                     </div>
                   )}
                 </SortableItem>
@@ -333,6 +364,7 @@ export default function StepRail({
             })}
           </ul>
         </SortableContext>
+        <SortableOverlay onHost={setOverlayHost} />
       </DndContext>
       {onContinueRecording && (
         <button

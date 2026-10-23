@@ -71,6 +71,39 @@ export function sectionOfEntry(
   return undefined;
 }
 
+/** One row of the step rail: a section heading or an entry. */
+export type RailRow = { kind: 'section'; id: string } | { kind: 'entry'; id: string };
+
+/** The rail's rows: every entry in order, each section heading right before the entry it starts. */
+export function railRows(entries: readonly StepEntry[], sections: readonly ProjectSection[]): RailRow[] {
+  const sectionByStart = new Map(sections.map((section) => [section.startEntryId, section]));
+  return entries.flatMap((entry): RailRow[] => {
+    const id = entryId(entry);
+    const section = sectionByStart.get(id);
+    return section ? [{ kind: 'section', id: section.id }, { kind: 'entry', id }] : [{ kind: 'entry', id }];
+  });
+}
+
+/**
+ * The sections a reordered rail describes: each starts at the first entry below
+ * its heading. A heading with no entry before the next heading or the end has
+ * nothing left to start, so that section is dropped.
+ */
+export function sectionsInRows(sections: readonly ProjectSection[], rows: readonly RailRow[]): ProjectSection[] {
+  const byId = new Map(sections.map((section) => [section.id, section]));
+  const result: ProjectSection[] = [];
+  let open: ProjectSection | undefined;
+  for (const row of rows) {
+    if (row.kind === 'section') {
+      open = byId.get(row.id);
+    } else if (open) {
+      result.push({ ...open, startEntryId: row.id });
+      open = undefined;
+    }
+  }
+  return result;
+}
+
 function validIdentifier(value: unknown): string | null {
   if (
     typeof value !== 'string' ||

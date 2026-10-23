@@ -14,6 +14,7 @@ import {
   renameProjectSectionAtomically,
 } from '@/lib/storage/project-structure';
 import { getSteps } from '@/lib/storage/step-repository';
+import type { RailRow } from '@/lib/project/project-sections';
 import { t } from '@/lib/shared/i18n';
 import { jpegBlob } from '../setup/raster-fixtures';
 import { seedSteps } from '../setup/step-fixtures';
@@ -78,6 +79,7 @@ function createEditor() {
       sessionId,
       project,
       entries,
+      sections: project.sections,
       selectedEntryId: editor.selectedEntryId,
       runOperation: (_label, operation) => operation(),
       editingBlocked: () => false,
@@ -126,6 +128,16 @@ async function layout(): Promise<unknown[]> {
   const { entries } = await getProjectStructureSnapshot(sessionId);
   return entries.map((entry) =>
     entry.kind === 'single' ? entry.step.id : [entry.anchor.id, entry.annotations.map((annotation) => annotation.id)]);
+}
+
+/** Rail rows: `#name` is the section titled name, anything else an entry. */
+async function rows(...names: string[]): Promise<RailRow[]> {
+  const project = await getProject(sessionId);
+  return names.map((name) => {
+    if (!name.startsWith('#')) return { kind: 'entry', id: uid(name) };
+    const section = project!.sections.find((candidate) => candidate.title === name.slice(1));
+    return { kind: 'section', id: section!.id };
+  });
 }
 
 async function sections() {
@@ -185,9 +197,7 @@ describe('delete step', () => {
 describe('reorder', () => {
   it('reorders entries, and undo restores the previous order', async () => {
     const { run } = createEditor();
-    const { entries } = await getProjectStructureSnapshot(sessionId);
-
-    await run((mutations) => mutations.handleReorderEntries([entries[2], entries[0], entries[1]]));
+    await run(async (mutations) => mutations.handleReorderEntries(await rows('c', 'a', 'g')));
 
     expect(await layout()).toEqual([uid('c'), uid('a'), [uid('g'), [uid('g1'), uid('g2')]]]);
 
@@ -201,10 +211,55 @@ describe('reorder', () => {
     const { entries } = await getProjectStructureSnapshot(sessionId);
     const staleView = entries.slice(0, 2);
 
-    await run((mutations) => mutations.handleReorderEntries([staleView[1], staleView[0]]), staleView);
+    await run(async (mutations) => mutations.handleReorderEntries(await rows('g', 'a')), staleView);
 
     expect(editor.operationError).toBe(t().editor.mutations.conflict);
     expect(await layout()).toEqual([uid('a'), [uid('g'), [uid('g1'), uid('g2')]], uid('c')]);
+  });
+
+  it('leaves a section heading in place, so the entry dropped below it starts the section', async () => {
+    await addSection(uid('g'), 'Setup');
+    const { run } = createEditor();
+
+    await run(async (mutations) => mutations.handleReorderEntries(await rows('#Setup', 'c', 'a', 'g')));
+
+    expect(await layout()).toEqual([uid('c'), uid('a'), [uid('g'), [uid('g1'), uid('g2')]]]);
+    expect(await sections()).toEqual([{ title: 'Setup', startEntryId: uid('c') }]);
+
+    await run((mutations) => mutations.handleUndo());
+
+    expect(await layout()).toEqual([uid('a'), [uid('g'), [uid('g1'), uid('g2')]], uid('c')]);
+    expect(await sections()).toEqual([{ title: 'Setup', startEntryId: uid('g') }]);
+  });
+
+  it('drops a section left with no entry, and undo brings it back', async () => {
+    await addSection(uid('c'), 'End');
+    const { run } = createEditor();
+
+    await run(async (mutations) => mutations.handleReorderEntries(await rows('a', 'c', 'g', '#End')));
+
+    expect(await layout()).toEqual([uid('a'), uid('c'), [uid('g'), [uid('g1'), uid('g2')]]]);
+    expect(await sections()).toEqual([]);
+
+    await run((mutations) => mutations.handleUndo());
+
+    expect(await layout()).toEqual([uid('a'), [uid('g'), [uid('g1'), uid('g2')]], uid('c')]);
+    expect(await sections()).toEqual([{ title: 'End', startEntryId: uid('c') }]);
+  });
+
+  it('keeps a rename made before the drop was stored', async () => {
+    await addSection(uid('g'), 'Setup');
+    const { run } = createEditor();
+    const dropped = await rows('a', '#Setup', 'c', 'g');
+
+    // The hook still shows the old title when the queued rename lands ahead of the drop.
+    await run(async (mutations) => {
+      const project = await getProject(sessionId);
+      await renameProjectSectionAtomically(sessionId, project!.sections[0].id, 'Renamed', project!.contentRevision);
+      await mutations.handleReorderEntries(dropped);
+    });
+
+    expect(await sections()).toEqual([{ title: 'Renamed', startEntryId: uid('c') }]);
   });
 
   it('reorders a snapshot’s annotations, and undo restores them', async () => {

@@ -7,6 +7,7 @@ import {
 } from '@/lib/editor/editor-app-model';
 import { addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, ProjectContentConflictError, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically, setProjectEntriesNumberedAtomically, type ProjectStructureMutationResult, type ProjectStructureSnapshot } from '@/lib/storage/project-structure';
 import { entryId, type Project, type Step, type StepEntry } from '@/lib/storage/models';
+import { sectionsInRows, type ProjectSection, type RailRow } from '@/lib/project/project-sections';
 import { t, type Messages } from '@/lib/shared/i18n';
 
 /** A structural edit with its own progress/failure copy in the i18n catalog. */
@@ -19,6 +20,8 @@ interface UseProjectMutationsOptions {
   project: Project | null;
   /** The rendered (optimistic-first) entry list. */
   entries: StepEntry[];
+  /** The rendered (optimistic-first) sections. */
+  sections: readonly ProjectSection[];
   selectedEntryId: string | null;
   /** Queues `operation` behind every data operation asked for before it. */
   runOperation: <T>(label: string | null, operation: () => Promise<T>) => Promise<T>;
@@ -61,6 +64,7 @@ export function useProjectMutations({
   sessionId,
   project,
   entries,
+  sections,
   selectedEntryId,
   runOperation,
   editingBlocked,
@@ -148,20 +152,31 @@ export function useProjectMutations({
     setZoomOpen(false);
   }
 
-  async function handleReorderEntries(newEntries: StepEntry[]) {
+  /** `rows` is the rail after a drop: entries in their new order, each section heading where it was left. */
+  async function handleReorderEntries(rows: readonly RailRow[]) {
     if (!project) return;
     const previousEntryIds = entries.map(entryId);
+    const previousSectionIds = sections.map((section) => section.id).sort();
+    const nextEntryIds = rows.flatMap((row) => (row.kind === 'entry' ? [row.id] : []));
     const expectedRevision = project.contentRevision;
     await runProjectMutation({
       operation: 'reorderSteps',
-      optimistic: inOrder(newEntries.map(entryId), entryId),
+      optimistic: (shown) => ({
+        entries: inOrder(nextEntryIds, entryId)(shown.entries),
+        sections: sectionsInRows(shown.sections, rows),
+      }),
       mutate: async (snapshot, projectId) => {
-        if (!equalIds(snapshot.entryIds, previousEntryIds)) {
+        if (
+          !equalIds(snapshot.entryIds, previousEntryIds)
+          || !equalIds(snapshot.project.sections.map((section) => section.id).sort(), previousSectionIds)
+        ) {
           throw new ProjectContentConflictError(projectId, expectedRevision, snapshot.project.contentRevision);
         }
         const result = await reorderProjectEntriesAtomically(
           projectId,
-          newEntries.map(entryId),
+          nextEntryIds,
+          // Titles come from the snapshot, so a rename queued before this drop is kept.
+          sectionsInRows(snapshot.project.sections, rows),
           snapshot.project.contentRevision,
         );
         adoptCommitted(result);
@@ -171,6 +186,7 @@ export function useProjectMutations({
           restore: () => reorderProjectEntriesAtomically(
             projectId,
             result.previousEntryIds,
+            result.previousSections,
             result.project.contentRevision,
           ),
         };
@@ -189,9 +205,12 @@ export function useProjectMutations({
       operation: 'reorderAnnotations',
       optimistic: (shown) => {
         const order = inOrder(reordered.map((annotation) => annotation.id), (annotation: Step) => annotation.id);
-        return shown.map((entry) => (
-          entry.kind === 'group' && entry.anchor.id === anchorId ? { ...entry, annotations: order(entry.annotations) } : entry
-        ));
+        return {
+          ...shown,
+          entries: shown.entries.map((entry) => (
+            entry.kind === 'group' && entry.anchor.id === anchorId ? { ...entry, annotations: order(entry.annotations) } : entry
+          )),
+        };
       },
       mutate: async (snapshot, projectId) => {
         const freshGroup = snapshot.entries.find(
@@ -266,14 +285,14 @@ export function useProjectMutations({
     const groupId = step.groupId;
     if (!groupId) return;
     const annotationIndex = currentEntry.annotations.findIndex((annotation) => annotation.id === step.id);
-    const withoutMarker: OptimisticChange = (shown) => shown.flatMap((entry) => {
+    const withoutMarker = (shown: StepEntry[]) => shown.flatMap((entry) => {
       if (entry.kind !== 'group' || entry.anchor.id !== groupId) return [entry];
       const remaining = entry.annotations.filter((annotation) => annotation.id !== step.id);
       return remaining.length === 0 ? [] : [{ ...entry, annotations: remaining }];
     });
     await runProjectMutation({
       operation: 'deleteAnnotation',
-      optimistic: withoutMarker,
+      optimistic: (shown) => ({ ...shown, entries: withoutMarker(shown.entries) }),
       // Deleting a snapshot's last marker takes the snapshot off the list at once, so the selection moves with it.
       atClick: () => {
         const after = withoutMarker(entries);
@@ -320,11 +339,14 @@ export function useProjectMutations({
     const selectedIds = new Set(entryIdsToUpdate);
     await runProjectMutation({
       operation: 'numbering',
-      optimistic: (shown) => shown.map((entry) => (
-        entry.kind === 'group' && selectedIds.has(entry.anchor.id)
-          ? { ...entry, anchor: { ...entry.anchor, numbered } }
-          : entry
-      )),
+      optimistic: (shown) => ({
+        ...shown,
+        entries: shown.entries.map((entry) => (
+          entry.kind === 'group' && selectedIds.has(entry.anchor.id)
+            ? { ...entry, anchor: { ...entry.anchor, numbered } }
+            : entry
+        )),
+      }),
       mutate: async (snapshot, projectId) => {
         const previousValues = new Set(
           snapshot.entries

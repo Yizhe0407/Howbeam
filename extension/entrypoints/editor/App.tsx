@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { AlertCircle, Library } from 'lucide-react';
 import { useRecordingSession } from '@/lib/recording/use-recording-session';
 import { useEditorProjectData } from '@/lib/editor/use-editor-project-data';
-import { EditingBlockedError, EMPTY_STEP_ENTRIES, type OptimisticChange } from '@/lib/editor/editor-app-model';
+import { EditingBlockedError, EMPTY_SECTIONS, EMPTY_STEP_ENTRIES, type OptimisticChange } from '@/lib/editor/editor-app-model';
 import { useSerialOperations } from '@/lib/editor/use-serial-operations';
 import { entryId, type StepEntry } from '@/lib/storage/models';
 import { sectionOfEntry } from '@/lib/project/project-sections';
@@ -66,6 +66,7 @@ function EditorApp() {
   const recaptureActive = operationBelongsToViewedProject && recording.operation === 'recapture' && recording.recapture !== null;
   const { flushAll } = useEditorSaveRegistry();
   const dbEntries = canonicalSnapshot?.entries ?? EMPTY_STEP_ENTRIES;
+  const dbSections = project?.sections ?? EMPTY_SECTIONS;
   const operations = useSerialOperations();
   const [exporting, setExporting] = useState(false);
 
@@ -77,9 +78,9 @@ function EditorApp() {
     setOptimisticChanges((current) => [...current, { id, apply }]);
     return () => setOptimisticChanges((current) => current.filter((change) => change.id !== id));
   }, []);
-  const entries = useMemo(
-    () => optimisticChanges.reduce((shown, change) => change.apply(shown), dbEntries),
-    [dbEntries, optimisticChanges],
+  const { entries, sections } = useMemo(
+    () => optimisticChanges.reduce((shown, change) => change.apply(shown), { entries: dbEntries, sections: dbSections }),
+    [dbEntries, dbSections, optimisticChanges],
   );
   const [operationError, setOperationError] = useState<string | null>(null);
   const handledRecaptureResult = useRef<string | null>(null);
@@ -243,6 +244,7 @@ function EditorApp() {
     sessionId,
     project,
     entries,
+    sections,
     selectedEntryId,
     runOperation: operations.run,
     editingBlocked,
@@ -481,10 +483,10 @@ function EditorApp() {
             <StepRail
               entries={entries}
               selectedEntryId={selectedEntryId}
-              sections={project?.sections}
+              sections={sections}
               onSelect={selectEntrySafely}
               onRenameSection={(sectionId) => {
-                const section = project?.sections.find((candidate) => candidate.id === sectionId);
+                const section = sections.find((candidate) => candidate.id === sectionId);
                 if (section) setSectionDialog({ kind: 'rename', sectionId, title: section.title });
               }}
               onDeleteSection={deleteSection}
@@ -502,9 +504,9 @@ function EditorApp() {
                 key={entryId(selectedEntry)}
                 entry={selectedEntry}
                 index={selectedIndex}
-                sectionTitle={sectionOfEntry(project?.sections ?? [], entries, selectedIndex)?.title}
+                sectionTitle={sectionOfEntry(sections, entries, selectedIndex)?.title}
                 onStartSection={
-                  project?.sections.some((section) => section.startEntryId === entryId(selectedEntry))
+                  sections.some((section) => section.startEntryId === entryId(selectedEntry))
                     ? undefined
                     : () => setSectionDialog({ kind: 'add', startEntryId: entryId(selectedEntry), step: selectedIndex + 1 })
                 }

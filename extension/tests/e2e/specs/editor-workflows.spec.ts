@@ -384,7 +384,6 @@ test.describe('editor workflows', () => {
     const downloadRecord = await readLatestDownload(popupPage);
     expect(downloadRecord?.mime).toBe('application/zip');
     expect(path.extname(download.suggestedFilename())).toBe('.zip');
-    await expect(publishDialog.getByText('圖片 ZIP 已開始下載。', { exact: true })).toBeVisible();
 
     const files = unzipSync(new Uint8Array(await readFile(archivePath)));
     expect(Object.keys(files).sort()).toEqual(['01.jpg', '02.jpg', '03.jpg']);

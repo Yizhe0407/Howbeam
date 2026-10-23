@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { type Step, type StepEntry } from '@/lib/storage/models';
 import {
   PROJECT_SECTION_LIMITS,
+  railRows,
   repairProjectSections,
   sanitizeProjectSectionTitle,
   sectionOfEntry,
+  sectionsInRows,
 } from '@/lib/project/project-sections';
 
 function step(id: string, order: number, overrides: Partial<Step> = {}): Step {
@@ -107,5 +109,28 @@ describe('project sections', () => {
     expect(sectionOfEntry(sections, timeline, 2)?.id).toBe('later');
     expect(sectionOfEntry([{ id: 'first', title: 'First', startEntryId: 'first' }, ...sections], timeline, 0)?.id).toBe('first');
     expect(sectionOfEntry([], timeline, 2)).toBeUndefined();
+  });
+
+  it('puts each heading right before the entry it starts', () => {
+    expect(railRows(entries(), [{ id: 'mid', title: 'Mid', startEntryId: 'snapshot' }])).toEqual([
+      { kind: 'entry', id: 'first' },
+      { kind: 'section', id: 'mid' },
+      { kind: 'entry', id: 'snapshot' },
+      { kind: 'entry', id: 'last' },
+    ]);
+  });
+
+  it('starts each section at the first entry below its heading and drops a heading with none', () => {
+    const sections = [
+      { id: 'one', title: 'One', startEntryId: 'first' },
+      { id: 'two', title: 'Two', startEntryId: 'last' },
+    ];
+    expect(sectionsInRows(sections, [
+      { kind: 'entry', id: 'first' },
+      { kind: 'section', id: 'one' },
+      { kind: 'entry', id: 'last' },
+      { kind: 'entry', id: 'snapshot' },
+      { kind: 'section', id: 'two' },
+    ])).toEqual([{ id: 'one', title: 'One', startEntryId: 'last' }]);
   });
 });

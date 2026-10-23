@@ -99,7 +99,7 @@ describe('Project entry-safe atomic structure', () => {
     await expect(deleteProjectEntriesAtomically(project.id, [annotationId], snapshot.project.contentRevision))
       .rejects.toBeInstanceOf(ProjectStructureIntegrityError);
     await expect(reorderProjectEntriesAtomically(
-      project.id, [snapshot.entryIds[0], annotationId, snapshot.entryIds[2]], snapshot.project.contentRevision,
+      project.id, [snapshot.entryIds[0], annotationId, snapshot.entryIds[2]], snapshot.project.sections, snapshot.project.contentRevision,
     )).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
     expect((await getProjectStructureSnapshot(project.id)).entryIds).toEqual(snapshot.entryIds);
   });
@@ -283,6 +283,7 @@ describe('strict annotation and visual CAS mutations', () => {
     const moved = await reorderProjectEntriesAtomically(
       project.id,
       [...snapshot.entryIds].reverse(),
+      snapshot.project.sections,
       snapshot.project.contentRevision,
     );
 
@@ -365,6 +366,7 @@ describe('strict annotation and visual CAS mutations', () => {
     const moved = await reorderProjectEntriesAtomically(
       project.id,
       [...deleted.entryIds].reverse(),
+      deleted.project.sections,
       deleted.project.contentRevision,
     );
 
@@ -509,6 +511,7 @@ describe('strict annotation and visual CAS mutations', () => {
     const result = await reorderProjectEntriesAtomically(
       project.id,
       [...before.entryIds].reverse(),
+      before.project.sections,
       sectioned.project.contentRevision,
     );
     expect(result.previousEntryIds).toEqual(before.entryIds);

@@ -107,7 +107,11 @@ describe('StepRail arrow-key listener stability', () => {
     fireEvent.keyDown(document, { code: 'Space', key: ' ' });
 
     await waitFor(() => expect(onReorder).toHaveBeenCalledOnce());
-    expect(onReorder.mock.calls[0][0].map((entry: { step: { id: string } }) => entry.step.id)).toEqual(['step-2', 'step-1', 'step-3']);
+    expect(onReorder.mock.calls[0][0]).toEqual([
+      { kind: 'entry', id: 'step-2' },
+      { kind: 'entry', id: 'step-1' },
+      { kind: 'entry', id: 'step-3' },
+    ]);
     expect(onSelect).not.toHaveBeenCalled();
   });
 });

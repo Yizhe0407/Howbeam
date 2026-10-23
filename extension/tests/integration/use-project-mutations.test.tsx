@@ -39,6 +39,7 @@ import { useProjectMutations } from '@/components/editor/use-project-mutations';
 const singleEntry = (id: string) => ({ kind: 'single', step: { id } }) as never;
 const entries = [singleEntry('s1'), singleEntry('s2')];
 const reordered = [entries[1], entries[0]];
+const reorderedRows = [{ kind: 'entry', id: 's2' }, { kind: 'entry', id: 's1' }] as const;
 const project = { id: 'g1', contentRevision: 1, sections: [] } as never;
 
 function renderMutations(overrides: Record<string, unknown> = {}) {
@@ -46,6 +47,7 @@ function renderMutations(overrides: Record<string, unknown> = {}) {
     sessionId: 'g1',
     project,
     entries,
+    sections: [],
     selectedEntryId: null,
     runOperation: vi.fn((_label: string | null, operation: () => Promise<unknown>) => operation()),
     editingBlocked: vi.fn(() => false),
@@ -89,7 +91,10 @@ afterEach(() => {
 
 /** The optimistic change a mutation showed, applied to `shown`, and the spy that takes it back. */
 function shownChange(options: ReturnType<typeof renderMutations>['options'], call = 0) {
-  const [change] = options.showOptimistic.mock.calls[call] as unknown as [(entries: unknown[]) => unknown[]];
+  const [apply] = options.showOptimistic.mock.calls[call] as unknown as [
+    (shown: { entries: unknown[]; sections: unknown[] }) => { entries: unknown[] },
+  ];
+  const change = (shownEntries: unknown[]) => apply({ entries: shownEntries, sections: [] }).entries;
   const hide = options.showOptimistic.mock.results[call].value as ReturnType<typeof vi.fn>;
   return { change, hide };
 }
@@ -98,7 +103,7 @@ describe('runProjectMutation (via handleReorderEntries)', () => {
   it('shows the result at the click, commits in the queue, then takes the optimistic change back', async () => {
     const { result, options } = renderMutations();
 
-    await act(() => result.current.handleReorderEntries(reordered));
+    await act(() => result.current.handleReorderEntries([...reorderedRows]));
 
     const { change, hide } = shownChange(options);
     expect(change(entries)).toEqual(reordered);
@@ -115,7 +120,7 @@ describe('runProjectMutation (via handleReorderEntries)', () => {
     mocks.reorderProjectEntriesAtomically.mockRejectedValue(new Error('cas boom'));
     const { result, options } = renderMutations();
 
-    await act(() => result.current.handleReorderEntries(reordered));
+    await act(() => result.current.handleReorderEntries([...reorderedRows]));
 
     expect(shownChange(options).hide).toHaveBeenCalledOnce();
     expect(options.setOperationError).toHaveBeenLastCalledWith('步驟排序失敗，已重新載入目前資料。');
@@ -126,7 +131,7 @@ describe('runProjectMutation (via handleReorderEntries)', () => {
   it('applies its change on top of whatever is shown when its change is replayed', async () => {
     const { result, options } = renderMutations();
 
-    await act(() => result.current.handleReorderEntries(reordered));
+    await act(() => result.current.handleReorderEntries([...reorderedRows]));
 
     // A later read can bring a third entry; the reorder still puts the two it named in its order.
     const third = singleEntry('s3');
@@ -136,7 +141,7 @@ describe('runProjectMutation (via handleReorderEntries)', () => {
   it('changes nothing while the Project cannot be edited', async () => {
     const { result, options } = renderMutations({ editingBlocked: vi.fn(() => true) });
 
-    await act(() => result.current.handleReorderEntries(reordered));
+    await act(() => result.current.handleReorderEntries([...reorderedRows]));
 
     expect(options.showOptimistic).not.toHaveBeenCalled();
     expect(options.runOperation).not.toHaveBeenCalled();
@@ -206,7 +211,7 @@ describe('a pending undo when another mutation runs (single-level undo)', () => 
   it('hands the earlier undo to the new one, which says it is now final', async () => {
     const { result, options } = renderMutations({ takeUndo: vi.fn(() => earlier) });
 
-    await act(() => result.current.handleReorderEntries(reordered));
+    await act(() => result.current.handleReorderEntries([...reorderedRows]));
 
     expect(options.offerUndo).toHaveBeenCalledWith(expect.objectContaining({ expectedRevision: 2 }), 'g1', earlier);
     expect(options.finalizeUndo).not.toHaveBeenCalled();
@@ -228,7 +233,7 @@ describe('a pending undo when another mutation runs (single-level undo)', () => 
     mocks.reorderProjectEntriesAtomically.mockRejectedValue(new Error('cas boom'));
     const { result, options } = renderMutations({ takeUndo: vi.fn(() => earlier) });
 
-    await act(() => result.current.handleReorderEntries(reordered));
+    await act(() => result.current.handleReorderEntries([...reorderedRows]));
 
     expect(options.returnUndo).toHaveBeenCalledWith(earlier);
     expect(options.finalizeUndo).not.toHaveBeenCalled();

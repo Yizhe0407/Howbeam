@@ -304,6 +304,7 @@ export async function repairEmptySnapshotAnchors(sessionId: string): Promise<num
 export async function reorderProjectEntriesAtomically(
   sessionId: string,
   orderedEntryIds: readonly string[],
+  sections: readonly ProjectSection[],
   expectedContentRevision: number,
 ): Promise<ReorderProjectEntriesResult> {
   return runProjectStructureMutation(sessionId, expectedContentRevision, async (tx, structure) => {
@@ -315,7 +316,7 @@ export async function reorderProjectEntriesAtomically(
       tx,
       structure,
       orderedEntryIds.map((id) => byId.get(id)!),
-      structure.project.sections,
+      sections,
       orderedEntryIds,
     );
     return { ...result, previousEntryIds, previousSections };

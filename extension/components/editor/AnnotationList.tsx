@@ -1,31 +1,45 @@
 import { type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Trash2 } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { PERSISTED_STEP_LIMITS } from '@/lib/storage/persistence-limits';
 import { type Step } from '@/lib/storage/models';
-import { restrictToVerticalAxis, useSortableReorder } from '@/lib/editor/dnd';
+import { useSortableReorder, verticalListModifiers } from '@/lib/editor/dnd';
 import { useStepDescriptionAutosave } from '@/lib/editor/editor-autosave';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import DescriptionDraftRecoveries from './DescriptionDraftRecoveries';
 import DescriptionSaveIssue from './DescriptionSaveIssue';
-import SortableItem from './SortableItem';
+import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import { t } from '@/lib/shared/i18n';
+import { cn } from '@/lib/shared/utils';
 import { useAutoHideScrollbar } from '@/lib/editor/use-auto-hide-scrollbar';
 import { DashedOutline } from '@/components/ui/dashed-outline';
 
 interface RowProps {
   step: Step;
   index: number;
+  /** The number shown on the badge, which follows a drag in progress. */
+  position: number;
   onDelete: (step: Step) => Promise<void>;
   deleteDisabled: boolean;
   dragHandle: ReactNode;
+  /** Where to draw this row's moving copy while it is dragged. */
+  overlay: HTMLElement | null;
+}
+
+function NumberBadge({ value }: { value: number }) {
+  return (
+    <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-recording text-xs font-bold text-recording-foreground">
+      {value}
+    </span>
+  );
 }
 
 /** One marker. Deleting it takes the row off the list at once; a failed delete
  * brings it back and is reported with the editor's other edits. */
-function AnnotationRow({ step, index, onDelete, deleteDisabled, dragHandle }: RowProps) {
+function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHandle, overlay }: RowProps) {
   const {
     description,
     setDescription,
@@ -46,10 +60,21 @@ function AnnotationRow({ step, index, onDelete, deleteDisabled, dragHandle }: Ro
 
   return (
     <div className="group flex flex-col rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
+      {overlay && createPortal(
+        <div className="flex size-full items-start rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <NumberBadge value={position} />
+            <span className={cn('min-w-0 flex-1 truncate px-1.5 py-1 text-sm', description ? 'text-foreground' : 'text-muted-foreground')}>
+              {description || t().editor.annotations.placeholder}
+            </span>
+            <span className="flex size-7 shrink-0 items-center justify-center text-muted-foreground"><Trash2 className="size-3.5" /></span>
+            <StaticHandle />
+          </div>
+        </div>,
+        overlay,
+      )}
       <div className="flex items-center gap-3">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-recording text-xs font-bold text-recording-foreground">
-          {index + 1}
-        </span>
+        <NumberBadge value={position} />
         <input
           type="text"
           aria-label={t().editor.annotations.descriptionLabel(index + 1)}
@@ -122,7 +147,7 @@ export default function AnnotationList({
   editingDisabled = false,
 }: Props) {
   const scrollbar = useAutoHideScrollbar<HTMLDivElement>();
-  const { sensors, accessibility, handleDragEnd, itemIds } = useSortableReorder(
+  const { sensors, accessibility, handlers, itemIds, overlayHost, setOverlayHost, previewPositionOf } = useSortableReorder(
     annotations,
     (step) => step.id,
     onReorder,
@@ -156,27 +181,30 @@ export default function AnnotationList({
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
+          {...handlers}
           accessibility={accessibility}
-          modifiers={[restrictToVerticalAxis]}
+          modifiers={verticalListModifiers}
         >
           <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
             <ul className="flex flex-col gap-2">
               {annotations.map((step, index) => (
-                <SortableItem key={step.id} id={step.id} disabled={editingDisabled}>
-                  {(handle) => (
+                <SortableItem key={step.id} id={step.id} disabled={editingDisabled} overlayHost={overlayHost}>
+                  {(handle, overlay) => (
                     <AnnotationRow
                       step={step}
                       index={index}
+                      position={previewPositionOf(step.id)}
                       onDelete={onDelete}
                       deleteDisabled={editingDisabled}
                       dragHandle={handle}
+                      overlay={overlay}
                     />
                   )}
                 </SortableItem>
               ))}
             </ul>
           </SortableContext>
+          <SortableOverlay onHost={setOverlayHost} />
         </DndContext>
       </div>
     </div>

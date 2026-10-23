@@ -40,18 +40,22 @@ vi.mock('@dnd-kit/sortable', () => ({
 }));
 vi.mock('@/lib/editor/dnd', () => ({
   reorderById: () => null,
-  restrictToHorizontalAxis: () => null,
-  restrictToVerticalAxis: () => null,
+  horizontalListModifiers: [],
+  verticalListModifiers: [],
   useSortableReorder: (items: unknown[], getId: (item: unknown) => unknown) => ({
     sensors: [],
     accessibility: { announcements: {}, screenReaderInstructions: { draggable: '' } },
-    handleDragEnd: () => undefined,
+    handlers: {},
     itemIds: items.map(getId),
+    overlayHost: null,
+    setOverlayHost: () => undefined,
+    previewPositionOf: (id: unknown) => items.map(getId).indexOf(id) + 1,
   }),
 }));
 vi.mock('@/components/editor/SortableItem', () => ({
-  default: ({ children }: { children: (handle: null, state: { isDragging: boolean }) => unknown }) =>
-    children(null, { isDragging: false }),
+  default: ({ children }: { children: (handle: null, overlay: null) => unknown }) => children(null, null),
+  SortableOverlay: () => null,
+  StaticHandle: () => null,
 }));
 
 import Lightbox from '@/components/editor/Lightbox';

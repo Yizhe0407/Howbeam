@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto';
 import { act, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { installStepRailDomStubs, removeStepRailDomStubs } from '../setup/step-rail-dom';
 import StepRail from '@/components/editor/StepRail';
 import { type StepEntry } from '@/lib/storage/models';
@@ -332,7 +332,7 @@ describe('StepRail keyboard navigation', () => {
     expect(outline?.getAttribute('style')).toBeNull();
   });
 
-  it('把章節標題與其起始步驟放在同一個 sortable 項目', () => {
+  it('puts a section heading in its own row, right above the step it starts', () => {
     const sections: ProjectSection[] = [{ id: 'section-1', title: '準備工作', startEntryId: 'step-2' }];
     render(
       <StepRail
@@ -346,10 +346,50 @@ describe('StepRail keyboard navigation', () => {
       />,
     );
 
-    const heading = screen.getByRole('heading', { name: '準備工作', level: 2 });
-    const startButton = screen.getByRole('button', { name: '開啟步驟 2' });
-    expect(heading.closest('li')).toBe(startButton.closest('li'));
-    expect(screen.getByRole('button', { name: '開啟步驟 1' }).closest('li')).not.toBe(heading.closest('li'));
+    const headingRow = screen.getByRole('heading', { name: '準備工作', level: 2 }).closest('li');
+    const startRow = screen.getByRole('button', { name: '開啟步驟 2' }).closest('li');
+    expect(headingRow).not.toBe(startRow);
+    expect(headingRow?.nextElementSibling).toBe(startRow);
+    expect(headingRow?.querySelector('[aria-label="拖曳排序"]')).toBeNull();
+  });
+
+  it('drops a step onto a heading from above to make it the section’s first step', async () => {
+    // jsdom has no layout; give each row its own vertical slot so the keyboard can find the row below.
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const row = this.closest('li');
+      const index = row ? Array.from(row.parentElement?.children ?? []).indexOf(row) : 0;
+      const top = index * 100;
+      return { x: 0, y: top, top, bottom: top + 90, left: 0, right: 200, width: 200, height: 90, toJSON: () => ({}) } as DOMRect;
+    });
+    onTestFinished(() => rect.mockRestore());
+    const onReorder = vi.fn().mockResolvedValue(undefined);
+    render(
+      <StepRail
+        entries={[makeEntry('step-1', 0), makeEntry('step-2', 1), makeEntry('step-3', 2)]}
+        selectedEntryId="step-1"
+        sections={[{ id: 'section-1', title: '準備工作', startEntryId: 'step-3' }]}
+        onSelect={vi.fn()}
+        onRenameSection={vi.fn()}
+        onDeleteSection={vi.fn().mockResolvedValue(undefined)}
+        onReorder={onReorder}
+      />,
+    );
+
+    const handle = screen.getAllByRole('button', { name: '拖曳排序' })[0];
+    handle.focus();
+    fireEvent.keyDown(handle, { code: 'Space', key: ' ' });
+    await waitFor(() => expect(handle.getAttribute('aria-pressed')).toBe('true'));
+    fireEvent.keyDown(document, { code: 'ArrowDown', key: 'ArrowDown' });
+    fireEvent.keyDown(document, { code: 'ArrowDown', key: 'ArrowDown' });
+    fireEvent.keyDown(document, { code: 'Space', key: ' ' });
+
+    await waitFor(() => expect(onReorder).toHaveBeenCalledOnce());
+    expect(onReorder.mock.calls[0][0]).toEqual([
+      { kind: 'entry', id: 'step-2' },
+      { kind: 'section', id: 'section-1' },
+      { kind: 'entry', id: 'step-1' },
+      { kind: 'entry', id: 'step-3' },
+    ]);
   });
 
 });
