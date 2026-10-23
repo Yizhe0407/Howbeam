@@ -132,6 +132,7 @@ import { notifyProjectsChanged } from '@/lib/storage/change-notifier';
 import { ProjectNotFoundError } from '@/lib/storage/database';
 // Resolves to the mocked module above, so `instanceof` in the handoff matches.
 import { DraftConfirmationRequiredError } from '@/lib/editor/editor-autosave';
+import { itemAt } from '../setup/item-at';
 
 const entries = [
   {
@@ -303,7 +304,7 @@ describe('Editor App structure wiring', () => {
       41,
     );
     expect(database.getProjectStructureSnapshot.mock.invocationCallOrder[0]).toBeLessThan(
-      database.setProjectEntriesNumberedAtomically.mock.invocationCallOrder[0],
+      itemAt(database.setProjectEntriesNumberedAtomically.mock.invocationCallOrder, 0),
     );
   });
 

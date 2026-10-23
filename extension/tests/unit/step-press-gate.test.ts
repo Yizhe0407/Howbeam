@@ -8,6 +8,7 @@ import {
   createStepPressGate,
   type StepPressGate,
 } from '@/lib/capture/step-press-gate';
+import { itemAt } from '../setup/item-at';
 
 /** Events the "browser" dispatches; everything else is page/replay-made. */
 const trusted = new WeakSet<Event>();
@@ -108,10 +109,10 @@ describe('createStepPressGate', () => {
     // The activation (navigation, toggling) waits for the screenshot.
     expect(nativeClick.defaultPrevented).toBe(true);
     expect(seen).toEqual([]);
-    await expect(presses[0].outcome).resolves.toBe('click');
+    await expect(itemAt(presses, 0).outcome).resolves.toBe('click');
 
-    gate.replay(presses[0]);
-    gate.replay(presses[0]);
+    gate.replay(itemAt(presses, 0));
+    gate.replay(itemAt(presses, 0));
     expect(seen).toEqual([
       'synthetic pointerdown',
       'synthetic mousedown',
@@ -129,7 +130,7 @@ describe('createStepPressGate', () => {
     fire(pointer('pointerdown', { buttons: 1 }), select);
     fire(mouse('mousedown', { buttons: 1 }), select);
     // No pointerup, mouseup or click ever reaches the document.
-    await expect(presses[0].outcome).resolves.toBe('click');
+    await expect(itemAt(presses, 0).outcome).resolves.toBe('click');
   });
 
   it('keeps a list-box select (drawn in the page) held until it is released', async () => {
@@ -139,7 +140,7 @@ describe('createStepPressGate', () => {
     target = select as unknown as HTMLButtonElement;
     fire(pointer('pointerdown', { buttons: 1 }), select);
     fire(pointer('pointermove', { buttons: 1, clientX: 40 }), select);
-    await expect(presses[0].outcome).resolves.toBe('drag');
+    await expect(itemAt(presses, 0).outcome).resolves.toBe('drag');
   });
 
   it('hands a drag back to the page and lets the rest of the gesture through untouched', async () => {
@@ -150,7 +151,7 @@ describe('createStepPressGate', () => {
     expect(seen).toEqual([]);
     fire(pointer('pointermove', { buttons: 1, clientX: 40 }));
     expect(seen).toEqual(['synthetic pointerdown', 'synthetic mousedown']);
-    await expect(presses[0].outcome).resolves.toBe('drag');
+    await expect(itemAt(presses, 0).outcome).resolves.toBe('drag');
 
     busy = true; // an earlier capture in flight must not eat the drag's tail
     const up = fire(pointer('pointerup', { clientX: 40 }));
@@ -167,7 +168,7 @@ describe('createStepPressGate', () => {
     const dragStart = fire(new MouseEvent('dragstart', { bubbles: true, cancelable: true }));
     expect(dragStart.defaultPrevented).toBe(false);
     expect(seen).toEqual(['synthetic pointerdown', 'synthetic mousedown', 'dragstart']);
-    await expect(presses[0].outcome).resolves.toBe('drag');
+    await expect(itemAt(presses, 0).outcome).resolves.toBe('drag');
   });
 
   it('cancels the native drag when the page cancelled the press it was handed', () => {
@@ -182,7 +183,7 @@ describe('createStepPressGate', () => {
   it('gives the page its press before a browser pointercancel and records nothing', async () => {
     fire(pointer('pointerdown', { buttons: 1, pointerType: 'touch' }));
     fire(pointer('pointercancel', { pointerType: 'touch' }));
-    await expect(presses[0].outcome).resolves.toBe('cancel');
+    await expect(itemAt(presses, 0).outcome).resolves.toBe('cancel');
     // Touch presses get no compatibility mousedown.
     expect(seen).toEqual(['synthetic pointerdown', 'pointercancel']);
   });
@@ -198,12 +199,12 @@ describe('createStepPressGate', () => {
     const second = click(undefined, 2);
     const dblclick = fire(mouse('dblclick', { detail: 2 }));
     expect(await recordedSteps()).toBe(1);
-    await expect(presses[1].outcome).resolves.toBe('merged');
+    await expect(itemAt(presses, 1).outcome).resolves.toBe('merged');
     expect(second.defaultPrevented).toBe(true);
     expect(dblclick.defaultPrevented).toBe(true);
     expect(seen).toEqual([]);
 
-    gate.replay(presses[0]);
+    gate.replay(itemAt(presses, 0));
     expect(seen).toEqual([
       'synthetic pointerdown',
       'synthetic mousedown',
@@ -221,7 +222,7 @@ describe('createStepPressGate', () => {
 
   it('lets the second press of a double click through natively once the first was replayed', async () => {
     click();
-    gate.replay(presses[0]);
+    gate.replay(itemAt(presses, 0));
     seen = [];
     busy = true;
     click(undefined, 2);
@@ -239,7 +240,7 @@ describe('createStepPressGate', () => {
     fire(pointer('pointerup'));
     fire(mouse('mouseup', { detail: 2 }));
     fire(mouse('click', { detail: 2 }));
-    gate.replay(presses[0]);
+    gate.replay(itemAt(presses, 0));
     expect(seen.filter((entry) => entry.startsWith('synthetic click'))).toEqual(['synthetic click', 'synthetic click:2']);
   });
 
@@ -247,7 +248,7 @@ describe('createStepPressGate', () => {
     // The browser did not count them as one gesture (detail stays 1), so
     // neither may our recorder — no home-grown double-click timer.
     click();
-    gate.replay(presses[0]);
+    gate.replay(itemAt(presses, 0));
     click();
     expect(await recordedSteps()).toBe(2);
   });
@@ -286,18 +287,18 @@ describe('createStepPressGate', () => {
   it('treats a press whose pointerup never arrived as released by the next press', async () => {
     fire(pointer('pointerdown', { buttons: 1 }));
     gate.onTrustedPointerDown();
-    await expect(presses[0].outcome).resolves.toBe('click');
+    await expect(itemAt(presses, 0).outcome).resolves.toBe('click');
   });
 
   it('releases on a hover move without buttons (pointerup swallowed by a native popup)', async () => {
     fire(pointer('pointerdown', { buttons: 1 }));
     fire(pointer('pointermove', { buttons: 0, clientX: 80 }));
-    await expect(presses[0].outcome).resolves.toBe('click');
+    await expect(itemAt(presses, 0).outcome).resolves.toBe('click');
   });
 
   it('abandon replays an uncaptured click and hands a held press back to the page', () => {
     click();
-    gate.abandon(presses[0]);
+    gate.abandon(itemAt(presses, 0));
     expect(seen.filter((entry) => entry === 'synthetic click')).toHaveLength(1);
 
     seen = [];

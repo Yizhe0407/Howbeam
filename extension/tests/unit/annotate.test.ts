@@ -7,6 +7,7 @@ import { BADGE_RADIUS, HIGHLIGHT_PADDING, LEADER_LINE_WIDTH, MARKER_RADIUS, REDA
 import { compositeHighlight, compositeMultiHighlight, getExpandedRedactionBounds } from '@/lib/media/annotation-composite';
 import { distanceToBounds, getBadgeFontSize } from '@/lib/media/annotation-geometry';
 import { layoutAnnotations, layoutWithProvisional } from '@/lib/media/annotation-layout';
+import { itemAt } from '../setup/item-at';
 
 interface Point {
   x: number;
@@ -28,9 +29,9 @@ function countLeaderCrossings(layouts: AnnotationLayout[]): number {
   let crossings = 0;
   for (let i = 0; i < leaders.length; i++) {
     for (let j = i + 1; j < leaders.length; j++) {
-      for (let a = 1; a < leaders[i].length; a++) {
-        for (let b = 1; b < leaders[j].length; b++) {
-          if (segmentsCross(leaders[i][a - 1], leaders[i][a], leaders[j][b - 1], leaders[j][b])) crossings++;
+      for (let a = 1; a < itemAt(leaders, i).length; a++) {
+        for (let b = 1; b < itemAt(leaders, j).length; b++) {
+          if (segmentsCross(itemAt(itemAt(leaders, i), a - 1), itemAt(itemAt(leaders, i), a), itemAt(itemAt(leaders, j), b - 1), itemAt(itemAt(leaders, j), b))) crossings++;
         }
       }
     }
@@ -107,14 +108,14 @@ describe('layoutAnnotations', () => {
     ];
 
     cases.forEach((bounds, index) => {
-      const [layout] = layoutAnnotations([{ bounds, order: index + 1 }], viewportWidth, viewportHeight);
+      const layout = itemAt(layoutAnnotations([{ bounds, order: index + 1 }], viewportWidth, viewportHeight), 0);
 
       expect(layout.markerOnly).toBe(false);
       expectRectInsideViewport(layout.frame, viewportWidth, viewportHeight);
       expectCircleInsideViewport(layout.badgeAnchor, BADGE_RADIUS, viewportWidth, viewportHeight);
     });
 
-    expect(layoutAnnotations([{ bounds: cases[0], order: 1 }], viewportWidth, viewportHeight)[0].frame).toEqual({
+    expect(itemAt(layoutAnnotations([{ bounds: itemAt(cases, 0), order: 1 }], viewportWidth, viewportHeight), 0).frame).toEqual({
       x: 0,
       y: 0,
       width: viewportWidth,
@@ -156,7 +157,7 @@ describe('layoutAnnotations', () => {
         expectRectInsideViewport(layout.frame, viewportWidth, viewportHeight);
         expectCircleInsideViewport(layout.badgeAnchor, BADGE_RADIUS, viewportWidth, viewportHeight);
       });
-      expect(rectsOverlap(layouts[0].frame, layouts[1].frame)).toBe(false);
+      expect(rectsOverlap(itemAt(layouts, 0).frame, itemAt(layouts, 1).frame)).toBe(false);
     });
   });
 
@@ -280,12 +281,12 @@ describe('layoutAnnotations', () => {
       1_080,
     );
 
-    expect(distanceToBounds(committedOnly.layouts[0].badgeAnchor, committedBoth[1].frame)).toBeLessThan(15);
-    expect(distanceToBounds(withHover.layouts[0].badgeAnchor, withHover.provisionalFrame!)).toBeGreaterThanOrEqual(15);
+    expect(distanceToBounds(itemAt(committedOnly.layouts, 0).badgeAnchor, itemAt(committedBoth, 1).frame)).toBeLessThan(15);
+    expect(distanceToBounds(itemAt(withHover.layouts, 0).badgeAnchor, withHover.provisionalFrame!)).toBeGreaterThanOrEqual(15);
     expect(withHover.layouts).toHaveLength(1);
-    expect(withHover.layouts[0].markerOnly).toBe(false);
-    expect(withHover.layouts[0].badgeAnchor).toEqual(committedBoth[0].badgeAnchor);
-    expect(withHover.provisionalFrame).toEqual(committedBoth[1].frame);
+    expect(itemAt(withHover.layouts, 0).markerOnly).toBe(false);
+    expect(itemAt(withHover.layouts, 0).badgeAnchor).toEqual(itemAt(committedBoth, 0).badgeAnchor);
+    expect(withHover.provisionalFrame).toEqual(itemAt(committedBoth, 1).frame);
   });
 
   it('keeps a committed target framed when the provisional one coincides with it', () => {
@@ -298,7 +299,7 @@ describe('layoutAnnotations', () => {
     );
 
     expect(layouts).toHaveLength(1);
-    expect(layouts[0].markerOnly).toBe(false);
+    expect(itemAt(layouts, 0).markerOnly).toBe(false);
     expect(provisionalFrame).not.toBeNull();
   });
 
@@ -388,7 +389,7 @@ describe('layoutAnnotations', () => {
     expect(frames).toHaveLength(annotations.length);
     for (let i = 0; i < frames.length; i++) {
       for (let j = i + 1; j < frames.length; j++) {
-        expect(rectsOverlap(frames[i], frames[j])).toBe(false);
+        expect(rectsOverlap(itemAt(frames, i), itemAt(frames, j))).toBe(false);
       }
     }
   });
@@ -406,9 +407,9 @@ describe('layoutAnnotations', () => {
 
     expect(layouts.every((layout) => !layout.markerOnly)).toBe(true);
     for (let index = 1; index < layouts.length; index++) {
-      expect(rectsOverlap(layouts[index - 1].frame, layouts[index].frame)).toBe(false);
-      expect(layouts[index - 1].frame.x + layouts[index - 1].frame.width)
-        .toBeLessThan(layouts[index].frame.x);
+      expect(rectsOverlap(itemAt(layouts, index - 1).frame, itemAt(layouts, index).frame)).toBe(false);
+      expect(itemAt(layouts, index - 1).frame.x + itemAt(layouts, index - 1).frame.width)
+        .toBeLessThan(itemAt(layouts, index).frame.x);
     }
   });
 
@@ -422,10 +423,10 @@ describe('layoutAnnotations', () => {
       600,
     );
 
-    expect(rectsOverlap(layouts[0].frame, layouts[1].frame)).toBe(false);
-    expect(layouts[0].frame.y + layouts[0].frame.height).toBeLessThan(layouts[1].frame.y);
-    expect(layouts[0].frame.x).toBe(100 - HIGHLIGHT_PADDING);
-    expect(layouts[1].frame.x).toBe(100 - HIGHLIGHT_PADDING);
+    expect(rectsOverlap(itemAt(layouts, 0).frame, itemAt(layouts, 1).frame)).toBe(false);
+    expect(itemAt(layouts, 0).frame.y + itemAt(layouts, 0).frame.height).toBeLessThan(itemAt(layouts, 1).frame.y);
+    expect(itemAt(layouts, 0).frame.x).toBe(100 - HIGHLIGHT_PADDING);
+    expect(itemAt(layouts, 1).frame.x).toBe(100 - HIGHLIGHT_PADDING);
   });
 
   it('keeps a nested inner frame inside the container raw bounds', () => {

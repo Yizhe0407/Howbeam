@@ -3,6 +3,7 @@ import type { RecordingState } from '@/lib/storage/recording-state';
 import { makeRecordingState } from '../setup/recording-state';
 import { flushAsyncWork, importBackground } from '../setup/background-test-utils';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
+import { itemAt } from '../setup/item-at';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
 
@@ -87,8 +88,8 @@ describe('follow-the-active-tab recording (steps mode)', () => {
     expect(mocks.tabsSendMessage).toHaveBeenCalledWith(4, { type: 'HOWBEAM_STOP' });
     // READY validation reads state.tabId, so the state write must precede injection, and the old recorder must only stop after the new one is in.
     const stateWriteOrder = mocks.setRecordingState.mock.invocationCallOrder[0];
-    const injectOrder = mocks.executeScript.mock.invocationCallOrder[0];
-    const stopOrder = mocks.tabsSendMessage.mock.invocationCallOrder[0];
+    const injectOrder = itemAt(mocks.executeScript.mock.invocationCallOrder, 0);
+    const stopOrder = itemAt(mocks.tabsSendMessage.mock.invocationCallOrder, 0);
     expect(stateWriteOrder).toBeLessThan(injectOrder);
     expect(injectOrder).toBeLessThan(stopOrder);
   });

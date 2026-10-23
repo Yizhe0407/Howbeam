@@ -7,6 +7,7 @@ import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
 import { jpegBlob, pngBlob } from '../setup/raster-fixtures';
 import { seedSteps } from '../setup/step-fixtures';
 import { createProject, createProjectFromSteps, deleteProjectPermanently, duplicateProject, ensureProject, getProject, getProjectSummaries, resetProject, updateProject } from '@/lib/storage/project-repository';
+import { itemAt } from '../setup/item-at';
 
 function makeStep(overrides: Partial<Step> = {}): Step {
   return {
@@ -45,7 +46,8 @@ describe('buildStepEntries', () => {
 
     expect(entries).toHaveLength(2);
     expect(entries[0]).toMatchObject({ kind: 'group', anchor: { id: groupId } });
-    expect(entries[0].kind === 'group' && entries[0].annotations).toEqual([annotation]);
+    const group = itemAt(entries, 0);
+    expect(group.kind === 'group' && group.annotations).toEqual([annotation]);
     expect(entries[1]).toMatchObject({ kind: 'single', step: { id: ordinary.id } });
   });
 
@@ -420,7 +422,7 @@ describe('step persistence', () => {
       actualDescription: '分頁 A 的版本',
     });
 
-    expect((await getSteps(step.sessionId))[0].description).toBe('分頁 A 的版本');
+    expect(itemAt((await getSteps(step.sessionId)), 0).description).toBe('分頁 A 的版本');
   });
 
   it('sanitizes malformed manual bounds and redaction records before storage', async () => {
@@ -435,7 +437,7 @@ describe('step persistence', () => {
 
     await addStep(step);
 
-    const stored = (await getSteps(step.sessionId))[0];
+    const stored = itemAt((await getSteps(step.sessionId)), 0);
     expect(stored.manualBounds).toBeNull();
     expect(stored.redactions).toEqual([
       { id: 'valid-mask', kind: 'solid', bounds: { x: 3, y: 4, width: 5, height: 6 } },
@@ -465,7 +467,7 @@ describe('atomic visual edits and recapture', () => {
     const stored = await getSteps(sessionId);
     expect(stored.find((step) => step.id === annotation.id)).toMatchObject({ description: 'new description' });
     expect(stored.find((step) => step.id === annotation.id)?.redactions).toBeUndefined();
-    expect(stored.find((step) => step.id === anchor.id)?.redactions?.[0].id).toBe('mask');
+    expect(stored.find((step) => step.id === anchor.id)?.redactions?.[0]?.id).toBe('mask');
   });
 
   it('recaptures an ordinary step without changing its identity, order, description or provenance', async () => {
@@ -482,7 +484,7 @@ describe('atomic visual edits and recapture', () => {
       timestamp: 123,
     }, 'recapture-run');
 
-    const stored = (await getSteps(step.sessionId))[0];
+    const stored = itemAt((await getSteps(step.sessionId)), 0);
     expect(stored).toMatchObject({
       id: step.id,
       sessionId: step.sessionId,
@@ -529,7 +531,7 @@ describe('atomic visual edits and recapture', () => {
       ]),
     ).rejects.toMatchObject({ name: 'StepUpdateConflictError' });
 
-    const stored = (await getSteps(step.sessionId))[0];
+    const stored = itemAt((await getSteps(step.sessionId)), 0);
     expect(stored.captureRevision).toBe(1);
     expect(stored.manualBounds).toBeNull();
     expect(stored.crop).toBeUndefined();
@@ -712,7 +714,7 @@ describe('stored text and screenshots match the archive rules', () => {
   it('stores C1 controls the way export accepts, and returns the stored description', async () => {
     const step = makeStep({ description: 'a\u0085b\u0007c\vd' });
     await addStep(step);
-    expect((await getSteps(step.sessionId))[0].description).toBe('abcd');
+    expect(itemAt((await getSteps(step.sessionId)), 0).description).toBe('abcd');
 
     await expect(saveStepDescription(step.id, 'x\u009fy\fz', 'abcd')).resolves.toBe('xyz');
     // The returned value is the CAS baseline: saving against it succeeds.

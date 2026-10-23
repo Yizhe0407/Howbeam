@@ -44,6 +44,7 @@ import {
   setActiveProjectId,
 } from '@/lib/storage/storage';
 import { RECORDING_STATE_KEY } from '@/lib/storage/recording-state';
+import { itemAt } from '../setup/item-at';
 
 beforeEach(() => {
   for (const key of Object.keys(mocks.values)) delete mocks.values[key];
@@ -93,7 +94,7 @@ describe('active Project storage', () => {
 
     expect(mocks.values[ACTIVE_PROJECT_ID_KEY]).toBe('project-b');
     expect(mocks.local.remove.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.local.set.mock.invocationCallOrder[0],
+      itemAt(mocks.local.set.mock.invocationCallOrder, 0),
     );
   });
 });

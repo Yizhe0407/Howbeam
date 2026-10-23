@@ -10,6 +10,7 @@ import type { RecordingState } from '@/lib/storage/recording-state';
 import { t } from '@/lib/shared/i18n';
 import { makeRecordingState } from '../setup/recording-state';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
+import { itemAt } from '../setup/item-at';
 
 /**
  * The capture flow runs against the real control plane, run-state writes,
@@ -303,8 +304,8 @@ describe('handleClick in a snapshot run', () => {
       screenshotScale: 2,
       numbered: harness.getState().numbered,
     }));
-    expect(mocks.storeStep.mock.calls[0][0]).not.toHaveProperty('screenshotBlob');
-    expect(mocks.storeStep.mock.calls[0][0]).not.toHaveProperty('order');
+    expect(itemAt(mocks.storeStep.mock.calls, 0)[0]).not.toHaveProperty('screenshotBlob');
+    expect(itemAt(mocks.storeStep.mock.calls, 0)[0]).not.toHaveProperty('order');
     expect(harness.getState().itemCount).toBe(3);
   });
 
@@ -393,7 +394,7 @@ describe('createAndActivateSnapshotAnchor', () => {
 
     await expect(create()).rejects.toThrow(/could not be activated/);
 
-    const anchorId = mocks.storeStep.mock.calls[0][0].id;
+    const anchorId = itemAt(mocks.storeStep.mock.calls, 0)[0].id;
     expect(harness.getState()).toMatchObject({ groupAnchorId: null, snapshotViewport: null });
     expect(mocks.deleteStep).toHaveBeenCalledWith(anchorId);
     expect(harness.control.acceptingClicks).toBe(false);
@@ -406,7 +407,7 @@ describe('createAndActivateSnapshotAnchor', () => {
 
     await expect(create()).rejects.toThrow(/changed while saving the snapshot/);
 
-    expect(mocks.deleteStep).toHaveBeenCalledWith(mocks.storeStep.mock.calls[0][0].id);
+    expect(mocks.deleteStep).toHaveBeenCalledWith(itemAt(mocks.storeStep.mock.calls, 0)[0].id);
     expect(harness.getState().groupAnchorId).toBeNull();
   });
 });

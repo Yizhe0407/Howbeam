@@ -110,10 +110,17 @@ export async function* renderEntryImages(
   if (reviewOrdinals.length > 0) throw new RedactionReviewRequiredError(reviewOrdinals);
 
   // A corrupt screenshot must say which step it is, not just fail the export.
-  const composite = (index: number): Promise<Blob> =>
-    compositeStepEntry(entries[index], IMAGE_MIME_TYPE).catch((error: unknown) => {
-      throw isAbortError(error) ? error : new StepImageError(index + 1, error);
+  const queue = entries.entries();
+  const startNext = () => {
+    const next = queue.next();
+    if (next.done) return undefined;
+    const [index, entry] = next.value;
+    const ordinal = index + 1;
+    const image = compositeStepEntry(entry, IMAGE_MIME_TYPE).catch((error: unknown) => {
+      throw isAbortError(error) ? error : new StepImageError(ordinal, error);
     });
+    return { entry, ordinal, image };
+  };
 
   let declaredImageBytes = 0;
   let actualImageBytes = 0;
@@ -126,17 +133,14 @@ export async function* renderEntryImages(
   // strictly sequential loop enforced is preserved; the only extra retention
   // is one encoded image blob, already bounded by the per-image budget.
   throwIfAborted(signal);
-  let index = 0;
-  let pending = entries.length > 0 ? composite(0) : undefined;
+  let pending = startNext();
   try {
     while (pending) {
-      const image = await pending;
+      const { entry, ordinal } = pending;
+      const image = await pending.image;
       pending = undefined;
       throwIfAborted(signal);
-      const entry = entries[index];
-      const ordinal = index + 1;
-      index += 1;
-      if (index < entries.length) pending = composite(index);
+      pending = startNext();
 
       // Blob.size is available without allocating another full copy, so reject
       // oversized output before arrayBuffer() and base64's ~4/3 expansion.
@@ -164,6 +168,6 @@ export async function* renderEntryImages(
     // A budget/abort throw or an abandoned generator can leave the lookahead
     // composite in flight; observe it so a late rejection (e.g. a compositing
     // failure racing a cancellation) is never reported as unhandled.
-    pending?.catch(() => {});
+    pending?.image.catch(() => {});
   }
 }

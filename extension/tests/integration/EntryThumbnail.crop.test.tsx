@@ -22,6 +22,7 @@ vi.mock('@/lib/media/crop-image', () => ({
 }));
 
 import EntryThumbnail from '@/components/editor/EntryThumbnail';
+import { itemAt } from '../setup/item-at';
 
 const original = new Blob(['original-pixels'], { type: 'image/png' });
 const cropped = new Blob(['cropped-pixels'], { type: 'image/png' });
@@ -68,7 +69,7 @@ describe('EntryThumbnail with a crop', () => {
     mocks.peekCroppedImage.mockReturnValue({ value: { blob: cropped, origin: { x: 100, y: 50 } } });
     const view = render(<EntryThumbnail entry={entry({ crop })} alt="x" />);
     expect(view.getByTestId('thumb')).toBeTruthy();
-    expect(mocks.highlight.mock.calls[0][0].blob).toBe(cropped);
+    expect(itemAt(mocks.highlight.mock.calls, 0)[0].blob).toBe(cropped);
   });
 
   it('shows the whole image with unshifted coordinates when there is no crop, or the editor asks for none', () => {

@@ -13,6 +13,7 @@ import {
   startRecording,
   stopRecording,
 } from '../support/harness';
+import { itemAt } from '../../setup/item-at';
 
 test.describe('frames and recording lifecycle', () => {
   test.beforeEach(async ({ popupPage }) => {
@@ -321,7 +322,7 @@ test.describe('frames and recording lifecycle', () => {
     browserErrors: _browserErrors,
   }) => {
     await captureNavLinkClickStep(appPage, popupPage);
-    const [linkStep] = await readSteps(popupPage);
+    const linkStep = itemAt(await readSteps(popupPage), 0);
     expect(linkStep.description).toBe('開啟連結');
     expect(linkStep.hasScreenshot).toBe(true);
 

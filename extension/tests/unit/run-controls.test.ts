@@ -10,6 +10,7 @@ import type { RecordingState } from '@/lib/storage/recording-state';
 import { t } from '@/lib/shared/i18n';
 import { makeRecordingState } from '../setup/recording-state';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
+import { itemAt } from '../setup/item-at';
 
 /**
  * Run controls against the real control plane, run-state writes, undo window,
@@ -237,7 +238,7 @@ describe('undo and restore', () => {
     expect(result).toEqual({ ok: true, undoToken: expect.any(String), removedItemNumber: 2 });
     expect(mocks.deleteStep).toHaveBeenCalledWith('last');
     expect(mocks.savePendingUndoRecord.mock.invocationCallOrder[0])
-      .toBeLessThan(mocks.deleteStep.mock.invocationCallOrder[0]);
+      .toBeLessThan(itemAt(mocks.deleteStep.mock.invocationCallOrder, 0));
     expect(mocks.savePendingUndoRecord).toHaveBeenCalledWith(expect.objectContaining({
       runId: RUN_ID,
       step: expect.objectContaining({ id: 'last' }),

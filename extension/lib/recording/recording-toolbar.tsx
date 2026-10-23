@@ -189,9 +189,9 @@ export default function RecordingToolbar({
   const handleConfirmKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Tab') return;
     const controls = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
-    if (controls.length === 0) return;
     const first = controls[0];
-    const last = controls.at(-1)!;
+    const last = controls.at(-1);
+    if (!first || !last) return;
     if (event.shiftKey && document.activeElement === first) {
       event.preventDefault();
       last.focus();

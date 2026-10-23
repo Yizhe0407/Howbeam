@@ -74,6 +74,7 @@ vi.mock('wxt/browser', async () => {
 
 import LibraryApp from '@/entrypoints/library/App';
 import { ProjectArchiveError } from '@/lib/export/project-archive-contract';
+import { itemAt } from '../setup/item-at';
 
 const project = {
   id: 'project-1',
@@ -155,7 +156,7 @@ describe('專案庫', () => {
     projectActions.createAndSelectProject.mockResolvedValue({ id: 'new-project' });
     const createButtons = screen.getAllByRole('button', { name: '新增' });
     expect(createButtons).toHaveLength(1);
-    fireEvent.click(createButtons[0]);
+    fireEvent.click(itemAt(createButtons, 0));
 
     await waitFor(() => expect(projectActions.createAndSelectProject).toHaveBeenCalledOnce());
     expect(projectActions.openSelectedProjectInEditor).toHaveBeenCalledWith('new-project', { inPlace: true });

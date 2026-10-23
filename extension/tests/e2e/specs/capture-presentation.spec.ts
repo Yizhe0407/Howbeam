@@ -10,6 +10,7 @@ import {
   startRecording,
   stopRecording,
 } from '../support/harness';
+import { itemAt } from '../../setup/item-at';
 
 interface Geometry {
   innerWidth: number;
@@ -137,7 +138,7 @@ test.describe('screenshot presentation', () => {
     await clickTarget(appPage, '#plain-text');
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
 
-    const [step] = await readSteps(popupPage);
+    const step = itemAt(await readSteps(popupPage), 0);
     const scrollbarPixels = await readScreenshotScrollbarStats(popupPage, step.id);
     expect(scrollbarPixels.rootSentinelPixels).toBe(0);
     expect(scrollbarPixels.nestedSentinelPixels).toBeGreaterThan(0);
@@ -158,7 +159,7 @@ test.describe('screenshot presentation', () => {
     await startRecording(appPage, popupPage, 'snapshot');
     await expect.poll(() => appPage.evaluate(() => window.captureHostPainted)).toBe(true);
 
-    const [anchor] = await readSteps(popupPage);
+    const anchor = itemAt(await readSteps(popupPage), 0);
     expect(anchor.bounds).toBeNull();
     const scrollbarPixels = await readScreenshotScrollbarStats(popupPage, anchor.id);
     expect(scrollbarPixels.rootSentinelPixels).toBe(0);

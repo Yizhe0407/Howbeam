@@ -95,18 +95,16 @@ function visualBoundsKey(bounds: Bounds): string {
     .join(':');
 }
 
-function boundsEdges(bounds: Bounds): [number, number, number, number] {
-  return [bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height];
-}
-
 /** Collapses tiny layout insets while retaining genuinely different parent
  * levels. Comparing edges rather than width/height avoids treating translated
  * sibling boxes as equivalent. */
 function hasSamePerceivedBoundary(a: Bounds, b: Bounds): boolean {
-  const aEdges = boundsEdges(a);
-  const bEdges = boundsEdges(b);
-  return aEdges.every(
-    (edge, index) => Math.abs(edge - bEdges[index]) <= VISUAL_EDGE_MERGE_TOLERANCE,
+  const close = (first: number, second: number) => Math.abs(first - second) <= VISUAL_EDGE_MERGE_TOLERANCE;
+  return (
+    close(a.x, b.x) &&
+    close(a.y, b.y) &&
+    close(a.x + a.width, b.x + b.width) &&
+    close(a.y + a.height, b.y + b.height)
   );
 }
 
@@ -159,25 +157,24 @@ function overflowClipBoundsFromEntry(
  * styles and rectangles already measured for this hit test, which lets visual
  * dedup compare the actual on-screen boxes without multiplying layout reads. */
 function visibleHighlightBoundsFromEntries(
-  entries: AnalyzedElement[],
-  index: number,
+  entry: AnalyzedElement,
+  ancestors: AnalyzedElement[],
   clientX: number,
   clientY: number,
   viewport: { width: number; height: number },
 ): Bounds | null {
   // An <area> paints through its associated <img>, not through its <map>
   // ancestry. Use the canonical path so clipping starts at the image tree.
-  if (entries[index].element instanceof HTMLAreaElement) {
-    return getVisibleHighlightBounds(entries[index].element, clientX, clientY, viewport);
+  if (entry.element instanceof HTMLAreaElement) {
+    return getVisibleHighlightBounds(entry.element, clientX, clientY, viewport);
   }
 
-  let visible = highlightBounds(entries[index], clientX, clientY);
+  let visible = highlightBounds(entry, clientX, clientY);
   if (!visible) return null;
   visible = intersectBounds(visible, { x: 0, y: 0, width: viewport.width, height: viewport.height });
   if (!visible) return null;
 
-  for (let ancestorIndex = index + 1; ancestorIndex < entries.length; ancestorIndex += 1) {
-    const ancestor = entries[ancestorIndex];
+  for (const ancestor of ancestors) {
     const style = ancestor.style;
     const overflowX = style.overflowX || style.overflow;
     const overflowY = style.overflowY || style.overflow;
@@ -235,7 +232,7 @@ function analyzeChain(
   for (const [index, entry] of entries.entries()) {
     const element = entry.element;
     if (!isVisuallySelectableEntry(entry, index === 0, policy)) continue;
-    const bounds = visibleHighlightBoundsFromEntries(entries, index, clientX, clientY, viewport);
+    const bounds = visibleHighlightBoundsFromEntries(entry, entries.slice(index + 1), clientX, clientY, viewport);
     if (!bounds || bounds.width <= 0 || bounds.height <= 0) continue;
 
     const key = visualBoundsKey(bounds);

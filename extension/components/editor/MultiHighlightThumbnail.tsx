@@ -105,8 +105,8 @@ export default function MultiHighlightThumbnail({
   const stableAnnotations = useMemo<Annotation[]>(() => {
     if (!annotationSignature) return [];
     return annotationSignature.split('|').map((entry) => {
-      const [order, bounds] = entry.split(':');
-      const [x, y, width, height] = bounds.split(',').map(Number);
+      const [order = '', bounds = ''] = entry.split(':');
+      const [x = 0, y = 0, width = 0, height = 0] = bounds.split(',').map(Number);
       return { bounds: { x, y, width, height }, order: Number(order) };
     });
   }, [annotationSignature]);

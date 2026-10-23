@@ -18,6 +18,7 @@ import type { RailRow } from '@/lib/project/project-sections';
 import { t } from '@/lib/shared/i18n';
 import { jpegBlob } from '../setup/raster-fixtures';
 import { seedSteps } from '../setup/step-fixtures';
+import { itemAt } from '../setup/item-at';
 
 /**
  * The editor's structural edits against real storage: each one goes through
@@ -255,7 +256,7 @@ describe('reorder', () => {
     // The hook still shows the old title when the queued rename lands ahead of the drop.
     await run(async (mutations) => {
       const project = await getProject(sessionId);
-      await renameProjectSectionAtomically(sessionId, project!.sections[0].id, 'Renamed', project!.contentRevision);
+      await renameProjectSectionAtomically(sessionId, itemAt(project!.sections, 0).id, 'Renamed', project!.contentRevision);
       await mutations.handleReorderEntries(dropped);
     });
 
@@ -341,7 +342,7 @@ describe('snapshot numbering', () => {
 describe('sections', () => {
   it('deletes a section, and undo re-creates it at the same start with the same title', async () => {
     await addSection(uid('c'), 'Finish');
-    const sectionId = (await getProject(sessionId))!.sections[0].id;
+    const sectionId = itemAt((await getProject(sessionId))!.sections, 0).id;
     const { editor, run } = createEditor();
 
     await run((mutations) => mutations.deleteSection(sectionId));
@@ -356,7 +357,7 @@ describe('sections', () => {
 
   it('renames a section without offering an undo', async () => {
     await addSection(uid('c'), 'Finish');
-    const sectionId = (await getProject(sessionId))!.sections[0].id;
+    const sectionId = itemAt((await getProject(sessionId))!.sections, 0).id;
     const { editor, run } = createEditor();
 
     await run((mutations) => mutations.renameSection(sectionId, 'Done'));
@@ -375,7 +376,7 @@ describe('undo after the project changed', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     // Another tab renames the section meanwhile.
     const project = (await getProject(sessionId))!;
-    await renameProjectSectionAtomically(sessionId, project.sections[0].id, 'Renamed', project.contentRevision);
+    await renameProjectSectionAtomically(sessionId, itemAt(project.sections, 0).id, 'Renamed', project.contentRevision);
 
     await run((mutations) => mutations.handleUndo());
 

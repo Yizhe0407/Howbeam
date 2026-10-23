@@ -12,6 +12,7 @@ vi.mock('@/lib/capture/raster-image-validation', () => ({
 }));
 
 import EntryThumbnail from '@/components/editor/EntryThumbnail';
+import { itemAt } from '../setup/item-at';
 
 /**
  * A tiny pixel-exact stand-in for the browser's raster pipeline: an "encoded
@@ -44,7 +45,7 @@ function screenshot(width: number, height: number): Blob {
 function parseColor(style: string): number[] {
   const hex = /^#([0-9a-f]{6})$/i.exec(style);
   if (!hex) throw new Error(`unsupported fill style ${style}`);
-  const value = Number.parseInt(hex[1], 16);
+  const value = Number.parseInt(itemAt(hex, 1), 16);
   return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
 }
 
@@ -61,7 +62,7 @@ class PixelCanvas {
       drawImage(bitmap: Raster) {
         for (let y = 0; y < Math.min(bitmap.height, canvas.height); y++) {
           for (let x = 0; x < Math.min(bitmap.width, canvas.width); x++) {
-            canvas.pixels[y * canvas.width + x] = [...bitmap.pixels[y * bitmap.width + x]];
+            canvas.pixels[y * canvas.width + x] = [...itemAt(bitmap.pixels, y * bitmap.width + x)];
           }
         }
       },
@@ -88,7 +89,7 @@ function installRasterFakes() {
     const full = await decode(blob);
     if (sx === undefined || sy === undefined || sw === undefined || sh === undefined) return { ...full, close() {} };
     const pixels: number[][] = [];
-    for (let y = sy; y < sy + sh; y++) for (let x = sx; x < sx + sw; x++) pixels.push(full.pixels[y * full.width + x]);
+    for (let y = sy; y < sy + sh; y++) for (let x = sx; x < sx + sw; x++) pixels.push(itemAt(full.pixels, y * full.width + x));
     return { width: sw, height: sh, pixels, close() {} };
   });
   urls = new Map();
@@ -172,7 +173,7 @@ describe('preview masking', () => {
     expect(blob).not.toBe(source);
     expect(img.draggable).toBe(false);
     expect([raster.width, raster.height]).toEqual([12, 8]);
-    for (const [x, y] of [[2, 1], [4, 3], [7, 5]]) expect(pixelAt(raster, x, y), `masked ${x},${y}`).toEqual([0, 0, 0]);
+    for (const [x, y] of [[2, 1], [4, 3], [7, 5]] as const) expect(pixelAt(raster, x, y), `masked ${x},${y}`).toEqual([0, 0, 0]);
     expect(pixelAt(raster, 8, 3)).toEqual([18, 13, 200]);
     expect(pixelAt(raster, 0, 0)).toEqual([10, 10, 200]);
     expectNeverShown(source);
@@ -280,7 +281,7 @@ describe('preview masking', () => {
     expect(images).toHaveLength(3);
     expect(new Set(images.map((img) => img.getAttribute('src'))).size).toBe(1);
     expect(URL.createObjectURL).toHaveBeenCalledOnce();
-    expect(images[0].getAttribute('loading')).toBe('lazy');
+    expect(itemAt(images, 0).getAttribute('loading')).toBe('lazy');
   });
 
   it('lets only the image editor show the stored pixels, under live masks, and not be dragged or saved from the menu', async () => {

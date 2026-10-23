@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from '@/lib/capture/overlay-layers';
+import { firstItems } from '../setup/item-at';
 
 /** jsdom has no popover API; this models the part that matters: the top layer is a stack ordered by showPopover() calls. */
 const topLayer: HTMLElement[] = [];
@@ -54,7 +55,7 @@ describe('top-layer stacking', () => {
   });
 
   it('orders annotation < chrome < modal whatever the opening order', () => {
-    const [annotation, chrome, modal] = ['annotation', 'chrome', 'modal'].map(popoverHost);
+    const [annotation, chrome, modal] = firstItems(['annotation', 'chrome', 'modal'].map(popoverHost), 3);
 
     showInTopLayer(modal, OVERLAY_LAYER.modal);
     showInTopLayer(annotation, OVERLAY_LAYER.annotation);

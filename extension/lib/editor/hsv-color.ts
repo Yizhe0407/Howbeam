@@ -7,9 +7,18 @@ export interface Hsv {
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
-export function hexToHsv(hex: string): Hsv {
+/** Channels in [0, 255] from `#rrggbb`. */
+export function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const value = hex.replace('#', '');
-  const [r, g, b] = [0, 2, 4].map((index) => Number.parseInt(value.slice(index, index + 2), 16) / 255);
+  const channel = (index: number) => Number.parseInt(value.slice(index, index + 2), 16);
+  return { r: channel(0), g: channel(2), b: channel(4) };
+}
+
+export function hexToHsv(hex: string): Hsv {
+  const rgb = hexToRgb(hex);
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
   const max = Math.max(r, g, b);
   const delta = max - Math.min(r, g, b);
   let h = 0;

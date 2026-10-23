@@ -3,6 +3,7 @@ import type { RecordingState } from '@/lib/storage/recording-state';
 import { makeRecordingState } from '../setup/recording-state';
 import { flushAsyncWork, importBackground } from '../setup/background-test-utils';
 import { type Step } from '@/lib/storage/models';
+import { itemAt } from '../setup/item-at';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
 
@@ -299,7 +300,7 @@ describe('undo window persistence across worker restarts', () => {
     );
     expect(mocks.deleteStep).toHaveBeenCalledWith('step-1');
     const saveOrder = mocks.savePendingUndoRecord.mock.invocationCallOrder[0];
-    const deleteOrder = mocks.deleteStep.mock.invocationCallOrder[0];
+    const deleteOrder = itemAt(mocks.deleteStep.mock.invocationCallOrder, 0);
     expect(saveOrder).toBeLessThan(deleteOrder);
   });
 

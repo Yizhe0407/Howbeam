@@ -22,6 +22,7 @@ import { renderEntryImages } from '@/lib/export/project-export-render';
 import { jpegOfSize } from '../setup/jpeg-fixture';
 import { readPdf } from '../setup/pdf-extract';
 import { PERSISTED_STEP_LIMITS } from '@/lib/storage/persistence-limits';
+import { valueAt } from '../setup/item-at';
 
 /** The document as text; the generator itself returns a Blob. */
 async function generateProjectHtml(...args: Parameters<typeof generateProjectHtmlBlob>): Promise<string> {
@@ -143,7 +144,7 @@ const MIXED_SECTIONS = [
 async function archiveMarkdown(entries: StepEntry[], metadata: ProjectExportMetadata = {}): Promise<string> {
   const archive = await generateProjectMarkdownArchive(entries, metadata);
   const files = unzipSync(new Uint8Array(await archive.blob.arrayBuffer()));
-  return strFromU8(files[archive.markdownFilename]);
+  return strFromU8(valueAt(files, archive.markdownFilename));
 }
 
 afterEach(() => {
@@ -230,7 +231,7 @@ describe('project export', () => {
       { title: 'Bundle project', filename: '../../Bundle Project' },
     );
     const files = unzipSync(new Uint8Array(await archive.blob.arrayBuffer()));
-    const markdown = strFromU8(files['bundle-project.md']);
+    const markdown = strFromU8(valueAt(files, 'bundle-project.md'));
 
     expect(archive.blob.type).toBe('application/zip');
     expect(archive.markdownFilename).toBe('bundle-project.md');
@@ -240,8 +241,8 @@ describe('project export', () => {
       'images/01.jpg',
       'images/02.jpg',
     ]);
-    expect(strFromU8(files['images/01.jpg'])).toBe('first-image');
-    expect(strFromU8(files['images/02.jpg'])).toBe('second-image');
+    expect(strFromU8(valueAt(files, 'images/01.jpg'))).toBe('first-image');
+    expect(strFromU8(valueAt(files, 'images/02.jpg'))).toBe('second-image');
     expect(markdown).toContain('![Open settings](images/01.jpg)');
     expect(markdown).toContain('![Shared page](images/02.jpg)');
     expect(markdown.indexOf('Open settings')).toBeLessThan(markdown.indexOf('![Open settings](images/01.jpg)'));

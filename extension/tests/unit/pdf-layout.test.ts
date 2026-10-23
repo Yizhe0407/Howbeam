@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PdfLayouter, type LayoutStep, type PdfBlock, type PdfPage } from '@/lib/export/pdf/pdf-layout';
 import { PDF_SPEC, PDF_TEXT, POINTS_PER_PIXEL } from '@/lib/export/pdf/pdf-spec';
 import { DEFAULT_PDF_EXPORT_SETTINGS, type PdfExportSettings } from '@/lib/export/pdf-export-settings';
+import { firstItems, itemAt } from '../setup/item-at';
 
 /** 14 layout pixels per code point: a 1072px-wide A4 text column holds 76 characters. */
 const measure = (text: string) => Array.from(text).length * 14;
@@ -57,11 +58,11 @@ describe('PdfLayouter', () => {
       const pages = laidOut(layouter);
 
       expect(pages.map((page) => page.number)).toEqual([1, 2, 3]);
-      expect(headingTexts(pages[0], 1)).toEqual(['Setup guide']);
-      expect(paragraphTexts(pages[0])).toEqual(['A short description']);
-      expect(headingTexts(pages[0], 2)).toEqual(['1.', 'Step 1']);
-      expect(headingTexts(pages[1], 2)).toEqual(['2.', 'Step 2']);
-      expect(headingTexts(pages[2], 1)).toEqual([]);
+      expect(headingTexts(itemAt(pages, 0), 1)).toEqual(['Setup guide']);
+      expect(paragraphTexts(itemAt(pages, 0))).toEqual(['A short description']);
+      expect(headingTexts(itemAt(pages, 0), 2)).toEqual(['1.', 'Step 1']);
+      expect(headingTexts(itemAt(pages, 1), 2)).toEqual(['2.', 'Step 2']);
+      expect(headingTexts(itemAt(pages, 2), 1)).toEqual([]);
     });
 
     it('hands pages over as they complete, not before', () => {
@@ -85,7 +86,7 @@ describe('PdfLayouter', () => {
       const pages = laidOut(layouter);
 
       expect(pages).toHaveLength(1);
-      expect(headingTexts(pages[0], 1)).toEqual(['Empty project']);
+      expect(headingTexts(itemAt(pages, 0), 1)).toEqual(['Empty project']);
     });
   });
 
@@ -97,19 +98,19 @@ describe('PdfLayouter', () => {
       const pages = laidOut(layouter);
 
       expect(pages).toHaveLength(2);
-      expect(headingTexts(pages[0], 2)).toEqual(['1.', 'Step 1', '2.', 'Step 2']);
+      expect(headingTexts(itemAt(pages, 0), 2)).toEqual(['1.', 'Step 1', '2.', 'Step 2']);
       // The third step moves to a new page as a whole: its heading and screenshot stay together.
-      expect(headingTexts(pages[1], 2)).toEqual(['3.', 'Step 3']);
-      expect(images(pages[1])).toHaveLength(1);
+      expect(headingTexts(itemAt(pages, 1), 2)).toEqual(['3.', 'Step 3']);
+      expect(images(itemAt(pages, 1))).toHaveLength(1);
     });
 
     it('separates flowing steps by a fixed gap', () => {
       const layouter = newLayouter({ stepLayout: 'continuous' });
       layouter.addStep(step(1));
       layouter.addStep(step(2));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
-      const [first, second] = images(page);
+      const [first, second] = firstItems(images(page), 2);
       expect(second.y - (first.y + first.height)).toBe(
         PDF_SPEC.imageGapAfter + PDF_SPEC.continuousStepGap + 52 + 22,
       );
@@ -122,7 +123,7 @@ describe('PdfLayouter', () => {
       const pages = laidOut(layouter);
 
       expect(pages).toHaveLength(2);
-      for (const page of pages) expect(images(page)[0].height).toBe(900);
+      for (const page of pages) expect(itemAt(images(page), 0).height).toBe(900);
     });
   });
 
@@ -134,7 +135,7 @@ describe('PdfLayouter', () => {
       const pages = laidOut(layouter);
 
       expect(pages).toHaveLength(1);
-      const [image] = images(pages[0]);
+      const image = itemAt(images(itemAt(pages, 0)), 0);
       const preferred = Math.ceil((1_650 - PDF_SPEC.margin * 2 - PDF_SPEC.stepIndent) / 1_600 * 900);
       expect(image.height).toBeLessThan(preferred);
       expect(image.height).toBeGreaterThanOrEqual(preferred * PDF_SPEC.continuousImageMinShare);
@@ -149,7 +150,7 @@ describe('PdfLayouter', () => {
       const pages = laidOut(layouter);
 
       expect(pages).toHaveLength(2);
-      expect(images(pages[1])[0].height).toBe(900);
+      expect(itemAt(images(itemAt(pages, 1)), 0).height).toBe(900);
     });
   });
 
@@ -160,28 +161,28 @@ describe('PdfLayouter', () => {
       layouter.addStep(step(2, {}, { width: 400, height: 300 }));
       const pages = laidOut(layouter);
 
-      const stepColumn = pages[0].size.widthPixels - PDF_SPEC.margin * 2 - PDF_SPEC.stepIndent;
-      expect(images(pages[0])[0].x).toBe(PDF_SPEC.margin + PDF_SPEC.stepIndent);
-      expect(images(pages[0])[0].width).toBeCloseTo(stepColumn);
-      expect(images(pages[0])[0].height).toBeCloseTo(stepColumn / 2);
-      expect(images(pages[1])[0]).toMatchObject({ width: 400, height: 300 });
+      const stepColumn = itemAt(pages, 0).size.widthPixels - PDF_SPEC.margin * 2 - PDF_SPEC.stepIndent;
+      expect(itemAt(images(itemAt(pages, 0)), 0).x).toBe(PDF_SPEC.margin + PDF_SPEC.stepIndent);
+      expect(itemAt(images(itemAt(pages, 0)), 0).width).toBeCloseTo(stepColumn);
+      expect(itemAt(images(itemAt(pages, 0)), 0).height).toBeCloseTo(stepColumn / 2);
+      expect(images(itemAt(pages, 1))[0]).toMatchObject({ width: 400, height: 300 });
     });
 
     it('caps a tall screenshot at the maximum height', () => {
       const layouter = newLayouter();
       layouter.addStep(step(1, {}, { width: 600, height: 4_000 }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
-      expect(images(page)[0].height).toBeLessThanOrEqual(PDF_SPEC.imageMaxHeight);
-      expect(images(page)[0].width / images(page)[0].height).toBeCloseTo(600 / 4_000);
+      expect(itemAt(images(page), 0).height).toBeLessThanOrEqual(PDF_SPEC.imageMaxHeight);
+      expect(itemAt(images(page), 0).width / itemAt(images(page), 0).height).toBeCloseTo(600 / 4_000);
     });
 
     it('carries the step description as the figure alternative text', () => {
       const layouter = newLayouter();
       layouter.addStep(step(1, { alt: 'Open the settings page' }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
-      expect(figures(page)[0].alt).toBe('Open the settings page');
+      expect(itemAt(figures(page), 0).alt).toBe('Open the settings page');
     });
   });
 
@@ -189,7 +190,7 @@ describe('PdfLayouter', () => {
     it('prints a section title and rule before its first step', () => {
       const layouter = newLayouter();
       layouter.addStep(step(1, { section: { title: 'Getting started' } }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
       const order = page.blocks.map((block) => block.kind);
       expect(headingTexts(page, 2)).toEqual(['Getting started']);
@@ -207,9 +208,9 @@ describe('PdfLayouter', () => {
       const pages = laidOut(layouter);
 
       // The title is H1, so nothing ever skips a level.
-      expect(headings(pages[0]).map((block) => block.level)).toEqual([1, 2]);
-      expect(headings(pages[1]).map((block) => block.level)).toEqual([2, 3]);
-      expect(headings(pages[2]).map((block) => block.level)).toEqual([3]);
+      expect(headings(itemAt(pages, 0)).map((block) => block.level)).toEqual([1, 2]);
+      expect(headings(itemAt(pages, 1)).map((block) => block.level)).toEqual([2, 3]);
+      expect(headings(itemAt(pages, 2)).map((block) => block.level)).toEqual([3]);
     });
 
     it('bookmarks every section and step, with steps nested under their section', () => {
@@ -230,9 +231,9 @@ describe('PdfLayouter', () => {
     it('shortens a very long step heading for its bookmark without cutting a character in two', () => {
       const layouter = newLayouter();
       layouter.addStep(step(1, { heading: '👩‍👩‍👧‍👦'.repeat(200) }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
-      const title = headings(page)[0].outline!.title;
+      const title = itemAt(headings(page), 0).outline!.title;
       expect([...new Intl.Segmenter().segment(title)].length).toBe(100);
       expect(title.endsWith('…')).toBe(true);
       expect(title.isWellFormed()).toBe(true);
@@ -246,10 +247,10 @@ describe('PdfLayouter', () => {
       const pages = laidOut(layouter);
 
       expect(pages).toHaveLength(2);
-      expect(headingTexts(pages[0], 2)).toEqual([]);
-      expect(headingTexts(pages[0], 3)).toEqual([]);
-      expect(headingTexts(pages[1], 2)).toEqual(['Chapter one']);
-      expect(headingTexts(pages[1], 3)).toEqual(['1.', 'Step 1']);
+      expect(headingTexts(itemAt(pages, 0), 2)).toEqual([]);
+      expect(headingTexts(itemAt(pages, 0), 3)).toEqual([]);
+      expect(headingTexts(itemAt(pages, 1), 2)).toEqual(['Chapter one']);
+      expect(headingTexts(itemAt(pages, 1), 3)).toEqual(['1.', 'Step 1']);
     });
   });
 
@@ -257,9 +258,9 @@ describe('PdfLayouter', () => {
     it('hangs the printed number left of the title, which wraps in its own column', () => {
       const layouter = newLayouter();
       layouter.addStep(step(7, { heading: 'x'.repeat(160) }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
-      const [heading] = headings(page);
+      const heading = itemAt(headings(page), 0);
       expect(heading.lines[0]).toMatchObject({ text: '7.', x: PDF_SPEC.margin });
       expect(heading.lines.slice(1).every((line) => line.x === PDF_SPEC.margin + PDF_SPEC.stepIndent)).toBe(true);
       expect(heading.lines.length).toBeGreaterThan(2);
@@ -268,7 +269,7 @@ describe('PdfLayouter', () => {
     it('lists annotations as one numbered list under the screenshot', () => {
       const layouter = newLayouter();
       layouter.addStep(step(1, { annotations: [{ description: 'Click Sign in' }, { description: '' }] }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
       expect(ofKind(page, 'list')).toHaveLength(1);
       expect(listTexts(page)).toEqual(['1. ', 'Click Sign in', '2. ', '(No description)']);
@@ -295,7 +296,7 @@ describe('PdfLayouter', () => {
       // every one to two lines (taller overall), two keep each on one line.
       const annotations = Array.from({ length: 16 }, () => ({ description: 'Mark an area of the page' }));
       layouter.addStep(step(1, { annotations }, { width: 1_000, height: 300 }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
       const items = listItems(page);
       expect(items.map((item) => item.label!.text)).toEqual(Array.from({ length: 16 }, (_, index) => `${index + 1}. `));
@@ -303,18 +304,18 @@ describe('PdfLayouter', () => {
       expect(columnX).toHaveLength(2);
       expect(items.slice(0, 8).every((item) => item.label!.x === columnX[0])).toBe(true);
       // Item 9 starts the second column on the row of item 1.
-      expect(items[8].label!.top).toBe(items[0].label!.top);
-      expect(items[15].label!.top).toBe(items[7].label!.top);
+      expect(itemAt(items, 8).label!.top).toBe(itemAt(items, 0).label!.top);
+      expect(itemAt(items, 15).label!.top).toBe(itemAt(items, 7).label!.top);
     });
 
     it('lines every description up after the widest number', () => {
       const layouter = newLayouter();
       const annotations = Array.from({ length: 10 }, (_, index) => ({ description: `Marker ${index + 1}` }));
       layouter.addStep(step(1, { annotations }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
       const items = listItems(page);
-      const offsets = new Set(items.map((item) => item.lines[0].x - item.label!.x));
+      const offsets = new Set(items.map((item) => itemAt(item.lines, 0).x - item.label!.x));
       expect(offsets).toEqual(new Set([measure('10. ')]));
     });
 
@@ -322,38 +323,38 @@ describe('PdfLayouter', () => {
       const layouter = newLayouter();
       const annotations = [...Array.from({ length: 7 }, () => ({ description: 'Short' })), { description: 'word '.repeat(10) }];
       layouter.addStep(step(1, { annotations }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
       const items = listItems(page);
       expect(new Set(items.map((item) => item.label!.x)).size).toBe(2);
-      expect(items[7].lines).toHaveLength(2);
+      expect(itemAt(items, 7).lines).toHaveLength(2);
       // The columns are balanced by height, so the two-line item's column holds one marker fewer.
-      expect(items.filter((item) => item.label!.x === items[7].label!.x)).toHaveLength(4);
-      expect(items[4].label!.top).toBe(items[0].label!.top);
+      expect(items.filter((item) => item.label!.x === itemAt(items, 7).label!.x)).toHaveLength(4);
+      expect(itemAt(items, 4).label!.top).toBe(itemAt(items, 0).label!.top);
     });
 
     it('runs a description too long for a column across the full width, with the columns resuming after it', () => {
       const layouter = newLayouter();
       const short = Array.from({ length: 4 }, () => ({ description: 'Short' }));
       layouter.addStep(step(1, { annotations: [...short, { description: 'word '.repeat(40) }, ...short] }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
       const items = listItems(page);
       const left = PDF_SPEC.margin + PDF_SPEC.stepIndent;
-      const long = items[4];
+      const long = itemAt(items, 4);
       expect(long.label!.x).toBe(left);
       expect(long.lines.length).toBeGreaterThan(2);
       expect(Math.max(...long.lines.map((line) => measure(line.text)))).toBeGreaterThan(page.size.widthPixels / 2);
       // Markers 1–4 sit in two columns above it, 6–9 in two columns below it.
       for (const group of [items.slice(0, 4), items.slice(5)]) expect(new Set(group.map((item) => item.label!.x)).size).toBe(2);
-      expect(items[3].label!.top).toBeLessThan(long.label!.top);
-      expect(items[5].label!.top).toBeGreaterThan(long.lines.at(-1)!.top);
+      expect(itemAt(items, 3).label!.top).toBeLessThan(long.label!.top);
+      expect(itemAt(items, 5).label!.top).toBeGreaterThan(long.lines.at(-1)!.top);
     });
 
     it('keeps one column for a list too short to fill two rows of columns', () => {
       const layouter = newLayouter();
       layouter.addStep(step(1, { annotations: [{ description: 'One' }, { description: 'Two' }, { description: 'Three' }] }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
       expect(new Set(listItems(page).map((item) => item.label!.x)).size).toBe(1);
     });
@@ -379,7 +380,7 @@ describe('PdfLayouter', () => {
       const layouter = newLayouter();
       layouter.addTitleBlock('T', 'D');
       layouter.addStep(step(1, { section: { title: 'S' } }));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
       expect(artifacts(page).map((block) => block.role)).toEqual(['layout', 'layout', 'pagination']);
       for (const block of page.blocks) {
@@ -402,7 +403,7 @@ describe('PdfLayouter', () => {
     it('drops the title and page number but keeps the rule and the credit', () => {
       const layouter = newLayouter({ showFooter: false });
       layouter.addStep(step(1));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
       expect(artifactTexts(page, 'pagination')).toEqual(['Made with Howbeam']);
       expect(artifactRules(page).some((rule) => rule.height === PDF_SPEC.footerRuleThickness)).toBe(true);
@@ -411,7 +412,7 @@ describe('PdfLayouter', () => {
     it('centres the credit and right-aligns the page number to the margin', () => {
       const layouter = newLayouter();
       layouter.addStep(step(1));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
       const footer = artifacts(page).find((block) => block.role === 'pagination')!.texts;
       const credit = footer.find((text) => text.text === 'Made with Howbeam')!;
@@ -428,9 +429,9 @@ describe('PdfLayouter', () => {
         labels: { pageNumber: (page) => `Page ${page}`, credit: 'Made with Howbeam', missingDescription: '' },
       });
       layouter.addStep(step(1));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
-      const [title] = artifactTexts(page, 'pagination');
+      const title = itemAt(artifactTexts(page, 'pagination'), 0);
       expect(title.endsWith('…')).toBe(true);
       expect(measure(title)).toBeLessThan(page.size.widthPixels / 2);
     });
@@ -445,7 +446,7 @@ describe('PdfLayouter', () => {
     ] as const)('lays out %s %s on a %f x %f point page', (paper, orientation, widthPoints, heightPoints) => {
       const layouter = newLayouter({ paper, orientation });
       layouter.addStep(step(1));
-      const [page] = laidOut(layouter);
+      const page = itemAt(laidOut(layouter), 0);
 
       // The layout pixels are the point size at 150dpi, so the two always agree.
       const { widthPixels, heightPixels } = page.size;

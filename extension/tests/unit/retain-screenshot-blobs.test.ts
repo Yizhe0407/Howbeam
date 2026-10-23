@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { retainScreenshotBlobs } from '@/lib/editor/retain-screenshot-blobs';
 import type { ScreenshotStep, StepEntry } from '@/lib/storage/models';
+import { itemAt } from '../setup/item-at';
 
 function step(id: string, overrides: Partial<ScreenshotStep> = {}, content = 'pixels'): ScreenshotStep {
   return {
@@ -18,8 +19,10 @@ describe('retainScreenshotBlobs', () => {
 
     const result = retainScreenshotBlobs(before, after);
 
-    expect(result[0].kind === 'single' && result[0].step.screenshotBlob).toBe(before[0].kind === 'single' && before[0].step.screenshotBlob);
-    expect(result[0].kind === 'single' && result[0].step.description).toBe('edited');
+    const kept = itemAt(result, 0);
+    const previous = itemAt(before, 0);
+    expect(kept.kind === 'single' && kept.step.screenshotBlob).toBe(previous.kind === 'single' && previous.step.screenshotBlob);
+    expect(kept.kind === 'single' && kept.step.description).toBe('edited');
   });
 
   it('takes the new Blob when the image was recaptured', () => {
@@ -28,7 +31,9 @@ describe('retainScreenshotBlobs', () => {
 
     const result = retainScreenshotBlobs(before, after);
 
-    expect(result[0].kind === 'single' && result[0].step.screenshotBlob).toBe(after[0].kind === 'single' && after[0].step.screenshotBlob);
+    const taken = itemAt(result, 0);
+    const recaptured = itemAt(after, 0);
+    expect(taken.kind === 'single' && taken.step.screenshotBlob).toBe(recaptured.kind === 'single' && recaptured.step.screenshotBlob);
   });
 
   it('retains a snapshot anchor image and ignores steps it has not seen before', () => {
@@ -41,7 +46,8 @@ describe('retainScreenshotBlobs', () => {
 
     const result = retainScreenshotBlobs(before, after);
 
-    expect(result[0].kind === 'group' && result[0].anchor.screenshotBlob).toBe(anchorBefore.screenshotBlob);
+    const group = itemAt(result, 0);
+    expect(group.kind === 'group' && group.anchor.screenshotBlob).toBe(anchorBefore.screenshotBlob);
     expect(result[1]).toBe(after[1]);
   });
 });

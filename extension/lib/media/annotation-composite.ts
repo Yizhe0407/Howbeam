@@ -102,15 +102,16 @@ function drawBadge(ctx: OffscreenCanvasRenderingContext2D, point: AnnotationPoin
 }
 
 function drawLeader(ctx: OffscreenCanvasRenderingContext2D, points: AnnotationPoint[], dpr: number) {
-  if (points.length < 2) return;
+  const [first, ...rest] = points;
+  if (!first || rest.length === 0) return;
   ctx.strokeStyle = HIGHLIGHT_COLOR;
   ctx.lineWidth = LEADER_LINE_WIDTH * dpr;
   // Match the SVG polyline defaults the preview uses (butt caps, miter joins).
   ctx.lineCap = 'butt';
   ctx.lineJoin = 'miter';
   ctx.beginPath();
-  ctx.moveTo(points[0].x * dpr, points[0].y * dpr);
-  for (const point of points.slice(1)) ctx.lineTo(point.x * dpr, point.y * dpr);
+  ctx.moveTo(first.x * dpr, first.y * dpr);
+  for (const point of rest) ctx.lineTo(point.x * dpr, point.y * dpr);
   ctx.stroke();
 }
 

@@ -29,20 +29,32 @@ function invalid(message: string): never {
   throw new RasterImageValidationError(message);
 }
 
+function dataView(bytes: Uint8Array): DataView {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+}
+
+function uint8(bytes: Uint8Array, offset: number): number {
+  return dataView(bytes).getUint8(offset);
+}
+
 function uint16be(bytes: Uint8Array, offset: number): number {
-  return (bytes[offset] << 8) | bytes[offset + 1];
+  return dataView(bytes).getUint16(offset);
+}
+
+function uint16le(bytes: Uint8Array, offset: number): number {
+  return dataView(bytes).getUint16(offset, true);
 }
 
 function uint24le(bytes: Uint8Array, offset: number): number {
-  return bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16);
+  return uint16le(bytes, offset) | (uint8(bytes, offset + 2) << 16);
 }
 
 function uint32be(bytes: Uint8Array, offset: number): number {
-  return ((bytes[offset] * 0x1000000) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3]) >>> 0;
+  return dataView(bytes).getUint32(offset);
 }
 
 function uint32le(bytes: Uint8Array, offset: number): number {
-  return (bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] * 0x1000000)) >>> 0;
+  return dataView(bytes).getUint32(offset, true);
 }
 
 function ascii(bytes: Uint8Array, offset: number, length: number): string {
@@ -76,7 +88,7 @@ function jpegDimensions(bytes: Uint8Array, complete = true): { width: number; he
   while (offset < bytes.length) {
     while (offset < bytes.length && bytes[offset] === 0xff) offset += 1;
     if (offset >= bytes.length) break;
-    const marker = bytes[offset++];
+    const marker = uint8(bytes, offset++);
     if (marker === 0x00) continue;
     if (marker === 0xd9 || marker === 0xda) break;
     if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
@@ -124,8 +136,8 @@ function webpDimensions(bytes: Uint8Array, totalByteLength: number): { width: nu
       invalid('The WebP VP8 frame header is invalid.');
     }
     return {
-      width: (bytes[26] | (bytes[27] << 8)) & 0x3fff,
-      height: (bytes[28] | (bytes[29] << 8)) & 0x3fff,
+      width: uint16le(bytes, 26) & 0x3fff,
+      height: uint16le(bytes, 28) & 0x3fff,
     };
   }
   invalid('The WebP image has an unsupported primary chunk.');

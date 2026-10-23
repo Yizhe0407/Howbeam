@@ -13,6 +13,7 @@ vi.mock('wxt/browser', () => ({
 }));
 
 import { focusTab, getEditorSessionIdFromUrl } from '@/lib/runtime/navigation';
+import { itemAt } from '../setup/item-at';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -43,7 +44,7 @@ describe('focusTab', () => {
     // Tab activation must precede the window focus so a failed focus still
     // leaves the tab selected in its window.
     expect(mocks.tabsUpdate.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.windowsUpdate.mock.invocationCallOrder[0],
+      itemAt(mocks.windowsUpdate.mock.invocationCallOrder, 0),
     );
   });
 

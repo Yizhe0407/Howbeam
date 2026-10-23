@@ -63,9 +63,8 @@ async function buildManifest(
   const screenshots: ArchiveScreenshot[] = [];
   const files = new Map<string, Uint8Array<ArrayBuffer>>();
   let totalScreenshotBytes = 0;
-  for (let index = 0; index < steps.length; index += 1) {
+  for (const [index, step] of steps.entries()) {
     throwIfAborted(signal);
-    const step = steps[index];
     let id: string | undefined;
     if (step.screenshotBlob) {
       await validateScreenshotRaster(step.screenshotBlob, `steps[${index}].screenshotBlob`);

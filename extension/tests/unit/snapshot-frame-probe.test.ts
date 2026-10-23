@@ -12,6 +12,7 @@ vi.mock('wxt/browser', () => ({
 
 import { installSnapshotFrameProbe, resolveSnapshotTargetAtPoint } from '@/lib/recording/snapshot-targeting';
 import { CLEANUP_EVENT } from '@/lib/recording/content-script-constants';
+import { itemAt } from '../setup/item-at';
 
 /**
  * A snapshot click that lands on an iframe asks the child frame for its target
@@ -43,7 +44,7 @@ function placeIframe(): { frame: HTMLIFrameElement; requests: ProbeRequest[]; po
   });
   const requests: ProbeRequest[] = [];
   const postMessage = vi.fn((data: ProbeRequest['data'], origin: string, transfer: MessagePort[]) => {
-    requests.push({ data, origin, port: transfer[0] });
+    requests.push({ data, origin, port: itemAt(transfer, 0) });
   });
   Object.defineProperty(frame, 'contentWindow', { value: { postMessage } });
   document.elementFromPoint = () => frame;
@@ -53,7 +54,7 @@ function placeIframe(): { frame: HTMLIFrameElement; requests: ProbeRequest[]; po
 /** Waits for the probe to be posted, then answers it as the child frame would. */
 async function answer(requests: ProbeRequest[], response: unknown): Promise<void> {
   await vi.waitFor(() => expect(requests).toHaveLength(1));
-  requests[0].port.postMessage(response);
+  itemAt(requests, 0).port.postMessage(response);
 }
 
 let runId: string;
@@ -77,8 +78,8 @@ describe('a snapshot click on an iframe', () => {
     await answer(requests, null);
     await resolving;
 
-    expect(requests[0].origin).toBe(CHILD_ORIGIN);
-    expect(requests[0].data).toMatchObject({ runId, clientX: 50, clientY: 40, timeoutMs: 100 });
+    expect(itemAt(requests, 0).origin).toBe(CHILD_ORIGIN);
+    expect(itemAt(requests, 0).data).toMatchObject({ runId, clientX: 50, clientY: 40, timeoutMs: 100 });
   });
 
   it('maps the child’s target into this viewport, clipped to the frame’s visible box', async () => {

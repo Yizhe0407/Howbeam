@@ -4,6 +4,7 @@ import { makeRecordingState } from '../setup/recording-state';
 import { flushAsyncWork, importBackground } from '../setup/background-test-utils';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 import { type Step } from '@/lib/storage/models';
+import { itemAt } from '../setup/item-at';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
 
@@ -281,7 +282,7 @@ describe('empty-anchor cleanup ordering in finishRecording', () => {
     );
     expect(stopWriteIndex).toBeGreaterThanOrEqual(0);
     const stopOrder = mocks.setRecordingState.mock.invocationCallOrder[stopWriteIndex];
-    const deleteOrder = mocks.deleteStep.mock.invocationCallOrder[0];
+    const deleteOrder = itemAt(mocks.deleteStep.mock.invocationCallOrder, 0);
     expect(stopOrder).toBeLessThan(deleteOrder);
   });
 });

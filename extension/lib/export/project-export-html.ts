@@ -74,7 +74,7 @@ ${header}
       pending += separator + renderHtmlSectionHeading(section);
       separator = '\n';
     }
-    const [before, after] = renderHtmlEntry(rendered.content, IMAGE_SRC_TOKEN).split(IMAGE_SRC_TOKEN);
+    const [before, after = ''] = renderHtmlEntry(rendered.content, IMAGE_SRC_TOKEN).split(IMAGE_SRC_TOKEN);
     parts.push(`${pending}${separator}${before}data:${IMAGE_MIME_TYPE};base64,`);
     parts.push(new Blob(encodeBase64Parts(rendered.imageBytes, signal)));
     pending = after;
@@ -176,8 +176,9 @@ function annotationColumns(texts: readonly string[]): { listAttributes: string; 
     (lineCount) => lineCount * PAGE.lineHeight + LIST.itemGap,
   );
   if (columns === 1) return { listAttributes: '', spans };
+  // `lines` holds one entry per text.
   const keepsLines = (width: number) =>
-    texts.every((text, index) => spans[index] || wrapText(estimatedWidth, text, width).length <= lines[index].length);
+    texts.every((text, index) => spans[index] || wrapText(estimatedWidth, text, width).length <= lines[index]!.length);
   let narrow = 0;
   let wide = columnWidth(columns) - LIST.marker;
   while (wide - narrow > 0.05) {

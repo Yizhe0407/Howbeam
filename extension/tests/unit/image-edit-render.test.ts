@@ -10,6 +10,7 @@ import {
   type TextMeasure,
 } from '@/lib/media/image-edit-render';
 import type { ArrowEdit, ImageEdit, TextEdit } from '@/lib/storage/image-edit-model';
+import { itemAt } from '../setup/item-at';
 
 /** Every character is exactly half the font size wide, so wrapping is easy to predict. */
 const measure: TextMeasure = (text, fontSize) => text.length * fontSize * 0.5;
@@ -44,8 +45,8 @@ describe('text placement', () => {
     const placement = placeText(edit, measure);
     expect(placement.lines.map((line) => line.text)).toEqual(['hello', 'brave new']);
     const step = textLineHeight(10);
-    expect(placement.lines[0].baselineY).toBeCloseTo(20 + textBaselineOffset(10));
-    expect(placement.lines[1].baselineY - placement.lines[0].baselineY).toBeCloseTo(step);
+    expect(itemAt(placement.lines, 0).baselineY).toBeCloseTo(20 + textBaselineOffset(10));
+    expect(itemAt(placement.lines, 1).baselineY - itemAt(placement.lines, 0).baselineY).toBeCloseTo(step);
     expect(placement.x).toBe(10);
   });
 

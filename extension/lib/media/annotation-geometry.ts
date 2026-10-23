@@ -9,7 +9,7 @@ import {
 
 const MERGE_OVERLAP_RATIO = 0.4;
 
-export interface SidePadding {
+interface SidePadding {
   top: number;
   right: number;
   bottom: number;
@@ -34,7 +34,7 @@ function inflateBounds(bounds: Bounds, padding: number): Bounds {
   };
 }
 
-export function inflateBoundsPerSide(bounds: Bounds, padding: SidePadding): Bounds {
+function inflateBoundsPerSide(bounds: Bounds, padding: SidePadding): Bounds {
   return {
     x: bounds.x - padding.left,
     y: bounds.y - padding.top,
@@ -92,17 +92,19 @@ function contains(outer: Bounds, inner: Bounds): boolean {
 }
 
 /**
- * Visits every pair of bounds within `maxGap` on both axes, sweeping along the
- * less-congested axis so a long single-column list stays near-linear instead of
- * degenerating to O(n²).
+ * Visits every pair of items whose bounds are within `maxGap` on both axes,
+ * sweeping along the less-congested axis so a long single-column list stays
+ * near-linear instead of degenerating to O(n²).
  */
-export function forEachNearbyPair(
-  bounds: Bounds[],
+export function forEachNearbyPair<T>(
+  items: T[],
+  boundsOf: (item: T) => Bounds,
   maxGap: number,
-  visit: (first: number, second: number) => void,
+  visit: (first: T, second: T) => void,
 ): void {
-  if (bounds.length < 2) return;
+  if (items.length < 2) return;
 
+  const bounds = items.map(boundsOf);
   const minX = Math.min(...bounds.map((rect) => rect.x));
   const minY = Math.min(...bounds.map((rect) => rect.y));
   const maxX = Math.max(...bounds.map((rect) => rect.x + rect.width));
@@ -119,31 +121,41 @@ export function forEachNearbyPair(
       ? Math.max(0, a.y - (b.y + b.height), b.y - (a.y + a.height))
       : Math.max(0, a.x - (b.x + b.width), b.x - (a.x + a.width));
 
-  const ordered = bounds.map((_, index) => index).sort((a, b) => primaryStart(bounds[a]) - primaryStart(bounds[b]));
-  for (let position = 0; position < ordered.length; position++) {
-    const first = ordered[position];
-    const a = bounds[first];
-    const maxPrimary = primaryEnd(a) + maxGap;
-    for (let next = position + 1; next < ordered.length; next++) {
-      const second = ordered[next];
-      const b = bounds[second];
-      if (primaryStart(b) > maxPrimary) break;
-      if (secondaryGap(a, b) <= maxGap) visit(first, second);
+  interface Node {
+    item: T;
+    rect: Bounds;
+    next?: Node;
+  }
+  const ordered: Node[] = items
+    .map((item) => ({ item, rect: boundsOf(item) }))
+    .sort((a, b) => primaryStart(a.rect) - primaryStart(b.rect));
+  ordered.reduceRight<Node | undefined>((next, node) => {
+    node.next = next;
+    return node;
+  }, undefined);
+  for (const a of ordered) {
+    const maxPrimary = primaryEnd(a.rect) + maxGap;
+    for (let b = a.next; b && primaryStart(b.rect) <= maxPrimary; b = b.next) {
+      if (secondaryGap(a.rect, b.rect) <= maxGap) visit(a.item, b.item);
     }
   }
 }
 
-/** Per-side padding for frames so nearby singles never visually cross. */
-export function adaptiveSidePaddings(rawBounds: Bounds[]): SidePadding[] {
-  const paddings: SidePadding[] = rawBounds.map(() => ({
-    top: HIGHLIGHT_PADDING,
-    right: HIGHLIGHT_PADDING,
-    bottom: HIGHLIGHT_PADDING,
-    left: HIGHLIGHT_PADDING,
+/** Pads each item's bounds per side so frames of nearby items never visually
+ * cross. */
+export function padApart<T extends { bounds: Bounds }>(items: T[]): (T & { frame: Bounds })[] {
+  const nodes = items.map((item) => ({
+    item,
+    padding: {
+      top: HIGHLIGHT_PADDING,
+      right: HIGHLIGHT_PADDING,
+      bottom: HIGHLIGHT_PADDING,
+      left: HIGHLIGHT_PADDING,
+    },
   }));
-  forEachNearbyPair(rawBounds, HIGHLIGHT_PADDING * 2 + 2, (first, second) => {
-    const a = rawBounds[first];
-    const b = rawBounds[second];
+  forEachNearbyPair(nodes, (node) => node.item.bounds, HIGHLIGHT_PADDING * 2 + 2, (first, second) => {
+    const a = first.item.bounds;
+    const b = second.item.bounds;
     const dx = Math.max(0, a.x - (b.x + b.width), b.x - (a.x + a.width));
     const dy = Math.max(0, a.y - (b.y + b.height), b.y - (a.y + a.height));
 
@@ -151,12 +163,12 @@ export function adaptiveSidePaddings(rawBounds: Bounds[]): SidePadding[] {
       const cap = Math.max(dx, dy) / 2 - 1;
       if (dx >= dy) {
         const [left, right] = a.x < b.x ? [first, second] : [second, first];
-        paddings[left].right = Math.min(paddings[left].right, cap);
-        paddings[right].left = Math.min(paddings[right].left, cap);
+        left.padding.right = Math.min(left.padding.right, cap);
+        right.padding.left = Math.min(right.padding.left, cap);
       } else {
         const [top, bottom] = a.y < b.y ? [first, second] : [second, first];
-        paddings[top].bottom = Math.min(paddings[top].bottom, cap);
-        paddings[bottom].top = Math.min(paddings[bottom].top, cap);
+        top.padding.bottom = Math.min(top.padding.bottom, cap);
+        bottom.padding.top = Math.min(bottom.padding.top, cap);
       }
       return;
     }
@@ -164,7 +176,7 @@ export function adaptiveSidePaddings(rawBounds: Bounds[]): SidePadding[] {
     const aInB = contains(b, a);
     const bInA = contains(a, b);
     if (aInB || bInA) {
-      const inner = bInA ? paddings[second] : paddings[first];
+      const inner = bInA ? second.padding : first.padding;
       const io = bInA ? b : a;
       const oo = bInA ? a : b;
       inner.left = Math.min(inner.left, io.x - oo.x - 1);
@@ -184,27 +196,28 @@ export function adaptiveSidePaddings(rawBounds: Bounds[]): SidePadding[] {
 
     if (normalizedX >= normalizedY && centerAX !== centerBX) {
       const divider = (Math.max(a.x, b.x) + Math.min(a.x + a.width, b.x + b.width)) / 2;
-      const [leftIndex, rightIndex] = centerAX < centerBX ? [first, second] : [second, first];
-      const leftBounds = rawBounds[leftIndex];
-      const rightBounds = rawBounds[rightIndex];
-      paddings[leftIndex].right = Math.min(paddings[leftIndex].right, divider - halfClearance - (leftBounds.x + leftBounds.width));
-      paddings[rightIndex].left = Math.min(paddings[rightIndex].left, rightBounds.x - divider - halfClearance);
+      const [left, right] = centerAX < centerBX ? [first, second] : [second, first];
+      const leftBounds = left.item.bounds;
+      left.padding.right = Math.min(left.padding.right, divider - halfClearance - (leftBounds.x + leftBounds.width));
+      right.padding.left = Math.min(right.padding.left, right.item.bounds.x - divider - halfClearance);
     } else if (centerAY !== centerBY) {
       const divider = (Math.max(a.y, b.y) + Math.min(a.y + a.height, b.y + b.height)) / 2;
-      const [topIndex, bottomIndex] = centerAY < centerBY ? [first, second] : [second, first];
-      const topBounds = rawBounds[topIndex];
-      const bottomBounds = rawBounds[bottomIndex];
-      paddings[topIndex].bottom = Math.min(paddings[topIndex].bottom, divider - halfClearance - (topBounds.y + topBounds.height));
-      paddings[bottomIndex].top = Math.min(paddings[bottomIndex].top, bottomBounds.y - divider - halfClearance);
+      const [top, bottom] = centerAY < centerBY ? [first, second] : [second, first];
+      const topBounds = top.item.bounds;
+      top.padding.bottom = Math.min(top.padding.bottom, divider - halfClearance - (topBounds.y + topBounds.height));
+      bottom.padding.top = Math.min(bottom.padding.top, bottom.item.bounds.y - divider - halfClearance);
     }
   });
 
   const clamp = (value: number) => Math.min(HIGHLIGHT_PADDING, value);
-  return paddings.map((padding) => ({
-    top: clamp(padding.top),
-    right: clamp(padding.right),
-    bottom: clamp(padding.bottom),
-    left: clamp(padding.left),
+  return nodes.map(({ item, padding }) => ({
+    ...item,
+    frame: inflateBoundsPerSide(item.bounds, {
+      top: clamp(padding.top),
+      right: clamp(padding.right),
+      bottom: clamp(padding.bottom),
+      left: clamp(padding.left),
+    }),
   }));
 }
 

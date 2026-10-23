@@ -26,6 +26,7 @@ vi.mock('wxt/browser', () => ({
 
 import { downloadBlobViaBrowser } from '@/lib/export/download-utils';
 import { DownloadFailedError } from '@/lib/export/export-errors';
+import { itemAt } from '../setup/item-at';
 
 beforeEach(() => {
   mocks.listeners.length = 0;
@@ -68,9 +69,9 @@ describe('download utilities', () => {
       expect(revokeObjectURL).not.toHaveBeenCalled();
       expect(mocks.listeners).toHaveLength(1);
 
-      mocks.listeners[0]({ id: 6, state: { current: 'complete' } });
+      itemAt(mocks.listeners, 0)({ id: 6, state: { current: 'complete' } });
       expect(revokeObjectURL).not.toHaveBeenCalled();
-      mocks.listeners[0]({ id: 7, state: { current: 'complete' } });
+      itemAt(mocks.listeners, 0)({ id: 7, state: { current: 'complete' } });
       expect(revokeObjectURL).toHaveBeenCalledWith('blob:publication');
       expect(mocks.removeListener).toHaveBeenCalledOnce();
     });

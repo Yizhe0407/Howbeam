@@ -238,10 +238,10 @@ export default function StepRail({
       if (e.key !== previousKey && e.key !== nextKey) return;
       const idx = entries.findIndex((entry) => entryId(entry) === selectedEntryId);
       if (idx === -1) return;
-      const nextIdx = e.key === previousKey ? idx - 1 : idx + 1;
-      if (nextIdx < 0 || nextIdx >= entries.length) return;
+      const next = entries[e.key === previousKey ? idx - 1 : idx + 1];
+      if (!next) return;
       e.preventDefault();
-      onSelect(entryId(entries[nextIdx]));
+      onSelect(entryId(next));
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
@@ -294,6 +294,7 @@ export default function StepRail({
               if (!entry) return null;
               const id = row.id;
               const index = entries.indexOf(entry);
+              const nextEntry = entries[index + 1];
               const active = id === selectedEntryId;
               const number = previewPositionOf(rowId(row));
               return (
@@ -347,14 +348,14 @@ export default function StepRail({
                   )}
                 </SortableItem>
                 {/* The last seam is the 接續錄製 button below the list. */}
-                {index < entries.length - 1 && (onContinueRecording || onStartSection) && (
+                {nextEntry && (onContinueRecording || onStartSection) && (
                   <SeamActions
                     afterStep={index + 1}
                     disabled={reorderDisabled}
                     onInsert={onContinueRecording && (() => onContinueRecording(id))}
                     onStartSection={
-                      onStartSection && !sectionByStartId.has(entryId(entries[index + 1]))
-                        ? () => onStartSection(entryId(entries[index + 1]))
+                      onStartSection && !sectionByStartId.has(entryId(nextEntry))
+                        ? () => onStartSection(entryId(nextEntry))
                         : undefined
                     }
                   />

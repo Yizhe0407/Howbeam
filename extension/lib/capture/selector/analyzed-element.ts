@@ -24,15 +24,15 @@ export function analyzeElements(nodes: Iterable<unknown>): AnalyzedElement[] {
     elements.push(node);
   }
 
-  const entries = new Array<AnalyzedElement>(elements.length);
+  // Ancestor state flows down, so walk from the outermost element inward.
+  const entries: AnalyzedElement[] = [];
   let interactionUnavailable = false;
   let subtreeVisuallyUnavailable = false;
-  for (let index = elements.length - 1; index >= 0; index -= 1) {
-    const element = elements[index];
+  for (const element of elements.toReversed()) {
     const style = getComputedStyle(element);
     interactionUnavailable ||= hasOwnInteractionDisabledState(element);
     subtreeVisuallyUnavailable ||= hasOwnSubtreeVisualUnavailableState(style);
-    entries[index] = {
+    entries.push({
       element,
       style,
       kind: interactionKind(element, style),
@@ -44,9 +44,9 @@ export function analyzeElements(nodes: Iterable<unknown>): AnalyzedElement[] {
         : subtreeVisuallyUnavailable ||
           hasComputedVisibilityUnavailable(style) ||
           style.display === 'contents',
-    };
+    });
   }
-  return entries;
+  return entries.reverse();
 }
 
 export function boundingRect(entry: AnalyzedElement): DOMRect {

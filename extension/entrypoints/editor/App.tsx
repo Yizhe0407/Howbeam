@@ -535,7 +535,7 @@ function EditorApp() {
         entries={entries}
         index={zoomOpen ? selectedIndex : null}
         onClose={() => setZoomOpen(false)}
-        onNavigate={(i) => selectEntrySafely(entryId(entries[i]))}
+        onNavigate={(entry) => selectEntrySafely(entryId(entry))}
       />
       <SectionTitleDialog
         request={sectionDialog}

@@ -20,6 +20,7 @@ import RecordingToolbar, { type RecordingToolbarState } from '@/lib/recording/re
 import { RECORDING_TOOLBAR_CORNER_KEY } from '@/lib/recording/recording-toolbar-position';
 import { RECORDING_TOOLBAR_COLLAPSED_KEY } from '@/lib/recording/use-toolbar-collapsed';
 import { RECORDING_TOOLBAR_UNDO_KEY } from '@/lib/recording/use-toolbar-undo';
+import { itemAt } from '../setup/item-at';
 
 const state: RecordingToolbarState = {
   runId: 'run-1',
@@ -138,7 +139,7 @@ describe('recording toolbar', () => {
   it('collapses from the last button and keeps a meaningful compact status', async () => {
     await mount(<RecordingToolbar state={state} onCommand={vi.fn()} />);
     const buttons = screen.getAllByRole('button');
-    expect(buttons[buttons.length - 1].getAttribute('aria-label')).toBe('收合控制器');
+    expect(itemAt(buttons, buttons.length - 1).getAttribute('aria-label')).toBe('收合控制器');
     fireEvent.click(screen.getByRole('button', { name: '收合控制器' }));
 
     expect(screen.getByRole('button', { name: /錄製中，2 步；展開錄製控制/ })).toBeTruthy();

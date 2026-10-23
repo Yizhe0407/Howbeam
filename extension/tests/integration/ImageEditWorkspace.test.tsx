@@ -32,6 +32,7 @@ vi.mock('@/components/editor/EntryThumbnail', () => ({
 }));
 
 import ImageEditWorkspace from '@/components/editor/ImageEditWorkspace';
+import { itemAt } from '../setup/item-at';
 
 beforeAll(() => {
   // jsdom has no layout: 1 CSS px of image == 1 client px.
@@ -140,7 +141,7 @@ describe('ImageEditWorkspace mask review', () => {
     fireEvent.click(screen.getByRole('button', { name: '確認遮罩' }));
     await waitFor(() => expect(confirmed.onClose).toHaveBeenCalled());
     expect(storage.save).toHaveBeenCalledTimes(1);
-    expect(storage.save.mock.calls[0][2]).toEqual({ imageEditRevision: 0, confirmReview: true });
+    expect(itemAt(storage.save.mock.calls, 0)[2]).toEqual({ imageEditRevision: 0, confirmReview: true });
   });
 });
 

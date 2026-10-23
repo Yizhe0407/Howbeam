@@ -23,6 +23,7 @@ import {
   type ReplayResult,
 } from './metrics';
 import { renderMarkdown, type DetectionBenchmarkReport } from './report';
+import { itemAt } from '../../setup/item-at';
 
 test.use({ recordTrace: false });
 test.setTimeout(240_000);
@@ -329,7 +330,7 @@ async function waitForStepCount(popup: Page, count: number): Promise<number> {
 }
 
 async function runReplayCase(page: Page, popup: Page, index: number): Promise<ReplayResult> {
-  const benchmarkCase = REPLAY_CASES[index];
+  const benchmarkCase = itemAt(REPLAY_CASES, index);
   if (index > 0) await page.waitForTimeout(CAPTURE_COOLDOWN_MS);
   const previousSteps = await readSteps(popup);
   let point: { x: number; y: number };

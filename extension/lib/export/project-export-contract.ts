@@ -153,11 +153,12 @@ export function projectFilenameStem(metadata: ProjectExportMetadata): string {
   const codePoints = [...stem];
   let bytes = 0;
   let end = 0;
-  while (end < codePoints.length && bytes + utf8Length(codePoints[end]) <= FILENAME_STEM_MAX_BYTES) {
-    bytes += utf8Length(codePoints[end]);
+  for (const codePoint of codePoints) {
+    bytes += utf8Length(codePoint);
+    if (bytes > FILENAME_STEM_MAX_BYTES) break;
     end += 1;
   }
-  while (end < codePoints.length && end > 0 && /^\p{M}$/u.test(codePoints[end])) end -= 1;
+  for (let cut = codePoints[end]; cut !== undefined && end > 0 && /^\p{M}$/u.test(cut); cut = codePoints[end]) end -= 1;
   const bounded = codePoints.slice(0, end).join('').replace(/-+$/, '');
 
   if (!bounded) return DEFAULT_FILENAME;

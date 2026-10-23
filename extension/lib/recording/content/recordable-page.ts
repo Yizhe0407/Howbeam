@@ -39,7 +39,7 @@ export function detectUnrecordablePage(
  */
 export function isChildFrameUnrecordable(loc: Location = location): boolean {
   const ancestors = loc.ancestorOrigins;
-  if (!ancestors || ancestors.length === 0) return false;
-  const topOrigin = ancestors[ancestors.length - 1];
+  const topOrigin = ancestors?.[ancestors.length - 1];
+  if (!topOrigin) return false;
   return !topOrigin.startsWith('http://') && !topOrigin.startsWith('https://');
 }

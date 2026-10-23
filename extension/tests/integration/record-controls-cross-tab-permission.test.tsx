@@ -42,6 +42,7 @@ import RecordControls from '@/components/popup/RecordControls';
 import { CROSS_TAB_DECLINE_STORAGE_KEY } from '@/lib/runtime/cross-tab-recording';
 import { makeRecordingState } from '../setup/recording-state';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { itemAt } from '../setup/item-at';
 
 // The mode picker uses the shadcn Tooltip, which requires a TooltipProvider
 // ancestor — wrap every render() the same way the app roots do.
@@ -100,7 +101,7 @@ describe('cross-tab permission ask at recording start', () => {
     // Firefox invariant: permissions.request must be the first await of the
     // click handler, ahead of the tabs.query pre-flight.
     expect(mocks.permissionsRequest.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.query.mock.invocationCallOrder[0],
+      itemAt(mocks.query.mock.invocationCallOrder, 0),
     );
   });
 

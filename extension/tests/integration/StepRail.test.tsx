@@ -8,6 +8,7 @@ import { type StepEntry } from '@/lib/storage/models';
 import type { ProjectSection } from '@/lib/project/project-sections';
 import { makeEntry } from '../setup/step-entries';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { itemAt } from '../setup/item-at';
 
 // StepRail's "continue recording" button uses the shadcn Tooltip, which
 // requires a TooltipProvider ancestor — wrap every render() the same way the
@@ -70,7 +71,7 @@ describe('StepRail keyboard navigation', () => {
     expect(observers).toHaveLength(2);
 
     act(() => {
-      const record = observers[0];
+      const record = itemAt(observers, 0);
       record.callback([{ isIntersecting: true, target: record.target } as IntersectionObserverEntry], {} as IntersectionObserver);
     });
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(2));
@@ -375,7 +376,7 @@ describe('StepRail keyboard navigation', () => {
       />,
     );
 
-    const handle = screen.getAllByRole('button', { name: '拖曳排序' })[0];
+    const handle = itemAt(screen.getAllByRole('button', { name: '拖曳排序' }), 0);
     handle.focus();
     fireEvent.keyDown(handle, { code: 'Space', key: ' ' });
     await waitFor(() => expect(handle.getAttribute('aria-pressed')).toBe('true'));
@@ -384,7 +385,7 @@ describe('StepRail keyboard navigation', () => {
     fireEvent.keyDown(document, { code: 'Space', key: ' ' });
 
     await waitFor(() => expect(onReorder).toHaveBeenCalledOnce());
-    expect(onReorder.mock.calls[0][0]).toEqual([
+    expect(itemAt(onReorder.mock.calls, 0)[0]).toEqual([
       { kind: 'entry', id: 'step-2' },
       { kind: 'section', id: 'section-1' },
       { kind: 'entry', id: 'step-1' },

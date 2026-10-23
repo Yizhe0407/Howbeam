@@ -29,21 +29,21 @@ export function parseImageMapCoordinates(input: string): number[] {
   let position = 0;
 
   const skipDelimiters = () => {
-    while (position < input.length && isCoordinateDelimiter(input[position])) position += 1;
+    while (position < input.length && isCoordinateDelimiter(input.charAt(position))) position += 1;
   };
 
   skipDelimiters();
   while (position < input.length) {
     while (
       position < input.length &&
-      !isCoordinateDelimiter(input[position]) &&
-      !canStartCoordinateNumber(input[position])
+      !isCoordinateDelimiter(input.charAt(position)) &&
+      !canStartCoordinateNumber(input.charAt(position))
     ) {
       position += 1;
     }
 
     const start = position;
-    while (position < input.length && !isCoordinateDelimiter(input[position])) position += 1;
+    while (position < input.length && !isCoordinateDelimiter(input.charAt(position))) position += 1;
     const parsed = Number.parseFloat(input.slice(start, position));
     numbers.push(Number.isFinite(parsed) && !Object.is(parsed, -0) ? parsed : 0);
     skipDelimiters();
@@ -97,10 +97,10 @@ function pointOnSegment(
 
 /** HTML image-map polygons use the even-odd rule and include polygon edges. */
 function pointInPolygon(x: number, y: number, points: Array<readonly [number, number]>): boolean {
+  let start = points.at(-1);
+  if (!start) return false;
   let inside = false;
-  for (let index = 0; index < points.length; index += 1) {
-    const start = points[index];
-    const end = points[(index + 1) % points.length];
+  for (const end of points) {
     if (pointOnSegment(x, y, start, end)) return true;
 
     const crossesScanline = (start[1] > y) !== (end[1] > y);
@@ -108,6 +108,7 @@ function pointInPolygon(x: number, y: number, points: Array<readonly [number, nu
       const intersectionX = start[0] + ((y - start[1]) * (end[0] - start[0])) / (end[1] - start[1]);
       if (x < intersectionX) inside = !inside;
     }
+    start = end;
   }
   return inside;
 }
@@ -120,10 +121,12 @@ function regionForArea(area: HTMLAreaElement, imageBounds: Bounds): ImageMapRegi
 
   const coords = parseImageMapCoordinates(area.coords);
   if (shape === 'rect') {
-    if (coords.length < 4) return null;
-    let [left, top, right, bottom] = coords;
-    if (left > right) [left, right] = [right, left];
-    if (top > bottom) [top, bottom] = [bottom, top];
+    const [x1, y1, x2, y2] = coords;
+    if (x1 === undefined || y1 === undefined || x2 === undefined || y2 === undefined) return null;
+    const left = Math.min(x1, x2);
+    const right = Math.max(x1, x2);
+    const top = Math.min(y1, y2);
+    const bottom = Math.max(y1, y2);
     return {
       bounds: { x: left, y: top, width: right - left, height: bottom - top },
       contains: (x, y) => x >= left && x <= right && y >= top && y <= bottom,
@@ -131,9 +134,8 @@ function regionForArea(area: HTMLAreaElement, imageBounds: Bounds): ImageMapRegi
   }
 
   if (shape === 'circle') {
-    if (coords.length < 3) return null;
     const [centerX, centerY, radius] = coords;
-    if (radius <= 0) return null;
+    if (centerX === undefined || centerY === undefined || radius === undefined || radius <= 0) return null;
     return {
       bounds: {
         x: centerX - radius,
@@ -145,12 +147,18 @@ function regionForArea(area: HTMLAreaElement, imageBounds: Bounds): ImageMapRegi
     };
   }
 
-  if (coords.length % 2 === 1) coords.pop();
-  if (coords.length <= 4) return null;
-  const points = Array.from(
-    { length: coords.length / 2 },
-    (_, index) => [coords[index * 2], coords[index * 2 + 1]] as const,
-  );
+  // An odd trailing coordinate is dropped.
+  const points: Array<readonly [number, number]> = [];
+  let pendingX: number | undefined;
+  for (const value of coords) {
+    if (pendingX === undefined) {
+      pendingX = value;
+    } else {
+      points.push([pendingX, value]);
+      pendingX = undefined;
+    }
+  }
+  if (points.length <= 2) return null;
   const xs = points.map(([x]) => x);
   const ys = points.map(([, y]) => y);
   const left = Math.min(...xs);

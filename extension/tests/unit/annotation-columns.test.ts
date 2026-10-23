@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { balancedColumnHeight, chooseAnnotationColumns, fillColumns } from '@/lib/export/annotation-columns';
+import { itemAt } from '../setup/item-at';
 
 describe('fillColumns', () => {
   it('fills each column up to the capacity, in order', () => {
@@ -23,7 +24,7 @@ describe('balancedColumnHeight', () => {
 describe('chooseAnnotationColumns', () => {
   /** `lengths` in characters, wrapped into columns of 30, 14 and 9 characters. */
   const layout = (lengths: number[]) => chooseAnnotationColumns(
-    (columns) => lengths.map((length) => Array.from({ length: Math.max(1, Math.ceil(length / [30, 14, 9][columns - 1])) }, () => 'line')),
+    (columns) => lengths.map((length) => Array.from({ length: Math.max(1, Math.ceil(length / itemAt([30, 14, 9], columns - 1))) }, () => 'line')),
     (lines) => lines,
   );
   const choose = (lengths: number[]) => layout(lengths).columns;

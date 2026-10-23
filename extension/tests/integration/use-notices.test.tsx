@@ -9,6 +9,7 @@ vi.mock('react-hot-toast', () => ({ default: toast }));
 
 import { useBusyNotice, useUndoNotice } from '@/components/editor/use-notices';
 import { BUSY_DELAY_MS, BUSY_MIN_SHOWN_MS } from '@/lib/shared/use-deferred-busy';
+import { itemAt } from '../setup/item-at';
 
 const action = (overrides: Partial<UndoAction> = {}) =>
   ({ id: 1, message: '已刪除步驟 1', projectId: 'p1', expectedRevision: 2, restore: vi.fn(), ...overrides }) as UndoAction;
@@ -42,7 +43,7 @@ describe('useUndoNotice', () => {
     renderUndoNotice({ action: action(), pending: false });
 
     expect(toast.custom).toHaveBeenCalledOnce();
-    expect(toast.custom.mock.calls[0][1]).toEqual({ id: 'editor-undo', duration: Infinity });
+    expect(itemAt(toast.custom.mock.calls, 0)[1]).toEqual({ id: 'editor-undo', duration: Infinity });
     render(shownNotice());
     expect(screen.getByRole('status').textContent).toContain('已刪除步驟 1');
   });

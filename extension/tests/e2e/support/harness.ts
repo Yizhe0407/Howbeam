@@ -2,6 +2,7 @@ import { expect, type Frame, type Locator, type Page } from '@playwright/test';
 import { inflateSync } from 'node:zlib';
 // Type-only import: erased at runtime (Playwright never loads extension code), but keeps the project template below from drifting off the model.
 import type { Project } from '../../../lib/storage/models';
+import { firstItems, itemAt } from '../../setup/item-at';
 
 /** Browser 內的 page.evaluate 無法匯入 Node 模組，因此在此集中管理持久化契約字面值。 */
 const SCRIBE_DB = { name: 'howbeam', version: 2 } as const;
@@ -65,8 +66,8 @@ function decodePngRgba(input: Buffer): { width: number; height: number; channels
     if (type === 'IHDR') {
       width = data.readUInt32BE(0);
       height = data.readUInt32BE(4);
-      bitDepth = data[8];
-      colorType = data[9];
+      bitDepth = data.readUInt8(8);
+      colorType = data.readUInt8(9);
     } else if (type === 'IDAT') {
       chunks.push(data);
     } else if (type === 'IEND') {
@@ -82,13 +83,13 @@ function decodePngRgba(input: Buffer): { width: number; height: number; channels
   const pixels = new Uint8Array(height * stride);
   let source = 0;
   for (let y = 0; y < height; y += 1) {
-    const filter = raw[source++];
+    const filter = raw.readUInt8(source++);
     const rowStart = y * stride;
     const previousStart = rowStart - stride;
     for (let x = 0; x < stride; x += 1) {
-      const left = x >= channels ? pixels[rowStart + x - channels] : 0;
-      const above = y > 0 ? pixels[previousStart + x] : 0;
-      const upperLeft = y > 0 && x >= channels ? pixels[previousStart + x - channels] : 0;
+      const left = x >= channels ? itemAt(pixels, rowStart + x - channels) : 0;
+      const above = y > 0 ? itemAt(pixels, previousStart + x) : 0;
+      const upperLeft = y > 0 && x >= channels ? itemAt(pixels, previousStart + x - channels) : 0;
       let predictor = 0;
       if (filter === 1) predictor = left;
       else if (filter === 2) predictor = above;
@@ -102,7 +103,7 @@ function decodePngRgba(input: Buffer): { width: number; height: number; channels
       } else if (filter !== 0) {
         throw new Error(`Unsupported PNG filter ${filter}.`);
       }
-      pixels[rowStart + x] = (raw[source++] + predictor) & 0xff;
+      pixels[rowStart + x] = (raw.readUInt8(source++) + predictor) & 0xff;
     }
   }
   return { width, height, channels, pixels };
@@ -122,10 +123,10 @@ export async function readPageScreenshotPixel(
   const y = Math.min(decoded.height - 1, Math.max(0, Math.floor(clientY * decoded.height / viewport.height)));
   const index = (y * decoded.width + x) * decoded.channels;
   return {
-    red: decoded.pixels[index],
-    green: decoded.pixels[index + 1],
-    blue: decoded.pixels[index + 2],
-    alpha: decoded.channels === 4 ? decoded.pixels[index + 3] : 255,
+    red: itemAt(decoded.pixels, index),
+    green: itemAt(decoded.pixels, index + 1),
+    blue: itemAt(decoded.pixels, index + 2),
+    alpha: decoded.channels === 4 ? itemAt(decoded.pixels, index + 3) : 255,
   };
 }
 
@@ -136,9 +137,9 @@ export async function readRootScrollbarSentinelPixels(page: Page): Promise<numbe
   for (let y = 0; y < decoded.height; y += 1) {
     for (let x = decoded.width - stripWidth; x < decoded.width; x += 1) {
       const index = (y * decoded.width + x) * decoded.channels;
-      const red = decoded.pixels[index];
-      const green = decoded.pixels[index + 1];
-      const blue = decoded.pixels[index + 2];
+      const red = itemAt(decoded.pixels, index);
+      const green = itemAt(decoded.pixels, index + 1);
+      const blue = itemAt(decoded.pixels, index + 2);
       if (
         (red > 170 && green < 100 && blue > 170) ||
         (red < 100 && green > 170 && blue < 100) ||
@@ -330,9 +331,10 @@ export async function rawScreenshotRosePixels(
           const pixels = context.getImageData(left, top, right - left, bottom - top).data;
           let rosePixels = 0;
           for (let index = 0; index < pixels.length; index += 4) {
-            const red = pixels[index];
-            const green = pixels[index + 1];
-            const blue = pixels[index + 2];
+            // Runs in the page, where test helpers are not available.
+            const red = pixels[index] ?? 0;
+            const green = pixels[index + 1] ?? 0;
+            const blue = pixels[index + 2] ?? 0;
             if (red > 180 && red - green > 60 && red - blue > 20) rosePixels++;
           }
           db.close();
@@ -376,9 +378,10 @@ export async function readScreenshotScrollbarStats(popup: Page, stepId: string):
             let rootSentinelPixels = 0;
             let nestedSentinelPixels = 0;
             for (let index = 0; index < pixels.length; index += 4) {
-              const red = pixels[index];
-              const green = pixels[index + 1];
-              const blue = pixels[index + 2];
+              // Runs in the page, where test helpers are not available.
+              const red = pixels[index] ?? 0;
+              const green = pixels[index + 1] ?? 0;
+              const blue = pixels[index + 2] ?? 0;
               const x = (index / 4) % bitmap.width;
               const magenta = red > 170 && green < 100 && blue > 170;
               const greenTrack = red < 100 && green > 170 && blue < 100;
@@ -594,13 +597,13 @@ export async function getStepPreviewStyle(page: Page): Promise<{ hidden: boolean
   const preview = find(root, (node) => {
     const attributes = node.attributes ?? [];
     const classIndex = attributes.indexOf('class');
-    return classIndex >= 0 && attributes[classIndex + 1]?.split(/\s+/).includes('preview');
+    return classIndex >= 0 && (attributes[classIndex + 1]?.split(/\s+/).includes('preview') ?? false);
   });
   await client.detach();
   if (!preview) return { hidden: true, style: null };
   const attributes = preview.attributes ?? [];
   const styleIndex = attributes.indexOf('style');
-  const style = styleIndex >= 0 ? attributes[styleIndex + 1] : null;
+  const style = styleIndex >= 0 ? (attributes[styleIndex + 1] ?? null) : null;
   return { hidden: style?.includes('display: none') ?? true, style };
 }
 /** Clicks a toolbar control by accessible name via CDP, since Playwright locators cannot pierce the closed shadow root that hosts it. */
@@ -632,7 +635,7 @@ export async function clickRecordingToolbarButton(page: Page, name: string): Pro
     });
     if (!button) throw new Error(`Recording toolbar has no control labelled ${name}`);
     const { model } = await client.send('DOM.getBoxModel', { nodeId: button.nodeId });
-    const [left, top, , , right, bottom] = model.content;
+    const [left, top, , , right, bottom] = firstItems(model.content, 6);
     await page.mouse.click((left + right) / 2, (top + bottom) / 2);
   } finally {
     await client.detach();

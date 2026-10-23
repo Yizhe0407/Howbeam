@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { backupFilename, fallbackBackupFilename, runBackup, type BackupRunDeps } from '@/lib/backup/backup-runner';
 import type { BackupManifestEntry } from '@/lib/backup/backup-store';
 import type { ProjectSummary } from '@/lib/storage/models';
+import { itemAt } from '../setup/item-at';
 
 /** Minimal in-memory stand-in for a FileSystemDirectoryHandle. */
 function fakeDirectory(failOn?: string, asciiOnly = false) {
@@ -144,7 +145,7 @@ describe('runBackup', () => {
     const projects = [project('aaaaaaaa-1', 'Old name', 10)];
     const { deps, files } = setup(projects);
     await runBackup(deps);
-    const [oldName] = [...files.keys()];
+    const oldName = itemAt([...files.keys()], 0);
 
     projects[0] = project('aaaaaaaa-1', 'New name', 10, 1);
     await runBackup(deps);
@@ -184,7 +185,7 @@ describe('runBackup', () => {
     const { deps, files } = setup(projects, undefined, true);
 
     expect(await runBackup(deps)).toMatchObject({ written: 1, failed: 0 });
-    expect([...files.keys()]).toEqual([fallbackBackupFilename(projects[0])]);
+    expect([...files.keys()]).toEqual([fallbackBackupFilename(itemAt(projects, 0))]);
 
     expect(await runBackup(deps)).toMatchObject({ written: 0, skipped: 1, failed: 0 });
   });

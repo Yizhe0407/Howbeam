@@ -79,7 +79,8 @@ export async function validateRecaptureTarget(
   const annotations = steps.filter(
     (step) => step.groupId === anchor.id && stepRole(step) === 'annotation' && getEffectiveBounds(step),
   );
-  if (annotations.length !== 1 || annotations[0].id !== annotation.id) {
+  const [only, ...others] = annotations;
+  if (!only || others.length > 0 || only.id !== annotation.id) {
     throw new StepRecaptureStartError(
       'UNSUPPORTED_SNAPSHOT_GROUP',
       t().recaptureFlow.multiAnnotation,

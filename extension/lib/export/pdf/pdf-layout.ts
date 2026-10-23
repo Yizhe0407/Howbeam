@@ -2,7 +2,7 @@ import { throwIfAborted } from '../../shared/abort';
 import type { PdfExportSettings } from '../pdf-export-settings';
 import { PDF_COLORS, PDF_SPEC, PDF_TEXT, pdfPageSize, type PdfPageSize, type PdfTextStyle } from './pdf-spec';
 import { shortenText, truncateText, wrapText } from '../text-wrap';
-import { balancedColumnHeight, chooseAnnotationColumns, fillColumns, type AnnotationColumns } from '../annotation-columns';
+import { balancedColumnHeight, chooseAnnotationColumns, fillColumns } from '../annotation-columns';
 
 /** Every coordinate is in page pixels (~150dpi), measured from the page's top-left. */
 export interface PdfText {
@@ -92,6 +92,12 @@ const OUTLINE_TITLE_LENGTH = 100;
  * are complete, so the caller can render and release each one while the next is
  * still being laid out.
  */
+interface AnnotationMarker {
+  label: string;
+  lines: string[];
+  height: number;
+}
+
 export class PdfLayouter {
   private readonly size: PdfPageSize;
   private readonly contentWidth: number;
@@ -272,53 +278,56 @@ export class PdfLayouter {
     if (annotations.length === 0) return;
     const style = PDF_TEXT.annotation;
     const texts = annotations.map((annotation) => annotation.description.trim() || this.options.labels.missingDescription);
-    const labels = texts.map((_, index) => `${index + 1}. `);
-    const labelWidth = Math.max(...labels.map((label) => this.options.measure(label, style)));
+    const labelFor = (index: number) => `${index + 1}. `;
+    const labelWidth = Math.max(...texts.map((_, index) => this.options.measure(labelFor(index), style)));
     const layout = chooseAnnotationColumns(
       (count) => texts.map((text) => wrapText(this.measure(style), text, this.annotationColumnWidth(count) - labelWidth, this.options.signal)),
       (lineCount) => style.gapBefore + lineCount * style.lineHeight + style.gapAfter,
     );
+    const markers = layout.lines.map((lines, index) => ({
+      label: labelFor(index),
+      lines,
+      height: style.gapBefore + lines.length * style.lineHeight + style.gapAfter,
+    }));
     let runStart = 0;
-    for (const [index, itemLines] of layout.lines.entries()) {
+    for (const [index, marker] of markers.entries()) {
       if (layout.columns > 1 && !layout.spans[index]) continue;
-      this.addAnnotationColumns(labels, labelWidth, layout, runStart, index);
-      this.addAnnotation(labels[index], labelWidth, itemLines);
+      this.addAnnotationColumns(markers.slice(runStart, index), layout.columns, labelWidth);
+      this.addAnnotation(marker.label, labelWidth, marker.lines);
       runStart = index + 1;
     }
-    this.addAnnotationColumns(labels, labelWidth, layout, runStart, texts.length);
+    this.addAnnotationColumns(markers.slice(runStart), layout.columns, labelWidth);
   }
 
-  /** Markers `start` to `end` (exclusive) in the layout's columns, balanced, carrying over to the next page when they don't fit. */
-  private addAnnotationColumns(labels: readonly string[], labelWidth: number, layout: AnnotationColumns<string>, start: number, end: number): void {
+  /** A run of markers in balanced columns, carrying over to the next page when they don't fit. */
+  private addAnnotationColumns(markers: readonly AnnotationMarker[], columns: number, labelWidth: number): void {
     const style = PDF_TEXT.annotation;
-    const { columns, lines } = layout;
     const columnWidth = this.annotationColumnWidth(columns);
-    const heights = lines.map((itemLines) => style.gapBefore + itemLines.length * style.lineHeight + style.gapAfter);
-    let next = start;
-    while (next < end) {
-      this.ensureSpace(heights[next]);
+    let rest = markers;
+    for (let first = rest[0]; first; first = rest[0]) {
+      this.ensureSpace(first.height);
       // The rest of the run in balanced columns when it fits on this page; otherwise the columns fill the page and the rest carries over.
-      const rest = heights.slice(next, end);
-      const capacity = Math.min(balancedColumnHeight(rest, columns), this.contentBottom - this.cursorY);
-      const { count, starts } = fillColumns(rest, columns, capacity);
+      const heights = rest.map((marker) => marker.height);
+      const capacity = Math.min(balancedColumnHeight(heights, columns), this.contentBottom - this.cursorY);
+      const { count, starts } = fillColumns(heights, columns, capacity);
       const items = this.listFor(this.pageNumber);
       let tallest = 0;
-      for (const [column, first] of starts.entries()) {
+      for (const [column, start] of starts.entries()) {
         const x = PDF_SPEC.margin + PDF_SPEC.stepIndent + column * (columnWidth + PDF_SPEC.annotationColumnGap);
         let top = this.cursorY;
-        for (let index = next + first; index < next + (starts[column + 1] ?? count); index += 1) {
+        for (const marker of rest.slice(start, starts[column + 1] ?? count)) {
           const lineTop = top + style.gapBefore;
           items.push({
-            label: { text: labels[index], x, top: lineTop, style },
-            lines: lines[index].map((line, lineIndex) => ({ text: line, x: x + labelWidth, top: lineTop + lineIndex * style.lineHeight, style })),
+            label: { text: marker.label, x, top: lineTop, style },
+            lines: marker.lines.map((line, lineIndex) => ({ text: line, x: x + labelWidth, top: lineTop + lineIndex * style.lineHeight, style })),
           });
-          top += heights[index];
+          top += marker.height;
         }
         tallest = Math.max(tallest, top - this.cursorY);
       }
       this.cursorY += tallest;
       this.hasContent = true;
-      next += count;
+      rest = rest.slice(count);
     }
   }
 

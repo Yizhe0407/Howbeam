@@ -452,7 +452,7 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
       const stops: HTMLElement[] = [blocker, cancelButton, ...(confirmButton.hidden ? [] : [confirmButton])];
       const at = stops.indexOf(event.composedPath()[0] as HTMLElement);
       const step = event.shiftKey ? -1 : 1;
-      stops[(at + step + stops.length) % stops.length].focus({ preventScroll: true });
+      stops[(at + step + stops.length) % stops.length]?.focus({ preventScroll: true });
       return;
     }
     consume(event);

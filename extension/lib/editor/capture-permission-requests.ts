@@ -32,11 +32,12 @@ export function recaptureTargetForEntry(entry: StepEntry): StepRecaptureTarget {
   if (entry.kind === 'single') return { kind: 'single', stepId: entry.step.id };
   // Replacing the base image of a multi-annotation snapshot would invalidate
   // every other annotation on it, so that case is refused outright.
-  if (entry.annotations.length !== 1) throw new Error(t().editor.multiAnnotationRecaptureBlocked);
+  const [annotation, ...others] = entry.annotations;
+  if (!annotation || others.length > 0) throw new Error(t().editor.multiAnnotationRecaptureBlocked);
   return {
     kind: 'snapshot-singleton',
     anchorId: entry.anchor.id,
-    annotationId: entry.annotations[0].id,
+    annotationId: annotation.id,
   };
 }
 

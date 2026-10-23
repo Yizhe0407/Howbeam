@@ -28,11 +28,12 @@ export type NewStep = Omit<Step, 'order'>;
  * appended. Their order is assigned here, from the rows this transaction
  * reads, and the Project's order stays dense. */
 export async function addStepsAfter(steps: readonly NewStep[], afterStepId: string | null): Promise<void> {
-  if (steps.length === 0) return;
+  const [first] = steps;
+  if (!first) return;
   assertMutationItems(steps, 'Added steps');
   await assertStorableScreenshots(steps.map((step) => step.screenshotBlob));
-  const { sessionId, runId } = steps[0];
-  let latestTimestamp = steps[0].timestamp;
+  const { sessionId, runId } = first;
+  let latestTimestamp = first.timestamp;
   await runProjectStepsWrite(async (tx) => {
     const project = await requireWritableProject(tx, sessionId);
     const existing = orderedSessionSteps(await tx.objectStore('steps').index('by-session').getAll(sessionId));
@@ -273,7 +274,8 @@ export async function replaceStepCaptureAtomically(
     const annotations = sessionSteps.filter(
       (step) => step.groupId === anchor.id && stepRole(step) === 'annotation' && getEffectiveBounds(step),
     );
-    if (annotations.length !== 1 || annotations[0].id !== annotation.id) {
+    const [only, ...others] = annotations;
+    if (!only || others.length > 0 || only.id !== annotation.id) {
       throw new StepRecaptureError(
         'UNSUPPORTED_SNAPSHOT_GROUP',
         'A snapshot with multiple annotations must be rebuilt as a whole.',

@@ -9,6 +9,7 @@ import {
   startRecording,
   stopRecording,
 } from '../support/harness';
+import { itemAt } from '../../setup/item-at';
 
 interface ProbeRect {
   x: number;
@@ -127,7 +128,7 @@ test.describe('element detection', () => {
     await clickRect(appPage, shadowButton);
 
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
-    const [step] = await readSteps(popupPage);
+    const step = itemAt(await readSteps(popupPage), 0);
     // Without closed-root access the hit test stops at the host, which would record the whole 320x160 block as an unlabelled region.
     expect(step.description).toBe('點擊按鈕');
     expectBoundsNear(step.bounds, shadowButton);
@@ -152,8 +153,8 @@ test.describe('element detection', () => {
     const steps = await readSteps(popupPage);
     // Neither card has a role, href, handler property or pointer cursor: the framework attribute is the only evidence they're controls.
     expect(steps.map((step) => step.description)).toEqual(['點擊互動元素', '點擊互動元素']);
-    expectBoundsNear(steps[0].bounds, jsaction);
-    expectBoundsNear(steps[1].bounds, stimulus);
+    expectBoundsNear(itemAt(steps, 0).bounds, jsaction);
+    expectBoundsNear(itemAt(steps, 1).bounds, stimulus);
 
     await stopRecording(popupPage);
   });
@@ -175,7 +176,7 @@ test.describe('element detection', () => {
       ...ZERO_COUNTERS,
       imageMapClicks: 1,
     });
-    const [step] = await readSteps(popupPage);
+    const step = itemAt(await readSteps(popupPage), 0);
     expect(step.description).toBe('開啟連結');
     expectBoundsNear(step.bounds, area);
 
@@ -231,7 +232,7 @@ test.describe('element detection', () => {
       ...ZERO_COUNTERS,
       activationOverlayClicks: 1,
     });
-    const [step] = await readSteps(popupPage);
+    const step = itemAt(await readSteps(popupPage), 0);
     expect(step.description).toBe('點擊互動元素');
     expectBoundsNear(step.bounds, overlay);
     expect(step.bounds!.width).toBeGreaterThan(coveredButton.width);
@@ -450,7 +451,7 @@ test.describe('element detection', () => {
       ...ZERO_COUNTERS,
       paintedBackdropClicks: 1,
     });
-    const [step] = await readSteps(popupPage);
+    const step = itemAt(await readSteps(popupPage), 0);
     expect(step.description).toBe('標記頁面區域');
     expectBoundsNear(step.bounds, backdrop);
     expect(step.bounds!.width).toBeGreaterThan(coveredButton.width);

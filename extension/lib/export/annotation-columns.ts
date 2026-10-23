@@ -10,11 +10,11 @@ const MAX_LINES_IN_COLUMN = 2;
 export function fillColumns(heights: readonly number[], columns: number, capacity: number): { count: number; starts: number[] } {
   const starts: number[] = [];
   let index = 0;
-  while (starts.length < columns && index < heights.length && heights[index] <= capacity) {
+  for (let first = heights[index]; starts.length < columns && first !== undefined && first <= capacity; first = heights[index]) {
     starts.push(index);
     let used = 0;
-    while (index < heights.length && used + heights[index] <= capacity) {
-      used += heights[index];
+    for (let next = heights[index]; next !== undefined && used + next <= capacity; next = heights[index]) {
+      used += next;
       index += 1;
     }
   }
@@ -25,19 +25,20 @@ export function fillColumns(heights: readonly number[], columns: number, capacit
 export function balancedColumnHeight(heights: readonly number[], columns: number): number {
   // The answer is always the height of some run of consecutive items.
   const runs = new Set<number>();
-  for (let start = 0; start < heights.length; start += 1) {
+  heights.forEach((_, start) => {
     let sum = 0;
-    for (let end = start; end < heights.length; end += 1) {
-      sum += heights[end];
+    for (const height of heights.slice(start)) {
+      sum += height;
       runs.add(sum);
     }
-  }
+  });
   const candidates = [...runs].sort((left, right) => left - right);
   let low = 0;
   let high = candidates.length - 1;
   while (low < high) {
     const middle = (low + high) >> 1;
-    if (fillColumns(heights, columns, candidates[middle]).count === heights.length) high = middle;
+    // low <= middle < high, so middle is inside candidates.
+    if (fillColumns(heights, columns, candidates[middle]!).count === heights.length) high = middle;
     else low = middle + 1;
   }
   return candidates[low] ?? 0;
@@ -102,7 +103,10 @@ export function chooseAnnotationColumns<Line>(
   for (let columns = 2; columns <= ANNOTATION_MAX_COLUMNS; columns += 1) {
     const narrow = wrap(columns);
     const spans = spanningMarkers(narrow.map((item) => item.length), columns);
-    const lines = narrow.map((item, index) => (spans[index] ? fullWidth[index] : item));
+    const lines = narrow.map((item, index) => {
+      const wide = fullWidth[index];
+      return spans[index] && wide ? wide : item;
+    });
     const listHeight = columnListHeight(lines.map((item) => height(item.length)), spans, columns);
     if (best.height - listHeight >= worthAnotherColumn) best = { layout: { columns, lines, spans }, height: listHeight };
   }

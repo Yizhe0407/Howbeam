@@ -367,7 +367,8 @@ export function createSnapshotShield(
     if (hitModal) return hitModal;
 
     const modalDialogs = Array.from(document.querySelectorAll('dialog')).filter(isModalDialog);
-    return modalDialogs.length === 1 ? modalDialogs[0] : document.documentElement;
+    const [only, ...others] = modalDialogs;
+    return only && others.length === 0 ? only : document.documentElement;
   };
 
   // querySelector('dialog') per node is O(subtree); the element/child

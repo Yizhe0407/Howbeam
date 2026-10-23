@@ -64,8 +64,9 @@ export function sectionOfEntry(
   index: number,
 ): ProjectSection | undefined {
   const byStart = new Map(sections.map((section) => [section.startEntryId, section]));
-  for (let at = Math.min(index, entries.length - 1); at >= 0; at -= 1) {
-    const section = byStart.get(entryId(entries[at]));
+  if (index < 0) return undefined;
+  for (const entry of entries.slice(0, index + 1).toReversed()) {
+    const section = byStart.get(entryId(entry));
     if (section) return section;
   }
   return undefined;

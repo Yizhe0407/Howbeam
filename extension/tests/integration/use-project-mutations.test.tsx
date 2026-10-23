@@ -35,6 +35,7 @@ vi.mock('@/lib/storage/project-structure', () => {
 });
 
 import { useProjectMutations } from '@/components/editor/use-project-mutations';
+import { itemAt } from '../setup/item-at';
 
 const singleEntry = (id: string) => ({ kind: 'single', step: { id } }) as never;
 const entries = [singleEntry('s1'), singleEntry('s2')];
@@ -95,7 +96,7 @@ function shownChange(options: ReturnType<typeof renderMutations>['options'], cal
     (shown: { entries: unknown[]; sections: unknown[] }) => { entries: unknown[] },
   ];
   const change = (shownEntries: unknown[]) => apply({ entries: shownEntries, sections: [] }).entries;
-  const hide = options.showOptimistic.mock.results[call].value as ReturnType<typeof vi.fn>;
+  const hide = itemAt(options.showOptimistic.mock.results, call).value as ReturnType<typeof vi.fn>;
   return { change, hide };
 }
 
@@ -111,7 +112,7 @@ describe('runProjectMutation (via handleReorderEntries)', () => {
     expect(options.adoptCommitted).toHaveBeenCalledWith(committed);
     // Taken back only once the commit is on screen, so nothing reverts in between.
     expect(hide).toHaveBeenCalledOnce();
-    expect(options.adoptCommitted.mock.invocationCallOrder[0]).toBeLessThan(hide.mock.invocationCallOrder[0]);
+    expect(options.adoptCommitted.mock.invocationCallOrder[0]).toBeLessThan(itemAt(hide.mock.invocationCallOrder, 0));
     expect(options.offerUndo).toHaveBeenCalledTimes(1);
     expect(options.setOperationError).not.toHaveBeenCalledWith(expect.stringContaining('失敗'));
   });

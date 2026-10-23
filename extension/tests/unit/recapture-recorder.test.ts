@@ -58,6 +58,7 @@ vi.mock('@/lib/capture/selector/element-availability', async (importOriginal) =>
 }));
 
 import { installRecaptureRecorder } from '@/lib/recording/recapture-recorder';
+import { itemAt } from '../setup/item-at';
 
 const RUN_ID = 'run-1';
 
@@ -154,7 +155,7 @@ describe('installRecaptureRecorder', () => {
     pointerDown();
     await flush();
     expect(targetMessages()).toHaveLength(1);
-    expect(targetMessages()[0][0]).toMatchObject({ runId: RUN_ID, rect: TARGET.rect });
+    expect(itemAt(targetMessages(), 0)[0]).toMatchObject({ runId: RUN_ID, rect: TARGET.rect });
     expect(mocks.preview.prepareForCapture).toHaveBeenCalledTimes(1);
   });
 

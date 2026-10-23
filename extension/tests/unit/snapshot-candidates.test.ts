@@ -5,6 +5,7 @@ import {
   orderKeyboardCandidates,
   type RawKeyboardCandidate,
 } from '@/lib/capture/snapshot-candidates';
+import { itemAt } from '../setup/item-at';
 
 function rect(x: number, y: number, width = 20, height = 20, label = ''): RawKeyboardCandidate {
   return { x, y, width, height, label: label || `${x},${y}` };
@@ -36,7 +37,7 @@ describe('orderKeyboardCandidates', () => {
   });
 
   it('clamps anchor centres one pixel inside the viewport', () => {
-    const [anchor] = orderKeyboardCandidates([rect(790, 590, 40, 40, 'edge')], 800, 600);
+    const anchor = itemAt(orderKeyboardCandidates([rect(790, 590, 40, 40, 'edge')], 800, 600), 0);
     expect(anchor.x).toBeLessThanOrEqual(799);
     expect(anchor.y).toBeLessThanOrEqual(599);
     expect(anchor.x).toBeGreaterThanOrEqual(1);

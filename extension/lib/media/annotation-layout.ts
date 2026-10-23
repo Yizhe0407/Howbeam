@@ -8,13 +8,12 @@ import {
   type AnnotationPoint,
 } from './annotation-contract';
 import {
-  adaptiveSidePaddings,
   coincident,
   fitBoundsInViewport,
   fitHighlightFrame,
   fitPointInViewport,
   forEachNearbyPair,
-  inflateBoundsPerSide,
+  padApart,
   pointBounds,
   unionBounds,
 } from './annotation-geometry';
@@ -30,6 +29,13 @@ import {
 const CALLOUT_GAP = 14;
 const ANCHOR_TIE_EPSILON = 8;
 const LANE_NUDGE_ATTEMPTS = 3;
+
+interface Item {
+  annotation: Annotation;
+  anchor: AnnotationPoint;
+  /** Union-find link; a group's root has none. */
+  parent?: Item;
+}
 
 /** Coordinates grouping, collision-safe frames and callout placement. Geometry
  * and spatial-index primitives live in dedicated modules so preview/export
@@ -56,94 +62,87 @@ export function layoutWithProvisional(
   viewportHeight: number,
   provisional: Bounds | null,
 ): { layouts: AnnotationLayout[]; provisionalFrame: Bounds | null } {
-  const count = annotations.length;
-  const parent = Array.from({ length: count }, (_, index) => index);
-  const find = (index: number): number => {
-    while (parent[index] !== index) {
-      parent[index] = parent[parent[index]];
-      index = parent[index];
-    }
-    return index;
-  };
-  const join = (a: number, b: number) => {
-    const rootA = find(a);
-    const rootB = find(b);
-    if (rootA !== rootB) parent[rootB] = rootA;
-  };
-
-  const rawBounds = annotations.map((annotation) => annotation.bounds);
-  const representativeByBounds = new Map<string, number>();
-  const representatives: number[] = [];
-  for (let index = 0; index < rawBounds.length; index++) {
-    const rect = rawBounds[index];
-    const key = `${rect.x}:${rect.y}:${rect.width}:${rect.height}`;
-    const representative = representativeByBounds.get(key);
-    if (representative === undefined) {
-      representativeByBounds.set(key, index);
-      representatives.push(index);
-    } else {
-      join(representative, index);
-    }
-  }
-  const representativeBounds = representatives.map((index) => rawBounds[index]);
-  forEachNearbyPair(representativeBounds, 0, (a, b) => {
-    if (coincident(representativeBounds[a], representativeBounds[b])) join(representatives[a], representatives[b]);
-  });
-
-  const grouped = new Map<number, number[]>();
-  for (let index = 0; index < count; index++) {
-    const root = find(index);
-    (grouped.get(root) ?? grouped.set(root, []).get(root)!).push(index);
-  }
-
-  // Stable ordering keeps the output deterministic for identical input.
-  const singles: number[] = [];
-  const groups: number[][] = [];
-  for (const indexes of grouped.values()) {
-    if (indexes.length === 1) singles.push(indexes[0]);
-    else groups.push(indexes.slice().sort((a, b) => a - b));
-  }
-  singles.sort((a, b) => a - b);
-  groups.sort((a, b) => a[0] - b[0]);
-
   // Anchors are read O(n log n) times by the lane sorts and slot maps below;
   // compute each once up front instead of re-deriving inside comparators.
-  const anchors: AnnotationPoint[] = annotations.map(({ bounds }) =>
-    fitPointInViewport(
-      { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
+  const items: Item[] = annotations.map((annotation) => ({
+    annotation,
+    anchor: fitPointInViewport(
+      {
+        x: annotation.bounds.x + annotation.bounds.width / 2,
+        y: annotation.bounds.y + annotation.bounds.height / 2,
+      },
       MARKER_RADIUS,
       viewportWidth,
       viewportHeight,
     ),
-  );
+  }));
+  const find = (item: Item): Item => {
+    while (item.parent) {
+      if (item.parent.parent) item.parent = item.parent.parent;
+      item = item.parent;
+    }
+    return item;
+  };
+  const join = (a: Item, b: Item) => {
+    const rootA = find(a);
+    const rootB = find(b);
+    if (rootA !== rootB) rootB.parent = rootA;
+  };
+
+  const representativeByBounds = new Map<string, Item>();
+  const representatives: Item[] = [];
+  for (const item of items) {
+    const rect = item.annotation.bounds;
+    const key = `${rect.x}:${rect.y}:${rect.width}:${rect.height}`;
+    const representative = representativeByBounds.get(key);
+    if (representative === undefined) {
+      representativeByBounds.set(key, item);
+      representatives.push(item);
+    } else {
+      join(representative, item);
+    }
+  }
+  forEachNearbyPair(representatives, (item) => item.annotation.bounds, 0, (a, b) => {
+    if (coincident(a.annotation.bounds, b.annotation.bounds)) join(a, b);
+  });
+
+  // Map order follows each group's first member, so singles and groups come
+  // out in input order and the output stays deterministic.
+  const grouped = new Map<Item, Item[]>();
+  for (const item of items) {
+    const root = find(item);
+    const members = grouped.get(root);
+    if (members) members.push(item);
+    else grouped.set(root, [item]);
+  }
+  const singles: Item[] = [];
+  const groups: Item[][] = [];
+  for (const members of grouped.values()) {
+    if (members.length === 1) singles.push(...members);
+    else groups.push(members);
+  }
 
   // Geometry that will actually be drawn, known before any badge is placed so
   // every badge can be tested against all of it. Padding is adaptive per side
-  // (see adaptiveSidePaddings) so two frames for near-but-non-overlapping
-  // targets never visually collide; the obstacle index and perimeter-badge
-  // picker below both build on these final frames.
-  const singleRawBounds = singles.map((index) => annotations[index].bounds);
-  if (provisional) singleRawBounds.push(provisional);
-  const singlePaddings = adaptiveSidePaddings(singleRawBounds);
-  const singleFrames = singleRawBounds.map((bounds, position) =>
-    fitBoundsInViewport(
-      inflateBoundsPerSide(bounds, singlePaddings[position]),
-      viewportWidth,
-      viewportHeight,
-    ),
-  );
-  const groupMembers = groups.flat();
-  const markerRectOf = (index: number): Bounds => pointBounds(anchors[index], MARKER_RADIUS);
-  const markerRects = new Map(groupMembers.map((index) => [index, markerRectOf(index)]));
+  // (see padApart) so two frames for near-but-non-overlapping targets never
+  // visually collide; the obstacle index and perimeter-badge picker below both
+  // build on these final frames.
+  const framed = padApart<{ bounds: Bounds; single: Item | null }>([
+    ...singles.map((single) => ({ bounds: single.annotation.bounds, single })),
+    ...(provisional ? [{ bounds: provisional, single: null }] : []),
+  ]).map((entry) => ({ ...entry, frame: fitBoundsInViewport(entry.frame, viewportWidth, viewportHeight) }));
   // A group's markers substantially overlap by definition. One union obstacle
   // prevents thousands of coincident marker rectangles from turning every
   // nearby badge query into a linear scan.
-  const groupMarkerObstacles = groups.map((group) => unionBounds(group.map((index) => markerRects.get(index)!)));
+  const markedGroups = groups.map((members) => ({
+    members,
+    markers: unionBounds(members.map((member) => pointBounds(member.anchor, MARKER_RADIUS))),
+  }));
 
   const badgeIndex = new PointSpatialIndex();
   const obstacleIndex = new BoundsSpatialIndex(viewportWidth, viewportHeight);
-  for (const frame of singleFrames) obstacleIndex.add(frame);
-  for (const marker of groupMarkerObstacles) obstacleIndex.add(marker);
+  for (const { frame } of framed) obstacleIndex.add(frame);
+  for (const { markers } of markedGroups) obstacleIndex.add(markers);
   const layouts: AnnotationLayout[] = [];
 
   /**
@@ -153,31 +152,32 @@ export function layoutWithProvisional(
    * read as one cluster, so within a run the step numbers win: the lane then
    * shows 1,2,3… instead of an order dictated by sub-pixel anchor jitter.
    */
-  const sortAlongLane = (group: number[], coordinate: (index: number) => number): number[] => {
+  const sortAlongLane = (group: Item[], coordinate: (item: Item) => number): Item[] => {
     const byCoordinate = group
       .slice()
-      .sort((a, b) => coordinate(a) - coordinate(b) || annotations[a].order - annotations[b].order);
-    const ordered: number[] = [];
-    let run: number[] = [];
+      .sort((a, b) => coordinate(a) - coordinate(b) || a.annotation.order - b.annotation.order);
+    const ordered: Item[] = [];
+    let run: Item[] = [];
     const flushRun = () => {
-      run.sort((a, b) => annotations[a].order - annotations[b].order);
+      run.sort((a, b) => a.annotation.order - b.annotation.order);
       ordered.push(...run);
       run = [];
     };
-    for (const index of byCoordinate) {
-      if (run.length > 0 && coordinate(index) - coordinate(run[run.length - 1]) > ANCHOR_TIE_EPSILON) flushRun();
-      run.push(index);
+    for (const item of byCoordinate) {
+      const last = run.at(-1);
+      if (last && coordinate(item) - coordinate(last) > ANCHOR_TIE_EPSILON) flushRun();
+      run.push(item);
     }
     flushRun();
     return ordered;
   };
 
   // Groups first, so a single's perimeter badge can dodge the lane badges.
-  groups.forEach((group, groupPosition) => {
-    const ownMarkers = new Set([groupMarkerObstacles[groupPosition]]);
-    const groupBounds = unionBounds(group.map((index) => annotations[index].bounds));
-    const anchorXs = group.map((index) => anchors[index].x);
-    const anchorYs = group.map((index) => anchors[index].y);
+  for (const { members: group, markers } of markedGroups) {
+    const ownMarkers = new Set([markers]);
+    const groupBounds = unionBounds(group.map((item) => item.annotation.bounds));
+    const anchorXs = group.map((item) => item.anchor.x);
+    const anchorYs = group.map((item) => item.anchor.y);
     const spreadX = Math.max(...anchorXs) - Math.min(...anchorXs);
     const spreadY = Math.max(...anchorYs) - Math.min(...anchorYs);
 
@@ -191,10 +191,10 @@ export function layoutWithProvisional(
       laneExtent > BADGE_RADIUS * 2 ? Math.floor((laneExtent - BADGE_RADIUS * 2) / CALLOUT_SPACING) + 1 : 0;
 
     let slots: AnnotationPoint[];
-    let ordered: number[];
+    let ordered: Item[];
     if (group.length <= laneCapacity) {
-      ordered = sortAlongLane(group, (index) => (laneIsVertical ? anchors[index].y : anchors[index].x));
-      const alongLane = ordered.map((index) => (laneIsVertical ? anchors[index].y : anchors[index].x));
+      ordered = sortAlongLane(group, (item) => (laneIsVertical ? item.anchor.y : item.anchor.x));
+      const alongLane = ordered.map((item) => (laneIsVertical ? item.anchor.y : item.anchor.x));
       const slotCoordinates = placeOrderedSlots(alongLane, CALLOUT_SPACING, BADGE_RADIUS, laneExtent - BADGE_RADIUS);
 
       // The lane's cross-axis position: just outside the cluster on whichever
@@ -238,7 +238,7 @@ export function layoutWithProvisional(
       // multi-column side grid. Order along each column still follows the
       // anchor sort, which keeps the common case of a huge duplicate stack
       // readable even though cross-column leaders may touch.
-      ordered = sortAlongLane(group, (index) => anchors[index].y);
+      ordered = sortAlongLane(group, (item) => item.anchor.y);
       const leftSpace = groupBounds.x;
       const rightSpace = viewportWidth - (groupBounds.x + groupBounds.width);
       const laneOnRight = rightSpace >= leftSpace;
@@ -262,17 +262,17 @@ export function layoutWithProvisional(
       );
     }
 
-    ordered.forEach((index, position) => {
-      const anchor = anchors[index];
-      const badge = slots[position];
+    ordered.forEach(({ annotation, anchor }, position) => {
+      // Both lane placers return one slot per member.
+      const badge = slots[position]!;
       const dx = badge.x - anchor.x;
       const dy = badge.y - anchor.y;
       const length = Math.hypot(dx, dy) || 1;
       const start = { x: anchor.x + (dx / length) * MARKER_RADIUS, y: anchor.y + (dy / length) * MARKER_RADIUS };
       const end = { x: badge.x - (dx / length) * BADGE_RADIUS, y: badge.y - (dy / length) * BADGE_RADIUS };
       layouts.push({
-        order: annotations[index].order,
-        frame: fitHighlightFrame(annotations[index].bounds, viewportWidth, viewportHeight),
+        order: annotation.order,
+        frame: fitHighlightFrame(annotation.bounds, viewportWidth, viewportHeight),
         anchor,
         markerOnly: true,
         badgeAnchor: badge,
@@ -280,25 +280,25 @@ export function layoutWithProvisional(
         leader: length > MARKER_RADIUS + BADGE_RADIUS ? [start, end] : [],
       });
     });
-  });
+  }
 
-  singles.forEach((index, position) => {
-    const frame = singleFrames[position];
+  for (const { single, frame } of framed) {
+    if (!single) continue;
     const badgeAnchor = pickPerimeterBadge(frame, obstacleIndex, badgeIndex, viewportWidth, viewportHeight);
     badgeIndex.add(badgeAnchor);
     layouts.push({
-      order: annotations[index].order,
+      order: single.annotation.order,
       frame,
-      anchor: anchors[index],
+      anchor: single.anchor,
       markerOnly: false,
       badgeAnchor,
       callout: null,
       leader: [],
     });
-  });
+  }
 
   return {
     layouts: layouts.sort((a, b) => a.order - b.order),
-    provisionalFrame: provisional ? singleFrames[singles.length] : null,
+    provisionalFrame: framed.find((entry) => entry.single === null)?.frame ?? null,
   };
 }

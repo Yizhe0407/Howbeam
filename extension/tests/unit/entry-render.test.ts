@@ -16,6 +16,7 @@ vi.mock('@/lib/media/annotation-composite', () => ({
 
 import { compositeStepEntry } from '@/lib/export/entry-render';
 import { type Step, type StepEntry } from '@/lib/storage/models';
+import { itemAt } from '../setup/item-at';
 
 function makeStep(id: string, order: number, changes: Partial<Step> = {}): Step {
   return {
@@ -165,8 +166,8 @@ describe('compositeStepEntry', () => {
 
       await compositeStepEntry(entry, 'image/jpeg');
 
-      expect(mocks.compositeMultiHighlight.mock.calls[0][0]).toBe(croppedBlob);
-      expect(mocks.compositeMultiHighlight.mock.calls[0][1]).toEqual([{ bounds: { x: 10, y: 10, width: 5, height: 5 }, order: 1 }]);
+      expect(itemAt(mocks.compositeMultiHighlight.mock.calls, 0)[0]).toBe(croppedBlob);
+      expect(itemAt(mocks.compositeMultiHighlight.mock.calls, 0)[1]).toEqual([{ bounds: { x: 10, y: 10, width: 5, height: 5 }, order: 1 }]);
     });
 
     it('uses the original image untouched when the crop turns out to cover all of it', async () => {
@@ -176,8 +177,8 @@ describe('compositeStepEntry', () => {
 
       await compositeStepEntry(entry, 'image/png');
 
-      expect(mocks.compositeHighlight.mock.calls[0][0]).toBe(step.screenshotBlob);
-      expect(mocks.compositeHighlight.mock.calls[0][1]).toEqual(step.bounds);
+      expect(itemAt(mocks.compositeHighlight.mock.calls, 0)[0]).toBe(step.screenshotBlob);
+      expect(itemAt(mocks.compositeHighlight.mock.calls, 0)[1]).toEqual(step.bounds);
     });
   });
 });

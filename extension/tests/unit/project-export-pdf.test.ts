@@ -37,6 +37,7 @@ vi.mock('@/lib/export/project-export-contract', async (original) => {
 import { ProjectExportLimitError } from '@/lib/export/project-export-contract';
 import { StepImageError } from '@/lib/export/export-errors';
 import { generateProjectPdf } from '@/lib/export/project-export-pdf';
+import { itemAt } from '../setup/item-at';
 
 function entry(id: string, order: number, description: string): StepEntry {
   return {
@@ -117,12 +118,12 @@ describe('generateProjectPdf', () => {
       expect(page.height).toBeCloseTo(A4.height, 1);
     }
     expect(read.title).toBe('安裝指南 Setup Project');
-    expect(read.pages[0].lines.join('\n')).toContain('安裝指南 Setup Project');
-    expect(read.pages[0].lines.join('\n')).toContain('本指南示範 how mixed-script text stays text.');
-    expect(read.pages[0].lines.join('\n')).toContain('點擊瀏覽器工具列上的擴充功能圖示，開啟設定頁面。');
+    expect(itemAt(read.pages, 0).lines.join('\n')).toContain('安裝指南 Setup Project');
+    expect(itemAt(read.pages, 0).lines.join('\n')).toContain('本指南示範 how mixed-script text stays text.');
+    expect(itemAt(read.pages, 0).lines.join('\n')).toContain('點擊瀏覽器工具列上的擴充功能圖示，開啟設定頁面。');
     // A long English sentence wraps at word boundaries, so compare it with the line breaks folded.
-    expect(read.pages[1].lines.join(' ')).toContain('Open the extension settings and enable automatic capture for every tab.');
-    expect(read.pages[2].lines.join('\n')).toContain('完成後按下「儲存」，並與團隊分享。');
+    expect(itemAt(read.pages, 1).lines.join(' ')).toContain('Open the extension settings and enable automatic capture for every tab.');
+    expect(itemAt(read.pages, 2).lines.join('\n')).toContain('完成後按下「儲存」，並與團隊分享。');
   });
 
   it('prints the step number, a running footer with the credit and a numbered page on every page', async () => {
@@ -166,7 +167,7 @@ describe('generateProjectPdf', () => {
     const read = await readPdf(await generateProjectPdf([], { title: 'Nothing yet' }));
 
     expect(read.pages).toHaveLength(1);
-    expect(read.pages[0].lines.join('\n')).toContain('Nothing yet');
+    expect(itemAt(read.pages, 0).lines.join('\n')).toContain('Nothing yet');
     expect(mocks.composite).not.toHaveBeenCalled();
   });
 
@@ -222,9 +223,9 @@ describe('generateProjectPdf', () => {
     );
 
     expect(read.pages).toHaveLength(2);
-    const first = read.pages[0].lines.join('\n');
+    const first = itemAt(read.pages, 0).lines.join('\n');
     expect(first.indexOf('第一章 前置作業')).toBeLessThan(first.indexOf('開啟設定頁面'));
-    const second = read.pages[1].lines.join('\n');
+    const second = itemAt(read.pages, 1).lines.join('\n');
     expect(second).toContain('第二章 快照標記');
     expect(second).toMatch(/1\. ?點擊登入按鈕/);
     expect(second).toMatch(/2\. ?輸入電子郵件/);
@@ -251,7 +252,7 @@ describe('generateProjectPdf', () => {
 
     it('puts mixed short descriptions in two columns without wrapping any', async () => {
       const notes = ['Save', 'Click the blue Sign in button', 'Menu', 'Search box at the top', 'OK', 'Language switcher', 'Profile picture', 'Help', 'Close the dialog window', 'Tab'];
-      const [page] = await laidOutMarkers(notes);
+      const page = itemAt(await laidOutMarkers(notes), 0);
 
       expect(columnsOf(page.markers, range(1, 10))).toBe(2);
       for (const note of notes) expect(page.texts).toContain(note);
@@ -259,14 +260,14 @@ describe('generateProjectPdf', () => {
 
     it('keeps a CJK description whole rather than squeezing it into a third column', async () => {
       const notes = ['儲存', '點擊右上角的登入按鈕', 'Menu', '搜尋框', 'OK', '語言切換 Language', '個人頭像', 'Help', '關閉對話框', '分頁 Tab'];
-      const [page] = await laidOutMarkers(notes);
+      const page = itemAt(await laidOutMarkers(notes), 0);
 
       expect(columnsOf(page.markers, range(1, 10))).toBe(2);
       for (const note of notes) expect(page.texts).toContain(note);
     });
 
     it('runs a very long description across the full width, with columns before and after it', async () => {
-      const [page] = await laidOutMarkers(['Save', 'Menu', 'OK', 'Help', 'Tab', LONG, 'Back', 'Next', 'Edit', 'Done']);
+      const page = itemAt(await laidOutMarkers(['Save', 'Menu', 'OK', 'Help', 'Tab', LONG, 'Back', 'Next', 'Edit', 'Done']), 0);
 
       expect(columnsOf(page.markers, range(1, 5))).toBe(2);
       expect(columnsOf(page.markers, range(7, 10))).toBe(2);
@@ -278,14 +279,14 @@ describe('generateProjectPdf', () => {
 
     it('keeps markers between long ones in one column when they are too few for two rows of columns', async () => {
       const url = 'https://example.com/a/very/long/url/without/any/spaces/that/cannot/wrap/anywhere/at/all/really';
-      const [page] = await laidOutMarkers(['', 'Save', '', url, 'OK', '', 'Help', 'Tab']);
+      const page = itemAt(await laidOutMarkers(['', 'Save', '', url, 'OK', '', 'Help', 'Tab']), 0);
 
       expect(columnsOf(page.markers, range(1, 4))).toBe(1);
       expect(columnsOf(page.markers, range(5, 8))).toBe(2);
     });
 
     it('keeps one column when long and short descriptions alternate', async () => {
-      const [page] = await laidOutMarkers(['Save', LONG, 'Menu', LONG, 'OK', LONG, 'Help']);
+      const page = itemAt(await laidOutMarkers(['Save', LONG, 'Menu', LONG, 'OK', LONG, 'Help']), 0);
 
       expect(columnsOf(page.markers, range(1, 7))).toBe(1);
     });
@@ -295,13 +296,13 @@ describe('generateProjectPdf', () => {
       const chinese = await laidOutMarkers([...Array.from({ length: 15 }, () => '標記頁面區域'), 'asdfasdfasdf']);
 
       expect(english).toHaveLength(1);
-      expect(columnsOf(english[0].markers, range(1, 16))).toBe(2);
+      expect(columnsOf(itemAt(english, 0).markers, range(1, 16))).toBe(2);
       expect(chinese).toHaveLength(1);
-      expect(columnsOf(chinese[0].markers, range(1, 16))).toBe(3);
+      expect(columnsOf(itemAt(chinese, 0).markers, range(1, 16))).toBe(3);
     });
 
     it('carries columns over a page break with every marker once and in order', async () => {
-      const notes = Array.from({ length: 70 }, (_, index) => ['A', 'Go', 'Save', 'Edit it', 'Open menu', '搜尋框', 'Open the account settings page now'][index % 7]);
+      const notes = Array.from({ length: 70 }, (_, index) => itemAt(['A', 'Go', 'Save', 'Edit it', 'Open menu', '搜尋框', 'Open the account settings page now'], index % 7));
       const pages = await laidOutMarkers(notes);
 
       expect(pages.length).toBeGreaterThan(1);
@@ -316,7 +317,7 @@ describe('generateProjectPdf', () => {
 
     const read = await readPdf(await generateProjectPdf([entry('step-1', 1, description)], { title: 'T' }));
 
-    const lines = read.pages[0].lines.filter((line) => line.includes('documentation'));
+    const lines = itemAt(read.pages, 0).lines.filter((line) => line.includes('documentation'));
     expect(lines.length).toBeGreaterThan(1);
     for (const line of lines) expect(line).toMatch(/documentation( documentation)*$/);
     expect(lines.join(' ').match(/documentation/g)).toHaveLength(24);
@@ -327,7 +328,7 @@ describe('generateProjectPdf', () => {
 
     const read = await readPdf(await generateProjectPdf([entry('step-1', 1, description)], { title: 'T' }));
 
-    const lines = read.pages[0].lines.filter((line) => line.includes('點擊') || line.includes('頁面'));
+    const lines = itemAt(read.pages, 0).lines.filter((line) => line.includes('點擊') || line.includes('頁面'));
     expect(lines.length).toBeGreaterThan(1);
     expect(lines.join('').replace(/\s/g, '')).toContain(description);
   });
@@ -336,7 +337,7 @@ describe('generateProjectPdf', () => {
     const read = await readPdf(await generateProjectPdf([entry('step-1', 1, 'Rocket 🚀 简体字 한국어')], { title: 'T' }));
 
     expect(read.pages).toHaveLength(1);
-    expect(read.pages[0].lines.join('\n')).toContain('Rocket');
+    expect(itemAt(read.pages, 0).lines.join('\n')).toContain('Rocket');
   });
 
   describe('structure and navigation', () => {
@@ -351,7 +352,7 @@ describe('generateProjectPdf', () => {
     it('tags the document: headings, paragraphs, lists and figures in reading order', async () => {
       const read = await readPdf(await generateProjectPdf(project(), { title: '指南', description: '說明', sections }));
 
-      const [first, second, third] = read.structure.map((page) => page[0].children.map((node) => [node.role, node.text]));
+      const [first, second, third] = read.structure.map((page) => itemAt(page, 0).children.map((node) => [node.role, node.text]));
       expect(first).toEqual([['H1', '指南'], ['P', '說明'], ['H2', '1. 開啟設定'], ['Figure', '']]);
       expect(second).toEqual([['H2', '第一章 開始'], ['H3', '2. Snapshot'], ['Figure', ''], ['L', '1. 點這裡2. Then here']]);
       expect(third).toEqual([['H3', '3. 完成'], ['Figure', '']]);
@@ -360,7 +361,7 @@ describe('generateProjectPdf', () => {
     it('structures a list as items with a label and a body', async () => {
       const read = await readPdf(await generateProjectPdf(project(), { title: 'T', sections }));
 
-      const list = flat(read.structure[1]).find((node) => node.role === 'L')!;
+      const list = flat(itemAt(read.structure, 1)).find((node) => node.role === 'L')!;
       // pdf.js attaches the space after a label to whatever follows it, so compare trimmed.
       expect(list.children.map((item) => [item.role, item.children.map((part) => [part.role, part.text.trim()])])).toEqual([
         ['LI', [['Lbl', '1.'], ['LBody', '點這裡']]],
@@ -417,7 +418,7 @@ describe('generateProjectPdf', () => {
 
       expect(read.pages).toHaveLength(5);
       expect(read.outline).toHaveLength(1);
-      expect(read.outline[0].items).toHaveLength(5);
+      expect(itemAt(read.outline, 0).items).toHaveLength(5);
       for (const page of read.structure) expect(flat(page).some((node) => node.role === 'Figure')).toBe(true);
     });
   });

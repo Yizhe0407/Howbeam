@@ -5,6 +5,7 @@ import { hasRoomFor, IMAGE_ITEM_LIMITS, itemRoom, nextStepNumber, reorderItem, r
 import { applyStylePatch, DEFAULT_IMAGE_EDIT_STYLE, STYLE_FIELDS, styleOfItem } from '@/lib/editor/image-edit-style';
 import { constrainDragEnd, imageEditTool, IMAGE_EDIT_TOOLS, toolForShortcut } from '@/lib/editor/image-edit-tools';
 import { isValidImageEdit } from '@/lib/storage/image-edit-model';
+import { itemAt } from '../setup/item-at';
 
 const size = { width: 400, height: 300 };
 
@@ -93,10 +94,10 @@ describe('clipboard and layer order', () => {
   it('pastes copies with new ids, offset, inside the image, and the next marker number', () => {
     const { items, pasted } = pasteItems([marker('a', 1), marker('b', 2)], [marker('a', 1)], 16, size);
     expect(pasted).toHaveLength(1);
-    expect(pasted[0].id).not.toBe('a');
+    expect(itemAt(pasted, 0).id).not.toBe('a');
     expect(pasted[0]).toMatchObject({ kind: 'step', number: 3, center: { x: 66, y: 66 } });
     expect(items).toHaveLength(3);
-    const edge = pasteItems([], [{ ...rect, bounds: { x: 390, y: 290, width: 10, height: 10 } } as ImageEditItem], 16, size).pasted[0];
+    const edge = itemAt(pasteItems([], [{ ...rect, bounds: { x: 390, y: 290, width: 10, height: 10 } } as ImageEditItem], 16, size).pasted, 0);
     expect(edge.kind === 'rect' && edge.bounds.x + edge.bounds.width).toBeLessThanOrEqual(size.width);
   });
 

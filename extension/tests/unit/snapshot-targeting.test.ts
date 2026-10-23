@@ -22,6 +22,7 @@ import {
   readScrollSnapshot,
 } from '@/lib/capture/scroll-snapshot';
 import { snapshotRectKey } from '@/lib/recording/snapshot-shield-protocol';
+import { itemAt } from '../setup/item-at';
 
 /** jsdom performs no layout, so scroll geometry is stubbed per element. */
 function makeScrollable(
@@ -397,7 +398,7 @@ describe('replayElementClick', () => {
     replayElementClick(rect);
 
     expect(seen).toHaveLength(1);
-    expect(seen[0].bubbles).toBe(true);
-    expect(seen[0].composed).toBe(true);
+    expect(itemAt(seen, 0).bubbles).toBe(true);
+    expect(itemAt(seen, 0).composed).toBe(true);
   });
 });

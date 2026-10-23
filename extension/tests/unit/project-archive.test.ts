@@ -16,6 +16,7 @@ import {
 } from '@/lib/export/project-archive-contract';
 import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
 import { importProjectArchive } from '@/lib/export/project-archive-import';
+import { firstItems, itemAt, valueAt } from '../setup/item-at';
 
 function pngBlob(width = 2, height = 2): Blob {
   const bytes = new Uint8Array(24);
@@ -58,6 +59,7 @@ interface OpenArchive {
 
 async function openArchive(blob: Blob): Promise<OpenArchive> {
   const { [ARCHIVE_MANIFEST_PATH]: manifest, ...files } = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+  if (!manifest) throw new Error('The archive has no manifest.');
   return { manifest: JSON.parse(strFromU8(manifest)), files };
 }
 
@@ -124,28 +126,28 @@ describe('project archive', () => {
     );
     // Screenshots are stored as their original bytes, not re-encoded.
     const [pngShot] = manifest.screenshots;
-    expect(Array.from(files[archiveScreenshotPath(pngShot.id, pngShot.mediaType)])).toEqual(await blobBytes(ordinary.screenshotBlob));
+    expect(Array.from(valueAt(files, archiveScreenshotPath(pngShot.id, pngShot.mediaType)))).toEqual(await blobBytes(ordinary.screenshotBlob));
 
     const { steps: restored } = await importProjectArchive(archive);
     const expected = [ordinary, anchor, annotation];
     expect(restored.map((step) => step.id)).not.toEqual(expected.map((step) => step.id));
     expect(new Set(restored.map((step) => step.sessionId)).size).toBe(1);
-    expect(restored[1].groupId).toBe(restored[1].id);
-    expect(restored[2].groupId).toBe(restored[1].id);
+    expect(itemAt(restored, 1).groupId).toBe(itemAt(restored, 1).id);
+    expect(itemAt(restored, 2).groupId).toBe(itemAt(restored, 1).id);
     for (let index = 0; index < expected.length; index += 1) {
       expect(restored[index]).toMatchObject({
-        order: expected[index].order,
-        bounds: expected[index].bounds,
-        devicePixelRatio: expected[index].devicePixelRatio,
-        description: expected[index].description,
-        url: expected[index].url,
-        timestamp: expected[index].timestamp,
+        order: itemAt(expected, index).order,
+        bounds: itemAt(expected, index).bounds,
+        devicePixelRatio: itemAt(expected, index).devicePixelRatio,
+        description: itemAt(expected, index).description,
+        url: itemAt(expected, index).url,
+        timestamp: itemAt(expected, index).timestamp,
       });
-      expect(await blobBytes(restored[index].screenshotBlob)).toEqual(await blobBytes(expected[index].screenshotBlob));
-      expect(restored[index].screenshotBlob?.type).toBe(expected[index].screenshotBlob?.type);
-      if (expected[index].screenshotBlob) expect(restored[index].screenshotBlob).not.toBe(expected[index].screenshotBlob);
+      expect(await blobBytes(itemAt(restored, index).screenshotBlob)).toEqual(await blobBytes(itemAt(expected, index).screenshotBlob));
+      expect(itemAt(restored, index).screenshotBlob?.type).toBe(itemAt(expected, index).screenshotBlob?.type);
+      if (itemAt(expected, index).screenshotBlob) expect(itemAt(restored, index).screenshotBlob).not.toBe(itemAt(expected, index).screenshotBlob);
     }
-    expect(restored[0].description).toContain('onerror=');
+    expect(itemAt(restored, 0).description).toContain('onerror=');
     expect((globalThis as { executed?: boolean }).executed).toBeUndefined();
   });
 
@@ -162,9 +164,9 @@ describe('project archive', () => {
     expect(manifest.steps[2].screenshotId).not.toBe(manifest.steps[0].screenshotId);
 
     const { steps } = await importProjectArchive(archive);
-    expect(await blobBytes(steps[0].screenshotBlob)).toEqual(await blobBytes(first.screenshotBlob));
-    expect(await blobBytes(steps[1].screenshotBlob)).toEqual(await blobBytes(first.screenshotBlob));
-    expect(await blobBytes(steps[2].screenshotBlob)).toEqual(await blobBytes(other.screenshotBlob));
+    expect(await blobBytes(itemAt(steps, 0).screenshotBlob)).toEqual(await blobBytes(first.screenshotBlob));
+    expect(await blobBytes(itemAt(steps, 1).screenshotBlob)).toEqual(await blobBytes(first.screenshotBlob));
+    expect(await blobBytes(itemAt(steps, 2).screenshotBlob)).toEqual(await blobBytes(other.screenshotBlob));
   });
 
   it('serializes every field declared in STEP_KEYS instead of silently dropping it', async () => {
@@ -206,8 +208,8 @@ describe('project archive', () => {
     const edited = makeStep({ id: 'edited', imageEditRevision: 7 });
     const plain = makeStep({ id: 'plain', order: 1 });
     const { steps } = await importProjectArchive(await exportProjectArchive([edited, plain]));
-    expect(steps[0].imageEditRevision).toBe(7);
-    expect(steps[1].imageEditRevision).toBeUndefined();
+    expect(itemAt(steps, 0).imageEditRevision).toBe(7);
+    expect(itemAt(steps, 1).imageEditRevision).toBeUndefined();
 
     const malformed = await archiveObject([edited]);
     malformed.manifest.steps[0].imageEditRevision = -1;
@@ -258,7 +260,7 @@ describe('project archive', () => {
     ]);
 
     const imported = await importProjectArchive(pack(archive));
-    const [remappedFirst, remappedAnchor, remappedAnnotation, remappedLast] = imported.steps;
+    const [remappedFirst, remappedAnchor, remappedAnnotation, remappedLast] = firstItems(imported.steps, 4);
     expect(imported.version).toBe(PROJECT_ARCHIVE_VERSION);
     expect(imported.metadata.title).toBe('Safe project');
     expect(imported.metadata.description).toBe('Local backup');
@@ -295,7 +297,7 @@ describe('project archive', () => {
     const imported = await importProjectArchive(pack(archive));
 
     expect(imported.metadata.sections).toEqual([
-      { id: 'winner', title: 'Winner', startEntryId: imported.steps[0].id },
+      { id: 'winner', title: 'Winner', startEntryId: itemAt(imported.steps, 0).id },
     ]);
   });
 
@@ -420,9 +422,10 @@ describe('project archive', () => {
 
   it('rejects screenshots that do not match the manifest, unsafe image types, and unused screenshots', async () => {
     const tampered = await archiveObject();
-    const [path] = Object.keys(tampered.files);
-    tampered.files[path] = new Uint8Array(tampered.files[path]);
-    tampered.files[path][23] ^= 1;
+    const path = itemAt(Object.keys(tampered.files), 0);
+    const bytes = new Uint8Array(valueAt(tampered.files, path));
+    bytes[23] = itemAt(bytes, 23) ^ 1;
+    tampered.files[path] = bytes;
     await expect(importProjectArchive(pack(tampered))).rejects.toMatchObject({ code: 'INVALID_BLOB' });
 
     const wrongSize = await archiveObject();
@@ -527,13 +530,13 @@ describe('project archive', () => {
     it('round-trips text, arrows, boxes, ellipses and numbered markers on the image owner', async () => {
       const step = makeStep({ id: 'drawn', screenshotBlob: pngBlob(4, 4), imageEdits: edits });
       const { steps } = await importProjectArchive(await exportProjectArchive([step]));
-      expect(steps[0].imageEdits).toEqual(edits);
+      expect(itemAt(steps, 0).imageEdits).toEqual(edits);
     });
 
     it('round-trips a crop and rejects a malformed one', async () => {
       const crop = { x: 5, y: 6, width: 70, height: 40 };
       const { steps } = await importProjectArchive(await exportProjectArchive([makeStep({ id: 'cropped', screenshotBlob: pngBlob(4, 4), crop })]));
-      expect(steps[0].crop).toEqual(crop);
+      expect(itemAt(steps, 0).crop).toEqual(crop);
 
       const archive = await archiveObject([makeStep({ id: 'cropped', screenshotBlob: pngBlob(4, 4), crop })]);
       archive.manifest.steps[0].crop = { x: 0, y: 0, width: 0, height: 5 };
@@ -549,13 +552,13 @@ describe('project archive', () => {
       ['a non-finite arrow point', { ...edits[1], to: { x: 'far', y: 1 } }],
       ['an arrow with bounds fields', { ...edits[1], bounds: { x: 0, y: 0, width: 1, height: 1 } }],
     ])('rejects %s', async (_name, bad) => {
-      const archive = await archiveObject([makeStep({ id: 'drawn', screenshotBlob: pngBlob(4, 4), imageEdits: [edits[2]] })]);
+      const archive = await archiveObject([makeStep({ id: 'drawn', screenshotBlob: pngBlob(4, 4), imageEdits: [itemAt(edits, 2)] })]);
       archive.manifest.steps[0].imageEdits = [bad];
       await expect(importProjectArchive(pack(archive))).rejects.toBeInstanceOf(ProjectArchiveError);
     });
 
     it('rejects duplicate ids and too many edits', async () => {
-      const archive = await archiveObject([makeStep({ id: 'drawn', screenshotBlob: pngBlob(4, 4), imageEdits: [edits[2]] })]);
+      const archive = await archiveObject([makeStep({ id: 'drawn', screenshotBlob: pngBlob(4, 4), imageEdits: [itemAt(edits, 2)] })]);
       archive.manifest.steps[0].imageEdits = [edits[2], edits[2]];
       await expect(importProjectArchive(pack(archive))).rejects.toMatchObject({ code: 'DUPLICATE_ID' });
 

@@ -15,6 +15,7 @@ import {
   stopRecording,
   targetCenter,
 } from '../support/harness';
+import { itemAt } from '../../setup/item-at';
 
 declare const chrome: {
   storage: {
@@ -543,8 +544,8 @@ test.describe('editor workflows', () => {
 
     const steps = await readSteps(popupPage);
     expect(steps).toHaveLength(2);
-    expect(steps[1].sessionId).toBe(steps[0].sessionId);
-    expect(steps[1].order).toBeGreaterThan(steps[0].order);
+    expect(itemAt(steps, 1).sessionId).toBe(itemAt(steps, 0).sessionId);
+    expect(itemAt(steps, 1).order).toBeGreaterThan(itemAt(steps, 0).order);
   });
 
   test('undoes direct entry deletion and keeps confirmation for session reset', async ({

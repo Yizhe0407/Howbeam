@@ -8,6 +8,7 @@ import {
   useImageEditSession,
 } from '@/lib/editor/image-edit-session';
 import type { ImageEditItem } from '@/lib/editor/image-edit-items';
+import { itemAt } from '../setup/item-at';
 
 const item = (id: string, x = 0): ImageEditItem => ({ id, kind: 'redaction', bounds: { x, y: 0, width: 10, height: 10 } });
 
@@ -48,7 +49,7 @@ describe('useImageEditSession', () => {
 
     await act(async () => { await vi.advanceTimersByTimeAsync(500); });
     expect(persist).toHaveBeenCalledTimes(1);
-    expect(persist.mock.calls[0][0]).toHaveLength(2);
+    expect(itemAt(persist.mock.calls, 0)[0]).toHaveLength(2);
   });
 
   it('never runs two saves at once and writes edits made during a save', async () => {

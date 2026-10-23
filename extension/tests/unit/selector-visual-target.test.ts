@@ -4,6 +4,7 @@ import { deepElementFromPoint, isElementVisuallyUnavailable } from '@/lib/captur
 import { isInteractiveElement } from '@/lib/capture/selector/interactive-element';
 import { ACTIVATION_TARGETING_POLICY, findVisualTargetCandidatesAtPoint, resolveVisualTargetAtPoint, selectVisualTargetCandidate } from '@/lib/capture/selector/visual-target';
 import { makeVisible, resetSelectorDom } from '../setup/selector-dom';
+import { itemAt } from '../setup/item-at';
 
 afterEach(resetSelectorDom);
 describe('findVisualTargetCandidatesAtPoint', () => {
@@ -39,7 +40,7 @@ describe('findVisualTargetCandidatesAtPoint', () => {
     const targets = findVisualTargetCandidatesAtPoint(label, 40, 30);
 
     expect(targets.candidates).toHaveLength(1);
-    expect(targets.candidates[0].element).toBe(label);
+    expect(itemAt(targets.candidates, 0).element).toBe(label);
     expect(selectVisualTargetCandidate(targets)?.element).toBe(label);
   });
 
@@ -54,7 +55,7 @@ describe('findVisualTargetCandidatesAtPoint', () => {
     const targets = findVisualTargetCandidatesAtPoint(label, 40, 30);
 
     expect(targets.candidates).toHaveLength(1);
-    expect(targets.candidates[0].element).toBe(button);
+    expect(itemAt(targets.candidates, 0).element).toBe(button);
     expect(selectVisualTargetCandidate(targets)?.element).toBe(button);
   });
 
@@ -158,7 +159,7 @@ describe('findVisualTargetCandidatesAtPoint', () => {
     const targets = findVisualTargetCandidatesAtPoint(child, 30, 30, { width: 400, height: 300 });
 
     expect(targets.candidates.map((candidate) => candidate.element)).toEqual([child, clip]);
-    expect(targets.candidates[0].bounds).toEqual({ x: 20, y: 20, width: 120, height: 60 });
+    expect(itemAt(targets.candidates, 0).bounds).toEqual({ x: 20, y: 20, width: 120, height: 60 });
   });
 
   it('collapses identical child and control boxes to the semantic control', () => {
@@ -172,7 +173,7 @@ describe('findVisualTargetCandidatesAtPoint', () => {
     const targets = findVisualTargetCandidatesAtPoint(label, 35, 30);
 
     expect(targets.candidates).toHaveLength(1);
-    expect(targets.candidates[0].element).toBe(button);
+    expect(itemAt(targets.candidates, 0).element).toBe(button);
   });
 
   it('skips invisible descendants and decorative SVG geometry', () => {
@@ -184,7 +185,7 @@ describe('findVisualTargetCandidatesAtPoint', () => {
     makeVisible(paragraph, { x: 20, y: 20, width: 160, height: 50 });
     makeVisible(hiddenText, { x: 30, y: 25, width: 80, height: 20 });
 
-    expect(findVisualTargetCandidatesAtPoint(hiddenText, 35, 30).candidates[0].element).toBe(paragraph);
+    expect(itemAt(findVisualTargetCandidatesAtPoint(hiddenText, 35, 30).candidates, 0).element).toBe(paragraph);
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -193,10 +194,10 @@ describe('findVisualTargetCandidatesAtPoint', () => {
     makeVisible(svg, { x: 20, y: 20, width: 40, height: 40 });
     makeVisible(path, { x: 25, y: 25, width: 20, height: 20 });
 
-    expect(findVisualTargetCandidatesAtPoint(path, 30, 30).candidates[0].element).toBe(svg);
+    expect(itemAt(findVisualTargetCandidatesAtPoint(path, 30, 30).candidates, 0).element).toBe(svg);
 
     path.setAttribute('role', 'button');
-    expect(findVisualTargetCandidatesAtPoint(path, 30, 30).candidates[0].element).toBe(path);
+    expect(itemAt(findVisualTargetCandidatesAtPoint(path, 30, 30).candidates, 0).element).toBe(path);
   });
 
   it('follows the composed tree through assigned slots', () => {
@@ -231,7 +232,7 @@ describe('findVisualTargetCandidatesAtPoint', () => {
       ],
     });
 
-    expect(findVisualTargetCandidatesAtPoint(text, 30, 60).candidates[0].bounds).toEqual({
+    expect(itemAt(findVisualTargetCandidatesAtPoint(text, 30, 60).candidates, 0).bounds).toEqual({
       x: 20,
       y: 50,
       width: 120,
@@ -274,12 +275,12 @@ describe('shadow and occlusion aware hit testing', () => {
     });
 
     const viewport = { width: 1024, height: 768 };
-    expect(findVisualTargetCandidatesAtPoint(overlay, 30, 30, viewport).candidates[0].element).toBe(button);
+    expect(itemAt(findVisualTargetCandidatesAtPoint(overlay, 30, 30, viewport).candidates, 0).element).toBe(button);
 
     // A covering element that shows its own content is real content: it stays
     // the target instead of being treated as a shim.
     overlay.textContent = '請先同意條款';
-    expect(findVisualTargetCandidatesAtPoint(overlay, 30, 30, viewport).candidates[0].element).toBe(overlay);
+    expect(itemAt(findVisualTargetCandidatesAtPoint(overlay, 30, 30, viewport).candidates, 0).element).toBe(overlay);
   });
 
   it('does not pierce a blank child whose exclusive overlay ancestor paints', () => {
@@ -309,7 +310,7 @@ describe('shadow and occlusion aware hit testing', () => {
     );
 
     expect(targets.candidates.some((candidate) => candidate.element === button)).toBe(false);
-    expect(targets.candidates[0].element).toBe(hitSurface);
+    expect(itemAt(targets.candidates, 0).element).toBe(hitSurface);
   });
 
   it('does not pierce an otherwise blank branch whose pointer-events-none descendant paints', () => {
@@ -341,7 +342,7 @@ describe('shadow and occlusion aware hit testing', () => {
     );
 
     expect(targets.candidates.some((candidate) => candidate.element === button)).toBe(false);
-    expect(targets.candidates[0].element).toBe(overlay);
+    expect(itemAt(targets.candidates, 0).element).toBe(overlay);
   });
 
   it('does not pierce a branch painted by a generated backdrop', () => {
@@ -376,7 +377,7 @@ describe('shadow and occlusion aware hit testing', () => {
     );
 
     expect(targets.candidates.some((candidate) => candidate.element === button)).toBe(false);
-    expect(targets.candidates[0].element).toBe(overlay);
+    expect(itemAt(targets.candidates, 0).element).toBe(overlay);
   });
 
   it('does not pierce fixed generated paint outside its originating element box', () => {
@@ -419,7 +420,7 @@ describe('shadow and occlusion aware hit testing', () => {
     );
 
     expect(targets.candidates.some((candidate) => candidate.element === button)).toBe(false);
-    expect(targets.candidates[0].element).toBe(overlay);
+    expect(itemAt(targets.candidates, 0).element).toBe(overlay);
   });
 
   it('does not treat positioned generated paint elsewhere as covering the pointer', () => {
@@ -459,7 +460,7 @@ describe('shadow and occlusion aware hit testing', () => {
       { width: 1024, height: 768 },
     );
 
-    expect(targets.candidates[0].element).toBe(button);
+    expect(itemAt(targets.candidates, 0).element).toBe(button);
   });
 
   it('pierces a blank overlay branch even when its shared app ancestor paints', () => {
@@ -488,7 +489,7 @@ describe('shadow and occlusion aware hit testing', () => {
       { width: 1024, height: 768 },
     );
 
-    expect(targets.candidates[0].element).toBe(button);
+    expect(itemAt(targets.candidates, 0).element).toBe(button);
   });
 
   it('does not pierce a painted non-interactive layer below a blank shim', () => {
@@ -514,7 +515,7 @@ describe('shadow and occlusion aware hit testing', () => {
     );
 
     expect(targets.candidates.some((candidate) => candidate.element === button)).toBe(false);
-    expect(targets.candidates[0].element).toBe(shim);
+    expect(itemAt(targets.candidates, 0).element).toBe(shim);
   });
 
   it('pierces a transparent hit-test shim for annotation but preserves it for activation', () => {
@@ -541,8 +542,8 @@ describe('shadow and occlusion aware hit testing', () => {
       ACTIVATION_TARGETING_POLICY,
     );
 
-    expect(annotationTargets.candidates[0].element).toBe(button);
-    expect(activationTargets.candidates[0].element).toBe(overlay);
+    expect(itemAt(annotationTargets.candidates, 0).element).toBe(button);
+    expect(itemAt(activationTargets.candidates, 0).element).toBe(overlay);
     expect(styleSpy.mock.calls.filter(([element]) => element === overlay)).toHaveLength(2);
   });
 
@@ -569,8 +570,8 @@ describe('shadow and occlusion aware hit testing', () => {
       ACTIVATION_TARGETING_POLICY,
     );
 
-    expect(annotationTargets.candidates[0].element).toBe(backdrop);
-    expect(activationTargets.candidates[0].element).toBe(backdrop);
+    expect(itemAt(annotationTargets.candidates, 0).element).toBe(backdrop);
+    expect(itemAt(activationTargets.candidates, 0).element).toBe(backdrop);
   });
 
   it('does not click through a small painted or accessibly named surface', () => {
@@ -587,25 +588,25 @@ describe('shadow and occlusion aware hit testing', () => {
 
     overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
     expect(
-      findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 }).candidates[0].element,
+      itemAt(findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 }).candidates, 0).element,
     ).toBe(overlay);
 
     overlay.style.backgroundColor = 'transparent';
     overlay.setAttribute('aria-label', '拖曳區域');
     expect(
-      findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 }).candidates[0].element,
+      itemAt(findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 }).candidates, 0).element,
     ).toBe(overlay);
 
     overlay.removeAttribute('aria-label');
     overlay.setAttribute('role', 'region');
     expect(
-      findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 }).candidates[0].element,
+      itemAt(findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 }).candidates, 0).element,
     ).toBe(overlay);
 
     overlay.removeAttribute('role');
     overlay.style.filter = 'blur(2px)';
     expect(
-      findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 }).candidates[0].element,
+      itemAt(findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 }).candidates, 0).element,
     ).toBe(overlay);
   });
 
@@ -624,7 +625,7 @@ describe('shadow and occlusion aware hit testing', () => {
 
     const targets = findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 });
 
-    expect(targets.candidates[0].element).toBe(overlay);
+    expect(itemAt(targets.candidates, 0).element).toBe(overlay);
   });
 
   it('keeps the topmost chain when the stack holds no control', () => {
@@ -640,7 +641,7 @@ describe('shadow and occlusion aware hit testing', () => {
 
     const targets = findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 });
 
-    expect(targets.candidates[0].element).toBe(overlay);
+    expect(itemAt(targets.candidates, 0).element).toBe(overlay);
   });
 });
 
@@ -659,7 +660,7 @@ describe('selectVisualTargetCandidate', () => {
     const targets = findVisualTargetCandidatesAtPoint(text, 40, 40);
 
     expect(selectVisualTargetCandidate(targets)?.element).toBe(
-      targets.candidates[targets.defaultIndex].element,
+      itemAt(targets.candidates, targets.defaultIndex).element,
     );
   });
 

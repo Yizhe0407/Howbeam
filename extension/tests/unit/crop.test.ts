@@ -10,6 +10,7 @@ import {
 import { snapCrop } from '@/lib/editor/image-edit-crop';
 import { CROP_ITEM_ID, appendItem, splitItems, toItems, type ImageEditItem } from '@/lib/editor/image-edit-items';
 import type { ImageEdit } from '@/lib/storage/image-edit-model';
+import { itemAt } from '../setup/item-at';
 
 describe('cropToPixels', () => {
   it('snaps the crop to whole device pixels', () => {
@@ -34,8 +35,8 @@ describe('crop offset', () => {
   it('shifts bounds, annotations, masks and every kind of edit by the crop origin', () => {
     expect(offsetBounds({ x: 120, y: 70, width: 10, height: 20 }, origin)).toEqual({ x: 20, y: 20, width: 10, height: 20 });
     expect(offsetBounds(null, origin)).toBeNull();
-    expect(offsetAnnotations([{ bounds: { x: 110, y: 60, width: 5, height: 5 }, order: 1 }], origin)[0].bounds).toEqual({ x: 10, y: 10, width: 5, height: 5 });
-    expect(offsetRedactions([{ id: 'm', kind: 'solid', bounds: { x: 100, y: 50, width: 8, height: 8 } }], origin)[0].bounds).toEqual({ x: 0, y: 0, width: 8, height: 8 });
+    expect(itemAt(offsetAnnotations([{ bounds: { x: 110, y: 60, width: 5, height: 5 }, order: 1 }], origin), 0).bounds).toEqual({ x: 10, y: 10, width: 5, height: 5 });
+    expect(itemAt(offsetRedactions([{ id: 'm', kind: 'solid', bounds: { x: 100, y: 50, width: 8, height: 8 } }], origin), 0).bounds).toEqual({ x: 0, y: 0, width: 8, height: 8 });
 
     const edits: ImageEdit[] = [
       { id: 'a', kind: 'arrow', from: { x: 110, y: 60 }, to: { x: 210, y: 160 }, width: 4, color: '#ff4747' },

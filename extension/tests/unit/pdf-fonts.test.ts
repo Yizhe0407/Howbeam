@@ -8,6 +8,7 @@ import { PdfWriter } from '@/lib/export/pdf/pdf-render';
 import { DEFAULT_PDF_EXPORT_SETTINGS } from '@/lib/export/pdf-export-settings';
 import * as fontkit from 'fontkit';
 import { describe, expect, it } from 'vitest';
+import { firstItems } from '../setup/item-at';
 
 const root = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const fontDirectory = path.join(root, 'public/fonts/pdf');
@@ -77,7 +78,7 @@ describe('PDF export fonts', () => {
   });
 
   it('has a true Regular and a true Bold, both static', () => {
-    const [regular, bold] = ['Regular', 'Bold'].map((style) => open(`HowbeamSansTC-${style}.ttf`));
+    const [regular, bold] = firstItems(['Regular', 'Bold'].map((style) => open(`HowbeamSansTC-${style}.ttf`)), 2);
 
     expect(regular['OS/2'].usWeightClass).toBe(400);
     expect(bold['OS/2'].usWeightClass).toBe(700);

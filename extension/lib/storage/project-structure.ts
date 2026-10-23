@@ -253,8 +253,7 @@ function rebaseSectionsAfterDelete(
     .filter((item): item is { section: ProjectSection; index: number } => item.index !== undefined)
     .sort((left, right) => left.index - right.index);
   const rebased: ProjectSection[] = [];
-  for (let index = 0; index < orderedSections.length; index += 1) {
-    const current = orderedSections[index];
+  for (const [index, current] of orderedSections.entries()) {
     const end = orderedSections[index + 1]?.index ?? previousEntryIds.length;
     const nextStart = previousEntryIds.slice(current.index, end).find((id) => survivingEntryIds.has(id));
     if (nextStart) rebased.push({ ...current.section, startEntryId: nextStart });
@@ -331,8 +330,8 @@ export async function deleteProjectAnnotationAtomically(
 ): Promise<DeleteProjectAnnotationResult> {
   return runProjectStructureMutation(sessionId, expectedContentRevision, async (tx, structure) => {
     const group = requireSnapshotGroup(structure.entries, anchorId);
-    const annotationIndex = group.annotations.findIndex((annotation) => annotation.id === annotationId);
-    if (annotationIndex < 0) {
+    const removed = group.annotations.find((annotation) => annotation.id === annotationId);
+    if (!removed) {
       throw new ProjectStructureIntegrityError('Annotation does not belong to the requested snapshot group.');
     }
 
@@ -353,13 +352,13 @@ export async function deleteProjectAnnotationAtomically(
         structure.entryIds,
         survivingIds,
       );
-      deletedSteps = [group.anchor, group.annotations[annotationIndex]];
+      deletedSteps = [group.anchor, removed];
     } else {
       const annotations = group.annotations.filter((annotation) => annotation.id !== annotationId);
       nextEntries = structure.entries.map((entry): StepEntry => (
         entryId(entry) === anchorId ? { kind: 'group', anchor: group.anchor, annotations } : entry
       ));
-      deletedSteps = [group.annotations[annotationIndex]];
+      deletedSteps = [removed];
     }
 
     const result = await commitProjectStructure(

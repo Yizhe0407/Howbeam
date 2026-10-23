@@ -29,8 +29,14 @@ const NO_LINE_END = new Set('（［｛〔〈《「『【〖〘〝‘“([{');
 
 const CJK = /[\u2e80-\u9fff\uf900-\ufaff\ufe30-\ufe4f\uff00-\uffef\u3000-\u303f]/u;
 
-const startsWithNoLineStart = (text: string) => text !== '' && NO_LINE_START.has([...text][0]);
-const endsWithNoLineEnd = (text: string) => text !== '' && NO_LINE_END.has([...text].at(-1)!);
+const startsWithNoLineStart = (text: string) => {
+  const [first] = text;
+  return first !== undefined && NO_LINE_START.has(first);
+};
+const endsWithNoLineEnd = (text: string) => {
+  const last = [...text].at(-1);
+  return last !== undefined && NO_LINE_END.has(last);
+};
 
 /**
  * Chunks a paragraph into the units a line may break between: a Latin word (and

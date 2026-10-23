@@ -12,13 +12,14 @@ function isStartOfFrame(marker: number): boolean {
 export function readJpegSize(bytes: Uint8Array): JpegSize {
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) throw new Error('Not a JPEG image.');
 
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let offset = 2;
   while (offset + 4 <= bytes.length) {
     if (bytes[offset] !== 0xff) {
       offset += 1;
       continue;
     }
-    const marker = bytes[offset + 1];
+    const marker = view.getUint8(offset + 1);
     if (marker === 0xff) {
       offset += 1;
       continue;
@@ -28,11 +29,11 @@ export function readJpegSize(bytes: Uint8Array): JpegSize {
       offset += 2;
       continue;
     }
-    const length = (bytes[offset + 2] << 8) | bytes[offset + 3];
+    const length = view.getUint16(offset + 2);
     if (isStartOfFrame(marker)) {
       if (offset + 9 > bytes.length) break;
-      const height = (bytes[offset + 5] << 8) | bytes[offset + 6];
-      const width = (bytes[offset + 7] << 8) | bytes[offset + 8];
+      const height = view.getUint16(offset + 5);
+      const width = view.getUint16(offset + 7);
       if (width > 0 && height > 0) return { width, height };
       break;
     }

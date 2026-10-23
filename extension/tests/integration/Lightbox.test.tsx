@@ -48,7 +48,7 @@ describe('Lightbox', () => {
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
     fireEvent.keyDown(window, { key: 'Escape' });
 
-    expect(onNavigate.mock.calls).toEqual([[2], [0]]);
+    expect(onNavigate.mock.calls).toEqual([[entries[2]], [entries[0]]]);
     expect(onClose).toHaveBeenCalled();
     expect(screen.getByText('2')).toBeTruthy();
   });

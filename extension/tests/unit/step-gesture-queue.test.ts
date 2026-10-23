@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createStepGestureQueue, type StepGesture } from '@/lib/capture/step-gesture-queue';
+import { itemAt } from '../setup/item-at';
 
 /** A start() the test fully controls: resolves only when the test calls
  *  `finish()`, and records every lifecycle event into the shared `log`. */
@@ -63,20 +64,20 @@ describe('createStepGestureQueue', () => {
     for (const e of entries) queue.enqueue(e.entry);
     expect(log).toEqual(['a:start']);
 
-    entries[0].release();
-    entries[0].finish();
+    itemAt(entries, 0).release();
+    itemAt(entries, 0).finish();
     await Promise.resolve();
     await Promise.resolve();
     expect(log).toEqual(['a:start', 'a:release', 'b:start']);
 
-    entries[1].release();
-    entries[1].finish();
+    itemAt(entries, 1).release();
+    itemAt(entries, 1).finish();
     await Promise.resolve();
     await Promise.resolve();
     expect(log).toEqual(['a:start', 'a:release', 'b:start', 'b:release', 'c:start']);
 
-    entries[2].release();
-    entries[2].finish();
+    itemAt(entries, 2).release();
+    itemAt(entries, 2).finish();
     await Promise.resolve();
     await Promise.resolve();
     expect(queue.isBusy()).toBe(false);

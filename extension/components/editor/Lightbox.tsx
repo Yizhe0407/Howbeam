@@ -10,7 +10,7 @@ interface Props {
   entries: StepEntry[];
   index: number | null;
   onClose: () => void;
-  onNavigate: (index: number) => void;
+  onNavigate: (entry: StepEntry) => void;
 }
 
 /** Full-screen preview with prev/next (buttons + arrow keys) across every
@@ -18,21 +18,20 @@ interface Props {
 export default function Lightbox({ entries, index, onClose, onNavigate }: Props) {
   const open = index !== null;
   const entry = index !== null ? entries[index] : null;
-  const hasPrev = index !== null && index > 0;
-  const hasNext = index !== null && index < entries.length - 1;
+  const previous = index !== null ? entries[index - 1] : undefined;
+  const next = index !== null ? entries[index + 1] : undefined;
 
   useEffect(() => {
-    if (!open || index === null) return;
-    const current = index;
+    if (!open) return;
     function handleKey(e: KeyboardEvent) {
       if (e.defaultPrevented || e.isComposing) return;
-      if (e.key === 'ArrowRight' && current < entries.length - 1) {
+      if (e.key === 'ArrowRight' && next) {
         e.preventDefault();
-        onNavigate(current + 1);
+        onNavigate(next);
       }
-      if (e.key === 'ArrowLeft' && current > 0) {
+      if (e.key === 'ArrowLeft' && previous) {
         e.preventDefault();
-        onNavigate(current - 1);
+        onNavigate(previous);
       }
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -41,7 +40,7 @@ export default function Lightbox({ entries, index, onClose, onNavigate }: Props)
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [open, index, entries.length, onNavigate, onClose]);
+  }, [open, previous, next, onNavigate, onClose]);
 
   if (!entry || index === null) return null;
   const privacy = getEntryPrivacyState(entry);
@@ -89,8 +88,8 @@ export default function Lightbox({ entries, index, onClose, onNavigate }: Props)
           variant="outline"
           size="icon"
           className="fixed inset-y-0 left-2 z-50 my-auto size-11 rounded-full disabled:opacity-30 sm:left-6"
-          onClick={() => onNavigate(index - 1)}
-          disabled={!hasPrev}
+          onClick={() => previous && onNavigate(previous)}
+          disabled={!previous}
           aria-label={t().editor.lightbox.previous}
         >
           <ChevronLeft className="size-6" />
@@ -99,8 +98,8 @@ export default function Lightbox({ entries, index, onClose, onNavigate }: Props)
           variant="outline"
           size="icon"
           className="fixed inset-y-0 right-2 z-50 my-auto size-11 rounded-full disabled:opacity-30 sm:right-6"
-          onClick={() => onNavigate(index + 1)}
-          disabled={!hasNext}
+          onClick={() => next && onNavigate(next)}
+          disabled={!next}
           aria-label={t().editor.lightbox.next}
         >
           <ChevronRight className="size-6" />

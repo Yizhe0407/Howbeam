@@ -10,6 +10,7 @@ import {
 } from '@/lib/storage/image-edit-model';
 import { IMAGE_EDIT_LIMITS } from '@/lib/storage/image-edit-model';
 import type { ImageEditStyle, StyleField, StylePatch } from '@/lib/editor/image-edit-style';
+import { hexToRgb } from '@/lib/editor/hsv-color';
 import { cn } from '@/lib/shared/utils';
 import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -190,9 +191,9 @@ export default function ImageEditStylePanel({ fields, style, number, onChange }:
                   label={copy.strokeLabel}
                   value={style.strokeWidth}
                   onSelect={(strokeWidth) => onChange({ strokeWidth })}
-                  options={IMAGE_EDIT_STROKE_WIDTHS.map((value, index) => ({
+                  options={IMAGE_EDIT_STROKE_WIDTHS.map((value) => ({
                     value,
-                    title: copy.strokeWidths[index],
+                    title: copy.strokeWidths[value],
                     content: <span className="w-5 rounded-full bg-current" style={{ height: value }} aria-hidden="true" />,
                   }))}
                 />
@@ -205,7 +206,7 @@ export default function ImageEditStylePanel({ fields, style, number, onChange }:
                   label={copy.fontSizeLabel}
                   value={style.fontSize}
                   onSelect={(fontSize) => onChange({ fontSize })}
-                  options={IMAGE_EDIT_FONT_SIZES.map((value, index) => ({ value, title: copy.fontSizes[index], content: copy.fontSizes[index] }))}
+                  options={IMAGE_EDIT_FONT_SIZES.map((value) => ({ value, title: copy.fontSizes[value], content: copy.fontSizes[value] }))}
                 />
               </Group>
             );
@@ -252,7 +253,7 @@ export default function ImageEditStylePanel({ fields, style, number, onChange }:
                   label={copy.radiusLabel}
                   value={style.markerRadius}
                   onSelect={(markerRadius) => onChange({ markerRadius })}
-                  options={IMAGE_EDIT_MARKER_RADII.map((value, index) => ({ value, title: copy.radii[index], content: copy.radii[index] }))}
+                  options={IMAGE_EDIT_MARKER_RADII.map((value) => ({ value, title: copy.radii[value], content: copy.radii[value] }))}
                 />
               </Group>
             );
@@ -288,8 +289,7 @@ function LookSample({ look, color }: { look: (typeof TEXT_LOOKS)[number]; color:
 }
 
 function isDark(hex: string): boolean {
-  const value = hex.replace('#', '');
-  const [r, g, b] = [0, 2, 4].map((index) => Number.parseInt(value.slice(index, index + 2), 16));
+  const { r, g, b } = hexToRgb(hex);
   return 0.299 * r + 0.587 * g + 0.114 * b < 140;
 }
 

@@ -234,9 +234,10 @@ export default function ImageEditWorkspace({
       PASTE_OFFSET * clipboard.pastes,
       imageSize,
     );
-    if (pasted.length === 0) return;
+    const last = pasted.at(-1);
+    if (!last) return;
     commit(next);
-    setSelectedId(pasted[pasted.length - 1].id);
+    setSelectedId(last.id);
     if (tool !== "select") setTool("select");
   };
   const duplicateSelection = () => {

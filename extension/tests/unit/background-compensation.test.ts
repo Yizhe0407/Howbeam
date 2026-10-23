@@ -3,6 +3,7 @@ import type { RecordingState } from '@/lib/storage/recording-state';
 import { makeRecordingState } from '../setup/recording-state';
 import { flushAsyncWork, importBackground } from '../setup/background-test-utils';
 import { type Step } from '@/lib/storage/models';
+import { itemAt } from '../setup/item-at';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
 
@@ -243,7 +244,7 @@ describe('undo/restore lost-CAS compensation', () => {
     expect(mocks.deleteStep).toHaveBeenCalledWith('step-1');
     expect(mocks.storeStep).toHaveBeenCalledWith(removed);
     const deleteOrder = mocks.deleteStep.mock.invocationCallOrder[0];
-    const addOrder = mocks.storeStep.mock.invocationCallOrder[0];
+    const addOrder = itemAt(mocks.storeStep.mock.invocationCallOrder, 0);
     expect(deleteOrder).toBeLessThan(addOrder);
     // The undo window is over: its persisted copy must be hard-deleted.
     expect(mocks.clearPendingUndoRecord).toHaveBeenCalled();
@@ -274,7 +275,7 @@ describe('undo/restore lost-CAS compensation', () => {
     expect(mocks.storeStep).toHaveBeenCalledWith(record.step);
     expect(mocks.deleteStep).toHaveBeenCalledWith('step-1');
     const addOrder = mocks.storeStep.mock.invocationCallOrder[0];
-    const deleteOrder = mocks.deleteStep.mock.invocationCallOrder[0];
+    const deleteOrder = itemAt(mocks.deleteStep.mock.invocationCallOrder, 0);
     expect(addOrder).toBeLessThan(deleteOrder);
   });
 });

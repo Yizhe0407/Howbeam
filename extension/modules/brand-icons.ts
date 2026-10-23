@@ -13,9 +13,9 @@ export interface BrandArtwork {
 }
 
 function innerMarkup(svg: string, name: string): string {
-  const match = /<svg\b[^>]*\bviewBox="0 0 40 40"[^>]*>([\s\S]*)<\/svg>\s*$/.exec(svg.trim());
-  if (!match) throw new Error(`[brand-icons] ${name} must be a single <svg> with viewBox="0 0 ${ART_VIEWBOX} ${ART_VIEWBOX}"`);
-  return match[1];
+  const inner = /<svg\b[^>]*\bviewBox="0 0 40 40"[^>]*>([\s\S]*)<\/svg>\s*$/.exec(svg.trim())?.[1];
+  if (inner === undefined) throw new Error(`[brand-icons] ${name} must be a single <svg> with viewBox="0 0 ${ART_VIEWBOX} ${ART_VIEWBOX}"`);
+  return inner;
 }
 
 /**

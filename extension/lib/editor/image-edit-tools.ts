@@ -88,7 +88,7 @@ export function constrainDragEnd(tool: ImageEditTool, from: Point, to: Point, si
 }
 
 /** Order here is the order of the toolbar. Add future tools to this list. */
-export const IMAGE_EDIT_TOOLS: readonly ImageEditTool[] = [
+export const IMAGE_EDIT_TOOLS: readonly [ImageEditTool, ...ImageEditTool[]] = [
   {
     id: 'select',
     icon: MousePointer2,

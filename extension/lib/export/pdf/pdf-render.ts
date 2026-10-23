@@ -121,7 +121,7 @@ export class PdfWriter {
     switch (block.kind) {
       case 'heading':
         this.structure.add(this.tagged(`H${block.level}`, () => block.lines.forEach((line) => this.drawText(line))));
-        if (block.outline) this.addBookmark(block.outline, block.lines[0].top * k, page.size.widthPoints);
+        if (block.outline && block.lines[0]) this.addBookmark(block.outline, block.lines[0].top * k, page.size.widthPoints);
         return;
       case 'paragraph':
         this.structure.add(this.tagged('P', () => block.lines.forEach((line) => this.drawText(line))));

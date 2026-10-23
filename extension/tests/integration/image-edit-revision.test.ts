@@ -12,6 +12,7 @@ import { buildStepEntries, type Redaction, type Step, type StepEntry } from '@/l
 import { IMAGE_EDIT_LIMITS, type ImageEdit } from '@/lib/storage/image-edit-model';
 import { closeDatabase } from '@/lib/storage/database';
 import { seedSteps } from '../setup/step-fixtures';
+import { itemAt } from '../setup/item-at';
 import {
   ImageEditsNotStorableError,
   isEntryImageStale,
@@ -48,7 +49,7 @@ async function addStep(step: Step): Promise<void> {
 
 /** What an editor tab holds after loading the project. */
 async function openEntry(sessionId: string): Promise<StepEntry> {
-  return buildStepEntries(await getSteps(sessionId))[0];
+  return itemAt(buildStepEntries(await getSteps(sessionId)), 0);
 }
 
 const mask = (id: string): Redaction => ({ id, kind: 'solid', bounds: { x: 10, y: 10, width: 20, height: 20 } });

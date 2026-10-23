@@ -48,9 +48,10 @@ function encodeBase64FallbackParts(bytes: Uint8Array, signal?: AbortSignal): str
 
   for (let index = 0; index < bytes.length; index += 3) {
     if ((index & 0xffff) === 0) throwIfAborted(signal);
-    const first = bytes[index];
-    const second = index + 1 < bytes.length ? bytes[index + 1] : 0;
-    const third = index + 2 < bytes.length ? bytes[index + 2] : 0;
+    // Bytes past the end count as zero padding.
+    const first = bytes[index] ?? 0;
+    const second = bytes[index + 1] ?? 0;
+    const third = bytes[index + 2] ?? 0;
     const value = (first << 16) | (second << 8) | third;
     chunk += BASE64_ALPHABET[(value >>> 18) & 63];
     chunk += BASE64_ALPHABET[(value >>> 12) & 63];

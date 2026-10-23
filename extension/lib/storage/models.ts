@@ -528,8 +528,8 @@ export function buildCompleteStepEntries(
     if (step.groupId) lastGroupIndex.set(step.groupId, index);
   });
 
-  for (let index = 0; index < sorted.length;) {
-    const step = sorted[index];
+  let index = 0;
+  for (let step = sorted[index]; step; step = sorted[index]) {
     if (seenIds.has(step.id)) throw new ProjectStructureIntegrityError('Project contains duplicate step ids.');
     seenIds.add(step.id);
     if (expectedSessionId && step.sessionId !== expectedSessionId) {
@@ -552,8 +552,7 @@ export function buildCompleteStepEntries(
     const anchor = step as ScreenshotStep;
     const annotations: Step[] = [];
     index += 1;
-    while (index < sorted.length && sorted[index].groupId === groupId) {
-      const annotation = sorted[index];
+    for (let annotation = sorted[index]; annotation?.groupId === groupId; annotation = sorted[index]) {
       if (seenIds.has(annotation.id) || stepRole(annotation) !== 'annotation' || !getEffectiveBounds(annotation)) {
         throw new ProjectStructureIntegrityError('A snapshot group contains an invalid annotation.');
       }

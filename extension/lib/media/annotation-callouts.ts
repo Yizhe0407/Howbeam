@@ -5,14 +5,13 @@ import { distanceToBounds, fitPointInViewport } from './annotation-geometry';
 const BADGE_CLEARANCE = 4;
 
 export function placeOrderedSlots(targets: number[], spacing: number, lo: number, hi: number): number[] {
-  if (targets.length === 0) return [];
   const shifted = targets.map((value, index) => value - index * spacing);
   const pools: { sum: number; weight: number; mean: number }[] = [];
   for (const value of shifted) {
     let sum = value;
     let weight = 1;
-    while (pools.length > 0 && pools[pools.length - 1].mean >= sum / weight) {
-      const previous = pools.pop()!;
+    for (let previous = pools.at(-1); previous && previous.mean >= sum / weight; previous = pools.at(-1)) {
+      pools.pop();
       sum += previous.sum;
       weight += previous.weight;
     }
@@ -24,7 +23,8 @@ export function placeOrderedSlots(targets: number[], spacing: number, lo: number
   }
 
   const min = slots[0];
-  const max = slots[slots.length - 1];
+  const max = slots.at(-1);
+  if (min === undefined || max === undefined) return [];
   const room = hi - lo;
   if (room <= 0) return slots.map(() => (lo + hi) / 2);
   const span = max - min;
@@ -33,7 +33,7 @@ export function placeOrderedSlots(targets: number[], spacing: number, lo: number
   return slots.map((value) => value + shift);
 }
 
-function perimeterCandidates(frame: Bounds): AnnotationPoint[] {
+function perimeterCandidates(frame: Bounds): [AnnotationPoint, ...AnnotationPoint[]] {
   const { x, y, width: w, height: h } = frame;
   return [
     { x: x + w, y }, { x: x + w, y: y + h / 2 }, { x, y: y + h / 2 }, { x, y },
@@ -152,7 +152,12 @@ function calloutAxes(preferredX: number, preferredStartY: number, count: number,
 export function placeGroupCallouts(count: number, preferredX: number, preferredStartY: number, laneOnRight: boolean, obstacleRects: BoundsSpatialIndex, placedBadges: PointSpatialIndex, ignoredRects: Set<Bounds>, viewportWidth: number, viewportHeight: number): AnnotationPoint[] {
   const { xs, ys } = calloutAxes(preferredX, preferredStartY, count, viewportWidth, viewportHeight, laneOnRight);
   const candidateCount = xs.length * ys.length;
-  const candidateAt = (index: number): AnnotationPoint | undefined => index < 0 || index >= candidateCount || ys.length === 0 ? undefined : { x: xs[Math.floor(index / ys.length)], y: ys[index % ys.length] };
+  const candidateAt = (index: number): AnnotationPoint | undefined => {
+    if (index < 0 || index >= candidateCount || ys.length === 0) return undefined;
+    const x = xs[Math.floor(index / ys.length)];
+    const y = ys[index % ys.length];
+    return x === undefined || y === undefined ? undefined : { x, y };
+  };
   const slots: AnnotationPoint[] = [];
   let candidateIndex = 0;
   for (let position = 0; position < count; position++) {

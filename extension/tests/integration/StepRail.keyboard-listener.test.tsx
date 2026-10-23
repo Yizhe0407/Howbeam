@@ -7,6 +7,7 @@ import { installStepRailDomStubs, removeStepRailDomStubs } from '../setup/step-r
 import StepRail from '@/components/editor/StepRail';
 import { makeEntry } from '../setup/step-entries';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { itemAt } from '../setup/item-at';
 
 // StepRail's "continue recording" button uses the shadcn Tooltip, which
 // requires a TooltipProvider ancestor — wrap every render() the same way the
@@ -99,7 +100,7 @@ describe('StepRail arrow-key listener stability', () => {
     const onReorder = vi.fn().mockResolvedValue(undefined);
     render(<StepRail entries={ENTRIES} selectedEntryId="step-1" onSelect={onSelect} onReorder={onReorder} />);
 
-    const handle = screen.getAllByRole('button', { name: '拖曳排序' })[0];
+    const handle = itemAt(screen.getAllByRole('button', { name: '拖曳排序' }), 0);
     handle.focus();
     fireEvent.keyDown(handle, { code: 'Space', key: ' ' });
     await waitFor(() => expect(handle.getAttribute('aria-pressed')).toBe('true'));
@@ -107,7 +108,7 @@ describe('StepRail arrow-key listener stability', () => {
     fireEvent.keyDown(document, { code: 'Space', key: ' ' });
 
     await waitFor(() => expect(onReorder).toHaveBeenCalledOnce());
-    expect(onReorder.mock.calls[0][0]).toEqual([
+    expect(itemAt(onReorder.mock.calls, 0)[0]).toEqual([
       { kind: 'entry', id: 'step-2' },
       { kind: 'entry', id: 'step-1' },
       { kind: 'entry', id: 'step-3' },

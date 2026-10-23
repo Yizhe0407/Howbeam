@@ -87,8 +87,11 @@ export async function clearBackupConfig(): Promise<void> {
 
 export async function getBackupManifest(): Promise<Map<string, BackupManifestEntry>> {
   const db = await database();
-  const [keys, values] = await Promise.all([db.getAllKeys('manifest'), db.getAll('manifest')]);
-  return new Map(keys.map((key, index) => [key, values[index]]));
+  const manifest = new Map<string, BackupManifestEntry>();
+  for (let cursor = await db.transaction('manifest').store.openCursor(); cursor; cursor = await cursor.continue()) {
+    manifest.set(cursor.key, cursor.value);
+  }
+  return manifest;
 }
 
 export async function putBackupManifestEntry(projectId: string, entry: BackupManifestEntry): Promise<void> {

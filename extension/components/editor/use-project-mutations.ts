@@ -147,7 +147,7 @@ export function useProjectMutations({
   function selectInsteadOf(removedId: string, previousEntryIds: readonly string[], nextEntryIds: readonly string[]) {
     const previousIndex = previousEntryIds.indexOf(removedId);
     const nextIndex = Math.min(Math.max(previousIndex, 0), nextEntryIds.length - 1);
-    const next = nextIndex >= 0 ? nextEntryIds[nextIndex] : null;
+    const next = nextEntryIds[nextIndex] ?? null;
     setSelectedEntryId((current) => (current === removedId ? next : current));
     setZoomOpen(false);
   }

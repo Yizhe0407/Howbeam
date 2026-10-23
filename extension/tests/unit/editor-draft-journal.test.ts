@@ -8,6 +8,7 @@ import {
   readDescriptionDrafts,
   writeDescriptionDraft,
 } from '@/lib/editor/editor-draft-journal';
+import { firstItems } from '../setup/item-at';
 
 const step = {
   id: 'step-1',
@@ -203,7 +204,7 @@ describe('editor description draft journal', () => {
   it('drops a record filed under another record key instead of trusting its contents', () => {
     writeDescriptionDraft(step, '安全草稿 A', 'writer-a', localStorage, 1_000);
     writeDescriptionDraft(step, '安全草稿 B', 'writer-b', localStorage, 1_001);
-    const [keyA, keyB] = recordKeys().sort();
+    const [keyA, keyB] = firstItems(recordKeys().sort(), 2);
     localStorage.setItem(keyA, localStorage.getItem(keyB)!);
 
     expect(readDescriptionDrafts(step, 'observer', localStorage, 1_002)).toEqual([

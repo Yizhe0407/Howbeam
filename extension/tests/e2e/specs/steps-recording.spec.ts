@@ -15,6 +15,7 @@ import {
   stopRecording,
   targetCenter,
 } from '../support/harness';
+import { itemAt } from '../../setup/item-at';
 
 test.describe('step recording', () => {
   test.beforeEach(async ({ popupPage }) => {
@@ -37,7 +38,7 @@ test.describe('step recording', () => {
     await clickTarget(appPage, '#plain-text');
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
 
-    const [step] = await readSteps(popupPage);
+    const step = itemAt(await readSteps(popupPage), 0);
     expect(step.description).toBe('標記頁面區域');
     expect(step.bounds).toMatchObject({ width: expect.any(Number), height: expect.any(Number) });
     expect(step.hasScreenshot).toBe(true);
@@ -69,7 +70,7 @@ test.describe('step recording', () => {
     await region.locator('.ft-region-confirm').click();
 
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
-    const [step] = await readSteps(popupPage);
+    const step = itemAt(await readSteps(popupPage), 0);
     // A region carries no DOM target, so it lands as a mark with no text.
     expect(step.description).toBe('標記頁面區域');
     expect(step.hasScreenshot).toBe(true);
@@ -122,7 +123,7 @@ test.describe('step recording', () => {
 
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
     await expect.poll(() => appPage.evaluate(() => window.fixtureState.actionClicks)).toBe(1);
-    const [step] = await readSteps(popupPage);
+    const step = itemAt(await readSteps(popupPage), 0);
     expect(step.description).toBe('點擊按鈕');
 
     await stopRecording(popupPage);
@@ -257,7 +258,7 @@ test.describe('step recording', () => {
     const editor = await editorOpened;
     await editor.waitForLoadState('domcontentloaded');
     await expect.poll(async () => (await readRecordingState(editor)).isRecording).toBe(false);
-    const editorBase = editor.url().split('?')[0];
+    const editorBase = itemAt(editor.url().split('?'), 0);
     await expect.poll(() => extensionContext.pages().filter((page) => {
       return page.url().startsWith(editorBase);
     }).length).toBe(1);
@@ -331,7 +332,7 @@ test.describe('step recording', () => {
     // Clicking it captures a step whose rect sits inside the viewport, with no hover frame baked into the screenshot.
     await clickTarget(appPage, '#below-fold');
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
-    const [belowFoldStep] = await readSteps(popupPage);
+    const belowFoldStep = itemAt(await readSteps(popupPage), 0);
     expect(belowFoldStep.description).toBe('標記頁面區域');
     const viewport = await appPage.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
     expect(belowFoldStep.bounds).toMatchObject({
@@ -408,9 +409,9 @@ test.describe('step recording', () => {
     await stopRecording(popupPage);
     const steps = await readSteps(popupPage);
     expect(steps.map((step) => step.sessionId)).toEqual([
-      steps[0].sessionId,
-      steps[0].sessionId,
-      steps[0].sessionId,
+      itemAt(steps, 0).sessionId,
+      itemAt(steps, 0).sessionId,
+      itemAt(steps, 0).sessionId,
     ]);
     expect(steps.map((step) => step.order)).toEqual([0, 1, 2]);
     await secondPage.close();

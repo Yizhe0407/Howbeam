@@ -5,8 +5,9 @@ import { ensureProject } from '@/lib/storage/project-repository';
 /** Stores rows exactly as given (their own order, no re-densifying), creating
  * the Project if needed: test data, not a capture. */
 export async function seedSteps(steps: readonly Step[]): Promise<void> {
-  if (steps.length === 0) return;
-  const { sessionId, timestamp } = steps[0];
+  const [first] = steps;
+  if (!first) return;
+  const { sessionId, timestamp } = first;
   await ensureProject(sessionId, timestamp);
   await runProjectStepsWrite(async (tx) => {
     const project = await requireWritableProject(tx, sessionId);

@@ -345,8 +345,7 @@ function sortSessionSteps(sessionSteps: Step[], orderedIds: string[]): Step[] {
 
 export async function writeDenseOrder(tx: ProjectStepsTransaction, steps: Step[], orderedIds: string[]): Promise<void> {
   const reordered = sortSessionSteps(steps, orderedIds);
-  for (let order = 0; order < reordered.length; order += 1) {
-    const step = reordered[order];
+  for (const [order, step] of reordered.entries()) {
     if (step.order !== order) await tx.objectStore('steps').put({ ...step, order });
   }
 }

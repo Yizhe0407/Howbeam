@@ -89,8 +89,8 @@ export function reorderItem(items: readonly ImageEditItem[], id: string, to: 'fr
   const group = (candidate: ImageEditItem): boolean => (candidate.kind === 'redaction') === (item.kind === 'redaction');
   const others = items.filter((candidate) => candidate.id !== id);
   const members = others.filter(group);
-  if (members.length === 0) return [...items];
-  const anchor = to === 'front' ? members[members.length - 1] : members[0];
+  const anchor = to === 'front' ? members.at(-1) : members[0];
+  if (!anchor) return [...items];
   const at = others.indexOf(anchor);
   return [...others.slice(0, to === 'front' ? at + 1 : at), item, ...others.slice(to === 'front' ? at + 1 : at)];
 }

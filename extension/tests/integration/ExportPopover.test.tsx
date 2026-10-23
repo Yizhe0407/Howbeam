@@ -8,6 +8,7 @@ import { DownloadFailedError, RedactionReviewRequiredError, StepImageError } fro
 import { EditingBlockedError } from '@/lib/editor/editor-app-model';
 import { DEFAULT_PDF_EXPORT_SETTINGS } from '@/lib/export/pdf-export-settings';
 import { type StepEntry } from '@/lib/storage/models';
+import { itemAt } from '../setup/item-at';
 
 const mocks = vi.hoisted(() => ({
   generateProjectHtml: vi.fn(),
@@ -108,7 +109,7 @@ describe('ExportPopover', () => {
     fireEvent.click(screen.getByRole('button', { name: /下載 Markdown/ }));
 
     await waitFor(() => expect(mocks.downloadBlobViaBrowser).toHaveBeenCalledOnce());
-    const signal = getProjectEntries.mock.calls[0][0] as AbortSignal;
+    const signal = itemAt(getProjectEntries.mock.calls, 0)[0] as AbortSignal;
     expect(getProjectEntries).toHaveBeenCalledOnce();
     expect(mocks.generateProjectMarkdownArchive).toHaveBeenCalledWith(snapshotEntries, snapshotMetadata, { signal });
     expect(mocks.projectExportFilename).toHaveBeenCalledWith(snapshotMetadata, 'markdown-archive');
@@ -131,7 +132,7 @@ describe('ExportPopover', () => {
     fireEvent.click(screen.getByRole('button', { name: /下載 PDF/ }));
 
     await waitFor(() => expect(mocks.downloadBlobViaBrowser).toHaveBeenCalledOnce());
-    const signal = getProjectEntries.mock.calls[0][0] as AbortSignal;
+    const signal = itemAt(getProjectEntries.mock.calls, 0)[0] as AbortSignal;
     expect(mocks.generateProjectPdf).toHaveBeenCalledWith(snapshotEntries, snapshotMetadata, {
       signal,
       settings: DEFAULT_PDF_EXPORT_SETTINGS,
@@ -157,7 +158,7 @@ describe('ExportPopover', () => {
     fireEvent.click(screen.getByRole('button', { name: /下載 PDF/ }));
 
     await waitFor(() => expect(mocks.generateProjectPdf).toHaveBeenCalledOnce());
-    expect(mocks.generateProjectPdf.mock.calls[0][2].settings).toEqual({
+    expect(itemAt(mocks.generateProjectPdf.mock.calls, 0)[2].settings).toEqual({
       paper: 'letter',
       orientation: 'landscape',
       stepLayout: 'continuous',
@@ -276,7 +277,7 @@ describe('ExportPopover', () => {
     fireEvent.click(screen.getByRole('button', { name: /下載 HTML 網頁/ }));
 
     await waitFor(() => expect(mocks.downloadBlobViaBrowser).toHaveBeenCalledOnce());
-    expect(mocks.downloadBlobViaBrowser.mock.calls[0][0]).toBe(htmlBlob);
+    expect(itemAt(mocks.downloadBlobViaBrowser.mock.calls, 0)[0]).toBe(htmlBlob);
     // The browser shows the download itself, so the panel adds no notice of its own.
     await waitFor(() => expect(screen.getByRole('button', { name: /^下載/ }).hasAttribute('disabled')).toBe(false));
     expect(screen.queryByRole('status')).toBeNull();

@@ -7,6 +7,7 @@ import {
   actionIconPaths,
 } from '@/lib/shared/brand-icons';
 import { composeBrandIcon, loadBrandArtwork, renderBrandIcon } from '@/modules/brand-icons';
+import { firstItems, itemAt } from '../setup/item-at';
 
 const artwork = await loadBrandArtwork(path.resolve(__dirname, '../..'));
 
@@ -45,7 +46,7 @@ describe('brand icon rendering', () => {
     const store = BRAND_ICONS.find((icon) => icon.size === 128)!;
     const svg = composeBrandIcon(store, artwork);
     // 40 artwork units fill 96px, so the 128px canvas spans 40 × 128 / 96 units.
-    const [x, y, width, height] = /viewBox="([^"]+)"/.exec(svg)![1].split(' ').map(Number);
+    const [x, y, width, height] = firstItems(itemAt(/viewBox="([^"]+)"/.exec(svg)!, 1).split(' ').map(Number), 4);
     expect(width).toBeCloseTo((40 * 128) / 96);
     expect(height).toBeCloseTo((40 * 128) / 96);
     // Centred: the margin is split evenly on both sides.

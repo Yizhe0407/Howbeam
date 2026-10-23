@@ -25,9 +25,10 @@ export function useEditorEntryWorkspace({
 
   useEffect(() => {
     setSelectedEntryId((current) => {
-      if (entries.length === 0) return null;
+      const [first] = entries;
+      if (!first) return null;
       if (current && entries.some((entry) => entryId(entry) === current)) return current;
-      return entryId(entries[0]);
+      return entryId(first);
     });
   }, [entries]);
 

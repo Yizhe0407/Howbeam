@@ -372,17 +372,18 @@ function tryInitialize(event: MessageEvent): void {
     if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) document.activeElement.blur();
     keyboardIndex = nextCandidateIndex(keyboardIndex, keyboardAnchors.length, delta);
     const anchor = keyboardAnchors[keyboardIndex];
+    if (!anchor) return;
     hover.setAnchor(anchor.x, anchor.y);
     announce(t().shield.candidate(keyboardIndex + 1, keyboardAnchors.length, anchor.label || t().shield.unnamedElement));
   };
 
   const commitCurrent = () => {
-    if (keyboardIndex < 0 || keyboardIndex >= keyboardAnchors.length) return;
+    const anchor = keyboardAnchors[keyboardIndex];
+    if (!anchor) return;
     if (lastPreviewRect === null) {
       announce(t().shield.cannotAnnotate);
       return;
     }
-    const anchor = keyboardAnchors[keyboardIndex];
     commitAt(anchor.x, anchor.y, true);
   };
 

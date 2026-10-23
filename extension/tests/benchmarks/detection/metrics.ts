@@ -1,4 +1,5 @@
 import { HIGHLIGHT_PADDING } from '../../../lib/media/annotation-contract';
+import { itemAt } from '../../setup/item-at';
 
 export interface Rect {
   x: number;
@@ -100,9 +101,9 @@ export function quantile(values: number[], percentile: number): number {
   const position = Math.min(Math.max(percentile, 0), 1) * (sorted.length - 1);
   const lower = Math.floor(position);
   const upper = Math.ceil(position);
-  if (lower === upper) return sorted[lower];
+  if (lower === upper) return itemAt(sorted, lower);
   const weight = position - lower;
-  return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+  return itemAt(sorted, lower) * (1 - weight) + itemAt(sorted, upper) * weight;
 }
 
 function rounded(value: number): number {

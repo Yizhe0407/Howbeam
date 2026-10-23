@@ -60,6 +60,7 @@ vi.mock('@/components/editor/SortableItem', () => ({
 
 import Lightbox from '@/components/editor/Lightbox';
 import StepRail from '@/components/editor/StepRail';
+import { itemAt } from '../setup/item-at';
 
 const redactions = [{ id: 'mask-1', kind: 'solid' as const, bounds: { x: 90, y: 45, width: 20, height: 10 } }];
 
@@ -122,12 +123,12 @@ describe('timeline preview propagation', () => {
     );
 
     expect(previewMocks.highlight).toHaveBeenCalledOnce();
-    expect(previewMocks.highlight.mock.calls[0][0]).toMatchObject({
+    expect(itemAt(previewMocks.highlight.mock.calls, 0)[0]).toMatchObject({
       bounds: { x: 40, y: 50, width: 60, height: 70 },
       redactions,
     });
     expect(previewMocks.multi).toHaveBeenCalledOnce();
-    expect(previewMocks.multi.mock.calls[0][0]).toMatchObject({
+    expect(itemAt(previewMocks.multi.mock.calls, 0)[0]).toMatchObject({
       annotations: [{ bounds: { x: 40, y: 50, width: 60, height: 70 }, order: 1 }],
       redactions,
     });
@@ -140,13 +141,13 @@ describe('timeline preview propagation', () => {
     const onNavigate = () => {};
     const { rerender } = render(<Lightbox entries={[single]} index={0} onClose={onClose} onNavigate={onNavigate} />);
 
-    expect(previewMocks.highlight.mock.calls[0][0]).toMatchObject({
+    expect(itemAt(previewMocks.highlight.mock.calls, 0)[0]).toMatchObject({
       bounds: { x: 40, y: 50, width: 60, height: 70 },
       redactions,
     });
 
     rerender(<Lightbox entries={[group]} index={0} onClose={onClose} onNavigate={onNavigate} />);
-    expect(previewMocks.multi.mock.calls[0][0]).toMatchObject({
+    expect(itemAt(previewMocks.multi.mock.calls, 0)[0]).toMatchObject({
       annotations: [{ bounds: { x: 40, y: 50, width: 60, height: 70 }, order: 1 }],
       redactions,
     });
