@@ -21,7 +21,12 @@ import { t } from '@/lib/shared/i18n';
 import { describeBrowserError, isMissingTabError } from '../../runtime/browser-errors';
 import { UserFacingError, userFacingErrorMessage } from '../../runtime/user-facing-errors';
 import { getRecordingState } from '../../storage/storage';
-import type { ClickCapture, ClickCaptureResult, HowbeamSnapshotActiveMessage } from '../../runtime/messages';
+import type {
+  ClickCapture,
+  ClickCaptureResult,
+  HowbeamCaptureTakenMessage,
+  HowbeamSnapshotActiveMessage,
+} from '../../runtime/messages';
 import type { RecordingState, RecoverableRecordingError } from '../../storage/recording-state';
 import type { ControlPlane, SnapshotCaptureContext } from './control-plane';
 import type { RecorderRuntime } from './recorder-runtime';
@@ -196,6 +201,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
     tabId: number,
     windowId: number,
     assertContext: () => Promise<void>,
+    onTaken?: () => void,
   ): Promise<{ blob: Blob; scale: number }> {
     return queueCapture(async () => {
       const guard = async () => {
@@ -225,11 +231,16 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
         },
         () => recorderRuntime.captureVisibleTabWithRetry(windowId, guard),
       );
+      onTaken?.();
       const blob = await recorderRuntime.dataUrlToBlob(dataUrl);
       const scale = await recorderRuntime.getScreenshotScale(blob, message.viewport, message.devicePixelRatio);
       // Do not persist an image after a stop/cancel/new operation arrives while
-      // captureVisibleTab or image decoding is still in flight.
-      await guard();
+      // captureVisibleTab or image decoding is still in flight. Once onTaken has
+      // let the page replay its click, the page may already show another URL or
+      // tab; the pixels predate that, so only a cancel can void them here and
+      // the caller re-checks the run.
+      if (onTaken) assertCaptureNotCancelled(message.captureId);
+      else await guard();
       return { blob, scale };
     });
   }
@@ -240,9 +251,14 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
     tabId: number,
     windowId: number,
     expectedControlVersion: number,
+    onTaken?: () => void,
   ): Promise<{ blob: Blob; scale: number }> {
-    return captureScreenshotWithGuard(message, tabId, windowId, () =>
-      assertCaptureContext(expectedControlVersion, message.runId, sessionId, tabId, windowId, message.url),
+    return captureScreenshotWithGuard(
+      message,
+      tabId,
+      windowId,
+      () => assertCaptureContext(expectedControlVersion, message.runId, sessionId, tabId, windowId, message.url),
+      onTaken,
     );
   }
 
@@ -330,7 +346,22 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
       if (state.mode === 'snapshot') {
         await handleSnapshotClick(message, state.sessionId, state, expectedControlVersion);
       } else {
-        const captured = await captureScreenshot(message, state.sessionId, tabId, windowId, expectedControlVersion);
+        // The recorder holds the user's click until the pixels exist; decoding
+        // and storing the step need not keep it waiting. A recorder that misses
+        // this message settles on the final answer instead.
+        const taken: HowbeamCaptureTakenMessage = {
+          type: 'HOWBEAM_CAPTURE_TAKEN',
+          runId: message.runId,
+          captureId: message.captureId,
+        };
+        const captured = await captureScreenshot(
+          message,
+          state.sessionId,
+          tabId,
+          windowId,
+          expectedControlVersion,
+          () => void browser.tabs.sendMessage(tabId, taken, { frameId: 0 }).catch(() => {}),
+        );
         const current = await getRecordingState();
         if (!current.isRecording || current.runId !== message.runId || current.sessionId !== state.sessionId) {
           throw new StaleCaptureError('Recording changed while saving the step.');

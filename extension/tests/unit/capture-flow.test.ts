@@ -260,6 +260,48 @@ describe('handleClick in a steps run', () => {
     });
   });
 
+  it('tells the recorder the screenshot exists before it stores the step', async () => {
+    const order: string[] = [];
+    mocks.tabsSendMessage.mockImplementation(async () => {
+      order.push('taken');
+      return undefined;
+    });
+    mocks.storeStep.mockImplementation(async () => {
+      order.push('stored');
+    });
+
+    await expect(handle()).resolves.toEqual({ ok: true });
+
+    expect(mocks.tabsSendMessage).toHaveBeenCalledWith(
+      TAB_ID,
+      { type: 'HOWBEAM_CAPTURE_TAKEN', runId: RUN_ID, captureId: 'capture-1' },
+      { frameId: 0 },
+    );
+    expect(order).toEqual(['taken', 'stored']);
+  });
+
+  it('stores the step when the replayed click navigates the page after the screenshot', async () => {
+    mocks.tabsSendMessage.mockImplementation(async () => {
+      mocks.tabsQuery.mockResolvedValue([{ id: TAB_ID, url: 'https://site.example/next' }]);
+      return undefined;
+    });
+
+    await expect(handle()).resolves.toEqual({ ok: true });
+
+    expect(mocks.storeStep).toHaveBeenCalledOnce();
+    expect(harness.getState()).toMatchObject({ itemCount: 3, error: null });
+  });
+
+  it('stores nothing when the gesture is cancelled after the screenshot was taken', async () => {
+    mocks.tabsSendMessage.mockImplementation(async () => {
+      cancelCapture('capture-1');
+      return undefined;
+    });
+
+    await expect(handle()).resolves.toMatchObject({ ok: false, error: expect.stringMatching(/^stale-capture/) });
+    expect(mocks.storeStep).not.toHaveBeenCalled();
+  });
+
   it('reports a failed screenshot with localized copy, never the raw browser error', async () => {
     silenceIntentionalErrorLogs();
     harness.captureVisibleTabWithRetry.mockRejectedValue(new Error('Image readback failed'));

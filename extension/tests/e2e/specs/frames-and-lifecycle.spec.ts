@@ -106,6 +106,7 @@ test.describe('frames and recording lifecycle', () => {
     // A genuine click proves the recorder was live while the forged public hop was ignored, and gives a deterministic barrier for replay.
     await button.click();
     await expect.poll(() => button.getAttribute('data-click-count')).toBe('1');
+    await expectStepCount(popupPage, 1);
     await expectSteady(async () => (await readSteps(popupPage)).length, 1);
     await stopRecording(popupPage);
   });
@@ -157,6 +158,7 @@ test.describe('frames and recording lifecycle', () => {
     // The following trusted input must still record and replay once, proving the zero-step result was the trust check, not missing instrumentation.
     await button.click();
     await expect.poll(() => button.getAttribute('data-click-count')).toBe('1');
+    await expectStepCount(popupPage, 1);
     await expectSteady(async () => (await readSteps(popupPage)).length, 1);
     await stopRecording(popupPage);
   });
@@ -185,6 +187,7 @@ test.describe('frames and recording lifecycle', () => {
 
     await outerButton.click();
     await expect.poll(() => outerButton.getAttribute('data-click-count')).toBe('1');
+    await expectStepCount(popupPage, 1);
     await expectSteady(async () => (await readSteps(popupPage)).length, 1);
 
     const outerFrameMetrics = await appPage.locator('#cross-origin-frame').evaluate((element) => {
@@ -206,6 +209,7 @@ test.describe('frames and recording lifecycle', () => {
         nestedFrameMetrics.borderTop + nestedTargetMetrics.y + nestedTargetMetrics.height / 2,
     );
     await expect.poll(() => nestedText.getAttribute('data-click-count')).toBe('1');
+    await expectStepCount(popupPage, 2);
     await expectSteady(async () => (await readSteps(popupPage)).length, 2);
     await expectSteady(async () => outerButton.getAttribute('data-click-count'), '1');
     await stopRecording(popupPage);

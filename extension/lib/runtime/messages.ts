@@ -179,6 +179,14 @@ export interface HowbeamStopMessage {
   type: 'HOWBEAM_STOP';
 }
 
+/** The step screenshot for this capture has been taken: the recorder may
+ * replay the held click while the background still stores the step. */
+export interface HowbeamCaptureTakenMessage {
+  type: 'HOWBEAM_CAPTURE_TAKEN';
+  runId: string;
+  captureId: string;
+}
+
 /** 僅在乾淨 anchor 持久化後啟用快照互動。 */
 export interface HowbeamSnapshotActiveMessage {
   type: 'HOWBEAM_SNAPSHOT_ACTIVE';

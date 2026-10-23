@@ -21,6 +21,7 @@ import { installStepRecorder } from '@/lib/recording/content/step-recorder';
 import { createToolbarChannel } from '@/lib/recording/content/toolbar-channel';
 import { CLEANUP_EVENT } from '@/lib/recording/content-script-constants';
 import type {
+  HowbeamCaptureTakenMessage,
   HowbeamSnapshotActiveMessage,
   HowbeamStopMessage,
   SnapshotRecorderFailureMessage,
@@ -211,9 +212,15 @@ async function startRecorder(): Promise<void> {
     cleanup: () => cleanup(),
   });
 
-  const onRecorderMessage = (message: HowbeamStopMessage | HowbeamSnapshotActiveMessage) => {
+  const onRecorderMessage = (
+    message: HowbeamStopMessage | HowbeamSnapshotActiveMessage | HowbeamCaptureTakenMessage,
+  ) => {
     if (message?.type === 'HOWBEAM_STOP') {
       cleanup();
+      return;
+    }
+    if (message?.type === 'HOWBEAM_CAPTURE_TAKEN' && message.runId === runId) {
+      capture.markCaptureTaken(message.captureId);
       return;
     }
     if (message?.type === 'HOWBEAM_SNAPSHOT_ACTIVE' && message.runId === runId) {

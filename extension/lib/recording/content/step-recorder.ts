@@ -97,11 +97,12 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
   const reportUnrecordedClick = () => session.toolbar?.showNotice(t().toolbar.stepNotRecorded);
 
   /** Decides, once a capture attempt has finished, whether its click went
-   * unrecorded in a way nobody else reports: a lost delivery, or an attempt
+   * unrecorded in a way nobody else reports: a lost delivery (also after the
+   * screenshot was taken, while the step was being stored), or an attempt
    * cut off by the failsafe. */
   const reportStepDelivery = (outcome: StepCaptureOutcome, delivery: Promise<StepDelivery> | null): void => {
-    if (outcome === 'captured' || outcome === 'cancelled') return;
-    if (outcome === 'failed') {
+    if (outcome === 'cancelled') return;
+    if (outcome === 'captured' || outcome === 'failed') {
       void delivery?.then((result) => {
         if (result === 'lost') reportUnrecordedClick();
       });
@@ -158,6 +159,21 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       container.element.addEventListener('scroll', onStepScroll, { passive: true });
       lockedScrollElements.add(container.element);
     }
+  };
+
+  /** Starts a step capture and resolves `taken` true as soon as its
+   * screenshot exists (or the step is saved), false when it ends without one.
+   * The held click only has to wait for `taken`; `delivery` is the final
+   * answer about the stored step. */
+  const trackScreenshot = (
+    start: (onTaken: () => void) => Promise<StepDelivery>,
+  ): { taken: Promise<boolean>; delivery: Promise<StepDelivery> } => {
+    let markTaken!: () => void;
+    const signalled = new Promise<boolean>((resolve) => {
+      markTaken = () => resolve(true);
+    });
+    const delivery = start(markTaken);
+    return { taken: Promise.race([signalled, delivery.then((result) => result === 'saved')]), delivery };
   };
 
   /** Builds the orchestrateStepCapture handler set shared by the local
@@ -227,23 +243,26 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
         // the screenshot is in flight.
         setCaptureScrollLock({ ...readRegionScrollSnapshot(rect), x: origin.x, y: origin.y });
         let timeout: ReturnType<typeof setTimeout> | undefined;
-        const delivery = capture.deliverStepCapture(
+        const { taken, delivery } = trackScreenshot((onTaken) => capture.deliverStepCapture(
           rect,
           { text: '', tagName: 'region' },
           'mark',
           Date.now(),
           captureId,
           'region',
-        );
+          onTaken,
+        ));
         const outcome = await Promise.race([
-          delivery.then((result) => ({ kind: 'settled' as const, result })),
+          taken.then(() => ({ kind: 'settled' as const })),
           new Promise<{ kind: 'timeout' }>((resolve) => {
             timeout = setTimeout(() => resolve({ kind: 'timeout' }), CAPTURE_FAILSAFE_MS);
           }),
         ]);
         if (timeout) clearTimeout(timeout);
         if (outcome.kind === 'settled') {
-          if (outcome.result === 'lost') session.toolbar?.showNotice(t().toolbar.regionNotRecorded);
+          void delivery.then((result) => {
+            if (result === 'lost') session.toolbar?.showNotice(t().toolbar.regionNotRecorded);
+          });
           return;
         }
         console.warn('[howbeam] region capture exceeded its failsafe budget and was cancelled');
@@ -279,6 +298,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
     now: number,
     captureId: string,
     shouldCancel: () => boolean,
+    onTaken: () => void,
   ): Promise<StepDelivery> => {
     try {
       let clientX = initialClientX;
@@ -310,6 +330,8 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
         intent,
         now,
         captureId,
+        'element',
+        onTaken,
       );
     } catch (err) {
       console.error('[howbeam] step capture failed', err);
@@ -373,7 +395,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
         const outcome = await orchestrateStepCapture(
           makeStepOrchestrationHandlers(gesture, el, {
             capture: () => {
-              delivery = captureElement(
+              const tracked = trackScreenshot((onTaken) => captureElement(
                 el,
                 press.clientX,
                 press.clientY,
@@ -381,8 +403,10 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
                 now,
                 gesture.captureId,
                 gesture.isCancelled,
-              );
-              return delivery.then((result) => result === 'saved');
+                onTaken,
+              ));
+              delivery = tracked.delivery;
+              return tracked.taken;
             },
             replay: () => pressGate.replay(press),
           }),
@@ -469,14 +493,17 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
             // Pin the iframe's scrollable ancestor chain exactly like the
             // element path so the screenshot pixels match the relayed rect.
             setCaptureScrollLock(readScrollSnapshot(relayed.frame));
-            delivery = capture.deliverStepCapture(
+            const tracked = trackScreenshot((onTaken) => capture.deliverStepCapture(
               rect,
               { text: claimResult.target.text, tagName: claimResult.target.tagName },
               claimResult.target.interactive ? 'click' : 'mark',
               now,
               gesture.captureId,
-            );
-            return delivery.then((result) => result === 'saved');
+              'element',
+              onTaken,
+            ));
+            delivery = tracked.delivery;
+            return tracked.taken;
           },
           replay: () => {
             // Settlement returns over extension runtime directly to the

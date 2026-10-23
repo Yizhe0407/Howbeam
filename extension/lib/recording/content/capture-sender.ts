@@ -25,6 +25,9 @@ const CAPTURE_REQUEST_FAILED = 'capture-request-failed';
 /** The run's capture channel to the background, plus the annotation counting
  * both snapshot commit paths reconcile against. */
 export function createCaptureSender(runId: string) {
+  /** Step captures waiting for the background to say their screenshot exists. */
+  const takenListeners = new Map<string, () => void>();
+
   async function sendCapture(
     rect: SnapshotShieldRect,
     target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
@@ -78,6 +81,8 @@ export function createCaptureSender(runId: string) {
    * lost is reconciled against the durable recording state (the background
    * records the committed captureId right after storing the step), so the
    * caller can tell the user exactly when a click was not recorded.
+   * `onTaken` runs once the screenshot has been taken, before the step is
+   * stored.
    */
   async function deliverStepCapture(
     rect: SnapshotShieldRect,
@@ -86,6 +91,23 @@ export function createCaptureSender(runId: string) {
     now: number,
     captureId: string,
     captureKind: ClickCapture['captureKind'] = 'element',
+    onTaken?: () => void,
+  ): Promise<CaptureDelivery> {
+    if (onTaken) takenListeners.set(captureId, onTaken);
+    try {
+      return await requestStepCapture(rect, target, intent, now, captureId, captureKind);
+    } finally {
+      takenListeners.delete(captureId);
+    }
+  }
+
+  async function requestStepCapture(
+    rect: SnapshotShieldRect,
+    target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
+    intent: ClickCapture['intent'],
+    now: number,
+    captureId: string,
+    captureKind: ClickCapture['captureKind'],
   ): Promise<CaptureDelivery> {
     let failure: unknown;
     try {
@@ -101,6 +123,10 @@ export function createCaptureSender(runId: string) {
     }
     console.warn('[howbeam] step capture request failed; reconciling with recording state', failure);
     return (await wasCaptureCommitted(captureId)) ? 'saved' : 'lost';
+  }
+
+  function markCaptureTaken(captureId: string): void {
+    takenListeners.get(captureId)?.();
   }
 
   async function wasCaptureCommitted(captureId: string): Promise<boolean> {
@@ -150,6 +176,7 @@ export function createCaptureSender(runId: string) {
   return {
     sendCapture,
     deliverStepCapture,
+    markCaptureTaken,
     readAuthoritativeAnnotationCount,
     commitSnapshotAnnotation,
   };

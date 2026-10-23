@@ -28,6 +28,26 @@ beforeEach(() => {
 });
 
 describe('deliverStepCapture', () => {
+  it('reports the screenshot as taken while the step is still being stored', async () => {
+    let answer!: (result: unknown) => void;
+    mocks.sendMessage.mockReturnValue(new Promise((resolve) => {
+      answer = resolve;
+    }));
+    const sender = createCaptureSender('run-1');
+    const onTaken = vi.fn();
+    const delivery = sender.deliverStepCapture(rect, { text: 'Save', tagName: 'button' }, 'click', 1, 'capture-1', 'element', onTaken);
+
+    sender.markCaptureTaken('capture-2');
+    expect(onTaken).not.toHaveBeenCalled();
+    sender.markCaptureTaken('capture-1');
+    expect(onTaken).toHaveBeenCalledOnce();
+
+    answer({ ok: true });
+    await expect(delivery).resolves.toBe('saved');
+    sender.markCaptureTaken('capture-1');
+    expect(onTaken).toHaveBeenCalledOnce();
+  });
+
   it('reports a stored step as saved', async () => {
     mocks.sendMessage.mockResolvedValue({ ok: true });
     await expect(deliver()).resolves.toBe('saved');

@@ -3,7 +3,8 @@
 
 /**
  * The result of one capture attempt, in decreasing order of health:
- * - `captured`: the real screenshot was taken and a step was stored.
+ * - `captured`: the real screenshot was taken; the step is stored (or still
+ *   being stored, with its own delivery result).
  * - `failed`: the background ran but dropped the step (stale run, guard, etc.).
  * - `cancelled`: the gesture was abandoned (pointercancel / recorder teardown).
  * - `timeout`: the real capture out-ran its failsafe budget; the page is kept
@@ -70,10 +71,11 @@ export interface StepCaptureHandlers {
    * longer shows it. Runs before the screenshot is ever requested. */
   hidePreview: () => Promise<void>;
   /**
-   * Resolves ONLY after the real screenshot has actually been taken and stored:
-   * `true` when a step was saved, `false` when the background dropped it. It must
-   * never resolve while the capture is merely queued — that guarantee is what
-   * lets the replay below always run against the post-capture page.
+   * Resolves ONLY after the real screenshot has actually been taken: `true`
+   * once it exists (storing the step may still be in flight), `false` when the
+   * background dropped the capture. It must never resolve while the capture is
+   * merely queued — that guarantee is what lets the replay below always run
+   * against the post-capture page.
    */
   capture: () => Promise<boolean>;
   /** Resolves if the gesture is cancelled before its capture settles. */
