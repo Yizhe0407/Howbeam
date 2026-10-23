@@ -235,8 +235,8 @@ export default function RecordingToolbar({
     ? null
     : preparingNext
       ? t().toolbar.hintWaiting
-      : state.mode === 'snapshot' && state.phase === 'recording' && state.itemCount === 0
-        ? t().toolbar.hintAnnotating
+      : state.phase === 'recording' && state.itemCount === 0
+        ? (state.mode === 'snapshot' ? t().toolbar.hintAnnotating : t().toolbar.hintRecording)
         : null;
   const invalidated = state.mode === 'snapshot' && state.phase === 'invalidated';
   const busy = pending !== null || state.phase === 'finishing';

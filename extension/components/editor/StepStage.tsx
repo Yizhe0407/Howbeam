@@ -11,7 +11,6 @@ import AnnotationList from './AnnotationList';
 import EditableTitle from '@/components/shared/EditableTitle';
 import InlineAlert from '@/components/shared/InlineAlert';
 import { reportError } from '@/components/shared/report-error';
-import { recordingItemCountLabel, recordingModeCopy } from '@/lib/recording/recording-mode-copy';
 import { PERSISTED_PROJECT_LIMITS } from '@/lib/storage/persistence-limits';
 import { t } from '@/lib/shared/i18n';
 
@@ -85,19 +84,14 @@ export default function StepStage({
         {sectionTitle && (
           <span
             title={t().editor.sections.current(sectionTitle)}
-            className="flex min-w-0 max-w-[16rem] items-center gap-1 rounded-full border-2 border-border bg-matcha px-2.5 py-0.5 text-xs font-bold text-on-accent"
+            // No outline: in this UI an ink outline marks something you can press, and this only labels.
+            className="flex min-w-0 max-w-[16rem] items-center gap-1 rounded-full bg-matcha px-3 py-1 text-xs font-bold text-on-accent"
           >
             <Bookmark className="size-3 shrink-0" aria-hidden="true" />
             <span className="sr-only">{t().editor.sections.current(sectionTitle)}</span>
             <span aria-hidden="true" className="min-w-0 truncate">{sectionTitle}</span>
           </span>
         )}
-        <span className="shrink-0 rounded-full border-2 border-border bg-secondary px-2.5 py-0.5 text-xs font-bold text-foreground">
-          {/* Names entries with the same vocabulary as the popup and recording toolbar. */}
-          {entry.kind === 'single'
-            ? recordingModeCopy('steps').label
-            : `${recordingModeCopy('snapshot').label} · ${recordingItemCountLabel('snapshot', entry.annotations.length)}`}
-        </span>
         {/* Sits with the section chip: a section is where this step stands in the document, not an image action. */}
         {onStartSection && (
           <Badge asChild variant="dashedAction" className="shrink-0 disabled:opacity-50">

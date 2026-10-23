@@ -116,7 +116,7 @@ test.describe('popup workflows', () => {
     await expect.poll(() => readActiveProjectId(statePage)).toBeNull();
   });
 
-  test('opens the editor and keeps data actions disabled for an empty session', async ({
+  test('keeps data actions out of the idle popup and disabled in an empty editor', async ({
     popupPage,
     extensionContext,
     extensionId,
@@ -134,13 +134,13 @@ test.describe('popup workflows', () => {
       throw new Error('Expected reset data to select an empty Project.');
     }
 
-    await expect(popupPage.getByRole('button', { name: '重置' })).toBeDisabled();
+    // Idle, the popup only starts recordings: finishing one opens the editor, and clearing steps lives in the editor.
+    await expect(popupPage.getByRole('button', { name: '開啟編輯器' })).toHaveCount(0);
+    await expect(popupPage.getByRole('button', { name: '清空步驟' })).toHaveCount(0);
     await expect(popupPage.getByRole('button', { name: '專案庫', exact: true })).toBeEnabled();
 
-    const editorPromise = extensionContext.waitForEvent('page');
-    await popupPage.getByRole('button', { name: '編輯器' }).click();
-    const editor = await editorPromise;
-    await editor.waitForLoadState('domcontentloaded');
+    const editor = await extensionContext.newPage();
+    await editor.goto(`chrome-extension://${extensionId}/editor.html?sessionId=${activeProjectId}`);
 
     const editorUrl = new URL(editor.url());
     expect(editorUrl.protocol).toBe('chrome-extension:');
@@ -152,13 +152,14 @@ test.describe('popup workflows', () => {
     await expect(editor.getByText('尚未建立內容', { exact: true })).toBeVisible();
     await expect(editor.getByRole('button', { name: '回到網頁開始錄製' })).toBeVisible();
     await expect(editor.getByRole('button', { name: '匯出' })).toBeDisabled();
-    await expect(editor.getByRole('button', { name: '重置' })).toBeDisabled();
+    await expect(editor.getByRole('button', { name: '清空步驟' })).toBeDisabled();
   });
 
   test('opens a multi-step project at its first entry, not its latest capture', async ({
     appPage,
     popupPage,
     extensionContext,
+    extensionId,
     browserErrors: _browserErrors,
   }) => {
     await startStepsRunWithFirstStep(appPage, popupPage);
@@ -166,10 +167,16 @@ test.describe('popup workflows', () => {
     await expectStepCount(popupPage, 2);
     await stopRecording(popupPage);
 
-    const editorOpened = extensionContext.waitForEvent('page');
-    await popupPage.getByRole('button', { name: '開啟編輯器' }).click();
-    const editor = await editorOpened;
-    await editor.waitForLoadState('domcontentloaded');
+    const library = await extensionContext.newPage();
+    await library.goto(`chrome-extension://${extensionId}/library.html`);
+    await library.getByRole('button', { name: '開啟', exact: true }).click();
+    // Finishing the run already opened an editor tab at its newest capture; opening from the library reuses that tab.
+    const editorPage = () => extensionContext.pages().find((page) => {
+      const url = new URL(page.url());
+      return url.pathname === '/editor.html' && url.searchParams.get('entryId') === null;
+    });
+    await expect.poll(() => Boolean(editorPage())).toBe(true);
+    const editor = editorPage()!;
 
     // Ordinary navigation must not inherit the newest capture as its target: opening a finished project should start reading it from the top.
     expect(new URL(editor.url()).searchParams.get('entryId')).toBeNull();

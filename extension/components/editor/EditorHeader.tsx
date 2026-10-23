@@ -65,8 +65,8 @@ export default function EditorHeader({
           <ResetButton
             hasSteps={hasSteps}
             sessionId={sessionId}
+            projectTitle={projectTitle?.trim() || undefined}
             disabled={unavailable}
-            className="px-2.5 max-sm:[&>span]:hidden sm:px-4"
           />
           {publish ? <ExportPopover {...publish} trigger={exportButton} /> : exportButton}
         </>

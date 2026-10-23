@@ -54,7 +54,7 @@ test.describe('single editor tab', () => {
 
     // Back the other way: the recorded Project's card must reuse the same tab.
     await library.bringToFront();
-    const recordedCard = library.getByRole('listitem').filter({ hasText: '1 個畫面' });
+    const recordedCard = library.getByRole('listitem').filter({ hasText: '1 個步驟' });
     await expect(recordedCard).toHaveCount(1);
     await recordedCard.getByRole('button', { name: '開啟', exact: true }).click();
 

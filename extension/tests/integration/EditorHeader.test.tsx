@@ -44,7 +44,7 @@ describe('EditorHeader', () => {
     expect(screen.getAllByRole('button', { name: 'Howbeam 專案庫' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: '設定' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: '匯出' })).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: '重置目前錄製' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: '清空步驟' })).toHaveLength(1);
   });
 
   it('keeps the accessible name complete while the visible label collapses below sm', () => {

@@ -1,20 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { browser } from 'wxt/browser';
 import { AlertCircle, Library, Settings } from 'lucide-react';
 import { useRecordingSession } from '@/lib/recording/use-recording-session';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import OpenEditorButton from '@/components/popup/OpenEditorButton';
 import RecordControls from '@/components/popup/RecordControls';
-import ResetButton from '@/components/shared/ResetButton';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import BrandMark from '@/components/shared/BrandMark';
-import { cn } from '@/lib/shared/utils';
 import { needsEditorRecovery } from '@/lib/recording/recording-recovery';
 import type { OpenEditorResult } from '@/lib/runtime/messages';
 import { openLibrary, openSettings } from '@/lib/runtime/actions';
 import { ensureSelectedProject } from '@/lib/project/project-actions';
-import { getProject } from '@/lib/storage/project-repository';
-import { subscribeProjectsChanged } from '@/lib/storage/change-notifier';
 import { reportError } from '@/components/shared/report-error';
 import { isOpenEditorResult, requireRuntimeMessageResult } from '@/lib/runtime/runtime-message-result';
 import { t } from '@/lib/shared/i18n';
@@ -24,47 +19,9 @@ function App() {
   const { recording, isRecording, sessionId, error, recoverableError, dataError } = useRecordingSession();
   const [openingEditor, setOpeningEditor] = useState(false);
   const [editorOpenError, setEditorOpenError] = useState<string | null>(null);
-  // The 「錄到哪裡」 selection (null = 新專案). Reset acts on exactly this project,
-  // never on the last recording's, so what the user picked is what gets cleared.
+  // The 「錄到哪裡」 selection (null = 新專案).
   const [targetProjectId, setTargetProjectId] = useState<string | null>(null);
-  // The reset target's title and whether it holds any content. `recording.itemCount`
-  // cannot answer this since it's per-run and zeroed on finish; the counts live on the project row.
-  const [resetTarget, setResetTarget] = useState<{ title: string; hasContent: boolean } | null>(null);
   const editorRecovery = needsEditorRecovery(recoverableError);
-
-  useEffect(() => {
-    if (!targetProjectId) {
-      setResetTarget(null);
-      return;
-    }
-    let active = true;
-    const refresh = () => {
-      void getProject(targetProjectId)
-        .then((project) => {
-          if (!active) return;
-          setResetTarget(project
-            ? {
-                title: project.title.trim() || t().common.untitledProject,
-                hasContent: project.entryCount > 0 || project.stepCount > 0,
-              }
-            : null);
-        })
-        .catch((readError) => {
-          // Fail open: the confirm dialog and background guard still protect the
-          // action, while failing closed would strand a real reset need.
-          console.error('[howbeam] failed to read project summary', readError);
-          if (active) setResetTarget({ title: t().common.untitledProject, hasContent: true });
-        });
-    };
-    refresh();
-    // phase re-runs the read after a run finishes and bumps the counts; project
-    // changes cover resets, deletions and edits made from other pages.
-    const unsubscribe = subscribeProjectsChanged(refresh);
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [targetProjectId, recording.phase]);
 
   async function openSettingsPage() {
     setEditorOpenError(null);
@@ -162,31 +119,13 @@ function App() {
         onTargetProjectChange={setTargetProjectId}
       />
 
-      {/* Hidden while a run is live: RecordControls already offers the editor as
-          its secondary exit, and a mid-recording reset would fail anyway. */}
+      {/* Hidden while a run is live: RecordControls already offers the editor as its secondary exit. */}
       {!editorRecovery && !isRecording && <div className="h-0.5 w-full rounded-full bg-border-soft" aria-hidden="true" />}
 
       {!editorRecovery && !isRecording && (
-        <div className="flex flex-col gap-2">
-          <OpenEditorButton
-            label={t().common.openEditor}
-            pending={openingEditor}
-            onOpen={openEditor}
-            className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" size="sm" onClick={() => void openLibraryView()} className="w-full">
-              <Library />{t().common.library}
-            </Button>
-            <ResetButton
-              hasSteps={resetTarget?.hasContent ?? false}
-              sessionId={resetTarget ? targetProjectId : null}
-              projectTitle={resetTarget?.title}
-              onReset={() => setResetTarget((current) => (current ? { ...current, hasContent: false } : current))}
-              variant="outline" className="h-8 w-full px-3 text-[13px]"
-            />
-          </div>
-        </div>
+        <Button variant="outline" onClick={() => void openLibraryView()} className="w-full">
+          <Library />{t().common.library}
+        </Button>
       )}
 
     </main>

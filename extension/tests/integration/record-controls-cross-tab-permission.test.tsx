@@ -193,7 +193,7 @@ describe('cross-tab permission ask at recording start', () => {
     Element.prototype.scrollIntoView ??= () => {};
     await renderIdleControls();
     fireEvent.keyDown(await screen.findByRole('combobox', { name: '錄到哪裡' }), { key: 'Enter' });
-    const option = await screen.findByRole('option', { name: /^既有教學.*3 個畫面$/ });
+    const option = await screen.findByRole('option', { name: /^既有教學.*3 個步驟$/ });
     option.focus();
     fireEvent.keyDown(option, { key: 'Enter' });
 

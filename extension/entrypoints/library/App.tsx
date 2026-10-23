@@ -1,8 +1,8 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
+  Archive,
   Copy,
-  Download,
   Loader2,
   PencilLine,
   Plus,
@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
-import { type ProjectSummary } from '@/lib/storage/models';
+import { getProjectStructureSnapshot } from '@/lib/storage/project-structure';
+import { type ProjectSummary, type StepEntry } from '@/lib/storage/models';
 import { clearSelectedProject, createAndSelectProject, openSelectedProjectInEditor } from '@/lib/project/project-actions';
 import { subscribeProjectsChanged } from '@/lib/storage/change-notifier';
 import { getRecordingState, onRecordingStateChange } from '@/lib/storage/storage';
@@ -25,6 +26,8 @@ import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import EditableTitle from '@/components/shared/EditableTitle';
 import AppHeader from '@/components/shared/AppHeader';
 import Mascot from '@/components/shared/Mascot';
+import LazyPreview from '@/components/shared/LazyPreview';
+import EntryThumbnail from '@/components/editor/EntryThumbnail';
 import BackupPausedNotice from '@/components/shared/BackupPausedNotice';
 import { useAutoFolderBackup } from '@/lib/backup/use-folder-backup';
 import { reportError } from '@/components/shared/report-error';
@@ -44,6 +47,31 @@ import { useExtensionPageRegistration } from '@/lib/runtime/use-extension-page-r
 function exportFilename(title: string): string {
   const stem = projectExportFilename({ title }, 'html').replace(/\.html$/, '');
   return `${stem}.howbeam`;
+}
+
+/** The project's first step, so a card can be recognised at a glance. */
+function ProjectCover({ project }: { project: ProjectSummary }) {
+  return (
+    <div className="aspect-[16/9] w-full shrink-0 overflow-hidden border-b-2 border-border bg-secondary">
+      {project.entryCount > 0 && (
+        <LazyPreview eager={false}>
+          <FirstEntry projectId={project.id} revision={`${project.contentRevision}:${project.stepEditRevision}`} />
+        </LazyPreview>
+      )}
+    </div>
+  );
+}
+
+function FirstEntry({ projectId, revision }: { projectId: string; revision: string }) {
+  const [entry, setEntry] = useState<StepEntry | null>(null);
+  useEffect(() => {
+    let active = true;
+    getProjectStructureSnapshot(projectId)
+      .then((snapshot) => { if (active) setEntry(snapshot.entries[0] ?? null); })
+      .catch((error) => console.warn('[howbeam] failed to read the project cover', error));
+    return () => { active = false; };
+  }, [projectId, revision]);
+  return entry && <EntryThumbnail entry={entry} alt="" fit="cover" loading="lazy" decoding="async" className="size-full" />;
 }
 
 export default function App() {
@@ -291,6 +319,7 @@ export default function App() {
                   key={project.id}
                   className="group flex flex-col overflow-hidden rounded-md border-2 border-border bg-card transition-transform duration-200 hover:-translate-y-0.5"
                 >
+                  <ProjectCover project={project} />
                   <div className="flex flex-1 flex-col gap-2.5 p-4">
                     <EditableTitle
                       value={project.title}
@@ -311,11 +340,7 @@ export default function App() {
                         {project.description}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                      <span>{t().library.screenCount(project.entryCount)}</span>
-                      <span className="size-1 rounded-full bg-current opacity-50" />
-                      <span>{t().library.annotationCount(project.stepCount)}</span>
-                    </div>
+                    <p className="text-xs font-bold text-muted-foreground">{t().library.stepCount(project.entryCount)}</p>
                     <div className="flex-1" />
                     <div className="mt-1 flex items-center gap-1 border-t-2 border-border-soft pt-3">
                       <Button
@@ -351,7 +376,7 @@ export default function App() {
                             onClick={() => setExportTarget(project)}
                             disabled={actionsLocked}
                           >
-                            <Download />
+                            <Archive />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>{lockedTitle(t().library.exportArchiveTooltip)}</TooltipContent>

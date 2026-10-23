@@ -6,6 +6,7 @@ const plural = (count: number, one: string, other: string) => `${count} ${count 
  * function signature must match it exactly. */
 export const en: Messages = {
   common: {
+    thumbnailPending: 'Thumbnail not loaded yet',
     appName: 'Howbeam',
     cancel: 'Cancel',
     close: 'Close',
@@ -129,7 +130,7 @@ export const en: Messages = {
   popup: {
     recordTarget: 'Record into',
     recordTargetNew: 'New project',
-    recordTargetCount: (count: number) => `${count} ${count === 1 ? 'screen' : 'screens'}`,
+    recordTargetCount: (count: number) => `${count} ${count === 1 ? 'step' : 'steps'}`,
     continueRecording: 'Continue recording',
     editorServiceUnavailable: 'Couldn’t reach the editor. Reopen Howbeam and try again.',
     activeTabUnreadable: 'Couldn’t read the current tab. Reopen Howbeam and try again.',
@@ -149,7 +150,7 @@ export const en: Messages = {
     title: 'Library',
     loadFailed: 'Couldn’t read the local library.',
     operationFailed: 'Something went wrong. Please try again.',
-    exportStarted: (title: string) => `Downloading the editable file for “${title}”.`,
+    exportStarted: (title: string) => `Downloading the backup of “${title}”.`,
     importTooLarge: 'This file is over the 128 MB import limit.',
     importedFallbackTitle: 'Imported project',
     archiveErrors: {
@@ -177,15 +178,14 @@ export const en: Messages = {
     emptyHint: 'Open Howbeam on the page you want to demonstrate and press “Start recording”, or create a blank project.',
     otherActionPending: 'Another action is in progress',
     titleLabel: 'Project title',
-    screenCount: (count: number) => plural(count, 'screen', 'screens'),
-    annotationCount: (count: number) => plural(count, 'marker', 'markers'),
-    exportProjectLabel: (title: string) => `Export ${title}`,
-    exportArchiveTooltip: 'Export',
-    exportDialogTitle: 'Export editable file?',
+    stepCount: (count: number) => plural(count, 'step', 'steps'),
+    exportProjectLabel: (title: string) => `Download a backup of ${title}`,
+    exportArchiveTooltip: 'Download backup',
+    exportDialogTitle: 'Download backup?',
     exportDialogDescription: (filename: string) =>
       `This downloads ${filename}. It contains the original screenshots, markers, masks, descriptions and sections, and can be imported back into Howbeam. Because it includes the unmasked originals, don’t share it publicly.`,
     exportDialogConfirm: 'Download .howbeam',
-    exportDialogPending: 'Exporting',
+    exportDialogPending: 'Downloading',
     deleteDialogTitle: 'Delete this project permanently?',
     deleteDialogDescription:
       'The original screenshots, markers, masks and descriptions will be removed from this device. Consider exporting a .howbeam file first.',
@@ -209,15 +209,15 @@ export const en: Messages = {
   },
 
   reset: {
-    label: 'Reset',
-    pending: 'Resetting',
-    pendingLabel: 'Resetting',
-    actionLabel: 'Reset this recording',
-    noTarget: 'Couldn’t find the project to reset.',
-    failedWithReason: (reason: string) => `Reset failed: ${reason}`,
-    failed: 'Reset failed. Please try again.',
-    dialogTitle: 'Reset this recording?',
-    dialogTitleNamed: (title: string) => `Reset “${title}”?`,
+    label: 'Clear steps',
+    pending: 'Clearing',
+    pendingLabel: 'Clearing steps',
+    actionLabel: 'Clear steps',
+    noTarget: 'Couldn’t find the project to clear.',
+    failedWithReason: (reason: string) => `Couldn’t clear steps: ${reason}`,
+    failed: 'Couldn’t clear steps. Please try again.',
+    dialogTitle: 'Clear all steps?',
+    dialogTitleNamed: (title: string) => `Clear all steps in “${title}”?`,
     dialogDescription: 'All steps and markers will be permanently deleted. This can’t be undone.',
   },
 
@@ -229,7 +229,7 @@ export const en: Messages = {
     missingId: 'This editor link is incomplete. Reopen the project from the Howbeam library.',
     invalidTitle: 'This project can’t be opened safely',
     invalidBody:
-      'Howbeam stopped opening this project so that none of its steps are lost or overwritten. Export an editable file from the library to keep a copy, then try reopening the project.',
+      'Howbeam stopped opening this project so that none of its steps are lost or overwritten. Download a backup from the library to keep a copy, then try reopening the project.',
     noSelectionTitle: 'No step selected',
     noSelectionBody: 'Choose a step from the list on the left to edit it.',
     recaptureFailed: 'The retake failed. Nothing was changed.',
@@ -262,7 +262,6 @@ export const en: Messages = {
       label: 'Steps',
       count: (count: number) => `Steps · ${count}`,
       listLabel: 'Reorderable list of steps',
-      thumbnailPending: 'Thumbnail not loaded yet',
       openStep: (number: number) => `Open step ${number}`,
       continueRecording: 'Continue recording',
       insertHere: 'Record',
@@ -628,6 +627,7 @@ export const en: Messages = {
     finishTooltip: 'Stop and open the editor',
     hintWaiting: 'Set up the page, then press Capture.',
     hintAnnotating: 'Click what to mark.',
+    hintRecording: 'Click the page to record.',
     finish: 'Finish',
     corner: {
       'top-left': 'the top-left corner',

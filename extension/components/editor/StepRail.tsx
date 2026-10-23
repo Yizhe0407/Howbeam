@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Camera, Plus, Video } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
@@ -20,6 +20,7 @@ import { useAutoHideScrollbar } from '@/lib/editor/use-auto-hide-scrollbar';
 import EntryThumbnail from './EntryThumbnail';
 import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import ProjectSectionHeading from './ProjectSectionHeading';
+import LazyPreview from '@/components/shared/LazyPreview';
 
 
 const SEAM_PILL = 'relative flex h-[18px] min-w-0 scale-90 items-center gap-1 whitespace-nowrap rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
@@ -82,40 +83,6 @@ function rowId(row: RailRow): string {
   return `${row.kind}:${row.id}`;
 }
 
-function LazyRailPreview({ eager, children }: { eager: boolean; children: ReactNode }) {
-  const host = useRef<HTMLDivElement | null>(null);
-  const [visible, setVisible] = useState(eager);
-
-  useEffect(() => {
-    if (eager || visible) {
-      setVisible(true);
-      return;
-    }
-    const element = host.current;
-    if (!element || typeof IntersectionObserver === 'undefined') {
-      setVisible(true);
-      return;
-    }
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
-      setVisible(true);
-      observer.disconnect();
-    }, { rootMargin: '320px' });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [eager, visible]);
-
-  return (
-    <div
-      ref={host}
-      aria-busy={!visible}
-      className="relative size-full overflow-hidden"
-    >
-      {visible ? children : <span className="sr-only">{t().editor.rail.thumbnailPending}</span>}
-    </div>
-  );
-}
-
 // Sits on top of a screenshot, so it wears the same solid sticker chip as the step number.
 const RAIL_HANDLE = 'size-6 rounded-full border-2 border-border bg-card text-foreground hover:bg-secondary [&_svg]:size-3.5';
 
@@ -123,7 +90,7 @@ const RAIL_HANDLE = 'size-6 rounded-full border-2 border-border bg-card text-for
 function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: number; active: boolean }) {
   return (
     <div className="pointer-events-none relative z-[1] aspect-[16/9] w-full overflow-hidden rounded-sm border-2 border-border bg-secondary">
-      <LazyRailPreview eager={active}>
+      <LazyPreview eager={active}>
         <EntryThumbnail
           entry={entry}
           alt=""
@@ -132,7 +99,7 @@ function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: nu
           decoding="async"
           className="size-full"
         />
-      </LazyRailPreview>
+      </LazyPreview>
       <span className={cn(
         'absolute top-1.5 left-1.5 z-30 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-border px-1 text-xs font-bold tabular-nums transition-colors',
         active ? 'bg-selected text-on-accent' : 'bg-card text-foreground',

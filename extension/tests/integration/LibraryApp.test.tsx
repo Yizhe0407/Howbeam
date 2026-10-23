@@ -51,6 +51,7 @@ vi.mock('@/lib/storage/project-repository', () => ({
   updateProject: database.updateProject,
 }));
 vi.mock('@/lib/storage/step-repository', () => ({ getSteps: database.getSteps }));
+vi.mock('@/lib/storage/project-structure', () => ({ getProjectStructureSnapshot: async () => ({ entries: [] }) }));
 vi.mock('@/lib/project/project-actions', () => projectActions);
 vi.mock('@/lib/storage/storage', () => storage);
 vi.mock('@/lib/export/project-archive-serialize', () => ({ exportProjectArchive: archive.exportProjectArchive }));
@@ -170,9 +171,8 @@ describe('專案庫', () => {
     expect(screen.queryByText('100 B')).toBeNull();
     expect(screen.queryByText(/更新於/)).toBeNull();
 
-    const counts = screen.getByText('2 個畫面').parentElement!;
-    expect(counts.textContent).toBe('2 個畫面2 標註');
-    expect(counts.getAttribute('title')).toBeNull();
+    const count = screen.getByText('2 個步驟');
+    expect(count.getAttribute('title')).toBeNull();
   });
 
   it('專案沒有說明時不加入預設提示文字', async () => {
@@ -260,7 +260,7 @@ describe('專案庫', () => {
     expect(screen.queryByText('讀取專案庫…')).toBeNull();
   });
 
-  it('匯出可編輯檔案時包含完整 metadata、使用安全檔名且不重新載入專案庫', async () => {
+  it('下載備份時包含完整 metadata、使用安全檔名且不重新載入專案庫', async () => {
     const steps = [{ id: 'step-1' }];
     database.getSteps.mockResolvedValue(steps);
     archive.exportProjectArchive.mockResolvedValue(new Blob(['archive']));
@@ -268,7 +268,7 @@ describe('專案庫', () => {
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
     render(<LibraryApp />);
 
-    fireEvent.click(await screen.findByRole('button', { name: '匯出 安全教學' }));
+    fireEvent.click(await screen.findByRole('button', { name: '下載「安全教學」的備份' }));
     expect(screen.getByText(/安全教學\.howbeam/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '下載 .howbeam' }));
 
@@ -285,23 +285,23 @@ describe('專案庫', () => {
       saveAs: true,
     });
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:archive');
-    expect(await screen.findByText('「安全教學」的可編輯檔案已開始下載。')).toBeTruthy();
+    expect(await screen.findByText('「安全教學」的備份已開始下載。')).toBeTruthy();
     expect(database.getProjectSummaries).toHaveBeenCalledOnce();
   });
 
-  it('匯出失敗時保留專案卡片、顯示錯誤並允許重試', async () => {
+  it('下載備份失敗時保留專案卡片、顯示錯誤並允許重試', async () => {
     silenceIntentionalErrorLogs();
     database.getSteps.mockResolvedValue([{ id: 'step-1' }]);
     archive.exportProjectArchive.mockRejectedValueOnce(new Error('匯出空間不足'));
     render(<LibraryApp />);
 
-    fireEvent.click(await screen.findByRole('button', { name: '匯出 安全教學' }));
+    fireEvent.click(await screen.findByRole('button', { name: '下載「安全教學」的備份' }));
     fireEvent.click(screen.getByRole('button', { name: '下載 .howbeam' }));
 
     expect((await screen.findByRole('alert')).textContent).toContain('匯出空間不足');
     expect(screen.getByDisplayValue(project.title)).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect((screen.getByRole('button', { name: '匯出 安全教學' }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole('button', { name: '下載「安全教學」的備份' }) as HTMLButtonElement).disabled).toBe(false);
     expect(database.getProjectSummaries).toHaveBeenCalledOnce();
   });
 
@@ -347,16 +347,16 @@ describe('專案庫', () => {
     expect(input.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('其他頁面寫入專案後即時更新專案庫（例如錄製後的畫面數）', async () => {
+  it('其他頁面寫入專案後即時更新專案庫（例如錄製後的步驟數）', async () => {
     render(<LibraryApp />);
     await screen.findByDisplayValue(project.title);
-    expect(screen.getByText('2 個畫面', { exact: false })).toBeTruthy();
+    expect(screen.getByText('2 個步驟', { exact: false })).toBeTruthy();
     expect(changes.listeners.size).toBeGreaterThan(0);
 
     database.getProjectSummaries.mockResolvedValue([{ ...project, entryCount: 5, stepCount: 5 }]);
     act(() => changes.listeners.forEach((listener) => listener()));
 
-    await waitFor(() => expect(screen.getByText('5 個畫面', { exact: false })).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('5 個步驟', { exact: false })).toBeTruthy());
   });
 
   it('同一事件迴圈內不會啟動兩個重疊的專案庫寫入', async () => {

@@ -37,9 +37,10 @@ describe('English UI', () => {
   it('renders the popup in English', () => {
     render(<PopupApp />);
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Open editor/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Library/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Reset this recording' })).toBeTruthy();
+    // Idle, the popup only starts recordings: finishing one opens the editor, and clearing lives in the editor.
+    expect(screen.queryByRole('button', { name: /Open editor/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Clear steps' })).toBeNull();
   });
 
   it('renders the editor header in English', () => {

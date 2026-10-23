@@ -55,7 +55,7 @@ describe('catalogs', () => {
   it('pluralizes English counts', () => {
     expect(en.mode.steps.itemCount(1)).toBe('1 step');
     expect(en.mode.steps.itemCount(3)).toBe('3 steps');
-    expect(en.library.screenCount(1)).toBe('1 screen');
+    expect(en.library.stepCount(1)).toBe('1 step');
   });
 });
 

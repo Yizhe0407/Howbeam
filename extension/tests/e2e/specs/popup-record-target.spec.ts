@@ -28,13 +28,13 @@ test.describe('popup record target picker', () => {
       expect(box!.x + box!.width).toBeLessThanOrEqual(triggerBox!.x + triggerBox!.width + 1);
     }
     for (const option of await list.getByRole('option').all()) {
-      const count = option.getByText('0 個畫面');
+      const count = option.getByText('0 個步驟');
       if (await count.count() === 0) continue;
       // The count is the last thing on the row and must stay inside it.
       const [countBox, optionBox] = [await count.boundingBox(), await option.boundingBox()];
       expect(countBox!.x + countBox!.width).toBeLessThanOrEqual(optionBox!.x + optionBox!.width + 1);
     }
-    await expect(list.getByText('0 個畫面')).toHaveCount(3);
+    await expect(list.getByText('0 個步驟')).toHaveCount(3);
     expect(browserErrors).toEqual([]);
   });
 });
