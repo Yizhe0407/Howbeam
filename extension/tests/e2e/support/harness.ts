@@ -1,4 +1,4 @@
-import { expect, type Frame, type Page } from '@playwright/test';
+import { expect, type Frame, type Locator, type Page } from '@playwright/test';
 import { inflateSync } from 'node:zlib';
 // Type-only import: erased at runtime (Playwright never loads extension code), but keeps the project template below from drifting off the model.
 import type { Project } from '../../../lib/storage/models';
@@ -556,6 +556,21 @@ export async function getSnapshotFrame(page: Page): Promise<Frame> {
     await page.waitForTimeout(50);
   }
   throw new Error('Snapshot shield frame did not become available');
+}
+
+/**
+ * Clicks a shield toolbar control whose action removes the shield iframe
+ * (finish, next snapshot, rebuild, discard). Any Playwright action on that
+ * frame that is still pending when the app removes it never settles (a CDP
+ * mouse click waits for the frame's next paint) or fails with "Frame was
+ * detached". The click is queued in the frame so the evaluation returns
+ * before the handler, and with it the teardown, can start.
+ */
+export async function clickShieldClosingControl(control: Locator): Promise<void> {
+  await expect(control).toBeEnabled();
+  await control.evaluate((button: HTMLElement) => {
+    setTimeout(() => button.click(), 0);
+  });
 }
 
 export async function clickSnapshotTarget(page: Page, point: { x: number; y: number }): Promise<void> {

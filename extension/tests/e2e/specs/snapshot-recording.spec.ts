@@ -1,5 +1,6 @@
 import { test, expect, FIXTURE_URL } from '../support/fixture';
 import {
+  clickShieldClosingControl,
   clickSnapshotTarget,
   expectSteady,
   getSnapshotFrame,
@@ -168,7 +169,7 @@ test.describe('snapshot recording', () => {
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
 
     const editorOpened = extensionContext.waitForEvent('page');
-    await shield.getByRole('button', { name: '結束', exact: true }).click();
+    await clickShieldClosingControl(shield.getByRole('button', { name: '結束', exact: true }));
     const editor = await editorOpened;
     await editor.waitForLoadState('domcontentloaded');
     await expect.poll(async () => (await readRecordingState(popupPage)).isRecording).toBe(false);
@@ -215,7 +216,7 @@ test.describe('snapshot recording', () => {
 
     await shield.getByRole('button', { name: '放棄這次錄製' }).click();
     await expect(shield.getByRole('alertdialog', { name: '放棄這次錄製？' })).toBeVisible();
-    await shield.getByRole('button', { name: '放棄錄製' }).click();
+    await clickShieldClosingControl(shield.getByRole('button', { name: '放棄錄製' }));
 
     await expect.poll(async () => (await readRecordingState(popupPage)).isRecording).toBe(false);
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(0);
@@ -233,7 +234,7 @@ test.describe('snapshot recording', () => {
     await clickSnapshotTarget(appPage, await targetCenter(appPage, '#plain-text'));
     await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(1);
 
-    await firstShield.getByRole('button', { name: '下一張' }).click();
+    await clickShieldClosingControl(firstShield.getByRole('button', { name: '下一張' }));
     await expect.poll(async () => (await readRecordingState(popupPage)).phase).toBe('preparing-next');
     await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(0);
     await expect(appPage.locator('[data-howbeam-recording-toolbar]')).toHaveCount(1);
@@ -268,7 +269,7 @@ test.describe('snapshot recording', () => {
     );
 
     const editorOpened = extensionContext.waitForEvent('page');
-    await secondShield.getByRole('button', { name: '結束', exact: true }).click();
+    await clickShieldClosingControl(secondShield.getByRole('button', { name: '結束', exact: true }));
     const editor = await editorOpened;
     await editor.waitForLoadState('domcontentloaded');
     await expect(editor.getByRole('button', { name: /開啟步驟/ })).toHaveCount(2);
@@ -317,7 +318,7 @@ test.describe('snapshot recording', () => {
     await clickSnapshotTarget(appPage, await targetCenter(appPage, '#action-button'));
     await expectSteady(async () => await readSteps(popupPage), originalSteps);
 
-    await invalidatedShield.getByRole('button', { name: '保留並重建' }).click();
+    await clickShieldClosingControl(invalidatedShield.getByRole('button', { name: '保留並重建' }));
     await expect.poll(async () => (await readRecordingState(popupPage)).phase).toBe('recording');
     const rebuiltSteps = await readSteps(popupPage);
     const rebuiltAnchors = rebuiltSteps.filter((step) => step.bounds === null);
@@ -341,7 +342,7 @@ test.describe('snapshot recording', () => {
     await expect(scrolledShield.getByRole('button', { name: '保留並重建' })).toBeVisible();
 
     const editorOpened = extensionContext.waitForEvent('page');
-    await scrolledShield.getByRole('button', { name: '完成錄製' }).click();
+    await clickShieldClosingControl(scrolledShield.getByRole('button', { name: '完成錄製' }));
     const editor = await editorOpened;
     await editor.waitForLoadState('domcontentloaded');
     await expect.poll(async () => (await readRecordingState(popupPage)).isRecording).toBe(false);
