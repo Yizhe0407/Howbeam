@@ -30,7 +30,7 @@
 | 工具 | 版本 | 用途 |
 | --- | --- | --- |
 | [Git](https://git-scm.com/) | 任何版本 | 下載原始碼 |
-| [Node.js](https://nodejs.org/) | 20.19 以上 | 建置擴充功能 |
+| [Node.js](https://nodejs.org/) | 24.22.1 以上 | 建置擴充功能 |
 | [pnpm](https://pnpm.io/installation) | 10 以上 | 安裝套件 |
 
 > 已經裝好 Node.js 但沒有 pnpm？執行 `corepack enable` 就會啟用專案指定的 pnpm 版本。
@@ -210,7 +210,7 @@ pnpm build
 點擊會導向新頁面的連結時，Howbeam 會先拍下「點擊前」的畫面，再放行導覽，所以步驟是對的。「步驟」模式會跟著你錄；「標註」模式只針對單一畫面：按「擷取」前可以自由切換分頁或換頁，擷取之後換頁就會停止。
 
 **建置失敗？**
-先確認 `node -v` 是 20.19 以上，且是在 `Stepmark/extension` 資料夾裡執行 `pnpm install`。
+先確認 `node -v` 是 24.22.1 以上，且是在 `Stepmark/extension` 資料夾裡執行 `pnpm install`。
 
 ---
 

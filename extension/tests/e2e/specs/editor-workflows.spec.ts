@@ -111,12 +111,20 @@ async function readClipboardPng(page: Page): Promise<{
   });
 }
 
-/** StepActions' copy button leaves no DOM signal once the write finishes (just a transient icon swap), so poll the clipboard directly instead. */
-async function readClipboardPngEventually(page: Page): ReturnType<typeof readClipboardPng> {
+/**
+ * Copies with `button` and returns the PNG it put on the clipboard. The
+ * clipboard is emptied first: otherwise a previous copy's PNG satisfies the
+ * wait at once and the read races the new write. The copy button gives no DOM
+ * signal when the write finishes, so the clipboard itself is polled.
+ */
+async function copyAndReadPng(page: Page, button: Locator): ReturnType<typeof readClipboardPng> {
+  await page.evaluate(() => navigator.clipboard.writeText(''));
+  await button.click();
+  let png: Awaited<ReturnType<typeof readClipboardPng>> | undefined;
   await expect.poll(
     async () => {
       try {
-        await readClipboardPng(page);
+        png = await readClipboardPng(page);
         return true;
       } catch {
         return false;
@@ -124,7 +132,7 @@ async function readClipboardPngEventually(page: Page): ReturnType<typeof readCli
     },
     { timeout: 10_000 },
   ).toBe(true);
-  return readClipboardPng(page);
+  return png!;
 }
 
 test.describe('editor workflows', () => {
@@ -338,9 +346,7 @@ test.describe('editor workflows', () => {
     await recordSnapshotTargets(appPage, popupPage, ['#action-button', '#visual-container strong']);
     const editor = await openEditor(extensionContext, extensionId, popupPage, 2);
 
-    // 圖示短暫切換沒有 DOM 訊號，因此直接驗證剪貼簿。
-    await editor.getByRole('button', { name: '複製圖片' }).click();
-    const ordinaryPng = await readClipboardPngEventually(editor);
+    const ordinaryPng = await copyAndReadPng(editor, editor.getByRole('button', { name: '複製圖片' }));
     expect(ordinaryPng).toMatchObject({
       type: 'image/png',
       signature: [137, 80, 78, 71, 13, 10, 26, 10],
@@ -350,8 +356,7 @@ test.describe('editor workflows', () => {
     expect(ordinaryPng.height).toBeGreaterThan(600);
 
     await editor.getByRole('button', { name: '開啟步驟 2' }).click();
-    await editor.getByRole('button', { name: '複製圖片' }).click();
-    const snapshotPng = await readClipboardPngEventually(editor);
+    const snapshotPng = await copyAndReadPng(editor, editor.getByRole('button', { name: '複製圖片' }));
     expect(snapshotPng).toMatchObject({
       type: 'image/png',
       signature: [137, 80, 78, 71, 13, 10, 26, 10],

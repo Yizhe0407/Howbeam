@@ -40,51 +40,42 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "fflate": "^0.8.3",
-    "idb": "^8.0.3",
-    "lucide-react": "^1.24.0",
+    "idb": "^8.0.4",
+    "lucide-react": "^1.61.0",
     "pdfkit": "^0.20.2",
-    "radix-ui": "^1.6.2",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-hot-toast": "^2.6.0"
+    "radix-ui": "^1.8.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-hot-toast": "^2.6.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@playwright/test": "1.61.1",
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "1.64.1",
     "@resvg/resvg-js": "2.6.2",
-    "@tailwindcss/vite": "^4.3.2",
-    "@testing-library/react": "^16.3.2",
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/react": "^16.3.3",
     "@types/fontkit": "^2.0.9",
-    "@types/pdfkit": "^0.17.6",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitest/coverage-v8": "^4.1.10",
-    "@wxt-dev/module-react": "^1.1.5",
-    "eslint": "^9.39.4",
+    "@types/pdfkit": "^0.17.7",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitest/coverage-v8": "^4.1.12",
+    "@wxt-dev/module-react": "^1.2.2",
+    "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^6.1.1",
-    "fake-indexeddb": "^6.2.5",
+    "fake-indexeddb": "^6.2.6",
     "fontkit": "^2.0.4",
-    "globals": "^17.7.0",
+    "globals": "^17.13.0",
     "jsdom": "^29.1.1",
     "pdfjs-dist": "^6.4.299",
-    "tailwindcss": "^4.3.2",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.65.0",
-    "vitest": "^4.1.10",
-    "web-ext": "10.4.0",
-    "wxt": "^0.20.27"
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^4.1.12",
+    "web-ext": "10.8.0",
+    "wxt": "^0.21.4"
   },
   "packageManager": "pnpm@10.13.1",
   "engines": {
-    "node": ">=20.19.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "shell-quote": "1.9.0",
-      "tmp": "0.2.7",
-      "adm-zip": "0.6.0",
-      "uuid": "11.1.1",
-      "esbuild": "0.28.1"
-    }
+    "node": ">=24.22.1"
   }
 }
