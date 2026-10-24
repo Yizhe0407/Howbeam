@@ -127,7 +127,7 @@ function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: nu
         <EntryThumbnail
           entry={entry}
           alt=""
-          fit="contain"
+          fit="cover"
           loading="lazy"
           decoding="async"
           className="size-full"
