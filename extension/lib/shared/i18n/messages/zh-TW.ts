@@ -25,7 +25,6 @@ export const zhTW = {
     library: '專案庫',
     editor: '編輯器',
     backToLibrary: '回到專案庫',
-    openEditor: '開啟編輯器',
     openingEditor: '正在開啟編輯器',
     startRecording: '開始錄製',
     recordingMode: '錄製模式',
@@ -194,7 +193,7 @@ export const zhTW = {
 
   emptyState: {
     title: '尚未建立內容',
-    body: '到想示範的網頁按下「開始錄製」，每一次點擊都會變成這裡的一個步驟。',
+    body: '每一次點擊都會變成一個步驟。',
     opening: '正在開啟',
     returnToRecordingTab: '回到錄製分頁',
     returnToPage: '回到網頁開始錄製',

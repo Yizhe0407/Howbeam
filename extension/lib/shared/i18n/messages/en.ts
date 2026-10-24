@@ -23,7 +23,6 @@ export const en: Messages = {
     library: 'Library',
     editor: 'Editor',
     backToLibrary: 'Back to library',
-    openEditor: 'Open editor',
     openingEditor: 'Opening editor',
     startRecording: 'Start recording',
     recordingMode: 'Recording mode',
@@ -188,7 +187,7 @@ export const en: Messages = {
 
   emptyState: {
     title: 'Nothing here yet',
-    body: 'Press “Start recording” on the page you want to demonstrate. Every click becomes a step here.',
+    body: 'Every click becomes a step.',
     opening: 'Opening',
     returnToRecordingTab: 'Back to recording tab',
     returnToPage: 'Go back and start recording',

@@ -119,7 +119,6 @@ function App() {
         onTargetProjectChange={setTargetProjectId}
       />
 
-      {/* Hidden while a run is live: RecordControls already offers the editor as its secondary exit. */}
       {!editorRecovery && !isRecording && <div className="h-0.5 w-full rounded-full bg-border-soft" aria-hidden="true" />}
 
       {!editorRecovery && !isRecording && (

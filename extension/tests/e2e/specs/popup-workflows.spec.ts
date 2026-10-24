@@ -153,6 +153,24 @@ test.describe('popup workflows', () => {
     await expect(editor.getByRole('button', { name: '匯出' })).toBeDisabled();
   });
 
+  test('finishes a live run from the popup and opens the editor', async ({
+    appPage,
+    popupPage,
+    extensionContext,
+    browserErrors: _browserErrors,
+  }) => {
+    await startStepsRunWithFirstStep(appPage, popupPage);
+    await popupPage.reload();
+    await expect(popupPage.getByText('錄製中 · 1 個步驟')).toBeVisible();
+    await expect(popupPage.getByRole('button', { name: '開啟編輯器' })).toHaveCount(0);
+
+    const editorOpened = extensionContext.waitForEvent('page', (page) => page.url().includes('/editor.html'));
+    await popupPage.getByRole('button', { name: '完成錄製' }).click();
+    const editor = await editorOpened;
+    await expect.poll(async () => (await readRecordingState(editor)).isRecording).toBe(false);
+    await expect(editor.getByText('步驟 · 1', { exact: true })).toBeVisible();
+  });
+
   test('opens a multi-step project at its first entry, not its latest capture', async ({
     appPage,
     popupPage,

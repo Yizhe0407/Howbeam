@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
-import { Camera, ExternalLink, ListOrdered, Loader2, TriangleAlert } from 'lucide-react';
+import { Camera, Check, ExternalLink, ListOrdered, Loader2, TriangleAlert } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import InlineAlert from '@/components/shared/InlineAlert';
 import OpenEditorButton from '@/components/popup/OpenEditorButton';
@@ -24,6 +24,8 @@ import {
 import { claimPendingStart, discardPendingStart, parkPendingStart } from '@/lib/runtime/pending-start';
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { t } from '@/lib/shared/i18n';
+import type { RecordingControlResult } from '@/lib/runtime/messages';
+import { isRecordingControlResult, requireRuntimeMessageResult } from '@/lib/runtime/runtime-message-result';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Props {
@@ -126,6 +128,8 @@ export default function RecordControls({
   }, [onTargetProjectChange]);
   const [pending, setPending] = useState(false);
   const pendingShown = useDeferredBusy(pending);
+  const [finishing, setFinishing] = useState(false);
+  const finishingShown = useDeferredBusy(finishing);
   const [controlError, setControlError] = useState<string | null>(null);
   const { crossTab, setCrossTab, restrictedPage, setRestrictedPage, activeTabId } = useStartPreflight(setControlError);
 
@@ -206,6 +210,28 @@ export default function RecordControls({
     }
   }
 
+  async function finishRecording() {
+    if (finishing || !recording.runId) return;
+    setFinishing(true);
+    setControlError(null);
+    try {
+      const result = requireRuntimeMessageResult<RecordingControlResult>(
+        await browser.runtime.sendMessage({ type: 'FINISH_RECORDING', runId: recording.runId }),
+        isRecordingControlResult,
+        t().runtime.recordingChannelLost,
+      );
+      if (!result.ok) {
+        setControlError(result.error);
+        return;
+      }
+      window.close();
+    } catch (error) {
+      setControlError(reportError('[howbeam] failed to finish recording', error, t().toolbar.actionFailed));
+    } finally {
+      setFinishing(false);
+    }
+  }
+
   if (!recording.isRecording && needsEditorRecovery(recording.recoverableError)) {
     const editorFailed = recording.recoverableError?.code === 'EDITOR_OPEN_FAILED';
     return (
@@ -252,21 +278,21 @@ export default function RecordControls({
         <div className="flex flex-col gap-2">
           <button
             type="button"
-            onClick={focusRecordedTab}
+            onClick={() => void finishRecording()}
+            disabled={finishingShown}
             className={cn(buttonVariants(), 'w-full')}
+          >
+            {finishingShown ? <Loader2 className="animate-spin" /> : <Check className="size-4" />}
+            {finishingShown ? t().toolbar.finishing : t().toolbar.finishRecording}
+          </button>
+          <button
+            type="button"
+            onClick={focusRecordedTab}
+            className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'w-full')}
           >
             <ExternalLink className="size-4" />
             {t().popup.returnToRecordingTab}
           </button>
-          {/* Secondary exit while a run is live (UX_PLAN 6.4): the editor shows
-              what has been captured so far without interrupting the recording,
-              which the page controller still owns. */}
-          <OpenEditorButton
-            label={t().common.openEditor}
-            pending={openingEditor}
-            onOpen={onOpenEditor}
-            className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'w-full')}
-          />
         </div>
       </div>
     );

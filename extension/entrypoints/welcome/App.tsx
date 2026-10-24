@@ -118,8 +118,8 @@ export default function App() {
             <ul className="flex flex-col gap-3">
               {([['steps', ListOrdered], ['snapshot', Camera]] as const).map(([mode, Icon]) => (
                 <li key={mode} className="flex flex-col items-start gap-1.5">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-border bg-secondary px-2.5 py-0.5 text-xs font-bold text-foreground">
-                    <Icon className="size-3.5" aria-hidden="true" />
+                  <span className="inline-flex items-center gap-1.5 text-sm font-bold text-foreground">
+                    <Icon className="size-4" aria-hidden="true" />
                     {recordingModeCopy(mode).label}
                   </span>
                   <span className="text-sm leading-relaxed text-muted-foreground">{recordingModeCopy(mode).description}</span>
