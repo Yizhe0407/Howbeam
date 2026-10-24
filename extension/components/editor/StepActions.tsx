@@ -100,48 +100,55 @@ export default function StepActions({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      {/* A 2px outline + 2px padding keeps every button exactly 4px inside, as `rounded-sm` expects. */}
+      {/* A 2px outline + 2px padding keeps every button exactly 4px inside, as `rounded-sm` expects.
+          Each trigger is a span: a disabled button gets no pointer events, so its reason would never show. */}
       <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5">
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={handleCopy}
-              disabled={operationsDisabled || privacyReviewRequired || busyShown}
-              aria-label={t().editor.actions.copyImage}
-              className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-            >
-              {copying && busyShown ? <Loader2 className="size-4 animate-spin" /> : copied ? <Check className="size-4 text-brand-text" /> : <Copy className="size-4" />}
-            </button>
+            <span className="inline-flex">
+              <button
+                type="button"
+                onClick={handleCopy}
+                disabled={operationsDisabled || privacyReviewRequired || busyShown}
+                aria-label={t().editor.actions.copyImage}
+                className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+              >
+                {copying && busyShown ? <Loader2 className="size-4 animate-spin" /> : copied ? <Check className="size-4 text-brand-text" /> : <Copy className="size-4" />}
+              </button>
+            </span>
           </TooltipTrigger>
           <TooltipContent>{privacyReviewRequired ? t().editor.privacyReviewTooltip : t().editor.actions.copyImage}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => void handleRecapture()}
-              disabled={!onRecapture || operationsDisabled || busyShown || Boolean(recaptureDisabledReason)}
-              aria-label={t().editor.actions.recapture}
-              className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-            >
-              {recapturing && busyShown ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-            </button>
+            <span className="inline-flex">
+              <button
+                type="button"
+                onClick={() => void handleRecapture()}
+                disabled={!onRecapture || operationsDisabled || busyShown || Boolean(recaptureDisabledReason)}
+                aria-label={t().editor.actions.recapture}
+                className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+              >
+                {recapturing && busyShown ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              </button>
+            </span>
           </TooltipTrigger>
           <TooltipContent>{recaptureDisabledReason ?? (operationsDisabled ? t().editor.actions.recaptureUnavailable : t().editor.actions.recapture)}</TooltipContent>
         </Tooltip>
         <span className="mx-0.5 h-5 w-0.5 rounded-full bg-border-soft" aria-hidden="true" />
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleteDisabled || operationsDisabled || busyShown}
-              aria-label={t().editor.actions.deleteStep}
-              className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-danger-soft hover:text-danger disabled:pointer-events-none disabled:opacity-40"
-            >
-              {deleting && busyShown ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-            </button>
+            <span className="inline-flex">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleteDisabled || operationsDisabled || busyShown}
+                aria-label={t().editor.actions.deleteStep}
+                className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-danger-soft hover:text-danger disabled:pointer-events-none disabled:opacity-40"
+              >
+                {deleting && busyShown ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+              </button>
+            </span>
           </TooltipTrigger>
           <TooltipContent>{deleteDisabled ? t().editor.actions.deleteDisabled : t().common.delete}</TooltipContent>
         </Tooltip>

@@ -1,7 +1,6 @@
 import {
   Circle,
   Crop,
-  Hash,
   MousePointer2,
   MoveUpRight,
   RectangleHorizontal,
@@ -25,6 +24,12 @@ import { STYLE_FIELDS, type ImageEditStyle, type StyleField } from './image-edit
 // A solid bar, drawn the way a redaction renders in the export.
 const RedactIcon = createLucideIcon('Redact', [
   ['rect', { x: '3', y: '8', width: '18', height: '8', rx: '1.5', fill: 'currentColor', key: 'bar' }],
+]);
+
+// A numbered circle, the marker this tool draws.
+const StepIcon = createLucideIcon('Step', [
+  ['circle', { cx: '12', cy: '12', r: '10', key: 'ring' }],
+  ['path', { d: 'M10.5 9 12.5 7.5V16.5', key: 'one' }],
 ]);
 
 export type ImageEditToolId = 'select' | 'text' | 'arrow' | 'rect' | 'ellipse' | 'step' | 'redact' | 'crop';
@@ -162,7 +167,7 @@ export const IMAGE_EDIT_TOOLS: readonly [ImageEditTool, ...ImageEditTool[]] = [
   },
   {
     id: 'step',
-    icon: Hash,
+    icon: StepIcon,
     label: () => t().editor.imageEdit.tools.step,
     hint: () => t().editor.imageEdit.hints.step,
     shortcut: 'n',

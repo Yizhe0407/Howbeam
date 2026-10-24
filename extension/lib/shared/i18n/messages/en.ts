@@ -230,8 +230,7 @@ export const en: Messages = {
     recaptureAction: 'Retake',
     descriptionSaveRetry: 'Some descriptions couldn’t be saved. Retry before continuing.',
     draftConfirmationRequired: 'Choose which draft to keep before overwriting the saved description.',
-    multiAnnotationRecaptureBlocked:
-      'This snapshot has several markers. A new base image would misplace the others, so record the whole snapshot again.',
+    multiAnnotationRecaptureBlocked: 'Several markers, so it can’t be retaken. Record this snapshot again.',
     privacyReviewRequiredNotice:
       'The sensitive-information masks on this image haven’t been confirmed, so its preview stays black and copying and exporting are blocked. Choose “Check masks” to confirm them.',
     privacyReviewRequiredHidden:

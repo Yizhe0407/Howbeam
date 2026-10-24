@@ -1,8 +1,8 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  Archive,
   Copy,
+  Download,
   Loader2,
   PencilLine,
   Search,
@@ -326,11 +326,11 @@ export default function App() {
                             size="icon"
                             variant="ghost"
                             className="size-8 shrink-0"
-                            aria-label={t().library.exportProjectLabel(project.title)}
+                            aria-label={t().library.exportProjectLabel(projectDisplayTitle(project.title))}
                             onClick={() => setExportTarget(project)}
                             disabled={actionsLocked}
                           >
-                            <Archive />
+                            <Download />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>{lockedTitle(t().library.exportArchiveTooltip)}</TooltipContent>

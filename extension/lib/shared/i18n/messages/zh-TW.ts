@@ -233,7 +233,7 @@ export const zhTW = {
     recaptureAction: '補拍',
     descriptionSaveRetry: '尚有說明無法儲存。請重試後再繼續。',
     draftConfirmationRequired: '覆寫已儲存的說明前，需要先確認要保留哪一份草稿。',
-    multiAnnotationRecaptureBlocked: '此快照包含多個標註；只補拍其中一處會讓其他標註對不上畫面，請重新製作整張快照。',
+    multiAnnotationRecaptureBlocked: '有多個標註，無法補拍；請重新錄這張快照。',
     privacyReviewRequiredNotice:
       '這張圖片的敏感資訊遮罩尚未確認，因此預覽會保持全黑，複製與匯出也會被阻擋。請按「檢查遮罩」確認遮罩。',
     privacyReviewRequiredHidden: '這張圖片的敏感資訊遮罩尚未確認，因此暫時隱藏。請在步驟上按「檢查遮罩」確認遮罩。',
