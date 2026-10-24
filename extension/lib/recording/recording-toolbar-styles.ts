@@ -128,7 +128,8 @@ export const recordingToolbarStyles = `
   .ft-button[data-danger="true"]:hover:not(:disabled) { background: var(--ft-btn-danger-hover-bg); color: var(--ft-btn-danger-hover-text); }
   .ft-button:disabled { opacity: .42; cursor: default; }
   /* The one action that moves the flow forward in the current state. */
-  .ft-button[data-emphasis="true"] { background: var(--ft-segment-active-bg); color: #1f1b16; }
+  .ft-button[data-emphasis="true"], .ft-button[aria-pressed="true"] { background: var(--ft-segment-active-bg); color: #1f1b16; }
+  .ft-button[aria-pressed="true"]:disabled { opacity: 1; }
   .ft-primary {
     height: 38px; flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     padding: 0 16px; border: 2px solid var(--ft-border); border-radius: 999px; background: var(--ft-segment-active-bg);

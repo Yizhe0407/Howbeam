@@ -613,11 +613,11 @@ export const en: Messages = {
 
   regionCapture: {
     label: 'Region capture',
-    instructions: 'Drag to select the area to capture. Press Esc to cancel',
+    instructions: 'Drag to select an area. Esc cancels',
     cancelLabel: 'Cancel region capture',
-    dragging: 'Dragging; release to adjust, or press Esc to cancel',
+    dragging: 'Release to adjust the area',
     tooSmall: (minSize: number) => `That area is too small. Make it at least ${minSize} pixels wide and tall, then drag again`,
-    adjust: 'Drag to adjust, then press ✓. Esc cancels',
+    adjust: 'Drag the edges to adjust',
     confirmLabel: 'Confirm capture',
     capturing: 'Capturing the selected area',
   },

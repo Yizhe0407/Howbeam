@@ -45,13 +45,15 @@ function PinIllustration() {
   );
 }
 
-function StepCard({ number, title, done = false, children }: { number: number; title: string; done?: boolean; children: ReactNode }) {
+function Card({ title, badge, children }: { title: string; badge?: ReactNode; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3 rounded-md border-2 border-border bg-card p-4">
       <h2 className="flex items-center gap-2 text-base font-bold">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-primary text-xs text-primary-foreground" aria-hidden="true">
-          {done ? <Check className="size-3.5" strokeWidth={3} /> : number}
-        </span>
+        {badge && (
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-primary text-primary-foreground" aria-hidden="true">
+            {badge}
+          </span>
+        )}
         {title}
       </h2>
       {children}
@@ -60,7 +62,7 @@ function StepCard({ number, title, done = false, children }: { number: number; t
 }
 
 /**
- * Step 1 follows the browser's own pin state: once Howbeam is on the
+ * The pin card follows the browser's own pin state: once Howbeam is on the
  * toolbar the instructions give way to a confirmation, and they come back if
  * it is unpinned. A browser that cannot report the state keeps the
  * instructions. The live region announces the switch either way.
@@ -68,7 +70,10 @@ function StepCard({ number, title, done = false, children }: { number: number; t
 function PinStep() {
   const pinned = useToolbarPin() === 'pinned';
   return (
-    <StepCard number={1} title={pinned ? t().welcome.pinnedTitle : t().welcome.pinTitle} done={pinned}>
+    <Card
+      title={pinned ? t().welcome.pinnedTitle : t().welcome.pinTitle}
+      badge={pinned ? <Check className="size-3.5" strokeWidth={3} /> : <Pin className="size-3.5" />}
+    >
       <div aria-live="polite" className="flex flex-col gap-3">
         {pinned ? (
           <p className="text-sm leading-relaxed text-muted-foreground">{t().welcome.pinnedBody}</p>
@@ -79,7 +84,7 @@ function PinStep() {
           </>
         )}
       </div>
-    </StepCard>
+    </Card>
   );
 }
 
@@ -114,7 +119,7 @@ export default function App() {
         <div className="grid gap-4 md:grid-cols-[1.15fr_1fr_1fr]">
           <PinStep />
 
-          <StepCard number={2} title={t().welcome.modesTitle}>
+          <Card title={t().welcome.modesTitle}>
             <ul className="flex flex-col gap-3">
               {([['steps', ListOrdered], ['snapshot', Camera]] as const).map(([mode, Icon]) => (
                 <li key={mode} className="flex flex-col items-start gap-1.5">
@@ -126,9 +131,9 @@ export default function App() {
                 </li>
               ))}
             </ul>
-          </StepCard>
+          </Card>
 
-          <StepCard number={3} title={t().welcome.promisesTitle}>
+          <Card title={t().welcome.promisesTitle}>
             <ul className="flex flex-col gap-3 text-sm leading-relaxed text-muted-foreground">
               <li className="flex gap-2">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-foreground" aria-hidden="true" />
@@ -139,7 +144,7 @@ export default function App() {
                 {t().welcome.crossTab}
               </li>
             </ul>
-          </StepCard>
+          </Card>
         </div>
 
         <div className="flex justify-end">

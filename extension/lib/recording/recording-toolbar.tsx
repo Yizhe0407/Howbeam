@@ -469,23 +469,23 @@ export default function RecordingToolbar({
                     </button>
                   )}
 
-                  <div className="ft-actions-group">
-                    {state.mode === 'steps' && (
-                      <button
-                        type="button"
-                        className="ft-button"
-                        data-emphasis={paused ? 'true' : undefined}
-                        aria-label={paused ? t().toolbar.resume : t().toolbar.pause}
-                        data-tooltip={paused ? t().toolbar.resume : t().toolbar.pause}
-                        disabled={busy}
-                        onClick={() => void run(paused ? 'RESUME_RECORDING' : 'PAUSE_RECORDING')}
-                      >
-                        {pending === 'PAUSE_RECORDING' || pending === 'RESUME_RECORDING'
-                          ? <Loader2 />
-                          : paused ? <Play size={16} /> : <Pause size={16} />}
-                      </button>
-                    )}
-                    {!preparingNext && (
+                  {!preparingNext && (
+                    <div className="ft-actions-group">
+                      {state.mode === 'steps' && (
+                        <button
+                          type="button"
+                          className="ft-button"
+                          data-emphasis={paused ? 'true' : undefined}
+                          aria-label={paused ? t().toolbar.resume : t().toolbar.pause}
+                          data-tooltip={paused ? t().toolbar.resume : t().toolbar.pause}
+                          disabled={busy}
+                          onClick={() => void run(paused ? 'RESUME_RECORDING' : 'PAUSE_RECORDING')}
+                        >
+                          {pending === 'PAUSE_RECORDING' || pending === 'RESUME_RECORDING'
+                            ? <Loader2 />
+                            : paused ? <Play size={16} /> : <Pause size={16} />}
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="ft-button"
@@ -496,32 +496,21 @@ export default function RecordingToolbar({
                       >
                         {pending === 'UNDO_LAST_CAPTURE' ? <Loader2 /> : <Undo2 size={18} />}
                       </button>
-                    )}
-                    {!preparingNext && onStartRegionCapture && (
-                      <button
-                        type="button"
-                        className="ft-button"
-                        aria-label={regionCaptureActive ? t().toolbar.regionCaptureActive : t().toolbar.cropRegion}
-                        data-tooltip={regionCaptureActive ? t().toolbar.regionCaptureActive : t().toolbar.cropRegion}
-                        aria-pressed={regionCaptureActive}
-                        disabled={busy || paused || regionCaptureActive || state.phase !== 'recording'}
-                        onClick={() => onStartRegionCapture()}
-                      >
-                        <SquareDashed size={17} />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="ft-button"
-                      data-danger="true"
-                      aria-label={t().toolbar.discardLabel}
-                      data-tooltip={t().toolbar.discardLabel}
-                      disabled={busy}
-                      onClick={() => setConfirmDiscard(true)}
-                    >
-                      <Trash2 size={17} />
-                    </button>
-                  </div>
+                      {onStartRegionCapture && (
+                        <button
+                          type="button"
+                          className="ft-button"
+                          aria-label={regionCaptureActive ? t().toolbar.regionCaptureActive : t().toolbar.cropRegion}
+                          data-tooltip={regionCaptureActive ? t().toolbar.regionCaptureActive : t().toolbar.cropRegion}
+                          aria-pressed={regionCaptureActive}
+                          disabled={busy || paused || regionCaptureActive || state.phase !== 'recording'}
+                          onClick={() => onStartRegionCapture()}
+                        >
+                          <SquareDashed size={17} />
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   <button
                     type="button"
@@ -531,6 +520,17 @@ export default function RecordingToolbar({
                     onClick={() => void run('FINISH_RECORDING')}
                   >
                     {pending === 'FINISH_RECORDING' || state.phase === 'finishing' ? <Loader2 /> : t().toolbar.finish}
+                  </button>
+                  <button
+                    type="button"
+                    className="ft-button"
+                    data-danger="true"
+                    aria-label={t().toolbar.discardLabel}
+                    data-tooltip={t().toolbar.discardLabel}
+                    disabled={busy}
+                    onClick={() => setConfirmDiscard(true)}
+                  >
+                    <Trash2 size={17} />
                   </button>
                   <button
                     type="button"

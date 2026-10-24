@@ -611,11 +611,11 @@ export const zhTW = {
 
   regionCapture: {
     label: '區域擷取',
-    instructions: '拖曳選取要擷取的區域，按 Esc 可取消',
+    instructions: '拖曳選取區域，Esc 取消',
     cancelLabel: '取消區域擷取',
-    dragging: '拖曳中；放開後可調整，按 Esc 可取消',
+    dragging: '放開後可調整範圍',
     tooSmall: (minSize: number) => `選取範圍太小，寬高至少需 ${minSize} 像素，請重新拖曳`,
-    adjust: '拖曳調整範圍，按 ✓ 確認；Esc 取消',
+    adjust: '拖曳邊框可調整範圍',
     confirmLabel: '確認擷取',
     capturing: '正在擷取選取區域',
   },
