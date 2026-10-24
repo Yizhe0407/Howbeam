@@ -136,6 +136,7 @@ export const recordingToolbarStyles = `
     color: #1f1b16; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: filter .15s;
   }
   .ft-primary:hover:not(:disabled) { filter: brightness(.95); }
+  .ft-primary[data-quiet] { background: transparent; color: var(--ft-btn-text); }
   .ft-primary:disabled { opacity: .68; cursor: wait; }
   .ft-primary:focus-visible { outline: 2px solid var(--ft-focus); outline-offset: 2px; }
   .ft-primary svg { width: 16px; height: 16px; }

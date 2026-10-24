@@ -460,6 +460,7 @@ export default function RecordingToolbar({
                     <button
                       type="button"
                       className="ft-primary"
+                      data-quiet={state.itemCount === 0 ? 'true' : undefined}
                       data-tooltip={t().toolbar.nextFrameTooltip}
                       disabled={busy}
                       onClick={() => void run('PREPARE_NEXT_SNAPSHOT')}

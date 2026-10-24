@@ -142,8 +142,7 @@ export default function App() {
           </StepCard>
         </div>
 
-        <div className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">{t().welcome.revisitHint}</p>
+        <div className="flex justify-end">
           <Button onClick={() => void closeWelcome()}>{t().welcome.done}</Button>
         </div>
       </main>

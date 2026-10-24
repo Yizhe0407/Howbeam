@@ -89,7 +89,6 @@ export const en: Messages = {
     promisesTitle: 'Privacy and permissions',
     localOnly: 'All screenshots stay on this computer. Nothing is uploaded.',
     crossTab: 'Recording covers the current tab. To follow you across tabs, Howbeam asks for permission the first time you start.',
-    revisitHint: 'You can open this page again from Settings.',
     done: 'Got it',
   },
 

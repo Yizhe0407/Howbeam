@@ -244,7 +244,7 @@ export default function RecordControls({
         <div className="rounded-md border-2 border-border bg-surface-raised px-3.5 py-3">
           <div className="flex items-center gap-2 text-sm font-bold text-foreground">
             <span className="size-2 rounded-full bg-recording" />
-            {recording.phase === 'paused' ? t().common.paused : recordingModeCopy(recording.mode).label}
+            {recording.phase === 'paused' ? t().common.paused : t().common.recording}
             {' · '}
             {recordingItemCountLabel(recording.mode, recording.itemCount)}
           </div>

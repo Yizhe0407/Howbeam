@@ -93,7 +93,6 @@ export const zhTW = {
     promisesTitle: '隱私與權限',
     localOnly: '所有截圖只儲存在這台電腦，不會上傳。',
     crossTab: '預設只錄製目前分頁；若要跨分頁錄製，首次開始時會請你授權。',
-    revisitHint: '日後可在「設定」中再次開啟此頁。',
     done: '知道了',
   },
 

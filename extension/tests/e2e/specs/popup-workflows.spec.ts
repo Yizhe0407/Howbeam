@@ -104,7 +104,7 @@ test.describe('popup workflows', () => {
     expect(runSessionId).toBeTruthy();
     expect(runSessionId).not.toBe(seededProjectId);
 
-    await expect(popupPage.getByText('標註 · 0 個標註')).toBeVisible();
+    await expect(popupPage.getByText('錄製中 · 0 個標註')).toBeVisible();
     await expect(popupPage.getByRole('button', { name: '回到錄製分頁' })).toBeEnabled();
     await expect(popupPage.getByRole('button', { name: '停止錄製' })).toHaveCount(0);
     await stopRecording(statePage);
