@@ -197,7 +197,7 @@ describe('專案庫', () => {
       .mockReturnValueOnce(pendingRefresh);
     render(<LibraryApp />);
 
-    fireEvent.click(await screen.findByRole('button', { name: '複製' }));
+    fireEvent.click(await screen.findByRole('button', { name: '建立副本' }));
 
     await waitFor(() => expect(database.getProjectSummaries).toHaveBeenCalledTimes(2));
     expect(screen.getByText(project.title)).toBeTruthy();
@@ -254,7 +254,7 @@ describe('專案庫', () => {
     render(<LibraryApp />);
 
     fireEvent.click(await screen.findByRole('button', { name: '下載「安全教學」的備份' }));
-    expect(screen.getByText(/安全教學\.howbeam/)).toBeTruthy();
+    expect(screen.getByText('可再匯入 Howbeam 繼續編輯。含未遮罩的原始截圖，請勿公開分享。')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '下載 .howbeam' }));
 
     await waitFor(() => expect(archive.exportProjectArchive).toHaveBeenCalledWith(steps, {
@@ -351,7 +351,7 @@ describe('專案庫', () => {
     }));
     render(<LibraryApp />);
 
-    const duplicate = await screen.findByRole('button', { name: '複製' });
+    const duplicate = await screen.findByRole('button', { name: '建立副本' });
     fireEvent.click(duplicate);
     fireEvent.click(duplicate);
 

@@ -1,7 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  Copy,
+  CopyPlus,
   Download,
   Loader2,
   PencilLine,
@@ -315,7 +315,7 @@ export default function App() {
                             onClick={() => void run(project.id, async () => { await duplicateProject(project.id); })}
                             disabled={actionsLocked}
                           >
-                            <Copy />
+                            <CopyPlus />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>{lockedTitle(t().common.duplicate)}</TooltipContent>
@@ -362,9 +362,7 @@ export default function App() {
       <ConfirmationDialog
         open={exportTarget !== null}
         title={t().library.exportDialogTitle}
-        description={exportTarget
-          ? t().library.exportDialogDescription(exportFilename(exportTarget.title))
-          : ''}
+        description={t().library.exportDialogDescription}
         confirmLabel={t().library.exportDialogConfirm}
         confirmVariant="default"
         pendingLabel={t().library.exportDialogPending}

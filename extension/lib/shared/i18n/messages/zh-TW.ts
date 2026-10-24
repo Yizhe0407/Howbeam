@@ -20,7 +20,7 @@ export const zhTW = {
     restoring: '還原中',
     processing: '處理中',
     open: '開啟',
-    duplicate: '複製',
+    duplicate: '建立副本',
     export: '匯出',
     library: '專案庫',
     editor: '編輯器',
@@ -46,9 +46,7 @@ export const zhTW = {
   settings: {
     title: '設定',
     open: '設定',
-    languageDescription: '介面使用的語言。選擇「跟隨瀏覽器」時，會依瀏覽器的語言自動切換。',
     welcomeTitle: '歡迎頁',
-    welcomeDescription: '重新檢視如何將 Howbeam 釘選到工具列，以及兩種錄製模式的差異。',
     openWelcome: '開啟歡迎頁',
     backup: {
       title: '自動備份',
@@ -182,12 +180,11 @@ export const zhTW = {
     exportProjectLabel: (title: string) => `下載「${title}」的備份`,
     exportArchiveTooltip: '下載備份',
     exportDialogTitle: '下載備份？',
-    exportDialogDescription: (filename: string) =>
-      `將下載 ${filename}。檔案包含原始截圖、標註、遮罩、說明與章節，可再次匯入 Howbeam 編輯；因含未套用遮罩的原始截圖，請勿直接公開分享。`,
+    exportDialogDescription: '可再匯入 Howbeam 繼續編輯。含未遮罩的原始截圖，請勿公開分享。',
     exportDialogConfirm: '下載 .howbeam',
     exportDialogPending: '下載中',
     deleteDialogTitle: '永久刪除這個專案？',
-    deleteDialogDescription: '原始截圖、標註、遮罩與說明都會從本機刪除。建議先匯出 .howbeam 可編輯檔案。',
+    deleteDialogDescription: '刪除後無法復原，建議先下載備份。',
     deleteDialogConfirm: '永久刪除',
   },
 

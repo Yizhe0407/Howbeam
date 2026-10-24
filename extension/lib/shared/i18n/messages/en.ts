@@ -18,7 +18,7 @@ export const en: Messages = {
     restoring: 'Undoing',
     processing: 'Working',
     open: 'Open',
-    duplicate: 'Duplicate',
+    duplicate: 'Make a copy',
     export: 'Export',
     library: 'Library',
     editor: 'Editor',
@@ -43,9 +43,7 @@ export const en: Messages = {
   settings: {
     title: 'Settings',
     open: 'Settings',
-    languageDescription: 'The language Howbeam’s interface uses. “Match browser” follows your browser’s language.',
     welcomeTitle: 'Welcome page',
-    welcomeDescription: 'See again how to pin Howbeam to the toolbar and how the two recording modes differ.',
     openWelcome: 'Open welcome page',
     backup: {
       title: 'Automatic backup',
@@ -176,13 +174,11 @@ export const en: Messages = {
     exportProjectLabel: (title: string) => `Download a backup of ${title}`,
     exportArchiveTooltip: 'Download backup',
     exportDialogTitle: 'Download backup?',
-    exportDialogDescription: (filename: string) =>
-      `This downloads ${filename}. It contains the original screenshots, markers, masks, descriptions and sections, and can be imported back into Howbeam. Because it includes the unmasked originals, don’t share it publicly.`,
+    exportDialogDescription: 'You can import it back into Howbeam to keep editing. It includes unmasked screenshots, so don’t share it publicly.',
     exportDialogConfirm: 'Download .howbeam',
     exportDialogPending: 'Downloading',
     deleteDialogTitle: 'Delete this project permanently?',
-    deleteDialogDescription:
-      'The original screenshots, markers, masks and descriptions will be removed from this device. Consider exporting a .howbeam file first.',
+    deleteDialogDescription: 'This can’t be undone. Consider downloading a backup first.',
     deleteDialogConfirm: 'Delete permanently',
   },
 
