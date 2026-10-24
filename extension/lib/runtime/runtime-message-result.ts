@@ -8,7 +8,6 @@ import type {
   PreflightProjectContinuationSourcePermissionResult,
   PreflightStepRecaptureSourcePermissionResult,
   RecordingControlResult,
-  ResetProjectResult,
   StartRecordingResult,
   StartStepRecaptureResult,
   StepRecaptureTargetResult,
@@ -76,17 +75,6 @@ export function isStartRecordingResult(value: unknown): value is StartRecordingR
   if (!isRecord(value)) return false;
   if (value.ok === true) {
     return hasOnlyKeys(value, ['ok', 'sessionId', 'runId']) && isId(value.sessionId) && isId(value.runId);
-  }
-  return isFailureResult(value);
-}
-
-export function isResetProjectResult(value: unknown): value is ResetProjectResult {
-  if (!isRecord(value)) return false;
-  if (value.ok === true) {
-    return (
-      hasOnlyKeys(value, ['ok', 'contentRevision']) &&
-      (value.contentRevision === undefined || isSafeNonNegativeInteger(value.contentRevision))
-    );
   }
   return isFailureResult(value);
 }

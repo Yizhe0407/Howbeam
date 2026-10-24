@@ -9,7 +9,7 @@ function render(ui: Parameters<typeof rtlRender>[0]) {
 }
 
 vi.mock('wxt/browser', () => ({ browser: { runtime: { sendMessage: vi.fn() } } }));
-vi.mock('@/lib/runtime/actions', () => ({ openLibrary: vi.fn(), resetSession: vi.fn() }));
+vi.mock('@/lib/runtime/actions', () => ({ openLibrary: vi.fn() }));
 vi.mock('@/lib/project/project-actions', () => ({ ensureSelectedProject: vi.fn() }));
 vi.mock('@/lib/storage/project-repository', () => ({ getProject: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/recording/use-recording-session', () => ({
@@ -49,7 +49,6 @@ describe('English UI', () => {
         operationActive
         operation="recording"
         hasSteps={false}
-        sessionId="project"
         publish={{ runExport: (task) => task(), getProjectEntries: () => [] }}
       />,
     );

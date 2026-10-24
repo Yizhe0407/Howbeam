@@ -40,13 +40,10 @@ export default function BackupSettingsSection() {
       {!backup.supported ? (
         <p className="text-sm text-muted-foreground">{copy.unsupported}</p>
       ) : backup.loading ? null : !enabled ? (
-        <div className="flex flex-col gap-2">
-          <div>
-            <Button variant="outline" onClick={() => void backup.choose()} disabled={backup.busyShown}>
-              {backup.busyShown ? <Loader2 className="animate-spin" /> : <FolderOpen />}{copy.choose}
-            </Button>
-          </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">{copy.folderHint}</p>
+        <div>
+          <Button variant="outline" onClick={() => void backup.choose()} disabled={backup.busyShown}>
+            {backup.busyShown ? <Loader2 className="animate-spin" /> : <FolderOpen />}{copy.choose}
+          </Button>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -79,7 +76,6 @@ export default function BackupSettingsSection() {
       {backup.lastRun && backup.lastRun.failed > 0 && !backup.error && (
         <p role="alert" className="text-sm text-danger">{copy.someFailed(backup.lastRun.failed, failedNames(backup.lastRun))}</p>
       )}
-      <p className="text-xs leading-relaxed text-muted-foreground">{copy.privacy}</p>
       <ConfirmationDialog
         open={confirmOff}
         title={copy.turnOffTitle}

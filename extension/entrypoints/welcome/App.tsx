@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Camera, Check, Layers, ListOrdered, Pin, Puzzle, ShieldCheck } from 'lucide-react';
+import { Camera, Check, Layers, ListOrdered, Pin, Puzzle, ShieldCheck } from 'lucide-react';
 import AppHeader from '@/components/shared/AppHeader';
 import Mascot from '@/components/shared/Mascot';
 import { Button } from '@/components/ui/button';
-import { navigateInPlace } from '@/lib/runtime/page-navigation';
+import { browser } from 'wxt/browser';
 import { useExtensionPageRegistration } from '@/lib/runtime/use-extension-page-registration';
 import { useToolbarPin } from '@/lib/runtime/use-toolbar-pin';
 import { t } from '@/lib/shared/i18n';
@@ -88,6 +88,11 @@ function PinStep() {
  * what someone needs before their first recording: where the extension lives,
  * which mode to pick, and the limits worth knowing up front.
  */
+async function closeWelcome() {
+  const tab = await browser.tabs.getCurrent();
+  if (tab?.id !== undefined) await browser.tabs.remove(tab.id);
+}
+
 export default function App() {
   // Claims this tab as the welcome page, so the background stops treating it
   // as whatever page it showed before.
@@ -139,9 +144,7 @@ export default function App() {
 
         <div className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">{t().welcome.revisitHint}</p>
-          <Button onClick={() => navigateInPlace('library')}>
-            {t().welcome.goToLibrary}<ArrowRight />
-          </Button>
+          <Button onClick={() => void closeWelcome()}>{t().welcome.done}</Button>
         </div>
       </main>
     </div>

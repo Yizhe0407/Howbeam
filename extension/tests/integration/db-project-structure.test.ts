@@ -3,7 +3,7 @@ import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectContentConflictError, addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, moveProjectEntriesAtomically, repairEmptySnapshotAnchors, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically, setProjectEntriesNumberedAtomically } from '@/lib/storage/project-structure';
 import { ProjectStructureIntegrityError, type ProjectSection, type Step } from '@/lib/storage/models';
 import { closeDatabase, runWithDatabase } from '@/lib/storage/database';
-import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, resetProject, updateProject } from '@/lib/storage/project-repository';
+import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
 import { pngBlob } from '../setup/raster-fixtures';
 import { itemAt } from '../setup/item-at';
@@ -187,15 +187,6 @@ describe('Project entry-safe atomic structure', () => {
     expect(itemAt(renamed.project.sections, 0).title).toBe('新名稱');
     const removed = await deleteProjectSectionAtomically(project.id, itemAt(renamed.project.sections, 0).id, renamed.project.contentRevision);
     expect(removed.project.sections).toEqual([]);
-  });
-
-  it('clears sections on reset', async () => {
-    const { project, snapshot } = await createTrackedProject(makeSingleSteps(2));
-    await addProjectSectionAtomically(project.id, itemAt(snapshot.entryIds, 0), '開始', snapshot.project.contentRevision);
-    const reset = await resetProject(project.id);
-    expect(reset.sections).toEqual([]);
-    expect(reset.entryCount).toBe(0);
-    expect((await getProjectStructureSnapshot(project.id)).entries).toEqual([]);
   });
 
 

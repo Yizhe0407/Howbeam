@@ -548,7 +548,7 @@ test.describe('editor workflows', () => {
     expect(itemAt(steps, 1).order).toBeGreaterThan(itemAt(steps, 0).order);
   });
 
-  test('undoes direct entry deletion and keeps confirmation for session reset', async ({
+  test('undoes direct entry deletion', async ({
     appPage,
     popupPage,
     extensionContext,
@@ -572,12 +572,5 @@ test.describe('editor workflows', () => {
     await editor.getByRole('button', { name: '刪除步驟', exact: true }).click();
     await expect(editor.getByText('步驟 · 1', { exact: true })).toBeVisible();
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
-
-    await editor.getByRole('button', { name: '清空步驟' }).click();
-    const resetDialog = editor.getByRole('dialog');
-    await expect(resetDialog).toContainText('清空「E2E 測試教學」的所有步驟？');
-    await resetDialog.getByRole('button', { name: '清空步驟', exact: true }).click();
-    await expect(editor.getByText('尚未建立內容')).toBeVisible();
-    await expect.poll(async () => (await readSteps(popupPage)).length).toBe(0);
   });
 });

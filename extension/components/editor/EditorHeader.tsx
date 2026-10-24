@@ -1,5 +1,4 @@
 import { Download } from 'lucide-react';
-import ResetButton from '../shared/ResetButton';
 import AppHeader from '../shared/AppHeader';
 import type { ActiveOperation } from '@/lib/storage/recording-state';
 import { Badge } from '@/components/ui/badge';
@@ -12,9 +11,8 @@ interface Props {
   operationActive: boolean;
   editingDisabled?: boolean;
   operation?: ActiveOperation;
-  /** Whether the Project has anything to export or reset. */
+  /** Whether the Project has anything to export. */
   hasSteps: boolean;
-  sessionId: string | null;
   /** The open project's title, shown as the current crumb; null before it loads. */
   projectTitle?: string | null;
   /** False when there is no project to act on (a missing project): only the way
@@ -31,7 +29,6 @@ export default function EditorHeader({
   editingDisabled = false,
   operation,
   hasSteps,
-  sessionId,
   projectTitle = null,
   projectActionsAvailable = true,
   publish,
@@ -63,12 +60,6 @@ export default function EditorHeader({
       )}
       actions={projectActionsAvailable && (
         <>
-          <ResetButton
-            hasSteps={hasSteps}
-            sessionId={sessionId}
-            projectTitle={projectTitle == null ? undefined : projectDisplayTitle(projectTitle)}
-            disabled={unavailable}
-          />
           {publish ? <ExportPopover {...publish} trigger={exportButton} /> : exportButton}
         </>
       )}

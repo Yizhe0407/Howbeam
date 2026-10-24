@@ -7,7 +7,15 @@ function render(ui: Parameters<typeof rtlRender>[0]) {
   return rtlRender(ui, { wrapper: TooltipProvider });
 }
 
-const mocks = vi.hoisted(() => ({ navigateInPlace: vi.fn(), registerPage: vi.fn(), toolbarPin: vi.fn(() => 'unknown') }));
+const mocks = vi.hoisted(() => ({
+  navigateInPlace: vi.fn(),
+  registerPage: vi.fn(),
+  toolbarPin: vi.fn(() => 'unknown'),
+  getCurrentTab: vi.fn(),
+  removeTab: vi.fn(),
+}));
+
+vi.mock('wxt/browser', () => ({ browser: { tabs: { getCurrent: mocks.getCurrentTab, remove: mocks.removeTab } } }));
 
 vi.mock('@/lib/runtime/page-navigation', () => ({ navigateInPlace: mocks.navigateInPlace }));
 vi.mock('@/lib/runtime/use-extension-page-registration', () => ({ useExtensionPageRegistration: mocks.registerPage }));
@@ -32,15 +40,16 @@ function breadcrumb() {
 }
 
 describe('welcome page', () => {
-  it('sits under Howbeam in the shared header and turns into the library', () => {
+  it('sits under Howbeam in the shared header and closes its own tab when done', async () => {
+    mocks.getCurrentTab.mockResolvedValue({ id: 42 });
     render(<WelcomeApp />);
 
     expect(mocks.registerPage).toHaveBeenCalled();
     expect(breadcrumb().getByText('歡迎').closest('li')?.getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('heading', { level: 1, name: '歡迎使用 Howbeam' })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: /前往專案庫/ }));
-    expect(mocks.navigateInPlace).toHaveBeenCalledWith('library');
+    fireEvent.click(screen.getByRole('button', { name: '知道了' }));
+    await waitFor(() => expect(mocks.removeTab).toHaveBeenCalledWith(42));
   });
 
   it('covers pinning, both recording modes and the up-front limits', () => {

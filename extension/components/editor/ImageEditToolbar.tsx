@@ -27,7 +27,6 @@ interface HeaderProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomFit: () => void;
-  itemCount: number;
   saving: boolean;
   onDone: () => void;
   /** Replaces "Done" when finishing also confirms something (the masks under review). */
@@ -123,7 +122,6 @@ export function ImageEditHeaderActions(props: HeaderProps) {
         <IconButton tooltip={false} label={copy.zoomFit} onClick={props.onZoomFit} disabled={props.zoom === 1}><Maximize className="size-4" /></IconButton>
       </div>
 
-      <span className="hidden text-xs text-muted-foreground sm:inline" aria-live="polite">{copy.count(props.itemCount)}</span>
 
       <div className="ml-auto flex items-center gap-3">
         {savingShown && (

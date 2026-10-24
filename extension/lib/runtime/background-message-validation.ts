@@ -118,8 +118,6 @@ export function isBackgroundMessage(value: unknown): value is BackgroundMessage 
       // Which page registered is derived from the authenticated sender, so the
       // payload carries nothing that could be forged.
       return true;
-    case 'RESET_PROJECT':
-      return isString(value.sessionId);
     case 'SNAPSHOT_INVALIDATED':
       return isString(value.runId) && isViewport(value.viewport) && isDevicePixelRatio(value.devicePixelRatio);
     case 'SNAPSHOT_RECORDER_FAILED':
@@ -265,7 +263,6 @@ export function isTrustedKeepAliveSender(
 export function isExtensionPageOnlyMessage(message: BackgroundMessage): boolean {
   return message.type === 'START_RECORDING' ||
     message.type === 'STOP_RECORDING' ||
-    message.type === 'RESET_PROJECT' ||
     message.type === 'OPEN_EDITOR' ||
     message.type === 'OPEN_LIBRARY' ||
     message.type === 'REGISTER_EXTENSION_PAGE';

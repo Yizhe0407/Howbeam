@@ -3,29 +3,13 @@ import type {
   CancelStepRecaptureResult,
   FocusStepRecaptureSourceResult,
   OpenLibraryResult,
-  ResetProjectResult,
 } from './messages';
 import {
   isCancelStepRecaptureResult,
   isFocusStepRecaptureSourceResult,
   isOpenLibraryResult,
-  isResetProjectResult,
   requireRuntimeMessageResult,
 } from './runtime-message-result';
-import { t } from '@/lib/shared/i18n';
-
-/** Requests an atomic, Project-targeted reset from the background lifecycle. */
-export async function resetSession(sessionId: string): Promise<void> {
-  if (!sessionId) throw new Error(t().runtime.resetTargetMissing);
-  const result = requireRuntimeMessageResult<ResetProjectResult>(
-    await browser.runtime.sendMessage({
-      type: 'RESET_PROJECT',
-      sessionId,
-    }),
-    isResetProjectResult,
-  );
-  if (!result.ok) throw new Error(result.error);
-}
 
 /** Opens the options page, focusing it if it is already open. */
 export async function openSettings(): Promise<void> {

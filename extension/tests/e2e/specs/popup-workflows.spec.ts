@@ -134,9 +134,8 @@ test.describe('popup workflows', () => {
       throw new Error('Expected reset data to select an empty Project.');
     }
 
-    // Idle, the popup only starts recordings: finishing one opens the editor, and clearing steps lives in the editor.
+    // Idle, the popup only starts recordings: finishing one opens the editor.
     await expect(popupPage.getByRole('button', { name: '開啟編輯器' })).toHaveCount(0);
-    await expect(popupPage.getByRole('button', { name: '清空步驟' })).toHaveCount(0);
     await expect(popupPage.getByRole('button', { name: '專案庫', exact: true })).toBeEnabled();
 
     const editor = await extensionContext.newPage();
@@ -152,7 +151,6 @@ test.describe('popup workflows', () => {
     await expect(editor.getByText('尚未建立內容', { exact: true })).toBeVisible();
     await expect(editor.getByRole('button', { name: '回到網頁開始錄製' })).toBeVisible();
     await expect(editor.getByRole('button', { name: '匯出' })).toBeDisabled();
-    await expect(editor.getByRole('button', { name: '清空步驟' })).toBeDisabled();
   });
 
   test('opens a multi-step project at its first entry, not its latest capture', async ({

@@ -372,7 +372,6 @@ function EditorApp() {
         editingDisabled={editingLocked}
         operation={recording.operation}
         hasSteps={entries.length > 0}
-        sessionId={sessionId}
         projectTitle={project?.title ?? null}
         projectActionsAvailable={projectLoadState !== 'missing' && !projectDeleted}
         beforeNavigate={leaveEditor}

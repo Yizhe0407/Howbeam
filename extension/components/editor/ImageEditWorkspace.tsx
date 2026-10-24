@@ -353,7 +353,6 @@ export default function ImageEditWorkspace({
                 onZoomIn={viewport.zoomIn}
                 onZoomOut={viewport.zoomOut}
                 onZoomFit={viewport.zoomFit}
-                itemCount={items.length}
                 saving={session.saving}
                 onDone={() => void requestClose(true)}
                 doneLabel={reviewRequired ? copy.confirmReview : undefined}

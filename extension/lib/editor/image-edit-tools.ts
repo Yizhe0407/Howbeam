@@ -1,12 +1,12 @@
 import {
   Circle,
   Crop,
-  EyeOff,
   Hash,
   MousePointer2,
   MoveUpRight,
   RectangleHorizontal,
   Type,
+  createLucideIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { t } from '@/lib/shared/i18n';
@@ -21,6 +21,11 @@ import {
 import { fitTextHeight, MIN_ARROW_LENGTH, MIN_TEXT_WIDTH } from './image-edit-item-geometry';
 import { CROP_ITEM_ID, newItemId, type ImageEditItem, type ImageEditItemKind } from './image-edit-items';
 import { STYLE_FIELDS, type ImageEditStyle, type StyleField } from './image-edit-style';
+
+// A solid bar, drawn the way a redaction renders in the export.
+const RedactIcon = createLucideIcon('Redact', [
+  ['rect', { x: '3', y: '8', width: '18', height: '8', rx: '1.5', fill: 'currentColor', key: 'bar' }],
+]);
 
 export type ImageEditToolId = 'select' | 'text' | 'arrow' | 'rect' | 'ellipse' | 'step' | 'redact' | 'crop';
 
@@ -175,7 +180,7 @@ export const IMAGE_EDIT_TOOLS: readonly [ImageEditTool, ...ImageEditTool[]] = [
   },
   {
     id: 'redact',
-    icon: EyeOff,
+    icon: RedactIcon,
     label: () => t().editor.imageEdit.tools.redact,
     hint: () => t().editor.imageEdit.hints.redact,
     shortcut: 'm',

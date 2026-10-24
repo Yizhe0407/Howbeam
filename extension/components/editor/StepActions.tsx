@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Check, Copy, Loader2, Trash2 } from 'lucide-react';
+import { Check, Copy, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { compositeStepEntry } from '@/lib/export/entry-render';
 import { getEntryPrivacyState, type StepEntry } from '@/lib/storage/models';
 import { t } from '@/lib/shared/i18n';
@@ -125,7 +125,7 @@ export default function StepActions({
               aria-label={t().editor.actions.recapture}
               className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
             >
-              {recapturing && busyShown ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
+              {recapturing && busyShown ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
             </button>
           </TooltipTrigger>
           <TooltipContent>{recaptureDisabledReason ?? (operationsDisabled ? t().editor.actions.recaptureUnavailable : t().editor.actions.recapture)}</TooltipContent>

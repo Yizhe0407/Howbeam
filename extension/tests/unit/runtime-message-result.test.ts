@@ -9,7 +9,6 @@ import {
   isPreflightProjectContinuationSourcePermissionResult,
   isPreflightStepRecaptureSourcePermissionResult,
   isRecordingControlResult,
-  isResetProjectResult,
   isRuntimeBoolean,
   isStartRecordingResult,
   isStartStepRecaptureResult,
@@ -48,7 +47,6 @@ describe('requireRuntimeMessageResult', () => {
 describe('runtime response contracts', () => {
   it.each([
     ['start recording', isStartRecordingResult, { ok: true, sessionId: 'project-1', runId: 'run-1' }],
-    ['reset Project', isResetProjectResult, { ok: true, contentRevision: 3 }],
     ['open editor', isOpenEditorResult, { ok: false, error: 'cannot open' }],
     ['open library', isOpenLibraryResult, { ok: true }],
     ['editor handoff consenting to navigation', isEditorHandoffResult, { ok: true, ready: false }],
@@ -96,7 +94,6 @@ describe('runtime response contracts', () => {
 
   it.each([
     ['start recording without a run id', isStartRecordingResult, { ok: true, sessionId: 'project-1' }],
-    ['reset with a fractional revision', isResetProjectResult, { ok: true, contentRevision: 1.5 }],
     ['open editor with undeclared payload', isOpenEditorResult, { ok: true, error: 'hidden' }],
     // The background must be able to tell "not our editor page" from consent.
     ['editor handoff omitting readiness', isEditorHandoffResult, { ok: true }],

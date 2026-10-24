@@ -5,7 +5,6 @@ import {
   Copy,
   Loader2,
   PencilLine,
-  Plus,
   Search,
   Trash2,
   Upload,
@@ -13,7 +12,7 @@ import {
 import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
 import { projectDisplayTitle, type ProjectSummary } from '@/lib/storage/models';
-import { clearSelectedProject, createAndSelectProject, openSelectedProjectInEditor } from '@/lib/project/project-actions';
+import { clearSelectedProject, openSelectedProjectInEditor } from '@/lib/project/project-actions';
 import { subscribeProjectsChanged } from '@/lib/storage/change-notifier';
 import { getRecordingState, onRecordingStateChange } from '@/lib/storage/storage';
 import { Button } from '@/components/ui/button';
@@ -128,13 +127,6 @@ export default function App() {
     return outcome ?? false;
   }
 
-  async function createNewProject() {
-    await run('new', async () => {
-      const project = await createAndSelectProject();
-      await openSelectedProjectInEditor(project.id, { inPlace: true });
-    });
-  }
-
   async function exportProject(project: ProjectSummary) {
     await run(project.id, async () => {
       const blob = await exportProjectArchive(await getSteps(project.id), {
@@ -219,16 +211,6 @@ export default function App() {
               {shownId === 'import' ? <Loader2 className="animate-spin" /> : <Upload />}
               <span className="hidden sm:inline">{t().library.import}</span>
             </Button>
-            <Button
-              variant="default"
-              aria-label={t().library.create}
-              className="px-2.5 sm:px-3.5"
-              onClick={() => void createNewProject()}
-              disabled={loading || operationLocked || shownId !== null}
-            >
-              {shownId === 'new' ? <Loader2 className="animate-spin" /> : <Plus />}
-              <span className="hidden sm:inline">{t().library.create}</span>
-            </Button>
           </>
         }
       />
@@ -274,9 +256,6 @@ export default function App() {
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
               {query ? t().library.noMatchesHint : t().library.emptyHint}
             </p>
-            {!query && (
-              <Button className="mt-3" onClick={() => void createNewProject()}><Plus />{t().library.create}</Button>
-            )}
           </div>
         ) : (
           <ul className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-4">

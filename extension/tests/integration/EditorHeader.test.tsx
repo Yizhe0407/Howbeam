@@ -9,9 +9,8 @@ function render(ui: Parameters<typeof rtlRender>[0], options?: Parameters<typeof
   return rtlRender(ui, { wrapper: TooltipProvider, ...options });
 }
 
-const mocks = vi.hoisted(() => ({ navigateInPlace: vi.fn(), resetSession: vi.fn() }));
+const mocks = vi.hoisted(() => ({ navigateInPlace: vi.fn() }));
 
-vi.mock('@/lib/runtime/actions', () => ({ resetSession: mocks.resetSession }));
 vi.mock('@/lib/runtime/page-navigation', () => ({ navigateInPlace: mocks.navigateInPlace }));
 
 import EditorHeader from '@/components/editor/EditorHeader';
@@ -21,7 +20,6 @@ function renderHeader(overrides: Partial<React.ComponentProps<typeof EditorHeade
     <EditorHeader
       operationActive={false}
       hasSteps
-      sessionId="project-1"
       projectTitle="新增成員"
       publish={{ runExport: (task) => task(), getProjectEntries: () => [] }}
       {...overrides}
@@ -31,7 +29,6 @@ function renderHeader(overrides: Partial<React.ComponentProps<typeof EditorHeade
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.resetSession.mockResolvedValue(undefined);
 });
 
 afterEach(cleanup);
@@ -44,7 +41,7 @@ describe('EditorHeader', () => {
     expect(screen.getAllByRole('button', { name: 'Howbeam 專案庫' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: '設定' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: '匯出' })).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: '清空步驟' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: '清空步驟' })).toBeNull();
   });
 
   it('keeps the accessible name complete while the visible label collapses below sm', () => {

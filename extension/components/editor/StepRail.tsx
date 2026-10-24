@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Camera, Plus, Video } from 'lucide-react';
+import { Plus, Video } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -139,14 +139,6 @@ function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: nu
       )}>
         {number}
       </span>
-      {entry.kind === 'group' && (
-        <span
-          className="absolute bottom-1.5 left-1.5 z-30 flex size-6 items-center justify-center rounded-full border-2 border-border bg-card text-foreground"
-          aria-hidden="true"
-        >
-          <Camera className="size-3" />
-        </span>
-      )}
     </div>
   );
 }

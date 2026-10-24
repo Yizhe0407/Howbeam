@@ -324,7 +324,6 @@ describe('background sender authorization', () => {
     const extensionOnly: BackgroundMessage[] = [
       { type: 'START_RECORDING', sessionId: 'project-1', mode: 'steps' },
       { type: 'STOP_RECORDING' },
-      { type: 'RESET_PROJECT', sessionId: 'project-1' },
       { type: 'OPEN_EDITOR' },
       { type: 'OPEN_LIBRARY' },
       { type: 'REGISTER_EXTENSION_PAGE' },

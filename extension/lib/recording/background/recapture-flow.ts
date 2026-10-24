@@ -557,7 +557,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
   }
 
   return {
-    /** Read by START_RECORDING and RESET_PROJECT: their single-owner check must
+    /** Read by START_RECORDING: its single-owner check must
      * also cover a recapture start that has not published state yet. */
     isStartingRecapture: () => startingRecapture,
     preflightStepRecaptureSourcePermission,

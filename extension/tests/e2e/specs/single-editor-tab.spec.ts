@@ -42,10 +42,12 @@ test.describe('single editor tab', () => {
     expect(recordedProjectId).toBeTruthy();
     await expect(firstEditor.getByText('步驟 · 1', { exact: true })).toBeVisible();
 
+    await seedAndSelectProject(popupPage, '空白專案');
     const library = await extensionContext.newPage();
     await library.goto(`chrome-extension://${extensionId}/library.html`);
-    // 新增 creates an empty Project and must open it in the already-open editor tab, not a third tab; the toolbar control shares its name with the add-card tile, so it's `.first()`.
-    await library.getByRole('button', { name: '新增', exact: true }).first().click();
+    // Another Project's card must open in the already-open editor tab, not a third tab.
+    const emptyCard = library.getByRole('listitem').filter({ hasText: '空白專案' });
+    await emptyCard.getByRole('button', { name: '開啟', exact: true }).click();
 
     await expect.poll(() => viewedSessionId(firstEditor)).not.toBe(recordedProjectId);
     const newProjectId = viewedSessionId(firstEditor);
@@ -83,7 +85,7 @@ test.describe('single editor tab', () => {
     await library.goto(`chrome-extension://${extensionId}/library.html`);
     const pagesBefore = extensionContext.pages().length;
 
-    await library.getByRole('button', { name: '新增', exact: true }).first().click();
+    await library.getByRole('button', { name: '開啟', exact: true }).click();
 
     await library.waitForURL(/\/editor\.html\?sessionId=/);
     await expect(library.getByText('尚未建立內容', { exact: true })).toBeVisible();

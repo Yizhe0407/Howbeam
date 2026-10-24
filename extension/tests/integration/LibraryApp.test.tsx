@@ -21,7 +21,6 @@ const database = vi.hoisted(() => ({
 }));
 const projectActions = vi.hoisted(() => ({
   clearSelectedProject: vi.fn(),
-  createAndSelectProject: vi.fn(),
   openSelectedProjectInEditor: vi.fn(),
 }));
 const storage = vi.hoisted(() => {
@@ -74,7 +73,6 @@ vi.mock('wxt/browser', async () => {
 
 import LibraryApp from '@/entrypoints/library/App';
 import { ProjectArchiveError } from '@/lib/export/project-archive-contract';
-import { itemAt } from '../setup/item-at';
 
 const project = {
   id: 'project-1',
@@ -133,7 +131,7 @@ describe('專案庫', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  it('初次確認錄製狀態前停用新增與匯入操作', async () => {
+  it('初次確認錄製狀態前停用匯入操作', async () => {
     let resolveState!: (state: { operation: null; isRecording: false }) => void;
     storage.getRecordingState.mockReturnValueOnce(new Promise((resolve) => {
       resolveState = resolve;
@@ -141,25 +139,9 @@ describe('專案庫', () => {
     render(<LibraryApp />);
 
     expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole('button', { name: '新增' }) as HTMLButtonElement).disabled).toBe(true);
 
     await act(async () => { resolveState({ operation: null, isRecording: false }); });
-    await waitFor(() => expect((screen.getByRole('button', { name: '新增' }) as HTMLButtonElement).disabled).toBe(false));
-  });
-
-  // The card grid used to close with a dashed "add" tile, a third way to reach
-  // the same action. The header button is the one that is always visible.
-  it('專案卡片格線只保留標題列的新增入口', async () => {
-    render(<LibraryApp />);
-    await screen.findByText('安全教學');
-
-    projectActions.createAndSelectProject.mockResolvedValue({ id: 'new-project' });
-    const createButtons = screen.getAllByRole('button', { name: '新增' });
-    expect(createButtons).toHaveLength(1);
-    fireEvent.click(itemAt(createButtons, 0));
-
-    await waitFor(() => expect(projectActions.createAndSelectProject).toHaveBeenCalledOnce());
-    expect(projectActions.openSelectedProjectInEditor).toHaveBeenCalledWith('new-project', { inPlace: true });
+    await waitFor(() => expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false));
   });
 
   it('專案庫只顯示必要的專案資訊', async () => {
@@ -184,13 +166,14 @@ describe('專案庫', () => {
     expect(screen.queryByText('尚未加入專案說明')).toBeNull();
   });
 
-  // Different situation: an otherwise empty page needs its own call to action.
-  it('專案庫為空時額外提供空狀態的新增 CTA', async () => {
+  // Projects only come from recording, so the empty page points there instead of offering a blank Project.
+  it('專案庫為空時只指向錄製，不提供空白專案', async () => {
     database.getProjectSummaries.mockResolvedValue([]);
     render(<LibraryApp />);
 
-    await screen.findByRole('heading', { name: '建立第一個專案' });
-    await waitFor(() => expect(screen.getAllByRole('button', { name: '新增' })).toHaveLength(2));
+    await screen.findByRole('heading', { name: '還沒有專案' });
+    expect(screen.getByText('在網頁上點 Howbeam 圖示開始錄製。')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '新增' })).toBeNull();
   });
 
   it('即時訂閱全域 operation lock，避免錄製中修改專案庫', async () => {

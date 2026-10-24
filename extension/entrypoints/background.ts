@@ -45,7 +45,6 @@ import type {
   OpenLibraryResult,
   PreflightProjectContinuationSourcePermissionResult,
   PreflightStepRecaptureSourcePermissionResult,
-  ResetProjectResult,
   RecordingControlResult,
   StartRecordingResult,
   StartStepRecaptureResult,
@@ -257,12 +256,6 @@ export default defineBackground(() => {
           queueLifecycle(() => runLifecycle.stopRecording()),
           'stop recording request failed',
           undefined,
-        );
-      case 'RESET_PROJECT':
-        return withMessageFailureFallback(
-          queueLifecycle(() => runLifecycle.resetProjectLifecycle(message)),
-          'reset project request failed',
-          { ok: false, error: t().background.resetFailed } satisfies ResetProjectResult,
         );
       case 'OPEN_EDITOR':
         return withMessageFailureFallback(

@@ -10,7 +10,6 @@ import {
   ArrowRight,
   Camera,
   Check,
-  Crop,
   Crosshair,
   GripVertical,
   Loader2,
@@ -18,6 +17,7 @@ import {
   Pause,
   Play,
   Plus,
+  SquareDashed,
   Trash2,
   TriangleAlert,
   Undo2,
@@ -507,7 +507,7 @@ export default function RecordingToolbar({
                         disabled={busy || paused || regionCaptureActive || state.phase !== 'recording'}
                         onClick={() => onStartRegionCapture()}
                       >
-                        <Crop size={17} />
+                        <SquareDashed size={17} />
                       </button>
                     )}
                     <button

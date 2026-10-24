@@ -3,7 +3,7 @@ import { waitForQueuedClicks } from '../background-queues';
 import { isRecordableTabUrl } from '../../shared/restricted-urls';
 import { focusTab } from '../../runtime/navigation';
 import { getStep } from '../../storage/step-repository';
-import { getProject, resetProject } from '../../storage/project-repository';
+import { getProject } from '../../storage/project-repository';
 import { t } from '@/lib/shared/i18n';
 import { projectDisplayTitle } from '@/lib/storage/models';
 import { describeBrowserError } from '../../runtime/browser-errors';
@@ -13,8 +13,6 @@ import type {
   PreflightProjectContinuationSourcePermissionErrorCode,
   PreflightProjectContinuationSourcePermissionMessage,
   PreflightProjectContinuationSourcePermissionResult,
-  ResetProjectMessage,
-  ResetProjectResult,
   StartRecordingMessage,
   StartRecordingResult,
 } from '../../runtime/messages';
@@ -379,43 +377,10 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
     await reclaimAbandonedAutoCreatedProject(current);
   }
 
-  async function resetProjectLifecycle(message: ResetProjectMessage): Promise<ResetProjectResult> {
-    const initial = await getRecordingState();
-    if (initial.operation !== null || initial.isRecording || recaptureFlow.isStartingRecapture()) {
-      return { ok: false, error: t().background.resetDuringOperation };
-    }
-    const project = await getProject(message.sessionId);
-    if (!project) return { ok: false, error: t().runtime.resetTargetMissing };
-
-    // Invalidate any in-memory work first, then wait for all already-queued DB
-    // writes. Persisted run/session guards remain authoritative after restarts.
-    const version = control.claimControl({ cancelRecorderGate: true, discardUndo: true });
-    await waitForQueuedClicks();
-    const current = await getRecordingState();
-    if (version !== control.controlVersion || current.operation !== null || current.isRecording) {
-      return { ok: false, error: t().background.resetStateChanged };
-    }
-    try {
-      const updated = await resetProject(message.sessionId);
-      if (current.sessionId === message.sessionId) {
-        // resetRunStateToIdle also nulls autoCreatedProjectId; with operation already
-        // null, the field reads as null through state normalization either way.
-        await control.writeStateForControl(version, (latest) => latest.sessionId === message.sessionId
-          ? resetRunStateToIdle(latest)
-          : latest);
-      }
-      return { ok: true, contentRevision: updated.contentRevision };
-    } catch (error) {
-      console.error('[howbeam] failed to reset Project', error);
-      return { ok: false, error: t().background.resetFailedReload };
-    }
-  }
-
   return {
     preflightProjectContinuationSourcePermission,
     recoverInterruptedRecording,
     startRecording,
     stopRecording,
-    resetProjectLifecycle,
   };
 }

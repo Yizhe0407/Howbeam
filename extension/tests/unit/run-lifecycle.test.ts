@@ -20,7 +20,6 @@ const mocks = await vi.hoisted(async () =>
   (await import('../setup/background-test-utils')).makeBackgroundMocks());
 const repositories = vi.hoisted(() => ({
   getProject: vi.fn(),
-  resetProject: vi.fn(),
 }));
 const cleanup = vi.hoisted(() => ({
   deleteEmptySnapshotAnchor: vi.fn(),
@@ -37,7 +36,6 @@ vi.mock('@/lib/storage/storage', async (importOriginal) =>
 vi.mock('@/lib/storage/project-repository', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/storage/project-repository')>()),
   getProject: repositories.getProject,
-  resetProject: repositories.resetProject,
 }));
 vi.mock('@/lib/recording/background/run-cleanup', () => cleanup);
 
@@ -94,7 +92,6 @@ beforeEach(() => {
   mocks.permissionsContains.mockResolvedValue(true);
   mocks.getStep.mockResolvedValue(undefined);
   repositories.getProject.mockResolvedValue({ id: SESSION_ID, title: 'Guide', contentRevision: 3 });
-  repositories.resetProject.mockResolvedValue({ id: SESSION_ID, contentRevision: 4 });
   cleanup.deleteEmptySnapshotAnchorBestEffort.mockResolvedValue(undefined);
   cleanup.reclaimAbandonedAutoCreatedProject.mockResolvedValue(undefined);
 
@@ -223,35 +220,6 @@ describe('stopRecording', () => {
     await lifecycle.stopRecording();
 
     expect(mocks.setRecordingState).not.toHaveBeenCalled();
-  });
-});
-
-describe('resetProjectLifecycle', () => {
-  const reset = { type: 'RESET_PROJECT', sessionId: SESSION_ID } as const;
-
-  it('resets the project and clears its leftover run state', async () => {
-    state = makeRecordingState({ sessionId: SESSION_ID, phase: 'error', error: 'old' });
-
-    await expect(lifecycle.resetProjectLifecycle(reset)).resolves.toEqual({ ok: true, contentRevision: 4 });
-
-    expect(repositories.resetProject).toHaveBeenCalledWith(SESSION_ID);
-    expect(state).toMatchObject({ phase: 'idle', error: null });
-  });
-
-  it('refuses while a recording is live', async () => {
-    state = liveRun();
-
-    await expect(lifecycle.resetProjectLifecycle(reset))
-      .resolves.toEqual({ ok: false, error: t().background.resetDuringOperation });
-    expect(repositories.resetProject).not.toHaveBeenCalled();
-  });
-
-  it('reports a failed reset', async () => {
-    silenceIntentionalErrorLogs();
-    repositories.resetProject.mockRejectedValue(new Error('quota'));
-
-    await expect(lifecycle.resetProjectLifecycle(reset))
-      .resolves.toEqual({ ok: false, error: t().background.resetFailedReload });
   });
 });
 

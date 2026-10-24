@@ -110,15 +110,6 @@ export type EditorHandoffResult =
   | { ok: true; ready: boolean }
   | { ok: false; error: string };
 
-export interface ResetProjectMessage {
-  type: 'RESET_PROJECT';
-  sessionId: string;
-}
-
-export type ResetProjectResult =
-  | { ok: true; contentRevision?: number }
-  | { ok: false; error: string };
-
 export type OpenEditorResult = { ok: true } | { ok: false; error: string };
 
 export const RECORDING_CONTROL_TYPES = [
@@ -417,7 +408,6 @@ export type BackgroundMessage =
   | OpenEditorMessage
   | OpenLibraryMessage
   | RegisterExtensionPageMessage
-  | ResetProjectMessage
   | RecordingControlMessage
   | RecorderReadyMessage
   | PreflightStepRecaptureSourcePermissionMessage

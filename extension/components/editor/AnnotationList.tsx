@@ -64,7 +64,7 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
         <div className="flex size-full items-start rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             <NumberBadge value={position} />
-            <span className={cn('min-w-0 flex-1 break-words px-1.5 py-1 text-sm leading-relaxed', description ? 'text-foreground' : 'text-muted-foreground')}>
+            <span className={cn('min-w-0 flex-1 break-words border-2 border-transparent px-1.5 py-0.5 text-sm leading-relaxed', description ? 'text-foreground' : 'text-muted-foreground')}>
               {description || t().editor.annotations.placeholder}
             </span>
             <span className="flex size-7 shrink-0 items-center justify-center text-muted-foreground"><Trash2 className="size-3.5" /></span>
@@ -91,7 +91,7 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
           onBlur={() => void flush().catch(() => undefined)}
           disabled={deleteDisabled}
           placeholder={t().editor.annotations.placeholder}
-          className="min-w-0 flex-1 resize-none rounded-md border-none bg-transparent px-1.5 py-1 text-sm leading-relaxed text-foreground outline-none [field-sizing:content] focus-ring placeholder:text-muted-foreground"
+          className="min-w-0 flex-1 resize-none rounded-md border-2 border-transparent bg-transparent px-1.5 py-0.5 text-sm leading-relaxed text-foreground outline-none [field-sizing:content] focus-ring placeholder:text-muted-foreground hover:border-border-soft focus:border-border focus:bg-background"
         />
         <div className="flex shrink-0 items-center gap-0.5 opacity-80 transition-opacity group-hover:opacity-100">
           <Tooltip>

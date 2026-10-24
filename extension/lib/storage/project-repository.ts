@@ -15,7 +15,6 @@ import {
   isPristineProject,
   ProjectNotFoundError,
   newProject,
-  requireWritableProject,
   runProjectStepsWrite,
   runWithDatabase,
   summarizeSteps,
@@ -223,25 +222,3 @@ export async function deleteProjectPermanently(id: string): Promise<void> {
   });
 }
 
-/** Atomically clears project content while preserving identity and metadata. */
-export async function resetProject(id: string): Promise<Project> {
-  return runProjectStepsWrite(async (tx) => {
-    const project = await requireWritableProject(tx, id);
-    let cursor = await tx.objectStore('steps').index('by-session').openCursor(id);
-    while (cursor) {
-      await cursor.delete();
-      cursor = await cursor.continue();
-    }
-    const reset = sanitizeProject({
-      ...project,
-      updatedAt: Math.max(project.updatedAt, Date.now()),
-      contentRevision: project.contentRevision + 1,
-      sections: [],
-      stepCount: 0,
-      entryCount: 0,
-      storageBytes: 0,
-    });
-    await tx.objectStore('projects').put(reset);
-    return reset;
-  });
-}

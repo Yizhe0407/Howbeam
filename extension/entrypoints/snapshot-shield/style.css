@@ -101,3 +101,13 @@ body.has-region-capture,
 body.has-region-capture .snapshot-overlay {
   cursor: crosshair;
 }
+
+/* Marks the page as frozen while the shield is up. #a8d8ff mirrors
+ * BRAND_ACCENT in lib/capture/brand-colors.ts; change together. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 4px #a8d8ff, inset 0 0 0 5px rgb(28 25 23 / 0.35);
+}

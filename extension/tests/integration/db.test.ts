@@ -6,7 +6,7 @@ import { closeDatabase, ProjectNotFoundError, summarizeSteps } from '@/lib/stora
 import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
 import { jpegBlob, pngBlob } from '../setup/raster-fixtures';
 import { seedSteps } from '../setup/step-fixtures';
-import { createProject, createProjectFromSteps, deleteProjectPermanently, duplicateProject, ensureProject, getProject, getProjectSummaries, resetProject, updateProject } from '@/lib/storage/project-repository';
+import { createProject, createProjectFromSteps, deleteProjectPermanently, duplicateProject, ensureProject, getProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
 import { itemAt } from '../setup/item-at';
 
 function makeStep(overrides: Partial<Step> = {}): Step {
@@ -629,23 +629,6 @@ describe('project transaction safety', () => {
     await expect(addStepsAfter([{ ...step, description: 'stale write' }], null)).rejects.toThrow('Project not found.');
     expect(await getProject(step.sessionId)).toBeUndefined();
     expect(await getSteps(step.sessionId)).toEqual([]);
-  });
-
-  it('resets steps, increments content revision once, and zeroes summary metadata atomically', async () => {
-    const sessionId = crypto.randomUUID();
-    const first = makeStep({ sessionId, order: 0, screenshotBlob: pngBlob() });
-    const second = makeStep({ sessionId, order: 1, screenshotBlob: pngBlob() });
-    await ensureProject(sessionId);
-    await seedSteps([first]);
-    await seedSteps([second]);
-    const before = (await getProject(sessionId))!;
-
-    const reset = await resetProject(sessionId);
-
-    expect(reset.contentRevision).toBe(before.contentRevision + 1);
-    expect(reset).toMatchObject({ stepCount: 0, entryCount: 0, storageBytes: 0 });
-    expect(await getSteps(sessionId)).toEqual([]);
-    expect(await getProject(sessionId)).toEqual(reset);
   });
 
   it('serves summaries from project metadata without opening the step index or Blob payload', async () => {
