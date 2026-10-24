@@ -102,7 +102,6 @@ export const recordingToolbarStyles = `
   }
   .ft-status:active, .ft-collapsed:active { cursor: grabbing; }
   .ft-dot { width: 10px; height: 10px; flex: none; border-radius: 99px; background: var(--ft-recording); box-shadow: 0 0 0 3px var(--ft-btn-danger-hover-bg); }
-  .ft-state-icon { width: 20px; height: 20px; flex: none; color: var(--ft-recording); }
   .ft-dot[data-tone="muted"] { background: var(--ft-muted); box-shadow: none; }
   .ft-grip { width: 18px; height: 22px; flex: none; color: var(--ft-muted); }
   .ft-count-badge[data-tone="muted"] { background: var(--ft-actions-bg); color: var(--ft-muted); }

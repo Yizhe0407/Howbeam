@@ -595,11 +595,11 @@ export const zhTW = {
     captureFrameTooltip: '凍結畫面，再點選要標註處',
     nextFrame: '下一張',
     nextFrameTooltip: '完成這張，再擷取下一張',
-    finishTooltip: '結束並開啟編輯器',
+    finishTooltip: '完成並開啟編輯器',
     hintWaiting: '調整好頁面後，按「擷取」。',
     hintAnnotating: '點選要標註的地方。',
     hintRecording: '點擊網頁來記錄。',
-    finish: '結束',
+    finish: '完成',
     corner: {
       'top-left': '左上角',
       'top-right': '右上角',

@@ -38,7 +38,7 @@ No account or login is needed. All data stays in the browser.
 5. The library (from the popup) lists all projects. Settings (gear icon) has automatic backup to a local folder.
 ```
 
-> 中文：不需要帳號，資料都留在瀏覽器裡。① 打開一般網站；② 點工具列圖示，選「步驟」並開始錄製，Chrome 可能會詢問是否允許存取所有網站，這是選用權限，可以拒絕；③ 點幾個連結或按鈕，用右下角控制列結束；④ 編輯器會打開，可以改說明、編輯圖片、匯出；⑤ 專案庫列出所有專案，設定裡有自動備份。
+> 中文：不需要帳號，資料都留在瀏覽器裡。① 打開一般網站；② 點工具列圖示，選「步驟」並開始錄製，Chrome 可能會詢問是否允許存取所有網站，這是選用權限，可以拒絕；③ 點幾個連結或按鈕，用右下角控制列的「完成」結束；④ 編輯器會打開，可以改說明、編輯圖片、匯出；⑤ 專案庫列出所有專案，設定裡有自動備份。
 
 ## 送審
 

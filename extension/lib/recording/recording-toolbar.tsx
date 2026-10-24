@@ -10,7 +10,6 @@ import {
   ArrowRight,
   Camera,
   Check,
-  Crosshair,
   GripVertical,
   Loader2,
   Minimize2,
@@ -421,8 +420,6 @@ export default function RecordingToolbar({
                       <GripVertical className="ft-grip" aria-hidden="true" />
                     ) : paused ? (
                       <span className="ft-dot" data-tone="muted" aria-hidden="true" />
-                    ) : state.mode === 'snapshot' ? (
-                      <Crosshair className="ft-state-icon" aria-hidden="true" />
                     ) : (
                       <span className="ft-dot" aria-hidden="true" />
                     )}

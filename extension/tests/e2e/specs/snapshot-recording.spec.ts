@@ -155,7 +155,7 @@ test.describe('snapshot recording', () => {
     await startRecording(appPage, popupPage, 'snapshot');
     const shield = await getSnapshotFrame(appPage);
     const point = await targetCenter(appPage, '#plain-text');
-    await expect(shield.getByRole('button', { name: '結束', exact: true })).toBeVisible();
+    await expect(shield.getByRole('button', { name: '完成', exact: true })).toBeVisible();
 
     await clickSnapshotTarget(appPage, point);
     await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(1);
@@ -169,7 +169,7 @@ test.describe('snapshot recording', () => {
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
 
     const editorOpened = extensionContext.waitForEvent('page');
-    await clickShieldClosingControl(shield.getByRole('button', { name: '結束', exact: true }));
+    await clickShieldClosingControl(shield.getByRole('button', { name: '完成', exact: true }));
     const editor = await editorOpened;
     await editor.waitForLoadState('domcontentloaded');
     await expect.poll(async () => (await readRecordingState(popupPage)).isRecording).toBe(false);
@@ -269,7 +269,7 @@ test.describe('snapshot recording', () => {
     );
 
     const editorOpened = extensionContext.waitForEvent('page');
-    await clickShieldClosingControl(secondShield.getByRole('button', { name: '結束', exact: true }));
+    await clickShieldClosingControl(secondShield.getByRole('button', { name: '完成', exact: true }));
     const editor = await editorOpened;
     await editor.waitForLoadState('domcontentloaded');
     await expect(editor.getByRole('button', { name: /開啟步驟/ })).toHaveCount(2);
@@ -442,7 +442,7 @@ test.describe('snapshot recording', () => {
   }) => {
     await startRecording(appPage, popupPage, 'snapshot');
     const shield = await getSnapshotFrame(appPage);
-    await expect(shield.getByRole('button', { name: '結束', exact: true })).toBeVisible();
+    await expect(shield.getByRole('button', { name: '完成', exact: true })).toBeVisible();
 
     // The shield takes keyboard focus on its own: Tab goes to the first candidate (the enabled action button). No pointer is used.
     await appPage.keyboard.press('Tab');

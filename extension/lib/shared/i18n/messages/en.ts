@@ -597,7 +597,7 @@ export const en: Messages = {
     captureFrameTooltip: 'Freeze the view, then click to mark',
     nextFrame: 'Next',
     nextFrameTooltip: 'Finish this one, then capture the next',
-    finishTooltip: 'Stop and open the editor',
+    finishTooltip: 'Finish and open the editor',
     hintWaiting: 'Set up the page, then press Capture.',
     hintAnnotating: 'Click what to mark.',
     hintRecording: 'Click the page to record.',

@@ -238,14 +238,14 @@ describe('recording toolbar', () => {
     await waitFor(() => expect(onCommand).toHaveBeenCalledWith('PREPARE_NEXT_SNAPSHOT', undefined));
 
     // Finish is always the same control, whatever the state, and never doubles as another action.
-    fireEvent.click(screen.getByRole('button', { name: '結束' }));
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
     await waitFor(() => expect(onCommand).toHaveBeenCalledWith('FINISH_RECORDING', undefined));
   });
 
   it('finishes from the waiting state too', async () => {
     const onCommand = vi.fn().mockResolvedValue({ ok: true });
     await mount(<RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0 }} onCommand={onCommand} />);
-    fireEvent.click(screen.getByRole('button', { name: '結束' }));
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
     await waitFor(() => expect(onCommand).toHaveBeenCalledWith('FINISH_RECORDING', undefined));
   });
 });
