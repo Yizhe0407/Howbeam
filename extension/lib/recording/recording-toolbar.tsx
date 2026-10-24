@@ -235,9 +235,11 @@ export default function RecordingToolbar({
     ? null
     : preparingNext
       ? t().toolbar.hintWaiting
-      : state.phase === 'recording' && state.itemCount === 0
-        ? (state.mode === 'snapshot' ? t().toolbar.hintAnnotating : t().toolbar.hintRecording)
-        : null;
+      : paused
+        ? t().common.paused
+        : state.phase === 'recording' && state.itemCount === 0
+          ? (state.mode === 'snapshot' ? t().toolbar.hintAnnotating : t().toolbar.hintRecording)
+          : null;
   const invalidated = state.mode === 'snapshot' && state.phase === 'invalidated';
   const busy = pending !== null || state.phase === 'finishing';
 
@@ -418,7 +420,7 @@ export default function RecordingToolbar({
                     {preparingNext ? (
                       <GripVertical className="ft-grip" aria-hidden="true" />
                     ) : paused ? (
-                      <Pause className="ft-state-icon" data-tone="muted" aria-hidden="true" />
+                      <span className="ft-dot" data-tone="muted" aria-hidden="true" />
                     ) : state.mode === 'snapshot' ? (
                       <Crosshair className="ft-state-icon" aria-hidden="true" />
                     ) : (

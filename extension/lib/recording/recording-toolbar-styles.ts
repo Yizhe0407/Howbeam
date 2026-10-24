@@ -103,7 +103,7 @@ export const recordingToolbarStyles = `
   .ft-status:active, .ft-collapsed:active { cursor: grabbing; }
   .ft-dot { width: 10px; height: 10px; flex: none; border-radius: 99px; background: var(--ft-recording); box-shadow: 0 0 0 3px var(--ft-btn-danger-hover-bg); }
   .ft-state-icon { width: 20px; height: 20px; flex: none; color: var(--ft-recording); }
-  .ft-state-icon[data-tone="muted"] { color: var(--ft-muted); }
+  .ft-dot[data-tone="muted"] { background: var(--ft-muted); box-shadow: none; }
   .ft-grip { width: 18px; height: 22px; flex: none; color: var(--ft-muted); }
   .ft-count-badge[data-tone="muted"] { background: var(--ft-actions-bg); color: var(--ft-muted); }
   .ft-count-badge { min-width: 26px; height: 26px; padding: 0 8px; border: 2px solid var(--ft-border); border-radius: 99px; background: var(--ft-count); color: var(--ft-count-text); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
@@ -178,7 +178,7 @@ export const recordingToolbarStyles = `
     padding: 10px 12px; border: 2px solid var(--ft-border); border-radius: var(--ft-radius); background: var(--ft-surface);
     color: var(--ft-text); font-size: 12px; font-weight: 700;
   }
-  .ft-message { display: flex; align-items: center; gap: 8px; }
+  .ft-message { display: flex; align-items: center; gap: 8px; min-width: 0; width: max-content; }
   .ft-message[data-kind="error"] { color: var(--ft-error-text); }
   .ft-snackbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
   .ft-snackbar button { border: 0; background: transparent; color: var(--ft-link); font-weight: 700; cursor: pointer; }

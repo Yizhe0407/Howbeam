@@ -136,11 +136,10 @@ export const zhTW = {
     returnToTabFailed: '無法回到錄製分頁，分頁可能已關閉。',
     retryOpenEditor: '重試開啟編輯器',
     finishAndOpenEditor: '完成並開啟編輯器',
-    controlsStayOnPage: '錄製控制保留在原分頁右下角。',
     returnToRecordingTab: '回到錄製分頁',
     singleTabOnly: '目前僅錄製單一分頁。',
     enableCrossTab: '啟用跨分頁錄製',
-    restrictedPageHint: '這個頁面無法錄製。請切換到要示範的一般網頁分頁，再開啟 Howbeam。',
+    restrictedPageHint: '這個頁面無法錄製，請換到一般網頁。',
   },
 
   library: {
@@ -465,7 +464,7 @@ export const zhTW = {
       pickTabBody: '錄製會從選取的分頁開始，之後會跟著你切換的分頁。',
       insertNote: (step: number) => `新步驟會插在第 ${step} 步後面。`,
       sourceUnavailableBody: (reason: string) => `${reason}你可以改在目前開啟的網頁分頁繼續錄製。`,
-      accessBody: 'Howbeam 只會要求這個網站的存取權，開始前也會再次確認來源網站。',
+      accessBody: '只會要求這個網站的存取權。',
       appendNote: '新步驟會接在最後。',
       continueElsewhere: '改在其他頁面接續',
       authorizing: '正在授權…',

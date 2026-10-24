@@ -132,11 +132,10 @@ export const en: Messages = {
     returnToTabFailed: 'Couldn’t return to the recording tab. It may have been closed.',
     retryOpenEditor: 'Try opening the editor again',
     finishAndOpenEditor: 'Finish and open editor',
-    controlsStayOnPage: 'Recording controls stay in the bottom-right corner of the tab.',
     returnToRecordingTab: 'Back to recording tab',
     singleTabOnly: 'Recording this tab only.',
     enableCrossTab: 'Record across tabs',
-    restrictedPageHint: 'This page can’t be recorded. Switch to the website you want to demonstrate, then open Howbeam again.',
+    restrictedPageHint: 'This page can’t be recorded. Switch to a regular website.',
   },
 
   library: {
@@ -467,8 +466,7 @@ export const en: Messages = {
       pickTabBody: 'Recording starts in the selected tab and follows you as you switch tabs.',
       insertNote: (step: number) => `New steps are inserted after step ${step}.`,
       sourceUnavailableBody: (reason: string) => `${reason} You can continue recording in a tab that’s open now.`,
-      accessBody:
-        'Howbeam only asks for access to this site, and checks the source page again before starting.',
+      accessBody: 'Howbeam only asks for access to this site.',
       appendNote: 'New steps are added at the end.',
       continueElsewhere: 'Continue on another page',
       authorizing: 'Authorizing…',

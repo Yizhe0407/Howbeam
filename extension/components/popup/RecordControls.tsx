@@ -243,14 +243,11 @@ export default function RecordControls({
         {runError && runError !== controlError && <InlineAlert>{runError}</InlineAlert>}
         <div className="rounded-md border-2 border-border bg-surface-raised px-3.5 py-3">
           <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-            <span className="size-2 rounded-full bg-recording" />
+            <span className={cn('size-2 rounded-full', recording.phase === 'paused' ? 'bg-muted-foreground' : 'bg-recording')} />
             {recording.phase === 'paused' ? t().common.paused : t().common.recording}
             {' · '}
             {recordingItemCountLabel(recording.mode, recording.itemCount)}
           </div>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            {t().popup.controlsStayOnPage}
-          </p>
         </div>
         <div className="flex flex-col gap-2">
           <button
