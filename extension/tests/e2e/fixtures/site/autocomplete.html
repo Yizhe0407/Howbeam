@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <title>Howbeam 自動完成測試</title>
+    <style>
+      body { margin: 0; padding: 40px; font-family: Arial, sans-serif; }
+      #search { width: 320px; height: 36px; font-size: 16px; }
+      #menu { width: 320px; margin: 0; padding: 0; list-style: none; border: 1px solid #a8a29e; }
+      #menu[hidden] { display: none; }
+      #menu a { display: block; padding: 10px 12px; color: #1c1917; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <input id="search" type="search" aria-label="搜尋" autocomplete="off" />
+    <p id="note">輸入關鍵字後，從建議清單選擇條目。</p>
+    <ul id="menu" hidden>
+      <li><a id="suggestion" href="navigated.html?pick=taipei-101">台北101</a></li>
+    </ul>
+    <script>
+      // Built the way typeahead widgets are: the menu closes when the field loses
+      // focus, and its items keep that focus by cancelling mousedown.
+      const search = document.querySelector('#search');
+      const menu = document.querySelector('#menu');
+      window.autocompleteProbe = { blurs: 0 };
+      search.addEventListener('input', () => { menu.hidden = search.value === ''; });
+      search.addEventListener('blur', () => {
+        window.autocompleteProbe.blurs += 1;
+        menu.hidden = true;
+      });
+      menu.addEventListener('mousedown', (event) => event.preventDefault());
+    </script>
+  </body>
+</html>

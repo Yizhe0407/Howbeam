@@ -306,4 +306,67 @@ describe('createStepPressGate', () => {
     gate.clear();
     expect(seen).toEqual(['synthetic pointerdown', 'synthetic mousedown']);
   });
+
+  describe('a press while a text field has focus', () => {
+    let field: HTMLInputElement;
+
+    /** A full trusted click whose mousedown is returned, so its default can be checked. */
+    function clickReturningMouseDown(): MouseEvent {
+      fire(pointer('pointerdown', { buttons: 1 }));
+      const down = fire(mouse('mousedown', { buttons: 1 }));
+      fire(pointer('pointerup', { buttons: 0 }));
+      fire(mouse('mouseup'));
+      fire(mouse('click'));
+      return down;
+    }
+
+    beforeEach(() => {
+      field = document.createElement('input');
+      document.body.prepend(field);
+      field.focus();
+    });
+
+    it('keeps the field focused until the replayed mousedown, which an autocomplete menu cancels', async () => {
+      // Autocomplete menus keep focus in the field by cancelling mousedown on their items.
+      target.addEventListener('mousedown', (event) => event.preventDefault());
+      expect(clickReturningMouseDown().defaultPrevented).toBe(true);
+      expect(document.activeElement).toBe(field);
+      await expect(itemAt(presses, 0).outcome).resolves.toBe('click');
+
+      gate.replay(itemAt(presses, 0));
+      expect(document.activeElement).toBe(field);
+      expect(seen).toContain('synthetic click');
+    });
+
+    it('moves focus on replay when the page does not cancel the mousedown, as the browser would', () => {
+      clickReturningMouseDown();
+      expect(document.activeElement).toBe(field);
+      gate.replay(itemAt(presses, 0));
+      expect(document.activeElement).toBe(target);
+    });
+
+    it('takes focus off the field on replay when the pressed content cannot hold focus', () => {
+      const text = document.createElement('span');
+      document.body.append(text);
+      target = text as unknown as HTMLButtonElement;
+      clickReturningMouseDown();
+      gate.replay(itemAt(presses, 0));
+      expect(document.activeElement).toBe(document.body);
+    });
+
+    it('leaves a press on another text field to the browser, so its caret lands natively', () => {
+      const other = document.createElement('input');
+      document.body.append(other);
+      target = other as unknown as HTMLButtonElement;
+      expect(clickReturningMouseDown().defaultPrevented).toBe(false);
+    });
+
+    it('gives a drag back with focus decided by the handed-over mousedown', () => {
+      fire(pointer('pointerdown', { buttons: 1 }));
+      fire(mouse('mousedown', { buttons: 1 }));
+      expect(document.activeElement).toBe(field);
+      fire(pointer('pointermove', { buttons: 1, clientX: 10 + STEP_DRAG_THRESHOLD_PX + 1 }));
+      expect(document.activeElement).toBe(target);
+    });
+  });
 });

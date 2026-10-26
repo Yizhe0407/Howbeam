@@ -30,13 +30,25 @@ export interface ReplayClickOptions {
   clientY?: number;
   /** Click count (UIEvent.detail): 2 for the second click of a double click. */
   detail?: number;
-  /** False for a follow-up click of a multi-click, whose element already has focus. */
-  focus?: boolean;
+  /** False for a follow-up click of a multi-click, whose element already has focus.
+   * `unless-cancelled` moves focus after the mousedown, only if the page did not cancel it. */
+  focus?: boolean | 'unless-cancelled';
+}
+
+/** Moves focus the way a press on `el` does natively: to the nearest focusable
+ * element at or above it, or off the current element when there is none. */
+export function moveFocusAsPressed(el: Element): void {
+  for (let node: Node | null = el; node; node = node.parentNode ?? (node instanceof ShadowRoot ? node.host : null)) {
+    if (!(node instanceof HTMLElement || node instanceof SVGElement)) continue;
+    node.focus({ preventScroll: true });
+    if (node.matches(':focus')) return;
+  }
+  (document.activeElement as HTMLElement | null)?.blur?.();
 }
 
 export function replayElementClick(el: Element, options: ReplayClickOptions = {}): void {
   if (isElementInteractionDisabled(el)) return;
-  if (options.focus !== false) {
+  if (options.focus === undefined || options.focus === true) {
     const focus = (el as Element & { focus?: (options?: FocusOptions) => void }).focus;
     focus?.call(el, { preventScroll: true });
   }
@@ -62,7 +74,9 @@ export function replayElementClick(el: Element, options: ReplayClickOptions = {}
     buttons: 1,
   };
   el.dispatchEvent(new PointerEvent('pointerdown', pointerInit));
-  el.dispatchEvent(new MouseEvent('mousedown', { ...mouseInit, buttons: 1 }));
+  const mouseDown = new MouseEvent('mousedown', { ...mouseInit, buttons: 1 });
+  el.dispatchEvent(mouseDown);
+  if (options.focus === 'unless-cancelled' && !mouseDown.defaultPrevented) moveFocusAsPressed(el);
   el.dispatchEvent(new PointerEvent('pointerup', { ...pointerInit, buttons: 0 }));
   el.dispatchEvent(new MouseEvent('mouseup', { ...mouseInit, buttons: 0 }));
 

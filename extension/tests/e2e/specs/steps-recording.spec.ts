@@ -478,10 +478,51 @@ test.describe('step recording', () => {
 
     await stopRecording(popupPage);
   });
+
+  test('records a pick from an autocomplete menu that closes when its field loses focus', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
+    await appPage.goto(`${FIXTURE_URL}autocomplete.html`);
+    await startRecording(appPage, popupPage, 'steps');
+    await clickTarget(appPage, '#search');
+    await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
+    await appPage.keyboard.type('台北');
+    await expect(appPage.locator('#suggestion')).toBeVisible();
+    const suggestion = await appPage.locator('#suggestion').boundingBox();
+
+    await clickTarget(appPage, '#suggestion');
+    await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
+    await appPage.waitForURL(/navigated\.html\?pick=taipei-101$/);
+
+    // The step boxes the suggestion, so the menu was still open when the screenshot was taken.
+    const step = itemAt(await readSteps(popupPage), 1);
+    expect(step.description).toBe('開啟連結');
+    expect(step.bounds!.x).toBeCloseTo(suggestion!.x, 0);
+    expect(step.bounds!.width).toBeCloseTo(suggestion!.width, 0);
+    await stopRecording(popupPage);
+  });
+
+  test('still takes focus off a text field when the press lands on plain content', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
+    await appPage.goto(`${FIXTURE_URL}autocomplete.html`);
+    await startRecording(appPage, popupPage, 'steps');
+    await appPage.locator('#search').focus();
+    await clickTarget(appPage, '#note');
+    await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
+    await expect.poll(() => appPage.evaluate(() => window.autocompleteProbe.blurs)).toBe(1);
+    expect(await appPage.evaluate(() => document.activeElement === document.querySelector('#search'))).toBe(false);
+    await stopRecording(popupPage);
+  });
 });
 
 declare global {
   interface Window {
     fixtureState: { actionClicks: number };
+    autocompleteProbe: { blurs: number };
   }
 }
