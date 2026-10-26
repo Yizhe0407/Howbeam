@@ -1,5 +1,6 @@
 import { test, expect, FIXTURE_URL } from '../support/fixture';
 import {
+  addMovingTarget,
   clickRecordingToolbarButton,
   clickTarget,
   expectSteady,
@@ -13,6 +14,7 @@ import {
   startRecording,
   startStepsRunWithFirstStep,
   stopRecording,
+  storedScreenshotShowsMovingTarget,
   targetCenter,
 } from '../support/harness';
 import { itemAt } from '../../setup/item-at';
@@ -454,6 +456,25 @@ test.describe('step recording', () => {
     expect(await appPage.evaluate(
       () => (window.fixtureState as typeof window.fixtureState & { disabledEvents: number }).disabledEvents,
     )).toBe(0);
+
+    await stopRecording(popupPage);
+  });
+
+  test('boxes a moving element where the screenshot shows it, then lets it move again', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
+    await addMovingTarget(appPage);
+    await startRecording(appPage, popupPage, 'steps');
+    await clickTarget(appPage, '#moving-target');
+    await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
+
+    const step = itemAt(await readSteps(popupPage), 0);
+    expect(await storedScreenshotShowsMovingTarget(popupPage, step.id, step.bounds!)).toBe(true);
+    const before = await targetCenter(appPage, '#moving-target');
+    await appPage.waitForTimeout(100);
+    expect(await targetCenter(appPage, '#moving-target')).not.toEqual(before);
 
     await stopRecording(popupPage);
   });

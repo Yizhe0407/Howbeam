@@ -5,6 +5,7 @@ import { getVisibleHighlightBounds } from '../capture/selector/highlight-bounds'
 import { isInteractiveElement } from '../capture/selector/interactive-element';
 import { ACTIVATION_TARGETING_POLICY, resolveVisualTargetAtPoint } from '../capture/selector/visual-target';
 import { intersectBounds } from '../capture/bounds-geometry';
+import { pauseMotion } from '../capture/page-motion';
 import { createFrameCoordinateMapper } from '../capture/frame-geometry';
 import {
   createFrameProbeRateLimiter,
@@ -269,8 +270,10 @@ export function installStepFrameRecorder(runId: string, initiallyPaused: boolean
       return;
     }
     const el = press.target;
+    const releaseMotion = pauseMotion();
     const rect = getVisibleHighlightBounds(el, press.clientX, press.clientY);
     if (!rect) {
+      releaseMotion();
       gesture.release();
       pressGate.replay(press);
       return;
@@ -288,6 +291,7 @@ export function installStepFrameRecorder(runId: string, initiallyPaused: boolean
         failsafe = null;
         settleActiveRelay = null;
         activeCaptureId = null;
+        releaseMotion();
         gesture.release();
         if (!removed && !gesture.isCancelled() && replay) pressGate.replay(press);
         resolveGesture();
@@ -466,6 +470,7 @@ export function installSnapshotFrameFreeze(): void {
   const baseline = { x: window.scrollX, y: window.scrollY };
   let pinged = false;
   let removed = false;
+  const releaseMotion = pauseMotion();
 
   const consume = (event: Event) => {
     if (event.cancelable) event.preventDefault();
@@ -495,6 +500,7 @@ export function installSnapshotFrameFreeze(): void {
   const cleanup = () => {
     if (removed) return;
     removed = true;
+    releaseMotion();
     for (const type of SNAPSHOT_FREEZE_EVENTS) window.removeEventListener(type, consume, { capture: true });
     window.removeEventListener('scroll', onScroll, { capture: true });
     window.removeEventListener('resize', ping);

@@ -1,5 +1,6 @@
 import { test, expect, FIXTURE_URL } from '../support/fixture';
 import {
+  addMovingTarget,
   clickShieldClosingControl,
   clickSnapshotTarget,
   expectSteady,
@@ -11,6 +12,7 @@ import {
   sendRecordingControl,
   startRecording,
   stopRecording,
+  storedScreenshotShowsMovingTarget,
   targetCenter,
 } from '../support/harness';
 
@@ -484,6 +486,29 @@ test.describe('snapshot recording', () => {
     expect(state.recoverableError).toBeNull();
 
     await stopRecording(popupPage);
+  });
+
+  test('holds moving elements still so marks line up with the snapshot, and releases them after', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
+    await addMovingTarget(appPage);
+    await startRecording(appPage, popupPage, 'snapshot');
+    const held = await targetCenter(appPage, '#moving-target');
+    await appPage.waitForTimeout(300);
+    expect(await targetCenter(appPage, '#moving-target')).toEqual(held);
+
+    await clickSnapshotTarget(appPage, held);
+    await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
+    const steps = await readSteps(popupPage);
+    const anchor = steps.find((step) => step.bounds === null)!;
+    const mark = steps.find((step) => step.bounds !== null)!;
+    expect(await storedScreenshotShowsMovingTarget(popupPage, anchor.id, mark.bounds!)).toBe(true);
+
+    await stopRecording(popupPage);
+    await appPage.waitForTimeout(100);
+    expect(await targetCenter(appPage, '#moving-target')).not.toEqual(held);
   });
 });
 

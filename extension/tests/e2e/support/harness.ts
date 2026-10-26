@@ -345,6 +345,58 @@ export async function rawScreenshotRosePixels(
   }, { id: stepId, boundsOverride, scribeDb: SCRIBE_DB });
 }
 
+/** Adds a green box that a CSS animation sweeps across the page, far faster
+ * than a screenshot round trip, so any gap between reading its box and taking
+ * the pixels shows up as a box over blank page. */
+export async function addMovingTarget(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes moving-target-sweep { from { transform: translateX(0); } to { transform: translateX(900px); } }
+      #moving-target { position: fixed; left: 40px; top: 300px; width: 120px; height: 60px; background: rgb(0, 200, 0); animation: moving-target-sweep 600ms linear infinite alternate; }
+    `;
+    const box = document.createElement('div');
+    box.id = 'moving-target';
+    document.head.append(style);
+    document.body.append(box);
+  });
+}
+
+/** Whether the stored screenshot is the moving target's green at the centre
+ * and just inside the left and right edges of `bounds`. */
+export async function storedScreenshotShowsMovingTarget(
+  popup: Page,
+  stepId: string,
+  bounds: { x: number; y: number; width: number; height: number },
+): Promise<boolean> {
+  return popup.evaluate(async ({ id, bounds, scribeDb }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(scribeDb.name, scribeDb.version);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+    const step = await new Promise<{ screenshotBlob?: Blob; screenshotScale?: number; devicePixelRatio?: number } | undefined>((resolve, reject) => {
+      const get = db.transaction('steps', 'readonly').objectStore('steps').get(id);
+      get.onerror = () => reject(get.error);
+      get.onsuccess = () => resolve(get.result);
+    });
+    db.close();
+    if (!step?.screenshotBlob) throw new Error(`Screenshot ${id} was not found`);
+    const bitmap = await createImageBitmap(step.screenshotBlob);
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas context is unavailable');
+    context.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    const scale = step.screenshotScale || step.devicePixelRatio || 1;
+    const y = bounds.y + bounds.height / 2;
+    return [bounds.x + 14, bounds.x + bounds.width / 2, bounds.x + bounds.width - 14].every((x) => {
+      const [red, green, blue] = context.getImageData(Math.floor(x * scale), Math.floor(y * scale), 1, 1).data;
+      return (red ?? 255) < 40 && (green ?? 0) > 160 && (blue ?? 255) < 40;
+    });
+  }, { id: stepId, bounds, scribeDb: SCRIBE_DB });
+}
+
 export async function readScreenshotScrollbarStats(popup: Page, stepId: string): Promise<{
   width: number;
   height: number;

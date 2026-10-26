@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
 import { describeElement } from '../../capture/element-description';
+import { pauseMotion } from '../../capture/page-motion';
 import { createRegionCapture } from '../../capture/region-capture';
 import { isOutOfViewport, readRegionScrollSnapshot, readScrollSnapshot } from '../../capture/scroll-snapshot';
 import { getHighlightBounds, getVisibleHighlightBounds } from '../../capture/selector/highlight-bounds';
@@ -183,34 +184,41 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
     gesture: StepGesture,
     scrollTarget: Element,
     actions: Pick<StepCaptureHandlers, 'capture' | 'replay'>,
-  ): StepCaptureHandlers => ({
-    failsafeMs: CAPTURE_FAILSAFE_MS,
-    cancelled: gesture.cancelled,
-    readScroll: () => readScrollSnapshot(scrollTarget),
-    hidePreview: () => preview.prepareForCapture(),
-    capture: actions.capture,
-    cancelCapture: async () => {
-      gesture.cancel();
-      await browser.runtime.sendMessage({ type: 'HOWBEAM_CANCEL_CAPTURE', runId: session.runId, captureId: gesture.captureId });
-    },
-    endGesture: () => {
-      // Capture window closed: stop swallowing page events. The scroll pin
-      // stays installed until restoreScroll has copied every ancestor back.
-      gesture.release();
-    },
-    restoreScroll: (origin) => {
-      setCaptureScrollLock(null);
-      if (window.scrollX !== origin.x || window.scrollY !== origin.y) {
-        window.scrollTo(origin.x, origin.y);
-      }
-      for (const container of origin.containers ?? []) {
-        container.element.scrollLeft = container.x;
-        container.element.scrollTop = container.y;
-      }
-    },
-    replay: actions.replay,
-    resumePreview: () => preview.schedule(),
-  });
+  ): StepCaptureHandlers => {
+    let releaseMotion = () => {};
+    return {
+      failsafeMs: CAPTURE_FAILSAFE_MS,
+      cancelled: gesture.cancelled,
+      readScroll: () => readScrollSnapshot(scrollTarget),
+      hidePreview: () => {
+        releaseMotion = pauseMotion();
+        return preview.prepareForCapture();
+      },
+      capture: actions.capture,
+      cancelCapture: async () => {
+        gesture.cancel();
+        await browser.runtime.sendMessage({ type: 'HOWBEAM_CANCEL_CAPTURE', runId: session.runId, captureId: gesture.captureId });
+      },
+      endGesture: () => {
+        releaseMotion();
+        // Capture window closed: stop swallowing page events. The scroll pin
+        // stays installed until restoreScroll has copied every ancestor back.
+        gesture.release();
+      },
+      restoreScroll: (origin) => {
+        setCaptureScrollLock(null);
+        if (window.scrollX !== origin.x || window.scrollY !== origin.y) {
+          window.scrollTo(origin.x, origin.y);
+        }
+        for (const container of origin.containers ?? []) {
+          container.element.scrollLeft = container.x;
+          container.element.scrollTop = container.y;
+        }
+      },
+      replay: actions.replay,
+      resumePreview: () => preview.schedule(),
+    };
+  };
 
   /** The crop button can be pressed while an earlier click is still being
    * captured; the region selector opens once that click has fully settled
@@ -233,6 +241,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
     let captureSent = false;
     const origin: ScrollSnapshot = { x: window.scrollX, y: window.scrollY, containers: [] };
     setCaptureScrollLock(origin);
+    const releaseMotion = pauseMotion();
 
     const controller = createRegionCapture({
       onCapture: async (rect) => {
@@ -281,6 +290,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       },
       onClose: () => {
         if (session.regionCapture === controller) session.regionCapture = null;
+        releaseMotion();
         setCaptureScrollLock(null);
         session.toolbar?.setRegionCaptureActive(false);
         preview.schedule();

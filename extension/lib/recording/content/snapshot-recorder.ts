@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { pauseMotion } from '../../capture/page-motion';
 import { isRegionRectInsideViewport } from '../../capture/region-capture';
 import { SNAPSHOT_FREEZE_EVENTS } from '../content-script-constants';
 import { findIframeForWindow, snapshotFrameScrollPingType } from '../frame-relay';
@@ -209,8 +210,10 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     window.addEventListener('message', onSnapshotFramePing);
     dprQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
     dprQuery.addEventListener('change', onDprChange);
+    const releaseMotion = pauseMotion();
 
     return () => {
+      releaseMotion();
       for (const type of SNAPSHOT_FREEZE_EVENTS) {
         window.removeEventListener(type, onSnapshotFreeze, { capture: true });
       }
