@@ -56,6 +56,10 @@ export interface SnapshotShield {
   runWithoutShield<T>(callback: () => T): T;
   updateToolbar(state: SnapshotShieldToolbarStateMessage['state']): void;
   sendKeyboardCandidates(anchors: SnapshotShieldKeyboardAnchor[]): void;
+  /** Takes the last committed annotation off the shield (an undo the background accepted). */
+  undoLast(): void;
+  /** Puts the last undone annotation back (a restore the background accepted). */
+  restoreUndone(): void;
   remove(): void;
 }
 
@@ -314,26 +318,23 @@ export function createSnapshotShield(
       result = { ok: false, error: t().runtime.shieldActionFailed };
     }
     if (isStale(generation)) return;
-
-    // Undo/restore is DELIBERATELY tracked in three lockstep layers keyed by
-    // the same background result: the page recorder's selection set
-    // (content.ts onSnapshotControl), this channel's committedSelections
-    // (which replay committed annotations into a reloaded shield frame), and
-    // the shield page's overlay stack (snapshot-shield/overlay.ts). All three
-    // must pop and push together or dedup and drawn annotations drift.
-    if (result.ok && message.action === 'UNDO_LAST_CAPTURE') {
-      lastUndoneSelection = committedSelections.pop() ?? null;
-      if (lastUndoneSelection) {
-        post({ type: SNAPSHOT_SHIELD_UNDO });
-      }
-    } else if (result.ok && message.action === 'RESTORE_LAST_CAPTURE' && lastUndoneSelection) {
-      committedSelections.push(lastUndoneSelection);
-      const restoredSelection = lastUndoneSelection;
-      lastUndoneSelection = null;
-      post({ type: SNAPSHOT_SHIELD_COMMIT, selection: restoredSelection });
-    }
-
     post({ type: SNAPSHOT_SHIELD_CONTROL_RESULT, requestId: message.requestId, result });
+  };
+
+  // committedSelections replays committed annotations into a reloaded shield
+  // frame; the snapshot recorder moves it in lockstep with its own selection
+  // set and the shield page's overlay stack (snapshot-recorder applyHistory).
+  const undoLast = (): void => {
+    lastUndoneSelection = committedSelections.pop() ?? null;
+    if (lastUndoneSelection) post({ type: SNAPSHOT_SHIELD_UNDO });
+  };
+
+  const restoreUndone = (): void => {
+    if (!lastUndoneSelection) return;
+    committedSelections.push(lastUndoneSelection);
+    const restoredSelection = lastUndoneSelection;
+    lastUndoneSelection = null;
+    post({ type: SNAPSHOT_SHIELD_COMMIT, selection: restoredSelection });
   };
 
   const runWithoutShieldHitTesting = <T>(callback: () => T): T => {
@@ -567,6 +568,8 @@ export function createSnapshotShield(
       keyboardAnchors = anchors;
       post({ type: SNAPSHOT_SHIELD_CANDIDATES, anchors });
     },
+    undoLast,
+    restoreUndone,
     remove,
   };
 }

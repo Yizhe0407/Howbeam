@@ -23,6 +23,7 @@ import { CLEANUP_EVENT } from '@/lib/recording/content-script-constants';
 import type {
   HowbeamCaptureTakenMessage,
   HowbeamSnapshotActiveMessage,
+  HowbeamSnapshotHistoryMessage,
   HowbeamStopMessage,
   SnapshotRecorderFailureMessage,
 } from '@/lib/runtime/messages';
@@ -213,7 +214,7 @@ async function startRecorder(): Promise<void> {
   });
 
   const onRecorderMessage = (
-    message: HowbeamStopMessage | HowbeamSnapshotActiveMessage | HowbeamCaptureTakenMessage,
+    message: HowbeamStopMessage | HowbeamSnapshotActiveMessage | HowbeamSnapshotHistoryMessage | HowbeamCaptureTakenMessage,
   ) => {
     if (message?.type === 'HOWBEAM_STOP') {
       cleanup();
@@ -221,6 +222,10 @@ async function startRecorder(): Promise<void> {
     }
     if (message?.type === 'HOWBEAM_CAPTURE_TAKEN' && message.runId === runId) {
       capture.markCaptureTaken(message.captureId);
+      return;
+    }
+    if (message?.type === 'HOWBEAM_SNAPSHOT_HISTORY' && message.runId === runId) {
+      if (isSnapshotMode) snapshot.applyHistory(message.change);
       return;
     }
     if (message?.type === 'HOWBEAM_SNAPSHOT_ACTIVE' && message.runId === runId) {

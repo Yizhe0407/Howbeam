@@ -182,6 +182,36 @@ test.describe('snapshot recording', () => {
     await expect(editor.getByRole('button', { name: '開啟步驟 1' })).toHaveAttribute('aria-current', 'step');
   });
 
+  test('keeps the drawn marks and the duplicate check in step with an undo sent from outside the shield', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
+    await startRecording(appPage, popupPage, 'snapshot');
+    const shield = await getSnapshotFrame(appPage);
+    const point = await targetCenter(appPage, '#plain-text');
+    await clickSnapshotTarget(appPage, point);
+    await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(1);
+
+    // The undo-last-capture keyboard shortcut reaches the background the same way.
+    const undone = await sendRecordingControl(popupPage, 'UNDO_LAST_CAPTURE') as { ok: boolean; undoToken?: string };
+    expect(undone.ok).toBe(true);
+    await expect(shield.locator('.snapshot-annotation__frame')).toHaveCount(0);
+    await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(0);
+
+    expect(await sendRecordingControl(popupPage, 'RESTORE_LAST_CAPTURE', undone.undoToken)).toMatchObject({ ok: true });
+    await expect(shield.locator('.snapshot-annotation__frame')).toHaveCount(1);
+    await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(1);
+
+    expect(await sendRecordingControl(popupPage, 'UNDO_LAST_CAPTURE')).toMatchObject({ ok: true });
+    await expect(shield.locator('.snapshot-annotation__frame')).toHaveCount(0);
+    // The undone target is free to be marked again instead of being taken for a duplicate.
+    await clickSnapshotTarget(appPage, point);
+    await expect(shield.locator('.snapshot-annotation__frame')).toHaveCount(1);
+    await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(1);
+    await stopRecording(popupPage);
+  });
+
   test('moves and persists the toolbar, then discards the current run after confirmation', async ({
     appPage,
     popupPage,

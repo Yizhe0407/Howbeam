@@ -154,21 +154,23 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
   const onControl = async (
     message: SnapshotShieldControlMessage,
   ): Promise<RecordingControlResult> => {
-    const result = await toolbar.sendCommand(message.action, message.undoToken);
-    if (!result.ok) return result;
+    return toolbar.sendCommand(message.action, message.undoToken);
+  };
 
-    // Undo/restore is DELIBERATELY tracked in three lockstep layers keyed by
-    // the same background result: this recorder's selection set (dedup of
-    // future clicks), the shield channel's committedSelections
-    // (snapshot-shield.ts handleControl), and the shield page's overlay
-    // stack (snapshot-shield/overlay.ts undo/commit). All three must pop and
-    // push together or duplicate detection and the drawn annotations drift.
-    if (message.action === 'UNDO_LAST_CAPTURE') {
+  /** Undo/restore is DELIBERATELY tracked in three lockstep layers, all moved
+   * here by the background's HOWBEAM_SNAPSHOT_HISTORY whichever control asked:
+   * this recorder's selection set (dedup of future clicks), the shield
+   * channel's committedSelections, and the shield page's overlay stack. All
+   * three must pop and push together or duplicate detection and the drawn
+   * annotations drift. */
+  const applyHistory = (change: 'undo' | 'restore'): void => {
+    if (change === 'undo') {
       selection.undoLast();
-    } else if (message.action === 'RESTORE_LAST_CAPTURE') {
+      session.shield?.undoLast();
+    } else {
       selection.restoreUndone();
+      session.shield?.restoreUndone();
     }
-    return result;
   };
 
   /** Installs the snapshot-mode page instrumentation and returns its
@@ -228,6 +230,7 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     install,
     /** The shield's message handlers, in the order createSnapshotShield takes them. */
     handlers: { onPoint, onHover, onControl, onRegion },
+    applyHistory,
     /** Selection is armed by the background's SNAPSHOT_ACTIVE handshake and by
      * every recording-phase transition. */
     setInteractionsActive(active: boolean): void {

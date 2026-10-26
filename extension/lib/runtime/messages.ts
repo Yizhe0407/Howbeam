@@ -184,6 +184,13 @@ export interface HowbeamSnapshotActiveMessage {
   runId: string;
 }
 
+/** The background undid or restored the snapshot's last annotation, from whichever control asked. */
+export interface HowbeamSnapshotHistoryMessage {
+  type: 'HOWBEAM_SNAPSHOT_HISTORY';
+  runId: string;
+  change: 'undo' | 'restore';
+}
+
 /** `error` is a short diagnostic reason code/message, not user-facing copy —
  * the content script only ever surfaces it in a console.warn. User-facing
  * failures go through the separate recordingState.error/recoverableError

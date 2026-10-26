@@ -1,13 +1,25 @@
+import { browser } from 'wxt/browser';
 import { queueClick } from '../background-queues';
 import { addStepsAfter, deleteStep, getSteps } from '../../storage/step-repository';
 import { getRecordingState } from '../../storage/storage';
-import type { RecordingControlMessage, RecordingControlResult } from '../../runtime/messages';
-import { UNDO_WINDOW_MS } from '../../storage/recording-state';
+import type { HowbeamSnapshotHistoryMessage, RecordingControlMessage, RecordingControlResult } from '../../runtime/messages';
+import { UNDO_WINDOW_MS, type RecordingState } from '../../storage/recording-state';
 import { t } from '@/lib/shared/i18n';
 import { controlFailure } from './control-result';
 import type { ControlPlane } from './control-plane';
 import type { RunState } from './run-state';
 import type { UndoWindow } from './undo-window';
+
+/** The frozen snapshot draws and deduplicates its annotations itself, so it
+ * hears about every undo and restore here, whether the shield toolbar, the
+ * page toolbar or a keyboard shortcut asked for it. */
+function notifySnapshotHistory(state: RecordingState, runId: string, change: HowbeamSnapshotHistoryMessage['change']): void {
+  if (state.mode !== 'snapshot' || state.tabId == null) return;
+  const message: HowbeamSnapshotHistoryMessage = { type: 'HOWBEAM_SNAPSHOT_HISTORY', runId, change };
+  browser.tabs.sendMessage(state.tabId, message, { frameId: 0 }).catch((error: unknown) => {
+    console.warn('[howbeam] snapshot did not hear an annotation undo/restore', error);
+  });
+}
 
 /** Undo of a run's last item and its restore, through the run's one undo window. */
 export function createUndoControls(deps: { control: ControlPlane; runState: RunState; undoWindow: UndoWindow }) {
@@ -64,6 +76,7 @@ export function createUndoControls(deps: { control: ControlPlane; runState: RunS
       }
 
       undoWindow.open(undoRecord);
+      notifySnapshotHistory(state, message.runId, 'undo');
       return { ok: true, undoToken: undoRecord.token, removedItemNumber: state.itemCount };
     });
   }
@@ -107,6 +120,7 @@ export function createUndoControls(deps: { control: ControlPlane; runState: RunS
         return controlFailure(t().background.restoreStateChanged);
       }
       undoWindow.discard();
+      notifySnapshotHistory(state, message.runId, 'restore');
       return { ok: true };
     });
   }
