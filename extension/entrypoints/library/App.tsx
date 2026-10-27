@@ -9,7 +9,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
+import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries } from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
 import { projectDisplayTitle, type ProjectSummary } from '@/lib/storage/models';
 import { clearSelectedProject, openSelectedProjectInEditor } from '@/lib/project/project-actions';
@@ -21,7 +21,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import AppToaster from '@/components/shared/AppToaster';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
-import EditableTitle from '@/components/shared/EditableTitle';
 import AppHeader from '@/components/shared/AppHeader';
 import Mascot from '@/components/shared/Mascot';
 import BackupPausedNotice from '@/components/shared/BackupPausedNotice';
@@ -29,7 +28,6 @@ import { useAutoFolderBackup } from '@/lib/backup/use-folder-backup';
 import { reportError } from '@/components/shared/report-error';
 import { usePendingAction } from '@/components/shared/use-pending-action';
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
-import { PERSISTED_PROJECT_LIMITS } from '@/lib/storage/persistence-limits';
 import { intlLocale, t } from '@/lib/shared/i18n';
 import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
 import { importProjectArchive } from '@/lib/export/project-archive-import';
@@ -272,21 +270,15 @@ export default function App() {
                   className="group flex flex-col overflow-hidden rounded-md border-2 border-border bg-card transition-transform duration-200 hover:-translate-y-0.5"
                 >
                   <div className="flex flex-1 flex-col gap-2.5 p-4">
-                    <EditableTitle
-                      value={project.title}
-                      maxLength={PERSISTED_PROJECT_LIMITS.maxTitleLength}
-                      fallback={t().common.untitledProject}
-                      clamp
-                      label={t().library.titleLabel}
+                    <button
+                      type="button"
+                      title={projectDisplayTitle(project.title)}
+                      onClick={() => void run(project.id, () => openSelectedProjectInEditor(project.id, { inPlace: true }))}
                       disabled={actionsLocked}
-                      // `run` reports the reason via the page-level alert and returns
-                      // false on failure; rejecting here rolls the field back to the stored title.
-                      onCommit={async (title) => {
-                        const saved = await run(project.id, async () => { await updateProject(project.id, { title }); });
-                        if (!saved) throw new Error('Project rename was not applied.');
-                      }}
-                      className="-ml-1.5 w-full rounded-md border-2 border-transparent px-1 py-0.5 text-base leading-snug font-bold text-foreground focus-ring hover:border-border-soft focus:border-border focus:bg-background disabled:opacity-70"
-                    />
+                      className="-ml-1.5 w-full cursor-pointer rounded-md border-2 border-transparent px-1 py-0.5 text-left text-base leading-snug font-bold text-foreground focus-ring hover:underline disabled:cursor-default disabled:no-underline disabled:opacity-70"
+                    >
+                      <span className="line-clamp-2">{projectDisplayTitle(project.title)}</span>
+                    </button>
                     {project.description && (
                       <p className="line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">
                         {project.description}

@@ -50,7 +50,7 @@ export default function AppHeader({ current, currentHeading, status, actions, is
   const brand = (
     <>
       <Mascot />
-      <span className={cn('shrink-0', !isHome && 'hidden min-[420px]:inline')}>Howbeam</span>
+      <span className={cn('shrink-0', !isHome && 'hidden min-[420px]:inline')}>{isHome ? 'Howbeam' : t().common.library}</span>
     </>
   );
 

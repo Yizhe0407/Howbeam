@@ -416,15 +416,12 @@ export default function RecordingToolbar({
                     onPointerUp={finishPositionDrag}
                     onPointerCancel={finishPositionDrag}
                   >
-                    {preparingNext ? (
-                      <GripVertical className="ft-grip" aria-hidden="true" />
-                    ) : paused ? (
-                      <span className="ft-dot" data-tone="muted" aria-hidden="true" />
-                    ) : (
-                      <span className="ft-dot" aria-hidden="true" />
-                    )}
+                    <GripVertical className="ft-grip" aria-hidden="true" />
                     {!preparingNext && (
-                      <span className="ft-count-badge" data-tone={paused ? 'muted' : undefined}>{state.itemCount}</span>
+                      <>
+                        <span className="ft-dot" data-tone={paused ? 'muted' : undefined} aria-hidden="true" />
+                        <span className="ft-count-badge" data-tone={paused ? 'muted' : undefined}>{state.itemCount}</span>
+                      </>
                     )}
                   </button>
 

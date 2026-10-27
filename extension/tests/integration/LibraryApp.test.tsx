@@ -207,30 +207,12 @@ describe('專案庫', () => {
     await waitFor(() => expect(screen.queryByText(project.title)).toBeNull());
   });
 
-  it('失焦時提交重新命名的標題', async () => {
-    database.updateProject.mockResolvedValue(undefined);
+  it('點專案標題就開啟專案', async () => {
     render(<LibraryApp />);
 
-    fireEvent.click(await screen.findByText('安全教學'));
-    const input = screen.getByRole('textbox', { name: '專案名稱' });
-    fireEvent.change(input, { target: { value: '更新後的標題' } });
-    fireEvent.blur(input);
+    fireEvent.click(await screen.findByRole('button', { name: '安全教學' }));
 
-    await waitFor(() => expect(database.updateProject).toHaveBeenCalledWith('project-1', { title: '更新後的標題' }));
-  });
-
-  // Regression: Escape blurs synchronously before React re-renders, so the
-  // blur-commit used to read the stale edited draft and save it anyway.
-  it('Escape 取消重新命名而不寫入', async () => {
-    render(<LibraryApp />);
-
-    fireEvent.click(await screen.findByText('安全教學'));
-    const input = screen.getByRole('textbox', { name: '專案名稱' });
-    fireEvent.change(input, { target: { value: '不想保留的標題' } });
-    fireEvent.keyDown(input, { key: 'Escape' });
-
-    await screen.findByText('安全教學');
-    expect(screen.queryByRole('textbox', { name: '專案名稱' })).toBeNull();
+    await waitFor(() => expect(projectActions.openSelectedProjectInEditor).toHaveBeenCalledWith('project-1', { inPlace: true }));
     expect(database.updateProject).not.toHaveBeenCalled();
   });
 

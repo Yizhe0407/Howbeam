@@ -20,13 +20,6 @@ describe('EditableTitle', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
-  it('keeps a clamped title readable in full from its tooltip', () => {
-    renderTitle({ clamp: true });
-    const text = screen.getByText(LONG);
-    expect(text.className).toContain('line-clamp-2');
-    expect(text.closest('button')?.getAttribute('title')).toBe(LONG);
-  });
-
   it('turns into a focused field on click and commits the edit on Enter', async () => {
     const { onCommit } = renderTitle();
     fireEvent.click(screen.getByText(LONG));

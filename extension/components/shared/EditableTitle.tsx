@@ -13,8 +13,6 @@ interface Props {
   maxLength: number;
   disabled?: boolean;
   className?: string;
-  /** For cards: at most two lines, with the full title in the tooltip. Otherwise the title wraps in full. */
-  clamp?: boolean;
 }
 
 /**
@@ -32,7 +30,6 @@ export default function EditableTitle({
   maxLength,
   disabled = false,
   className,
-  clamp = false,
 }: Props) {
   const committed = value || fallback;
   const [draft, setDraft] = useState(committed);
@@ -87,11 +84,10 @@ export default function EditableTitle({
           cancelled.current = false;
           setEditing(true);
         }}
-        title={clamp ? committed : undefined}
         className={cn('cursor-text text-left break-words', className)}
       >
         <span className="sr-only">{label} </span>
-        <span className={cn(clamp && 'line-clamp-2')}>{committed}</span>
+        <span>{committed}</span>
       </button>
     );
   }

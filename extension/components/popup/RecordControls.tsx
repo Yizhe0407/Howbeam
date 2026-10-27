@@ -353,12 +353,11 @@ export default function RecordControls({
             the click handler so the browser accepts it as a user gesture. */}
         {mode === 'steps' && (crossTab === 'declined' || crossTab === 'ungranted') && (
           <p className="px-0.5 text-xs leading-relaxed text-muted-foreground">
-            {t().popup.singleTabOnly}
             <button
               type="button"
               onClick={() => !pending && void requestCrossTabPermission()}
               disabled={pendingShown}
-              className="ml-0.5 rounded-sm font-bold text-brand-text underline underline-offset-2 outline-none focus-ring disabled:pointer-events-none"
+              className="rounded-sm font-bold text-brand-text underline underline-offset-2 outline-none focus-ring disabled:pointer-events-none"
             >
               {t().popup.enableCrossTab}
             </button>

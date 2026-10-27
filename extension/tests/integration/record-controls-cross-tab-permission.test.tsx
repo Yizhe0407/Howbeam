@@ -51,7 +51,6 @@ function render(ui: Parameters<typeof rtlRender>[0], options?: Parameters<typeof
 }
 
 const ALL_URLS = { origins: ['<all_urls>'] };
-const HINT_TEXT = /目前僅錄製單一分頁/;
 const ENABLE_BUTTON = '啟用跨分頁錄製';
 
 const IDLE_RECORDING = makeRecordingState();
@@ -140,7 +139,7 @@ describe('cross-tab permission ask at recording start', () => {
     mocks.permissionsContains.mockResolvedValue(true);
     await renderIdleControls();
 
-    expect(screen.queryByText(HINT_TEXT)).toBeNull();
+    expect(screen.queryByText(ENABLE_BUTTON)).toBeNull();
     await clickStartAndWaitForSend(1);
     expect(mocks.permissionsRequest).not.toHaveBeenCalled();
   });
@@ -149,7 +148,7 @@ describe('cross-tab permission ask at recording start', () => {
     await renderIdleControls();
 
     fireEvent.click(screen.getByRole('radio', { name: '標註' }));
-    expect(screen.queryByText(HINT_TEXT)).toBeNull();
+    expect(screen.queryByText(ENABLE_BUTTON)).toBeNull();
 
     await clickStartAndWaitForSend(1);
     expect(mocks.permissionsRequest).not.toHaveBeenCalled();
@@ -161,10 +160,10 @@ describe('cross-tab permission ask at recording start', () => {
     });
     await renderIdleControls();
 
-    expect(screen.getByText(HINT_TEXT)).toBeTruthy();
+    expect(screen.getByText(ENABLE_BUTTON)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: ENABLE_BUTTON }));
 
-    await waitFor(() => expect(screen.queryByText(HINT_TEXT)).toBeNull());
+    await waitFor(() => expect(screen.queryByText(ENABLE_BUTTON)).toBeNull());
     expect(mocks.permissionsRequest).toHaveBeenCalledExactlyOnceWith(ALL_URLS);
     expect(mocks.storageRemove).toHaveBeenCalledExactlyOnceWith(CROSS_TAB_DECLINE_STORAGE_KEY);
     // The affordance is an opt-in, never a recording trigger.
@@ -178,7 +177,7 @@ describe('cross-tab permission ask at recording start', () => {
     fireEvent.click(screen.getByRole('button', { name: ENABLE_BUTTON }));
 
     await waitFor(() => expect(mocks.storageSet).toHaveBeenCalled());
-    expect(screen.getByText(HINT_TEXT)).toBeTruthy();
+    expect(screen.getByText(ENABLE_BUTTON)).toBeTruthy();
     // The decline is remembered, so the next start proceeds without an ask.
     await clickStartAndWaitForSend(1);
     expect(mocks.permissionsRequest).toHaveBeenCalledTimes(1);
