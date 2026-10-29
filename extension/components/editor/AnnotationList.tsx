@@ -30,7 +30,8 @@ interface RowProps {
 
 function NumberBadge({ value }: { value: number }) {
   return (
-    <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-recording text-xs font-bold text-recording-foreground">
+    // Centred on the label's first line (2px border + 2px padding + half a 22.75px line), not on its top, since a label can wrap.
+    <span className="mt-[3.375px] flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-recording text-xs font-bold text-recording-foreground">
       {value}
     </span>
   );
