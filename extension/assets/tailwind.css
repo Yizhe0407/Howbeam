@@ -232,15 +232,6 @@
   }
 }
 
-@layer components {
-  /* Kept above media previews so the active state stays legible: the inner
-   * half of the --selected band, inside a thumbnail border that turns
-   * --selected too, so a selected step keeps the same outer edge as every other. */
-  .howbeam-selected-step-outline {
-    box-shadow: inset 0 0 0 2px var(--selected);
-  }
-}
-
 /* Unlayered and doubled-up on purpose: Chromium injects its own unlayered
  * `body { font-family: … }` into extension pages, which outranks anything in
  * `@layer base`. `html body` wins on specificity wherever that sheet lands. */

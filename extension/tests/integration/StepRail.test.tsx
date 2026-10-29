@@ -327,9 +327,10 @@ describe('StepRail keyboard navigation', () => {
     // No plate around the thumbnail: a selected row's edge stays where every other row's is.
     expect(selectedRow.className).not.toMatch(/\bbg-|\bp-1\b/);
     const outline = selectedRow.querySelector<HTMLElement>('[data-howbeam-selected-step-outline]');
-    expect(outline?.className).toContain('howbeam-selected-step-outline');
-    // The band sits inside the thumbnail's own border, which turns the selected colour: one edge, nothing stacked on it.
-    expect(outline?.parentElement?.className).toContain('border-selected');
+    // One ring, drawn as a single shape over a thumbnail border of the same colour.
+    expect(outline?.className).toContain('border-4');
+    expect(outline?.className).toContain('border-selected');
+    expect(selectedRow.querySelector('.border-selected.overflow-hidden')).not.toBeNull();
     expect(outline?.getAttribute('style')).toBeNull();
   });
 
