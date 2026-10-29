@@ -7,7 +7,6 @@ import { PERSISTED_STEP_LIMITS } from '@/lib/storage/persistence-limits';
 import { type Step } from '@/lib/storage/models';
 import { useSortableReorder, verticalListModifiers } from '@/lib/editor/dnd';
 import { useStepDescriptionAutosave } from '@/lib/editor/editor-autosave';
-import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import DescriptionDraftRecoveries from './DescriptionDraftRecoveries';
 import DescriptionSaveIssue from './DescriptionSaveIssue';
@@ -22,7 +21,6 @@ interface RowProps {
   index: number;
   /** The number shown on the badge, which follows a drag in progress. */
   position: number;
-  numbered: boolean;
   onDelete: (step: Step) => Promise<void>;
   deleteDisabled: boolean;
   dragHandle: ReactNode;
@@ -30,15 +28,7 @@ interface RowProps {
   overlay: HTMLElement | null;
 }
 
-function NumberBadge({ value, numbered }: { value: number; numbered: boolean }) {
-  // Unnumbered markers are drawn without numbers, so the list shows plain dots to match.
-  if (!numbered) {
-    return (
-      <span className="flex size-6 shrink-0 items-center justify-center">
-        <span className="size-2.5 rounded-full bg-recording" />
-      </span>
-    );
-  }
+function NumberBadge({ value }: { value: number }) {
   return (
     <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-recording text-xs font-bold text-recording-foreground">
       {value}
@@ -48,7 +38,7 @@ function NumberBadge({ value, numbered }: { value: number; numbered: boolean }) 
 
 /** One marker. Deleting it takes the row off the list at once; a failed delete
  * brings it back and is reported with the editor's other edits. */
-function AnnotationRow({ step, index, position, numbered, onDelete, deleteDisabled, dragHandle, overlay }: RowProps) {
+function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHandle, overlay }: RowProps) {
   const {
     description,
     setDescription,
@@ -72,7 +62,7 @@ function AnnotationRow({ step, index, position, numbered, onDelete, deleteDisabl
       {overlay && createPortal(
         <div className="flex size-full items-start rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
           <div className="flex min-w-0 flex-1 items-start gap-3">
-            <NumberBadge value={position} numbered={numbered} />
+            <NumberBadge value={position} />
             <span className={cn('min-w-0 flex-1 break-words border-2 border-transparent px-1.5 py-0.5 text-sm leading-relaxed', description ? 'text-foreground' : 'text-muted-foreground')}>
               {description || t().editor.annotations.placeholder}
             </span>
@@ -83,7 +73,7 @@ function AnnotationRow({ step, index, position, numbered, onDelete, deleteDisabl
         overlay,
       )}
       <div className="flex items-start gap-3">
-        <NumberBadge value={position} numbered={numbered} />
+        <NumberBadge value={position} />
         {/* Grows with its text so a long marker label is read in full, not cut at the field's edge. */}
         <textarea
           aria-label={t().editor.annotations.descriptionLabel(index + 1)}
@@ -147,8 +137,6 @@ function AnnotationRow({ step, index, position, numbered, onDelete, deleteDisabl
 
 interface Props {
   annotations: Step[];
-  numbered?: boolean;
-  onSetNumbered?: (numbered: boolean) => void;
   onDelete: (step: Step) => Promise<void>;
   onReorder: (reordered: Step[]) => Promise<void>;
   editingDisabled?: boolean;
@@ -156,8 +144,6 @@ interface Props {
 
 export default function AnnotationList({
   annotations,
-  numbered = false,
-  onSetNumbered,
   onDelete,
   onReorder,
   editingDisabled = false,
@@ -180,18 +166,10 @@ export default function AnnotationList({
 
   return (
     <div className="flex h-full w-full shrink-0 flex-col overflow-hidden rounded-md border-2 border-border bg-card">
-      <div className="flex shrink-0 items-center justify-between border-b-2 border-border-soft px-4 py-3">
+      <div className="flex shrink-0 items-center border-b-2 border-border-soft px-4 py-3">
         <span className="text-xs font-bold text-muted-foreground">
           {t().editor.annotations.count(annotations.length)}
         </span>
-        <label className="flex cursor-pointer items-center gap-2.5 text-xs font-bold text-muted-foreground select-none">
-          {t().editor.annotations.numbering}
-          <Switch
-            checked={numbered}
-            onCheckedChange={(checked) => onSetNumbered?.(checked)}
-            disabled={editingDisabled || !onSetNumbered}
-          />
-        </label>
       </div>
       <div {...scrollbar} className="app-scrollbar-autohide min-h-0 flex-1 overflow-y-auto p-3">
         <DndContext
@@ -210,7 +188,6 @@ export default function AnnotationList({
                       step={step}
                       index={index}
                       position={previewPositionOf(step.id)}
-                      numbered={numbered}
                       onDelete={onDelete}
                       deleteDisabled={editingDisabled}
                       dragHandle={handle}

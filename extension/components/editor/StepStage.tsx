@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Bookmark, Plus, PencilRuler, ZoomIn } from 'lucide-react';
-import { entryId, getEntryPrivacyState, type Step, type StepEntry } from '@/lib/storage/models';
+import { getEntryPrivacyState, type Step, type StepEntry } from '@/lib/storage/models';
 import ImageEditWorkspace from './ImageEditWorkspace';
 import { Badge } from '@/components/ui/badge';
 import { DashedOutline } from '@/components/ui/dashed-outline';
@@ -30,7 +30,6 @@ interface Props {
   onEditImage?: () => void;
   onReorderAnnotations: (reordered: Step[]) => Promise<void>;
   onRecapture: () => Promise<void>;
-  onSetNumbered: (entryId: string, next: boolean) => Promise<void>;
   editingDisabled?: boolean;
 }
 
@@ -47,7 +46,6 @@ export default function StepStage({
   onEditImage,
   onReorderAnnotations,
   onRecapture,
-  onSetNumbered,
   editingDisabled = false,
 }: Props) {
   const [stageError, setStageError] = useState<string | null>(null);
@@ -70,15 +68,6 @@ export default function StepStage({
       />
     </div>
   );
-
-  function setNumbered(next: boolean) {
-    if (entry.kind !== 'group' || editingDisabled) return;
-    setStageError(null);
-    // The switch flips at once; a failed save is reported with the editor's other edits.
-    void onSetNumbered(entryId(entry), next).catch((err) => {
-      setStageError(reportError('[howbeam] failed to update annotation numbering', err, t().editor.stage.numberingSaveFailed));
-    });
-  }
 
   const headerRow = (
     <div className="mb-3.5 flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -221,8 +210,6 @@ export default function StepStage({
         <aside className="flex min-h-[280px] w-full shrink-0 flex-col gap-2.5 lg:min-h-0 lg:w-[380px]">
           <AnnotationList
             annotations={entry.annotations}
-            numbered={entry.anchor.numbered ?? false}
-            onSetNumbered={setNumbered}
             onDelete={onDeleteAnnotation}
             onReorder={onReorderAnnotations}
             editingDisabled={editingDisabled}

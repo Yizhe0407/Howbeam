@@ -517,33 +517,6 @@ export async function moveProjectEntriesAtomically(
   });
 }
 
-export async function setProjectEntriesNumberedAtomically(
-  sessionId: string,
-  entryIdsToUpdate: readonly string[],
-  numbered: boolean,
-  expectedContentRevision: number,
-): Promise<ProjectStructureMutationResult> {
-  return runProjectStructureMutation(sessionId, expectedContentRevision, async (tx, structure) => {
-    const { selectedIds } = requireEntrySelection(structure.entries, entryIdsToUpdate);
-    const affected: string[] = [];
-    const nextEntries = structure.entries.map((entry): StepEntry => {
-      const id = entryId(entry);
-      if (!selectedIds.has(id) || entry.kind === 'single') return entry;
-      affected.push(id);
-      return {
-        kind: 'group',
-        anchor: { ...entry.anchor, numbered },
-        annotations: entry.annotations.map((annotation) => ({ ...annotation, numbered })),
-      };
-    });
-    if (affected.length === 0) {
-      return { project: structure.project, entries: structure.entries, entryIds: structure.entryIds, affectedEntryIds: [] };
-    }
-    return commitProjectStructure(tx, structure, nextEntries, structure.project.sections, affected);
-  });
-}
-
-
 export async function addProjectSectionAtomically(
   sessionId: string,
   startEntryId: string,

@@ -49,7 +49,6 @@ function anchorStep(overrides: Partial<Step> = {}): Step {
     url: PAGE_URL,
     timestamp: 1,
     groupId: 'anchor-1',
-    numbered: true,
     ...overrides,
   };
 }

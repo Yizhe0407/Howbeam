@@ -22,7 +22,7 @@ import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import ProjectSectionHeading from './ProjectSectionHeading';
 
 
-const SEAM_PILL = 'relative flex h-[18px] min-w-0 scale-90 items-center gap-1 whitespace-nowrap rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
+const SEAM_PILL = 'relative flex h-4 min-w-0 scale-90 items-center gap-1 whitespace-nowrap rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
 
 /**
  * The seam between two steps. It takes no room of its own: a zero-height row
@@ -34,19 +34,23 @@ const SEAM_PILL = 'relative flex h-[18px] min-w-0 scale-90 items-center gap-1 wh
 function SeamActions({
   afterStep,
   disabled,
+  besideSelected,
   onInsert,
   onStartSection,
 }: {
   afterStep: number;
   disabled: boolean;
+  /** Which neighbour is selected. Its band fills the 4px padding the others leave empty, so the visible gap moves by half of that. */
+  besideSelected: 'above' | 'below' | null;
   onInsert?: () => void;
   onStartSection?: () => void;
 }) {
+  // The 16px slot sits on the middle of the 12px list gap: -2px from this zero-height row.
+  const top = -2 + (besideSelected === 'above' ? 2 : besideSelected === 'below' ? -2 : 0);
   return (
-    <li className="relative z-10 -mt-1 hidden h-0 shrink-0 lg:block">
-      {/* The thumbnails' own padding makes the visible seam sit 2px below this row, hence -top-1.5 rather than -top-2.
-          The pills share the rail's width and truncate rather than overflow it, whatever a locale's label length. */}
-      <div className="group/slot absolute inset-x-0 -top-1.5 flex h-4 items-center justify-center gap-1 px-2">
+    <li className="relative z-10 -mt-3 hidden h-0 shrink-0 lg:block">
+      {/* The pills share the rail's width and truncate rather than overflow it, whatever a locale's label length. */}
+      <div style={{ top }} className="group/slot absolute inset-x-0 flex h-4 items-center justify-center gap-1 px-2">
         <span
           aria-hidden="true"
           className="absolute inset-x-2 top-1/2 origin-center scale-x-0 border-t-2 border-dashed border-border opacity-0 transition-[transform,opacity] duration-200 ease-out group-hover/slot:scale-x-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-x-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-x-100 group-focus-within/slot:opacity-100 motion-reduce:transition-none"
@@ -264,7 +268,7 @@ export default function StepRail({
           <ul
             {...scrollbar}
             aria-label={t().editor.rail.listLabel}
-            className="app-scrollbar-autohide flex flex-1 flex-row gap-1 overflow-x-auto px-2 pb-2 lg:min-h-0 lg:flex-col lg:gap-1 lg:overflow-x-visible lg:overflow-y-auto lg:px-2 lg:pb-2"
+            className="app-scrollbar-autohide flex flex-1 flex-row gap-1 overflow-x-auto px-2 pb-2 lg:min-h-0 lg:flex-col lg:gap-3 lg:overflow-x-visible lg:overflow-y-auto lg:px-2 lg:pb-2"
           >
             {rows.map((row) => {
               if (row.kind === 'section') {
@@ -346,6 +350,7 @@ export default function StepRail({
                   <SeamActions
                     afterStep={index + 1}
                     disabled={reorderDisabled}
+                    besideSelected={active ? 'above' : entryId(nextEntry) === selectedEntryId ? 'below' : null}
                     onInsert={onContinueRecording && (() => onContinueRecording(id))}
                     onStartSection={
                       onStartSection && !sectionByStartId.has(entryId(nextEntry))

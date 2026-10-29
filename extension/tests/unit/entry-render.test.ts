@@ -67,7 +67,6 @@ describe('compositeStepEntry', () => {
       groupId: 'anchor',
       bounds: null,
       screenshotScale: 1.5,
-      numbered: true,
       redactions: [{ id: 'mask', kind: 'solid', bounds: { x: 80, y: 90, width: 10, height: 20 } }],
     });
     const automatic = makeStep('automatic', 2, { groupId: 'anchor', screenshotBlob: undefined });
@@ -91,7 +90,6 @@ describe('compositeStepEntry', () => {
         { bounds: manual.manualBounds, order: 2 },
       ],
       1.5,
-      true,
       'image/jpeg',
       anchor.redactions,
       false,

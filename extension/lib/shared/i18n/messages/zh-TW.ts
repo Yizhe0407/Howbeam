@@ -310,7 +310,6 @@ export const zhTW = {
     stage: {
       titleLabel: '專案標題',
       titleSaveFailed: '標題儲存失敗，請再試一次。',
-      numberingSaveFailed: '編號設定儲存失敗，請再試一次。',
       zoomHint: '點擊放大',
       zoomImage: '放大圖片',
       stepAlt: (number: number) => `步驟 ${number}`,
@@ -346,7 +345,6 @@ export const zhTW = {
 
     annotations: {
       count: (count: number) => `標註 · ${count}`,
-      numbering: '順序編號',
       empty: '此快照目前沒有標註。',
       descriptionLabel: (number: number) => `標註 ${number} 說明`,
       placeholder: '輸入標註說明…',
@@ -511,11 +509,6 @@ export const zhTW = {
         notSnapshot: '只有快照標註可以個別刪除。',
         restoreDataMissing: '無法確認標註是否已刪除，請重新整理後查看目前內容。',
       },
-      numbering: {
-        pending: '正在儲存快照編號設定…',
-        failed: '快照編號設定失敗，已重新載入目前資料。',
-        done: (numbered: boolean): string => (numbered ? '已開啟快照編號' : '已關閉快照編號'),
-      },
       addSection: {
         pending: '正在新增章節…',
         failed: '新增章節失敗，已重新載入目前資料。',
@@ -627,8 +620,8 @@ export const zhTW = {
     candidate: (index: number, total: number, label: string) => `目標 ${index} / ${total}：${label}`,
     unnamedElement: '未命名元素',
     cannotAnnotate: '此處無法標註，請選擇其他元素',
-    regionAdded: (label: number | null) => (label !== null ? `已加入區域標註 ${label}` : '已加入區域標註'),
-    annotationAdded: (label: number | null) => (label !== null ? `已加入標註 ${label}` : '已加入標註'),
+    regionAdded: (label: number) => `已加入區域標註 ${label}`,
+    annotationAdded: (label: number) => `已加入標註 ${label}`,
     regionNotCreated: '未建立區域標註，請重新拖曳',
     annotationNotCreated: '未建立標註，請再選一次',
   },

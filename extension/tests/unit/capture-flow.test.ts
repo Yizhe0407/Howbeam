@@ -101,7 +101,6 @@ function anchor(overrides: Partial<Step> = {}): Step {
     url: PAGE_URL,
     timestamp: 1,
     groupId: 'anchor-1',
-    numbered: true,
     ...overrides,
   };
 }
@@ -345,7 +344,6 @@ describe('handleClick in a snapshot run', () => {
       groupId: 'anchor-1',
       bounds: click().rect,
       screenshotScale: 2,
-      numbered: harness.getState().numbered,
       // Left empty so the editor shows its placeholder instead of the same generic label on every marker.
       description: '',
     }));

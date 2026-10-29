@@ -63,7 +63,7 @@ test.describe('popup workflows', () => {
     await resetExtensionData(popupPage);
   });
 
-  test('starts snapshot recording always numbered and shows the active-run summary', async ({
+  test('starts snapshot recording and shows the active-run summary', async ({
     appPage,
     popupPage,
     extensionContext,
@@ -96,7 +96,6 @@ test.describe('popup workflows', () => {
     await expect.poll(async () => (await readRecordingState(statePage)).isRecording).toBe(true);
     await expect.poll(async () => (await readRecordingState(statePage)).phase).toBe('recording');
     await expect.poll(async () => (await readRecordingState(statePage)).mode).toBe('snapshot');
-    await expect.poll(async () => (await readRecordingState(statePage)).numbered).toBe(true);
     await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(1);
 
     // Popup start always records into a brand-new Project (Scribe/Tango convention); the previously selected Project is never appended to.

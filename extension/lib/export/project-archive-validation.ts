@@ -325,9 +325,6 @@ export function validateGroups(steps: readonly Step[]): void {
     if (!anchor.screenshotBlob || anchor.bounds !== null) {
       fail('BROKEN_GROUP_REFERENCE', `Group anchor ${JSON.stringify(anchor.id)} is malformed.`);
     }
-    if (anchor.numbered !== step.numbered) {
-      fail('BROKEN_GROUP_REFERENCE', `Step ${JSON.stringify(step.id)} disagrees with its group anchor numbering.`);
-    }
   }
 }
 
@@ -503,8 +500,6 @@ export function validateRuntimeStep(stepValue: unknown, path: string): Step {
   const lastCaptureRunId = expectOptionalString(record, 'lastCaptureRunId', path);
   if (lastCaptureRunId !== undefined) step.lastCaptureRunId = lastCaptureRunId;
   if (groupId !== undefined) step.groupId = groupId;
-  const numbered = expectOptionalBoolean(record, 'numbered', path);
-  if (numbered !== undefined) step.numbered = numbered;
   return step;
 }
 

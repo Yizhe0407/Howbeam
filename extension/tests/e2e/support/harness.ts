@@ -158,7 +158,6 @@ export interface StoredStep {
   description: string;
   bounds: { x: number; y: number; width: number; height: number } | null;
   groupId?: string;
-  numbered?: boolean;
   screenshotScale?: number;
   devicePixelRatio: number;
   hasScreenshot: boolean;
@@ -272,7 +271,6 @@ export async function readSteps(popup: Page): Promise<StoredStep[]> {
               description: step.description,
               bounds: step.bounds,
               groupId: step.groupId,
-              numbered: step.numbered,
               screenshotScale: step.screenshotScale,
               devicePixelRatio: step.devicePixelRatio,
               hasScreenshot: step.screenshotBlob instanceof Blob,

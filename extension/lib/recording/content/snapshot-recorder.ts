@@ -123,7 +123,7 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     selection.add(target);
     return {
       rect: target.rect,
-      label: session.numbered ? label : null,
+      label,
     };
   };
 
@@ -147,7 +147,7 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     selection.add(target);
     return {
       rect: message.rect,
-      label: session.numbered ? label : null,
+      label,
     };
   };
 

@@ -13,8 +13,6 @@ import type { StepHoverPreview } from '../step-hover-preview';
  */
 export interface ContentRecordingSession {
   readonly runId: string;
-  /** Whether captures are numbered, mirrored from the run's recording state. */
-  readonly numbered: boolean;
   /** True while the run is paused; recorders read it to drop input. */
   paused: boolean;
   shield: SnapshotShield | null;
@@ -26,12 +24,10 @@ export interface ContentRecordingSession {
 
 export function createContentRecordingSession(options: {
   runId: string;
-  numbered: boolean;
   paused: boolean;
 }): ContentRecordingSession {
   return {
     runId: options.runId,
-    numbered: options.numbered,
     paused: options.paused,
     shield: null,
     regionCapture: null,

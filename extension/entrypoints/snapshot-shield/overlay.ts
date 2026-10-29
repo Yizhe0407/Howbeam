@@ -177,12 +177,7 @@ export function createOverlay(): SnapshotOverlay {
           : null,
       );
       reconcileTarget(elements.target, layout);
-      const labelValue = selection.label ?? selection.id;
-      reconcileBadge(
-        elements.badge,
-        selection.label !== null || layout.callout ? layout.callout ?? layout.badgeAnchor : null,
-        labelValue,
-      );
+      reconcileBadge(elements.badge, layout.callout ?? layout.badgeAnchor, selection.label);
     }
   };
 

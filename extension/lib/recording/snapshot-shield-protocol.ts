@@ -40,7 +40,7 @@ export function snapshotRectKey(rect: SnapshotShieldRect): string {
 
 export interface SnapshotShieldSelection {
   rect: SnapshotShieldRect;
-  label: number | null;
+  label: number;
 }
 
 /** Distributes over a shield message union, dropping the channel token that
@@ -211,7 +211,7 @@ function isSelection(value: unknown): value is SnapshotShieldSelection & { id: n
   return (
     isRequestId(selection.id) &&
     isRect(selection.rect) &&
-    (label === null || (label !== undefined && Number.isSafeInteger(label) && label > 0))
+    label !== undefined && Number.isSafeInteger(label) && label > 0
   );
 }
 

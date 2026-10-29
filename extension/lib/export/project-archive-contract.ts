@@ -118,7 +118,6 @@ export interface ArchiveStep {
   imageEditRevision?: number;
   lastCaptureRunId?: string;
   groupId?: string;
-  numbered?: boolean;
 }
 
 export interface ArchiveScreenshot {
@@ -177,7 +176,6 @@ export const STEP_KEYS = [
   'imageEditRevision',
   'lastCaptureRunId',
   'groupId',
-  'numbered',
 ] as const;
 export const RUNTIME_STEP_KEYS = STEP_KEYS.map((key) => (key === 'screenshotId' ? 'screenshotBlob' : key));
 /** The storage screenshot rule's media types: archives carry exactly what storage accepts. */

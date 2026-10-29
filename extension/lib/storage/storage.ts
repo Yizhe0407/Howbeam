@@ -19,7 +19,7 @@ const DEFAULT_STATE: RecordingState = createDefaultRecordingState();
 /**
  * Ends the current run by returning every run-scoped field to its idle
  * default while preserving durable, non-run state: sessionId (the Project the
- * UI still targets), mode, numbered, and the recapture handoff fields
+ * UI still targets), mode, and the recapture handoff fields
  * (recapture/recaptureResult), which have their own lifecycle. This is the
  * clean-stop shape; error stops differ deliberately (phase 'error' plus a
  * message) and must keep hand-writing their fields.
@@ -243,7 +243,6 @@ export function normalizeRecordingState(stored: Partial<RecordingState> | undefi
         : 0,
     lastCommittedCaptureId:
       operation === 'recording' ? normalizeNullableString(raw.lastCommittedCaptureId, MAX_STATE_ID_LENGTH) : null,
-    numbered: typeof raw.numbered === 'boolean' ? raw.numbered : DEFAULT_STATE.numbered,
     groupAnchorId:
       operation === 'recording' && mode === 'snapshot'
         ? normalizeNullableString(raw.groupAnchorId, MAX_STATE_ID_LENGTH)

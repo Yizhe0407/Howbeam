@@ -100,7 +100,6 @@ export default function EntryThumbnail({ entry, redactions, imageEdits, crop, re
       imageEdits={shown.imageEdits}
       privacyReviewRequired={privacyReviewRequired}
       screenshotScale={screenshotScale}
-      numbered={owner.numbered ?? false}
       badges={badges}
       {...presentation}
     />

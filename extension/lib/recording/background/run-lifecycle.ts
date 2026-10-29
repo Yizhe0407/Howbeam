@@ -147,9 +147,6 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
     return { kind: 'intact' };
   }
 
-  /** 新流程預設編號；每次擷取都持久化當下的顯示設定。 */
-  const RUN_STARTS_NUMBERED = true;
-
   /** 寫入不受版本影響的共用啟動失敗狀態。 */
   function startFailureState(
     current: RecordingState,
@@ -168,7 +165,6 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
       mode,
       itemCount: 0,
       runItemCount: 0,
-      numbered: RUN_STARTS_NUMBERED,
       groupAnchorId: null,
       runId: null,
       snapshotViewport: null,
@@ -279,7 +275,6 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
       itemCount: 0,
       runItemCount: 0,
       lastCommittedCaptureId: null,
-      numbered: RUN_STARTS_NUMBERED,
       groupAnchorId: null,
       runId,
       // Durable (not module state): a MV3 service-worker restart mid-run must

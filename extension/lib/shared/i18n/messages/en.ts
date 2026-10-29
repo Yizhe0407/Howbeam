@@ -310,7 +310,6 @@ export const en: Messages = {
     stage: {
       titleLabel: 'Project title',
       titleSaveFailed: 'Couldn’t save the title. Please try again.',
-      numberingSaveFailed: 'Couldn’t save the numbering setting. Please try again.',
       zoomHint: 'Click to enlarge',
       zoomImage: 'Enlarge image',
       stepAlt: (number: number) => `Step ${number}`,
@@ -346,7 +345,6 @@ export const en: Messages = {
 
     annotations: {
       count: (count: number) => `Markers · ${count}`,
-      numbering: 'Numbered',
       empty: 'This snapshot has no markers yet.',
       descriptionLabel: (number: number) => `Marker ${number} description`,
       placeholder: 'Describe this marker…',
@@ -513,11 +511,6 @@ export const en: Messages = {
         notSnapshot: 'Markers can only be deleted one at a time from a snapshot.',
         restoreDataMissing: 'Couldn’t confirm the marker was deleted. Reload the page to see the current state.',
       },
-      numbering: {
-        pending: 'Saving snapshot numbering…',
-        failed: 'Couldn’t change snapshot numbering. The current data was reloaded.',
-        done: (numbered: boolean) => (numbered ? 'Snapshot numbering on' : 'Snapshot numbering off'),
-      },
       addSection: {
         pending: 'Adding section…',
         failed: 'Couldn’t add the section. The current data was reloaded.',
@@ -629,8 +622,8 @@ export const en: Messages = {
     candidate: (index: number, total: number, label: string) => `Target ${index} of ${total}: ${label}`,
     unnamedElement: 'Unnamed element',
     cannotAnnotate: 'This spot can’t be marked. Choose another element',
-    regionAdded: (label: number | null) => (label !== null ? `Added region marker ${label}` : 'Added region marker'),
-    annotationAdded: (label: number | null) => (label !== null ? `Added marker ${label}` : 'Added marker'),
+    regionAdded: (label: number) => `Added region marker ${label}`,
+    annotationAdded: (label: number) => `Added marker ${label}`,
     regionNotCreated: 'No region marker was created. Drag again',
     annotationNotCreated: 'No marker was created. Select again',
   },

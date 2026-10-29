@@ -104,19 +104,4 @@ describe('AnnotationList', () => {
     expect(onDelete).toHaveBeenCalledOnce();
   });
 
-  it('switches numbering, and locks it while editing is disabled', () => {
-    const onSetNumbered = vi.fn();
-    const { rerender } = render(
-      <AnnotationList annotations={[makeAnnotation()]} onSetNumbered={onSetNumbered} onDelete={vi.fn()} onReorder={vi.fn()} />,
-    );
-
-    fireEvent.click(screen.getByRole('switch'));
-    expect(onSetNumbered).toHaveBeenCalledWith(true);
-
-    rerender(
-      <AnnotationList annotations={[makeAnnotation()]} onSetNumbered={onSetNumbered} editingDisabled onDelete={vi.fn()} onReorder={vi.fn()} />,
-    );
-    expect((screen.getByRole('switch') as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByLabelText(t().editor.annotations.delete(1)) as HTMLButtonElement).disabled).toBe(true);
-  });
 });

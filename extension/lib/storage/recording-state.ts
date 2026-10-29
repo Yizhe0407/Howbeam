@@ -90,9 +90,6 @@ export interface RecordingState {
   runItemCount: number;
   /** Lets a page whose capture answer was lost check whether it was committed. */
   lastCommittedCaptureId: string | null;
-  /** Every run starts numbered; the editor turns it off per snapshot. Captures
-   * stamp this onto each step so a later change cannot rewrite old images. */
-  numbered: boolean;
   /** Snapshot mode: id of the current recording run's shared-image anchor
    * step. START_RECORDING captures and creates it before accepting clicks;
    * null means startup has not completed or this is not a snapshot run. */
@@ -137,7 +134,6 @@ const DEFAULT_STATE: RecordingState = {
   itemCount: 0,
   runItemCount: 0,
   lastCommittedCaptureId: null,
-  numbered: true,
   groupAnchorId: null,
   runId: null,
   autoCreatedProjectId: null,

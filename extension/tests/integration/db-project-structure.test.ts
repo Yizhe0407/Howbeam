@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
-import { ProjectContentConflictError, addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, moveProjectEntriesAtomically, repairEmptySnapshotAnchors, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically, setProjectEntriesNumberedAtomically } from '@/lib/storage/project-structure';
+import { ProjectContentConflictError, addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, moveProjectEntriesAtomically, repairEmptySnapshotAnchors, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically } from '@/lib/storage/project-structure';
 import { ProjectStructureIntegrityError, type ProjectSection, type Step } from '@/lib/storage/models';
 import { closeDatabase, runWithDatabase } from '@/lib/storage/database';
 import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
@@ -27,9 +27,9 @@ function makeMixedSteps(): Step[] {
   const sessionId = 'source-project';
   const first = makeStep({ sessionId, order: 0 });
   const anchorId = crypto.randomUUID();
-  const anchor = makeStep({ id: anchorId, sessionId, groupId: anchorId, bounds: null, numbered: false, order: 1 });
-  const a1 = makeStep({ sessionId, groupId: anchorId, screenshotBlob: undefined, numbered: false, order: 2 });
-  const a2 = makeStep({ sessionId, groupId: anchorId, screenshotBlob: undefined, numbered: false, order: 3 });
+  const anchor = makeStep({ id: anchorId, sessionId, groupId: anchorId, bounds: null, order: 1 });
+  const a1 = makeStep({ sessionId, groupId: anchorId, screenshotBlob: undefined, order: 2 });
+  const a2 = makeStep({ sessionId, groupId: anchorId, screenshotBlob: undefined, order: 3 });
   const last = makeStep({ sessionId, order: 4 });
   return [first, anchor, a1, a2, last];
 }
@@ -65,7 +65,7 @@ describe('Project entry-safe atomic structure', () => {
     await runWithDatabase(async (db) => {
       const tx = db.transaction(['steps'], 'readwrite');
       await tx.objectStore('steps').put(makeStep({
-        id: anchorId, sessionId: project.id, groupId: anchorId, bounds: null, numbered: false, order: 5,
+        id: anchorId, sessionId: project.id, groupId: anchorId, bounds: null, order: 5,
       }));
       await tx.done;
     });
@@ -82,7 +82,7 @@ describe('Project entry-safe atomic structure', () => {
     await runWithDatabase(async (db) => {
       const tx = db.transaction(['steps'], 'readwrite');
       await tx.objectStore('steps').put(makeStep({
-        id: orphanId, sessionId: project.id, groupId: orphanId, bounds: null, numbered: false, order: 5,
+        id: orphanId, sessionId: project.id, groupId: orphanId, bounds: null, order: 5,
       }));
       await tx.done;
     });
@@ -128,15 +128,6 @@ describe('Project entry-safe atomic structure', () => {
     expect((await getSteps(project.id)).map((step) => step.order)).toEqual([0, 1, 2, 3]);
   });
 
-  it('updates every snapshot member in one revision', async () => {
-    const { project, snapshot } = await createTrackedProject(makeMixedSteps());
-    const groupId = itemAt(snapshot.entryIds, 1);
-    const result = await setProjectEntriesNumberedAtomically(project.id, [groupId], true, snapshot.project.contentRevision);
-    const rows = (await getSteps(project.id)).filter((step) => step.groupId === groupId);
-    expect(rows).toHaveLength(3);
-    expect(rows.every((step) => step.numbered === true)).toBe(true);
-    expect(result.project.contentRevision).toBe(snapshot.project.contentRevision + 1);
-  });
 
   it('remaps section boundaries for import-style clone and duplicate Project', async () => {
     const source = makeMixedSteps();

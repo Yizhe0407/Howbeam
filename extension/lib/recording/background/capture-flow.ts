@@ -160,7 +160,6 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
         url: context.url,
         timestamp: context.timestamp,
         groupId: anchorId,
-        numbered: state.numbered,
       }]);
       const updated = await updateRunState(
         runId,
@@ -315,7 +314,6 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
       url: message.url,
       timestamp: message.timestamp,
       groupId: anchorId,
-      numbered: state.numbered,
     }]);
   }
 

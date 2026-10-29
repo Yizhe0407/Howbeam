@@ -65,7 +65,6 @@ vi.mock('@/lib/storage/project-repository', async (importOriginal) => ({
 vi.mock('@/lib/storage/project-structure', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/storage/project-structure')>()),
   getProjectStructureSnapshot: database.getProjectStructureSnapshot,
-  setProjectEntriesNumberedAtomically: database.setProjectEntriesNumberedAtomically,
 }));
 vi.mock('@/lib/recording/use-recording-session', () => ({
   useRecordingSession: recordingSession.useRecordingSession,
@@ -113,9 +112,6 @@ vi.mock('@/components/editor/StepStage', () => ({
         data-entry-id={id}
         data-editing-disabled={String(props.editingDisabled)}
       >
-        <button type="button" onClick={() => void props.onSetNumbered(id, false)}>
-          關閉目前快照編號
-        </button>
         <button type="button" disabled={props.editingDisabled} onClick={() => void props.onRecapture()}>
           準備補拍
         </button>
@@ -132,7 +128,6 @@ import { notifyProjectsChanged } from '@/lib/storage/change-notifier';
 import { ProjectNotFoundError } from '@/lib/storage/database';
 // Resolves to the mocked module above, so `instanceof` in the handoff matches.
 import { DraftConfirmationRequiredError } from '@/lib/editor/editor-autosave';
-import { itemAt } from '../setup/item-at';
 
 const entries = [
   {
@@ -246,12 +241,6 @@ beforeEach(() => {
   browserApi.sendMessage.mockReset();
   browserApi.requestPermission.mockReset();
   browserApi.requestPermission.mockResolvedValue(true);
-  database.setProjectEntriesNumberedAtomically.mockResolvedValue({
-    project: { ...project, contentRevision: 8 },
-    entries,
-    entryIds: entries.map(database.entryId),
-    affectedEntryIds: ['entry-1'],
-  });
   window.history.replaceState({}, '', '/editor.html?sessionId=project-1');
 });
 
@@ -272,40 +261,6 @@ describe('Editor App structure wiring', () => {
 
     await waitFor(() => expect(screen.getByTestId('rail-selected').textContent).toBe('entry-2'));
     expect(screen.getByLabelText('StepStage test double').getAttribute('data-entry-id')).toBe('entry-2');
-  });
-
-  it('uses a fresh structure snapshot revision for StepStage onSetNumbered atomic writes', async () => {
-    const freshProject = { ...project, contentRevision: 41 };
-    database.getProjectStructureSnapshot.mockResolvedValue({
-      project: freshProject,
-      entries,
-      entryIds: entries.map(database.entryId),
-    });
-    browserApi.sendMessage.mockReset();
-  browserApi.requestPermission.mockReset();
-  browserApi.requestPermission.mockResolvedValue(true);
-  database.setProjectEntriesNumberedAtomically.mockResolvedValue({
-      project: { ...project, contentRevision: 42 },
-      entries,
-      entryIds: entries.map(database.entryId),
-      affectedEntryIds: ['entry-1'],
-    });
-    render(<EditorApp />);
-
-    await screen.findByRole('button', { name: '關閉目前快照編號' });
-    fireEvent.click(screen.getByRole('button', { name: '關閉目前快照編號' }));
-
-    await waitFor(() => expect(database.setProjectEntriesNumberedAtomically).toHaveBeenCalledOnce());
-    expect(database.getProjectStructureSnapshot).toHaveBeenCalledWith('project-1');
-    expect(database.setProjectEntriesNumberedAtomically).toHaveBeenCalledWith(
-      'project-1',
-      ['entry-1'],
-      false,
-      41,
-    );
-    expect(database.getProjectStructureSnapshot.mock.invocationCallOrder[0]).toBeLessThan(
-      itemAt(database.setProjectEntriesNumberedAtomically.mock.invocationCallOrder, 0),
-    );
   });
 
   it('preflights recapture without trusting the step URL and starts only after confirmation', async () => {

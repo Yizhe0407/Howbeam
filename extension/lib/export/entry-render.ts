@@ -41,7 +41,6 @@ export async function compositeStepEntry(entry: StepEntry, format: CompositeImag
     screenshot,
     offsetAnnotations(getOrderedAnnotations(entry.annotations), origin),
     screenshotScale,
-    imageOwner.numbered ?? false,
     format,
     redactions,
     privacy.reviewRequired,

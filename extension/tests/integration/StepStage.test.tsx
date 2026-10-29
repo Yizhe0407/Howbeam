@@ -17,26 +17,7 @@ vi.mock('@/components/editor/MultiHighlightThumbnail', () => ({
   default: ({ overlay }: { overlay?: ReactNode }) => <div data-testid="group-image-frame">{overlay}</div>,
 }));
 vi.mock('@/components/editor/DescriptionField', () => ({ default: () => null }));
-vi.mock('@/components/editor/AnnotationList', () => ({
-  default: ({
-    numbered,
-    onSetNumbered,
-    editingDisabled,
-  }: {
-    numbered: boolean;
-    onSetNumbered: (next: boolean) => void;
-    editingDisabled: boolean;
-  }) => (
-    <button
-      type="button"
-      role="switch"
-      aria-label="顯示編號"
-      aria-checked={numbered}
-      disabled={editingDisabled}
-      onClick={() => onSetNumbered(!numbered)}
-    />
-  ),
-}));
+vi.mock('@/components/editor/AnnotationList', () => ({ default: () => null }));
 vi.mock('@/components/editor/StepActions', () => ({ default: () => null }));
 
 const database = vi.hoisted(() => ({ getProjectSummaries: vi.fn() }));
@@ -47,7 +28,6 @@ import StepStage from '@/components/editor/StepStage';
 interface StageOptions {
   entry?: StepEntry;
   editingDisabled?: boolean;
-  onSetNumbered?: (entryId: string, next: boolean) => Promise<void>;
   onZoom?: () => void;
   sectionTitle?: string;
   onStartSection?: () => void;
@@ -64,7 +44,6 @@ function makeStep(changes: Partial<Step> = {}): Step {
     url: 'https://example.test',
     timestamp: 0,
     groupId: 'group-1',
-    numbered: true,
     ...changes,
   };
 }
@@ -92,20 +71,9 @@ function singleEntry(stepChanges: Partial<ScreenshotStep> = {}): StepEntry {
   };
 }
 
-function deferred<T = void>() {
-  let resolve!: (value: T | PromiseLike<T>) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-}
-
 function stage({
   entry = groupEntry(),
   editingDisabled = false,
-  onSetNumbered = vi.fn().mockResolvedValue(undefined),
   onZoom = vi.fn(),
   sectionTitle,
   onStartSection,
@@ -121,7 +89,6 @@ function stage({
       onZoom={onZoom}
       onReorderAnnotations={vi.fn().mockResolvedValue(undefined)}
       onRecapture={vi.fn().mockResolvedValue(undefined)}
-      onSetNumbered={onSetNumbered}
       editingDisabled={editingDisabled}
     />
   );
@@ -140,7 +107,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('StepStage numbered snapshots', () => {
+describe('StepStage snapshots', () => {
   it('anchors the zoom hint to the rendered image frame in both modes', () => {
     const { unmount } = renderStage();
     const groupHint = screen.getByText('點擊放大');
@@ -150,52 +117,6 @@ describe('StepStage numbered snapshots', () => {
     renderStage({ entry: singleEntry() });
     const singleHint = screen.getByText('點擊放大');
     expect(singleHint.parentElement?.dataset.testid).toBe('single-image-frame');
-  });
-
-  it('hands the new value to the editor without locking the switch while it saves', () => {
-    const pending = deferred();
-    const onSetNumbered = vi.fn().mockReturnValue(pending.promise);
-    renderStage({ onSetNumbered });
-
-    const toggle = screen.getByRole('switch', { name: '顯示編號' });
-    fireEvent.click(toggle);
-
-    expect(onSetNumbered).toHaveBeenCalledWith('group-1', false);
-    // The editor shows the new value at once and queues the save, so the switch stays usable.
-    expect((toggle as HTMLButtonElement).disabled).toBe(false);
-  });
-
-  it('surfaces the rejection message when the parent callback rejects with an Error', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const onSetNumbered = vi.fn().mockRejectedValue(new Error('write failed'));
-    renderStage({ onSetNumbered });
-
-    fireEvent.click(screen.getByRole('switch', { name: '顯示編號' }));
-
-    expect((await screen.findByRole('alert')).textContent).toContain('write failed');
-    expect(onSetNumbered).toHaveBeenCalledOnce();
-    expect((screen.getByRole('switch', { name: '顯示編號' }) as HTMLButtonElement).disabled).toBe(false);
-  });
-
-  it('falls back to the generic failure message for a non-Error rejection', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const onSetNumbered = vi.fn().mockRejectedValue('write failed');
-    renderStage({ onSetNumbered });
-
-    fireEvent.click(screen.getByRole('switch', { name: '顯示編號' }));
-
-    expect((await screen.findByRole('alert')).textContent).toContain('編號設定儲存失敗，請再試一次。');
-  });
-
-  it('does not submit when editing is disabled', () => {
-    const onSetNumbered = vi.fn().mockResolvedValue(undefined);
-    renderStage({ onSetNumbered, editingDisabled: true });
-
-    const toggle = screen.getByRole('switch', { name: '顯示編號' });
-    expect((toggle as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(toggle);
-
-    expect(onSetNumbered).not.toHaveBeenCalled();
   });
 });
 

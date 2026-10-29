@@ -164,13 +164,8 @@ test.describe('editor workflows', () => {
       (step) => step.description === '更新後的快照標註',
     )).toBe(true);
 
-    const numbering = editor.getByRole('switch', { name: '順序編號' });
-    await expect(numbering).toBeChecked();
-    await numbering.click();
-    await expect(numbering).not.toBeChecked();
-    await expect.poll(async () => (await readSteps(popupPage)).filter((step) => step.groupId).every(
-      (step) => step.numbered === false,
-    )).toBe(true);
+    // Markers are always numbered; there is no switch to turn that off.
+    await expect(editor.getByRole('switch')).toHaveCount(0);
 
     await editor.getByRole('button', { name: '刪除標註 2' }).click();
     await expect(editor.locator('aside').getByText('標註 · 1', { exact: true })).toBeVisible();

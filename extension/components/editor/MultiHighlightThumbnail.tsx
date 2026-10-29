@@ -32,7 +32,6 @@ interface Props {
    * instead of burned in (see usePreviewImage). */
   liveMasks?: boolean;
   screenshotScale: number;
-  numbered: boolean;
   /** False drops the marker numbers and their leader lines, for previews too small to read them. */
   badges?: boolean;
   alt: string;
@@ -83,7 +82,6 @@ export default function MultiHighlightThumbnail({
   imageEdits = NO_EDITS,
   liveMasks = false,
   screenshotScale,
-  numbered,
   badges = true,
   alt,
   className,
@@ -277,7 +275,7 @@ export default function MultiHighlightThumbnail({
                 />
               </div>
             ) : box.drawFrame && <HighlightFrame box={box} order={box.order} />}
-            {badges && (numbered || box.calloutLeft) && (
+            {badges && (
               <div
                 className="pointer-events-none absolute flex items-center justify-center rounded-full font-semibold shadow"
                 style={{

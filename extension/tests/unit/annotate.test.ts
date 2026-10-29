@@ -705,7 +705,6 @@ describe('compositeMultiHighlight', () => {
           { bounds: { x: 120, y: 60, width: 60, height: 20 }, order: 2 },
         ],
         2,
-        true,
         'image/png',
         [{ id: 'mask', kind: 'solid', bounds: { x: 98, y: 48, width: 10, height: 10 } }],
       );
@@ -729,26 +728,6 @@ describe('compositeMultiHighlight', () => {
     }
   });
 
-  it('omits badges when the project is not numbered', async () => {
-    const { calls, FakeOffscreenCanvas } = fakeCanvas();
-    stubBitmap(400, 200, FakeOffscreenCanvas);
-
-    try {
-      await compositeMultiHighlight(
-        new Blob(['source']),
-        [{ bounds: { x: 10, y: 10, width: 60, height: 20 }, order: 1 }],
-        2,
-        false,
-        'image/png',
-      );
-
-      expect(calls.filter(([name]) => name === 'roundRect')).toHaveLength(2);
-      expect(calls.some(([name]) => name === 'arc')).toBe(false);
-      expect(calls.some(([name]) => name === 'fillText')).toBe(false);
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
 
   it('renders coincident targets as markers with leaders and callout badges', async () => {
     const { calls, FakeOffscreenCanvas } = fakeCanvas();
@@ -762,9 +741,6 @@ describe('compositeMultiHighlight', () => {
           { bounds: { x: 104, y: 102, width: 80, height: 32 }, order: 2 },
         ],
         1,
-        // numbered=false must not suppress callout badges — the only way to
-        // tell coincident markers apart.
-        false,
       );
 
       expect(calls.filter(([name]) => name === 'arc')).toHaveLength(2 * 3 + 2);
@@ -786,11 +762,11 @@ describe('compositeMultiHighlight', () => {
         new Blob(['source']),
         [{ bounds: { x: 150, y: 20, width: 30, height: 10 }, order: 1 }],
         2,
-        false,
         'image/png',
       );
 
-      expect(calls.map(([name]) => name)).toEqual(['drawImage', 'convertToBlob']);
+      // Only its badge is drawn; the frame itself is never stroked.
+      expect(calls.some(([name]) => name === 'roundRect')).toBe(false);
     } finally {
       vi.unstubAllGlobals();
     }

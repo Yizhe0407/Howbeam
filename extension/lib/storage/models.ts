@@ -91,9 +91,6 @@ export interface Step {
   lastCaptureRunId?: string;
   /** 快照 anchor id；anchor 自我引用並擁有群組共用圖片。 */
   groupId?: string;
-  /** Snapshot mode only: whether the group renders order-number badges.
-   * Same value denormalized across every step sharing a groupId. */
-  numbered?: boolean;
 }
 
 /** A locally persisted, editable project. `id` intentionally remains identical
@@ -442,7 +439,6 @@ export function sanitizeStepForStorage(step: Step): Step {
     sanitized.lastCaptureRunId = requireStorageIdentifier(step.lastCaptureRunId, 'Step last capture run id');
   }
   if (groupId !== undefined) sanitized.groupId = groupId;
-  if (step.numbered !== undefined) sanitized.numbered = step.numbered === true;
   return sanitized;
 }
 
@@ -558,9 +554,6 @@ export function buildCompleteStepEntries(
       }
       if (expectedSessionId && annotation.sessionId !== expectedSessionId) {
         throw new ProjectStructureIntegrityError('A snapshot group crosses Project boundaries.');
-      }
-      if (Boolean(annotation.numbered) !== Boolean(anchor.numbered)) {
-        throw new ProjectStructureIntegrityError('A snapshot group has inconsistent numbering metadata.');
       }
       seenIds.add(annotation.id);
       annotations.push(annotation);

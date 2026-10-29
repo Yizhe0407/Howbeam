@@ -5,7 +5,7 @@ import {
   type PendingUndoAction,
   type UndoAction,
 } from '@/lib/editor/editor-app-model';
-import { addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, ProjectContentConflictError, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically, setProjectEntriesNumberedAtomically, type ProjectStructureMutationResult, type ProjectStructureSnapshot } from '@/lib/storage/project-structure';
+import { addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, ProjectContentConflictError, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically, type ProjectStructureMutationResult, type ProjectStructureSnapshot } from '@/lib/storage/project-structure';
 import { entryId, type Project, type Step, type StepEntry } from '@/lib/storage/models';
 import { sectionsInRows, type ProjectSection, type RailRow } from '@/lib/project/project-sections';
 import { t, type Messages } from '@/lib/shared/i18n';
@@ -22,7 +22,6 @@ interface UseProjectMutationsOptions {
   entries: StepEntry[];
   /** The rendered (optimistic-first) sections. */
   sections: readonly ProjectSection[];
-  selectedEntryId: string | null;
   /** Queues `operation` behind every data operation asked for before it. */
   runOperation: <T>(label: string | null, operation: () => Promise<T>) => Promise<T>;
   /** True while the Project can't be changed at all (deleted, being recorded, or in a permission flow). */
@@ -65,7 +64,6 @@ export function useProjectMutations({
   project,
   entries,
   sections,
-  selectedEntryId,
   runOperation,
   editingBlocked,
   showOptimistic,
@@ -334,50 +332,6 @@ export function useProjectMutations({
     });
   }
 
-  async function setEntriesNumbered(entryIdsToUpdate: readonly string[], numbered: boolean) {
-    if (entryIdsToUpdate.length === 0) return;
-    const selectedIds = new Set(entryIdsToUpdate);
-    await runProjectMutation({
-      operation: 'numbering',
-      optimistic: (shown) => ({
-        ...shown,
-        entries: shown.entries.map((entry) => (
-          entry.kind === 'group' && selectedIds.has(entry.anchor.id)
-            ? { ...entry, anchor: { ...entry.anchor, numbered } }
-            : entry
-        )),
-      }),
-      mutate: async (snapshot, projectId) => {
-        const previousValues = new Set(
-          snapshot.entries
-            .filter((entry): entry is GroupEntry => entry.kind === 'group' && selectedIds.has(entry.anchor.id))
-            .map((entry) => entry.anchor.numbered ?? false),
-        );
-        const result = await setProjectEntriesNumberedAtomically(
-          projectId,
-          entryIdsToUpdate,
-          numbered,
-          snapshot.project.contentRevision,
-        );
-        adoptCommitted(result);
-        // A mixed selection has no single value to restore, and a no-op change has nothing to undo.
-        const previousValue = previousValues.size === 1 ? [...previousValues][0] : undefined;
-        if (result.affectedEntryIds.length === 0 || previousValue === undefined || previousValue === numbered) return;
-        return {
-          message: t().editor.mutations.numbering.done(numbered),
-          expectedRevision: result.project.contentRevision,
-          restoreSelectionId: selectedEntryId ?? undefined,
-          restore: () => setProjectEntriesNumberedAtomically(
-            projectId,
-            result.affectedEntryIds,
-            previousValue,
-            result.project.contentRevision,
-          ),
-        };
-      },
-    });
-  }
-
   async function addSection(startEntryId: string, title: string) {
     await runProjectMutation({
       operation: 'addSection',
@@ -489,7 +443,6 @@ export function useProjectMutations({
     handleReorderAnnotations,
     deleteEntry,
     handleDeleteAnnotation,
-    setEntriesNumbered,
     addSection,
     renameSection,
     deleteSection,

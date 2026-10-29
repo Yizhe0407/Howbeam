@@ -44,7 +44,6 @@ describe('MultiHighlightThumbnail', () => {
         blob={new Blob(['image'])}
         annotations={[{ bounds: { x: 10, y: 20, width: 40, height: 30 }, order: 1 }]}
         screenshotScale={2}
-        numbered
         alt="preview"
         fit="contain"
       />,
@@ -84,7 +83,6 @@ describe('MultiHighlightThumbnail', () => {
         blob={new Blob(['image'])}
         annotations={[]}
         screenshotScale={1}
-        numbered={false}
         alt="overlay preview"
         fit="contain"
         overlay={<span>點擊放大</span>}
@@ -167,7 +165,6 @@ describe('MultiHighlightThumbnail', () => {
           order: index + 1,
         }))}
         screenshotScale={1}
-        numbered
         alt="boundary preview"
         fit="contain"
       />,
@@ -211,7 +208,6 @@ describe('MultiHighlightThumbnail', () => {
         redactions={[{ id: 'mask-1', kind: 'solid', bounds: { x: 50, y: 20, width: 30, height: 40 } }]}
         liveMasks
         screenshotScale={1}
-        numbered
         alt="redacted preview"
         fit="contain"
       />,

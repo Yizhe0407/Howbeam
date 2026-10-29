@@ -245,7 +245,6 @@ function EditorApp() {
     handleReorderAnnotations,
     deleteEntry,
     handleDeleteAnnotation,
-    setEntriesNumbered,
     addSection,
     renameSection,
     deleteSection,
@@ -255,7 +254,6 @@ function EditorApp() {
     project,
     entries,
     sections,
-    selectedEntryId,
     runOperation: operations.run,
     editingBlocked,
     showOptimistic,
@@ -328,11 +326,6 @@ function EditorApp() {
         sections: snapshot.project.sections,
       },
     };
-  }
-
-  async function setSelectedEntryNumbered(id: string, numbered: boolean): Promise<void> {
-    requireSelectedEntry(id);
-    await setEntriesNumbered([id], numbered);
   }
 
   async function exportImages(signal: AbortSignal) {
@@ -532,7 +525,6 @@ function EditorApp() {
                 onEditImage={clearUndo}
                 onReorderAnnotations={(reordered) => handleReorderAnnotations(entryId(selectedEntry), reordered)}
                 onRecapture={handleRecapture}
-                onSetNumbered={setSelectedEntryNumbered}
                 editingDisabled={operationActive || editingLocked}
               />
             ) : (

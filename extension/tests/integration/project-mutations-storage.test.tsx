@@ -50,11 +50,11 @@ function single(id: string, order: number, overrides: Partial<Step> = {}): Step 
 }
 
 /** A snapshot: its anchor row, then one annotation row per id. */
-function snapshot(anchorId: string, order: number, annotationIds: string[], numbered = true): Step[] {
+function snapshot(anchorId: string, order: number, annotationIds: string[]): Step[] {
   return [
-    single(anchorId, order, { groupId: anchorId, bounds: null, numbered }),
+    single(anchorId, order, { groupId: anchorId, bounds: null }),
     ...annotationIds.map((id, index) =>
-      single(id, order + 1 + index, { groupId: anchorId, screenshotBlob: undefined, numbered })),
+      single(id, order + 1 + index, { groupId: anchorId, screenshotBlob: undefined })),
   ];
 }
 
@@ -81,7 +81,6 @@ function createEditor() {
       project,
       entries,
       sections: project.sections,
-      selectedEntryId: editor.selectedEntryId,
       runOperation: (_label, operation) => operation(),
       editingBlocked: () => false,
       showOptimistic: () => () => undefined,
@@ -312,30 +311,6 @@ describe('delete annotation', () => {
 
     expect(await layout()).toEqual([uid('a'), [uid('g'), [uid('g1'), uid('g2')]], uid('c'), [uid('h'), [uid('h1')]]]);
     expect(await sections()).toEqual([{ title: 'Wrap-up', startEntryId: uid('h') }]);
-  });
-});
-
-describe('snapshot numbering', () => {
-  it('turns numbering off, and undo turns it back on', async () => {
-    const { run } = createEditor();
-    const numberedOf = async () => (await getSteps(sessionId)).find((step) => step.id === uid('g'))?.numbered;
-
-    await run((mutations) => mutations.setEntriesNumbered([uid('g')], false));
-
-    expect(await numberedOf()).toBe(false);
-
-    await run((mutations) => mutations.handleUndo());
-
-    expect(await numberedOf()).toBe(true);
-  });
-
-  it('offers no undo for a mixed selection, which has no single value to restore', async () => {
-    await seedSteps(snapshot(uid('h'), 5, [uid('h1')], false));
-    const { editor, run } = createEditor();
-
-    await run((mutations) => mutations.setEntriesNumbered([uid('g'), uid('h')], true));
-
-    expect(editor.undo).toBeNull();
   });
 });
 

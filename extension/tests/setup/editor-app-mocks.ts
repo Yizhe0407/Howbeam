@@ -21,7 +21,6 @@ export function makeEditorDatabaseMocks() {
     getProject: vi.fn(),
     getProjectStructureSnapshot: vi.fn(),
     renameProjectSectionAtomically: vi.fn(),
-    setProjectEntriesNumberedAtomically: vi.fn(),
     updateProject: vi.fn(),
   };
 }

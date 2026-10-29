@@ -141,7 +141,6 @@ async function startRecorder(): Promise<void> {
 
   const session = createContentRecordingSession({
     runId,
-    numbered: recordingState.numbered,
     paused: recordingState.phase === 'paused',
   });
   const capture = createCaptureSender(runId);

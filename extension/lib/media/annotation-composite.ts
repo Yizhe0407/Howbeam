@@ -243,7 +243,7 @@ export async function compositeHighlight(
 }
 
 /**
- * Composites every annotation's red box (and, if numbered, an order badge) onto
+ * Composites every annotation's red box and order badge onto
  * one shared screenshot — the single-image mode counterpart of
  * {@link compositeHighlight}.
  */
@@ -251,7 +251,6 @@ export async function compositeMultiHighlight(
   screenshot: Blob,
   annotations: Annotation[],
   screenshotScale: number,
-  numbered: boolean,
   format: RasterFormat = 'image/jpeg',
   redactions: readonly Redaction[] = [],
   privacyBlockRequired = false,
@@ -269,12 +268,8 @@ export async function compositeMultiHighlight(
         strokeBox(ctx, layout.frame, dpr);
       }
 
-      if (layout.callout) {
-        drawLeader(ctx, layout.leader, dpr);
-        drawBadge(ctx, layout.callout, layout.order, dpr);
-      } else if (numbered) {
-        drawBadge(ctx, layout.badgeAnchor, layout.order, dpr);
-      }
+      if (layout.callout) drawLeader(ctx, layout.leader, dpr);
+      drawBadge(ctx, layout.callout ?? layout.badgeAnchor, layout.order, dpr);
     }
   });
 }

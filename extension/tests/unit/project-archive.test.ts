@@ -102,7 +102,6 @@ describe('project archive', () => {
       screenshotBlob: jpegBlob(),
       bounds: null,
       groupId: 'anchor',
-      numbered: true,
     });
     const annotation = makeStep({
       id: 'annotation',
@@ -110,7 +109,6 @@ describe('project archive', () => {
       screenshotBlob: undefined,
       bounds: { x: 5, y: 6, width: 7, height: 8 },
       groupId: 'anchor',
-      numbered: true,
       description: 'Annotation',
     });
 
@@ -186,13 +184,12 @@ describe('project archive', () => {
       imageEditRevision: 4,
       lastCaptureRunId: 'capture-run-3',
     });
-    const anchor = makeStep({ id: 'anchor', order: 1, bounds: null, groupId: 'anchor', numbered: true });
+    const anchor = makeStep({ id: 'anchor', order: 1, bounds: null, groupId: 'anchor' });
     const annotation = makeStep({
       id: 'annotation',
       order: 2,
       screenshotBlob: undefined,
       groupId: 'anchor',
-      numbered: true,
     });
 
     const { manifest } = await archiveObject([full, anchor, annotation]);
@@ -229,13 +226,12 @@ describe('project archive', () => {
 
   it('round-trips metadata, remaps section boundaries, and repairs stale or duplicate sections', async () => {
     const first = makeStep({ id: 'first', order: 0 });
-    const anchor = makeStep({ id: 'anchor', order: 1, bounds: null, groupId: 'anchor', numbered: true });
+    const anchor = makeStep({ id: 'anchor', order: 1, bounds: null, groupId: 'anchor' });
     const annotation = makeStep({
       id: 'annotation',
       order: 2,
       screenshotBlob: undefined,
       groupId: 'anchor',
-      numbered: true,
     });
     const last = makeStep({ id: 'last', order: 3 });
     const archive = await archiveObject([last, annotation, anchor, first], {
@@ -383,12 +379,10 @@ describe('project archive', () => {
   it('rejects missing and malformed snapshot group anchors', async () => {
     const missingAnchor = await archiveObject();
     missingAnchor.manifest.steps[0].groupId = 'missing';
-    missingAnchor.manifest.steps[0].numbered = true;
     await expect(importProjectArchive(pack(missingAnchor))).rejects.toMatchObject({ code: 'BROKEN_GROUP_REFERENCE' });
 
     const malformedAnchor = await archiveObject();
     malformedAnchor.manifest.steps[0].groupId = 'step-1';
-    malformedAnchor.manifest.steps[0].numbered = true;
     await expect(importProjectArchive(pack(malformedAnchor))).rejects.toMatchObject({ code: 'BROKEN_GROUP_REFERENCE' });
   });
 
