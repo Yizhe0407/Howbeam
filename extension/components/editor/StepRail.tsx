@@ -22,7 +22,7 @@ import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import ProjectSectionHeading from './ProjectSectionHeading';
 
 
-const SEAM_PILL = 'relative flex h-4 min-w-0 scale-90 items-center gap-1 whitespace-nowrap rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
+const SEAM_PILL = 'relative flex h-[18px] min-w-0 scale-90 items-center gap-1 whitespace-nowrap rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
 
 /**
  * The seam between two steps. It takes no room of its own: a zero-height row
@@ -34,23 +34,19 @@ const SEAM_PILL = 'relative flex h-4 min-w-0 scale-90 items-center gap-1 whitesp
 function SeamActions({
   afterStep,
   disabled,
-  besideSelected,
   onInsert,
   onStartSection,
 }: {
   afterStep: number;
   disabled: boolean;
-  /** Which neighbour is selected. Its band fills the 4px padding the others leave empty, so the visible gap moves by half of that. */
-  besideSelected: 'above' | 'below' | null;
   onInsert?: () => void;
   onStartSection?: () => void;
 }) {
-  // The 16px slot sits on the middle of the 12px list gap: -2px from this zero-height row.
-  const top = -2 + (besideSelected === 'above' ? 2 : besideSelected === 'below' ? -2 : 0);
   return (
     <li className="relative z-10 -mt-3 hidden h-0 shrink-0 lg:block">
-      {/* The pills share the rail's width and truncate rather than overflow it, whatever a locale's label length. */}
-      <div style={{ top }} className="group/slot absolute inset-x-0 flex h-4 items-center justify-center gap-1 px-2">
+      {/* -mt-3 takes back the list gap before this row, so a 16px slot centred on the 12px gap below sits at -top-0.5.
+          The pills share the rail's width and truncate rather than overflow it, whatever a locale's label length. */}
+      <div className="group/slot absolute inset-x-0 -top-0.5 flex h-4 items-center justify-center gap-1 px-2">
         <span
           aria-hidden="true"
           className="absolute inset-x-2 top-1/2 origin-center scale-x-0 border-t-2 border-dashed border-border opacity-0 transition-[transform,opacity] duration-200 ease-out group-hover/slot:scale-x-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-x-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-x-100 group-focus-within/slot:opacity-100 motion-reduce:transition-none"
@@ -268,7 +264,7 @@ export default function StepRail({
           <ul
             {...scrollbar}
             aria-label={t().editor.rail.listLabel}
-            className="app-scrollbar-autohide flex flex-1 flex-row gap-1 overflow-x-auto px-2 pb-2 lg:min-h-0 lg:flex-col lg:gap-3 lg:overflow-x-visible lg:overflow-y-auto lg:px-2 lg:pb-2"
+            className="app-scrollbar-autohide flex flex-1 flex-row gap-3 overflow-x-auto px-2 pb-2 lg:min-h-0 lg:flex-col lg:gap-3 lg:overflow-x-visible lg:overflow-y-auto lg:px-2 lg:pb-2"
           >
             {rows.map((row) => {
               if (row.kind === 'section') {
@@ -307,11 +303,8 @@ export default function StepRail({
                   {(handle, overlay) => (
                     <div
                       data-active={active || undefined}
-                      className={cn(
-                        // p-1 puts the thumbnail exactly 4px inside, the inset its `rounded-sm` is drawn for.
-                        'group relative flex w-32 min-w-0 shrink-0 cursor-pointer items-center rounded-md p-1 transition-colors lg:w-auto lg:shrink',
-                        active ? 'bg-card' : 'bg-transparent hover:bg-secondary',
-                      )}
+                      // The row is the thumbnail itself, with no plate around it, so every row's edge is its ink border and the seams between rows stay even.
+                      className="group relative flex w-32 min-w-0 shrink-0 cursor-pointer items-center rounded-sm lg:w-auto lg:shrink"
                     >
                       <button
                         ref={active ? selectedItem : undefined}
@@ -319,24 +312,24 @@ export default function StepRail({
                         onClick={() => onSelect(id)}
                         aria-label={t().editor.rail.openStep(index + 1)}
                         aria-current={active ? 'step' : undefined}
-                        className="absolute inset-0 z-0 rounded-md outline-none focus-ring"
+                        className="absolute inset-0 z-0 rounded-sm outline-none focus-ring"
                       />
                       {active && (
                         <span
                           aria-hidden="true"
                           data-howbeam-selected-step-outline
-                          className="howbeam-selected-step-outline pointer-events-none absolute inset-0 z-10 rounded-md border-2"
+                          className="howbeam-selected-step-outline pointer-events-none absolute inset-0 z-10 rounded-sm border-2"
                         />
                       )}
                       <RailThumbnail entry={entry} number={number} active={active} />
                       {/* Always rendered: a hover-only handle is invisible on touch; rests dimmed to not compete with the thumbnail. */}
-                      <span className="absolute top-2.5 right-2.5 z-20 opacity-80 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                      <span className="absolute top-1.5 right-1.5 z-20 opacity-80 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                         {handle}
                       </span>
                       {overlay && createPortal(
-                        <div className="relative flex size-full items-center rounded-md bg-card p-1">
+                        <div className="relative flex size-full items-center rounded-sm">
                           <RailThumbnail entry={entry} number={number} active={active} />
-                          <span className="absolute top-2.5 right-2.5 z-20">
+                          <span className="absolute top-1.5 right-1.5 z-20">
                             <StaticHandle className={RAIL_HANDLE} />
                           </span>
                         </div>,
@@ -350,7 +343,6 @@ export default function StepRail({
                   <SeamActions
                     afterStep={index + 1}
                     disabled={reorderDisabled}
-                    besideSelected={active ? 'above' : entryId(nextEntry) === selectedEntryId ? 'below' : null}
                     onInsert={onContinueRecording && (() => onContinueRecording(id))}
                     onStartSection={
                       onStartSection && !sectionByStartId.has(entryId(nextEntry))

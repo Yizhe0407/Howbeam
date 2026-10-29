@@ -234,7 +234,8 @@
 
 @layer components {
   /* Kept above media previews so the active state stays legible: a --selected
-   * band hugging the thumbnail's own ink border, which every step carries. */
+   * band drawn over the thumbnail's own ink border and just inside it, so a
+   * selected step keeps the same outer edge as every other. */
   .howbeam-selected-step-outline {
     border-color: var(--selected);
     box-shadow: inset 0 0 0 2px var(--selected);

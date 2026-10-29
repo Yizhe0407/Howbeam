@@ -324,8 +324,8 @@ describe('StepRail keyboard navigation', () => {
     );
 
     const selectedRow = screen.getByRole('button', { name: '開啟步驟 2' }).closest<HTMLElement>('[data-active]')!;
-    expect(selectedRow.className).toContain('bg-card');
-    expect(selectedRow.className).not.toContain('bg-[#e5ecf6]');
+    // No plate around the thumbnail: a selected row's edge stays where every other row's is.
+    expect(selectedRow.className).not.toMatch(/\bbg-|\bp-1\b/);
     const outline = selectedRow.querySelector<HTMLElement>('[data-howbeam-selected-step-outline]');
     expect(outline?.className).toContain('howbeam-selected-step-outline');
     expect(outline?.className).toContain('z-10');
