@@ -4,7 +4,6 @@ import {
   CopyPlus,
   Download,
   Loader2,
-  PencilLine,
   Search,
   Trash2,
   Upload,
@@ -295,7 +294,7 @@ export default function App() {
                         onClick={() => void run(project.id, () => openSelectedProjectInEditor(project.id, { inPlace: true }))}
                         disabled={actionsLocked}
                       >
-                        {pending ? <Loader2 className="animate-spin" /> : <PencilLine />}{t().common.open}
+                        {pending && <Loader2 className="animate-spin" />}{t().common.open}
                       </Button>
                       <Tooltip>
                         <TooltipTrigger asChild>

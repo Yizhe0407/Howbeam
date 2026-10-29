@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Copy, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { Check, ClipboardCopy, Loader2, SwitchCamera, Trash2 } from 'lucide-react';
 import { compositeStepEntry } from '@/lib/export/entry-render';
 import { getEntryPrivacyState, type StepEntry } from '@/lib/storage/models';
 import { t } from '@/lib/shared/i18n';
@@ -113,7 +113,7 @@ export default function StepActions({
                 aria-label={t().editor.actions.copyImage}
                 className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
               >
-                {copying && busyShown ? <Loader2 className="size-4 animate-spin" /> : copied ? <Check className="size-4 text-brand-text" /> : <Copy className="size-4" />}
+                {copying && busyShown ? <Loader2 className="size-4 animate-spin" /> : copied ? <Check className="size-4 text-brand-text" /> : <ClipboardCopy className="size-4" />}
               </button>
             </span>
           </TooltipTrigger>
@@ -129,7 +129,7 @@ export default function StepActions({
                 aria-label={t().editor.actions.recapture}
                 className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
               >
-                {recapturing && busyShown ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                {recapturing && busyShown ? <Loader2 className="size-4 animate-spin" /> : <SwitchCamera className="size-4" />}
               </button>
             </span>
           </TooltipTrigger>

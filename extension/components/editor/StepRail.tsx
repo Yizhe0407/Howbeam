@@ -26,7 +26,8 @@ const SEAM_PILL = 'relative flex h-[18px] min-w-0 scale-90 items-center gap-1 wh
 
 /**
  * The seam between two steps. It takes no room of its own: a zero-height row
- * whose hit area straddles the existing gap, so the list keeps its density.
+ * (zero-width in the bottom strip) whose hit area straddles the existing gap,
+ * so the list keeps its density.
  * Invisible until it, or the step above it, is hovered or focused; then a
  * dashed line with its actions floats over the seam: record new steps here,
  * or start a section here.
@@ -43,13 +44,14 @@ function SeamActions({
   onStartSection?: () => void;
 }) {
   return (
-    <li className="relative z-10 -mt-3 hidden h-0 shrink-0 lg:block">
-      {/* -mt-3 takes back the list gap before this row, so a 16px slot centred on the 12px gap below sits at -top-0.5.
-          The pills share the rail's width and truncate rather than overflow it, whatever a locale's label length. */}
-      <div className="group/slot absolute inset-x-0 -top-0.5 flex h-4 items-center justify-center gap-1 px-2">
+    <li className="relative z-10 -ml-3 w-0 shrink-0 self-stretch lg:-mt-3 lg:ml-0 lg:h-0 lg:w-auto lg:self-auto">
+      {/* -ml-3 / -mt-3 takes back the list gap before this row, so a 16px slot centred on the 12px gap after it sits at -0.5.
+          In the side rail the pills share its width and truncate rather than overflow it, whatever a locale's label length;
+          in the bottom strip they stack at the seam's foot, clear of the step numbers. */}
+      <div className="group/slot absolute inset-y-0 -left-0.5 flex w-4 flex-col items-center justify-end gap-1 pb-1 lg:inset-x-0 lg:inset-y-auto lg:-top-0.5 lg:h-4 lg:w-auto lg:flex-row lg:justify-center lg:px-2 lg:pb-0">
         <span
           aria-hidden="true"
-          className="absolute inset-x-2 top-1/2 origin-center scale-x-0 border-t-2 border-dashed border-border opacity-0 transition-[transform,opacity] duration-200 ease-out group-hover/slot:scale-x-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-x-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-x-100 group-focus-within/slot:opacity-100 motion-reduce:transition-none"
+          className="absolute inset-y-2 left-1/2 origin-center scale-y-0 border-l-2 border-dashed border-border opacity-0 transition-[transform,opacity] duration-200 ease-out group-hover/slot:scale-y-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-y-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-y-100 group-focus-within/slot:opacity-100 motion-reduce:transition-none lg:inset-x-2 lg:top-1/2 lg:bottom-auto lg:scale-x-0 lg:scale-y-100 lg:border-t-2 lg:border-l-0 lg:group-hover/slot:scale-x-100 lg:[li:hover+li_&]:scale-x-100 lg:group-focus-within/slot:scale-x-100"
         />
         {onInsert && (
           <button
@@ -248,7 +250,7 @@ export default function StepRail({
     <nav
       ref={railRef}
       aria-label={t().editor.rail.label}
-      className="fixed inset-x-0 bottom-0 z-30 flex h-[var(--step-rail-height,8rem)] shrink-0 flex-col border-t-2 border-border bg-card lg:static lg:z-auto lg:my-6 lg:ml-6 lg:h-auto lg:max-h-[calc(100%-3rem)] lg:min-h-0 lg:w-[200px] lg:min-w-[200px] lg:shrink-0 lg:self-start lg:basis-[200px] lg:rounded-md lg:border-2"
+      className="fixed inset-x-0 bottom-0 z-30 grid h-[var(--step-rail-height,8rem)] shrink-0 grid-cols-[1fr_auto] grid-rows-[auto_minmax(0,1fr)] border-t-2 border-border bg-card lg:static lg:z-auto lg:my-6 lg:ml-6 lg:h-auto lg:max-h-[calc(100%-3rem)] lg:min-h-0 lg:w-[200px] lg:min-w-[200px] lg:shrink-0 lg:self-start lg:basis-[200px] lg:flex lg:flex-col lg:rounded-md lg:border-2"
     >
       <div className="flex shrink-0 items-center justify-between gap-2 px-3.5 pt-3 pb-2 text-xs font-bold text-muted-foreground">
         <span>{t().editor.rail.count(entries.length)}</span>
@@ -267,7 +269,7 @@ export default function StepRail({
           <ul
             {...scrollbar}
             aria-label={t().editor.rail.listLabel}
-            className="app-scrollbar-autohide flex flex-1 flex-row gap-3 overflow-x-auto px-2 pb-2 lg:min-h-0 lg:flex-col lg:gap-3 lg:overflow-x-visible lg:overflow-y-auto lg:px-2 lg:pb-2"
+            className="app-scrollbar-autohide col-span-2 flex flex-1 flex-row gap-3 overflow-x-auto px-2 pb-2 lg:min-h-0 lg:flex-col lg:gap-3 lg:overflow-x-visible lg:overflow-y-auto lg:px-2 lg:pb-2"
           >
             {rows.map((row) => {
               if (row.kind === 'section') {
@@ -363,12 +365,13 @@ export default function StepRail({
         </SortableContext>
         <SortableOverlay onHost={setOverlayHost} />
       </DndContext>
+      {/* The bottom strip has no room below its thumbnails, so there the button sits beside the count. */}
       {onContinueRecording && (
         <button
           type="button"
           onClick={() => onContinueRecording()}
           disabled={reorderDisabled}
-          className="mx-2 mt-1 mb-2 hidden h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border-2 border-border bg-card text-xs leading-none font-bold text-foreground outline-none transition-colors focus-ring hover:bg-secondary disabled:pointer-events-none disabled:opacity-40 lg:flex"
+          className="col-start-2 row-start-1 mt-1.5 mr-3.5 flex h-7 shrink-0 items-center justify-center gap-1.5 px-2.5 lg:mx-2 lg:mt-1 lg:mb-2 lg:h-9 lg:px-0 rounded-md border-2 border-border bg-card text-xs leading-none font-bold text-foreground outline-none transition-colors focus-ring hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
         >
           <Video className="size-3.5" />{t().editor.rail.continueRecording}
         </button>
