@@ -123,7 +123,10 @@ const RAIL_HANDLE = 'size-6 rounded-full border-2 border-border bg-card text-for
 /** An entry's screenshot with its step number, as the rail and a dragged entry's copy show it. */
 function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: number; active: boolean }) {
   return (
-    <div className="pointer-events-none relative z-[1] aspect-[16/9] w-full overflow-hidden rounded-sm border-2 border-border bg-secondary">
+    <div className={cn(
+      'pointer-events-none relative z-[1] aspect-[16/9] w-full overflow-hidden rounded-sm border-2 bg-secondary',
+      active ? 'border-selected' : 'border-border',
+    )}>
       <LazyRailPreview eager={active}>
         <EntryThumbnail
           entry={entry}
@@ -135,6 +138,14 @@ function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: nu
           className="size-full"
         />
       </LazyRailPreview>
+      {active && (
+        // Inside the border, which is itself the band's outer half: one edge, so no ink shows at the corners.
+        <span
+          aria-hidden="true"
+          data-howbeam-selected-step-outline
+          className="howbeam-selected-step-outline absolute inset-0 z-20 rounded-[calc(var(--radius-sm)-2px)]"
+        />
+      )}
       <span className={cn(
         'absolute top-1.5 left-1.5 z-30 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-border px-1 text-xs font-bold tabular-nums transition-colors',
         active ? 'bg-selected text-on-accent' : 'bg-card text-foreground',
@@ -314,13 +325,6 @@ export default function StepRail({
                         aria-current={active ? 'step' : undefined}
                         className="absolute inset-0 z-0 rounded-sm outline-none focus-ring"
                       />
-                      {active && (
-                        <span
-                          aria-hidden="true"
-                          data-howbeam-selected-step-outline
-                          className="howbeam-selected-step-outline pointer-events-none absolute inset-0 z-10 rounded-sm border-2"
-                        />
-                      )}
                       <RailThumbnail entry={entry} number={number} active={active} />
                       {/* Always rendered: a hover-only handle is invisible on touch; rests dimmed to not compete with the thumbnail. */}
                       <span className="absolute top-1.5 right-1.5 z-20 opacity-80 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
