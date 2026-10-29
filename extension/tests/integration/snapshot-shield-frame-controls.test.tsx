@@ -76,6 +76,7 @@ describe('snapshot shield frame controls', () => {
           mode: 'snapshot',
           phase: 'recording',
           itemCount: 0,
+          runItemCount: 0,
           error: null,
         },
       },

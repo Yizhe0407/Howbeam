@@ -40,7 +40,7 @@ interface UseProjectMutationsOptions {
   undoAction: UndoAction | null;
   /** The undo that can be used right now. */
   offeredUndo: () => UndoAction | null;
-  offerUndo: (pending: PendingUndoAction, projectId: string, superseded?: UndoAction | null) => void;
+  offerUndo: (pending: PendingUndoAction, projectId: string) => void;
   takeUndo: () => UndoAction | null;
   returnUndo: (taken: UndoAction | null) => void;
   finalizeUndo: (taken: UndoAction | null) => void;
@@ -118,7 +118,7 @@ export function useProjectMutations({
     atClick?.();
     await runOperation(t().editor.mutations[operation].pending, async () => {
       // Only one undo is offered at a time: this mutation either replaces the pending one
-      // (and says it is now final), makes it final without a replacement, or hands it back on failure.
+      // on the snackbar, makes it final without a replacement, or hands it back on failure.
       const takenUndo = takeUndo();
       setOperationError(null);
       try {
@@ -133,7 +133,7 @@ export function useProjectMutations({
           if (rethrow) throw mutationError;
           return;
         }
-        if (undo) offerUndo(undo, sessionId, takenUndo);
+        if (undo) offerUndo(undo, sessionId);
         else finalizeUndo(takenUndo);
       } finally {
         // On success the committed structure is already shown, so taking this back changes nothing on screen.

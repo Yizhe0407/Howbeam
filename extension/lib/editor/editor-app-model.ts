@@ -14,15 +14,11 @@ export interface UndoAction {
   restoreSelectionId?: string;
   /** Puts the Project back and returns the structure that commit left, to show at once. */
   restore: () => Promise<ProjectStructureMutationResult>;
-  /** Message of the earlier undo this one replaced. Only one undo is offered at
-   * a time, so that earlier action is now final and the snackbar says so. */
-  supersedes?: string;
 }
 
 /** What a mutation describes about its own undo. The editor controller owns the
- * sequence number, the project it belongs to and what it supersedes, so a
- * mutation never supplies any of them. */
-export type PendingUndoAction = Omit<UndoAction, 'id' | 'projectId' | 'supersedes'>;
+ * sequence number and the project it belongs to, so a mutation never supplies either. */
+export type PendingUndoAction = Omit<UndoAction, 'id' | 'projectId'>;
 
 type PreparedCaptureSource =
   /** `sourceUrl` is the background-resolved persisted URL. The elsewhere tab

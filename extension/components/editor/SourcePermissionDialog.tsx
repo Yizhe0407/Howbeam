@@ -107,7 +107,7 @@ export default function SourcePermissionDialog({
         </DialogHeader>
 
         {!pickerOpen && !sourceUnavailable && (
-          <p className="mt-4 rounded-md border-2 border-border bg-secondary px-3 py-2.5 font-mono text-xs break-all text-foreground">
+          <p className="mt-2 text-sm font-bold break-all text-foreground">
             {sourceOrigin}
           </p>
         )}

@@ -6,9 +6,8 @@ import { t } from '@/lib/shared/i18n';
 
 /**
  * Bookkeeping for the editor's single offered undo action. An undo is only valid against the exact
- * revision its mutation produced, so it ends as soon as the Project moves on — and the user is told
- * whenever one ends before its own window does: either on the snackbar of the undo that replaced it
- * (`supersedes`), or with a toast when nothing replaced it.
+ * revision its mutation produced, so it ends as soon as the Project moves on. A newer undo simply
+ * replaces it on the snackbar; when nothing replaces it, a toast says it is now final.
  */
 export function useProjectUndo({ project, operationActive, projectDeleted = false }: {
   project: Project | null;
@@ -49,16 +48,9 @@ export function useProjectUndo({ project, operationActive, projectDeleted = fals
     if (reason === 'moved') toast(t().editor.undo.nowFinal(pending.message));
   }, [project, invalidity, publish]);
 
-  /** Offers a new undo. `superseded` is the earlier undo this mutation took (see `takeUndo`),
-   * which is now final; the new snackbar says so unless the user had already closed it. */
-  const offerUndo = useCallback((pending: PendingUndoAction, projectId: string, superseded?: UndoAction | null) => {
-    const stillShown = superseded != null && displayed.current === superseded;
-    publish({
-      ...pending,
-      id: ++undoSequence.current,
-      projectId,
-      ...(stillShown ? { supersedes: superseded.message } : {}),
-    });
+  /** Offers a new undo, replacing any earlier one on the snackbar. */
+  const offerUndo = useCallback((pending: PendingUndoAction, projectId: string) => {
+    publish({ ...pending, id: ++undoSequence.current, projectId });
   }, [publish]);
 
   /** Takes the pending undo out of play while another mutation runs: it can no longer expire or

@@ -626,6 +626,19 @@ describe('project export', () => {
       expect(markdown).toContain('1. Search box');
     });
 
+    it('prints no marker list when no marker has a label yet', async () => {
+      const unlabelled = [markEntry('mark', 1, ['', ''])];
+      const html = await generateProjectHtml(unlabelled, { title: 'Marks' });
+      const markdown = await archiveMarkdown(unlabelled, { title: 'Marks' });
+      mocks.composite.mockImplementation(async () => new Blob([jpegOfSize(1_200, 700)], { type: 'image/jpeg' }));
+      const pdfText = (await readPdf(await generateProjectPdf(unlabelled, { title: 'Marks' }))).pages.flatMap((page) => page.lines).join('\n');
+
+      expect(html).not.toContain('<ol class="annotations"');
+      expect(html).not.toContain('（未填寫說明）');
+      expect(markdown).not.toContain('（未填寫說明）');
+      expect(pdfText).not.toContain('（未填寫說明）');
+    });
+
     it('still flags a step that has no description at all', async () => {
       const blank = [entry({ id: 'blank', description: '' })];
       const html = await generateProjectHtml(blank, { title: 'Blank' });

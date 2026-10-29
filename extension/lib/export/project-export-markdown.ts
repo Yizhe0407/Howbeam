@@ -15,6 +15,7 @@ import {
 } from './project-export-contract';
 import {
   entryHeading,
+  hasAnnotationText,
   renderEntryImages,
   type RenderedEntryContent,
   type RenderedMarkdownEntry,
@@ -78,7 +79,7 @@ function renderProjectMarkdown<T extends RenderedEntryContent>(
     if (heading) lines.push('', escapeProjectMarkdown(heading));
     const alt = textOrDefault(entry.description, t().export.imageAlt);
     lines.push('', `![${escapeProjectMarkdown(alt)}](${imageReference(entry)})`);
-    if (entry.annotations.length > 0) {
+    if (hasAnnotationText(entry.annotations)) {
       lines.push('');
       for (const [index, annotation] of entry.annotations.entries()) {
         lines.push(`${index + 1}. ${escapeProjectMarkdown(textOrDefault(annotation.description, t().export.missingDescription))}`);

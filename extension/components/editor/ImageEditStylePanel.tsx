@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowDownToLine, ArrowUpToLine, Copy, Minus, Plus, Trash2 } from 'lucide-react';
+import { Copy, Minus, Plus, Trash2 } from 'lucide-react';
 import {
   IMAGE_EDIT_FONT_SIZES,
   IMAGE_EDIT_MARKER_RADII,
@@ -33,8 +33,6 @@ interface CropProps {
 
 export interface ItemActions {
   onDuplicate?: () => void;
-  onBringToFront: () => void;
-  onSendToBack: () => void;
   onDelete: () => void;
 }
 
@@ -313,8 +311,8 @@ export function ImageEditCropPanel({ size, onClear }: CropProps) {
   );
 }
 
-/** Duplicate, layer order and delete for the selected item. */
-export function ImageEditItemActions({ onDuplicate, onBringToFront, onSendToBack, onDelete }: ItemActions) {
+/** Duplicate and delete for the selected item. */
+export function ImageEditItemActions({ onDuplicate, onDelete }: ItemActions) {
   const copy = t().editor.imageEdit;
   const action = (label: string, onClick: (() => void) | undefined, icon: ReactNode, danger = false) =>
     onClick && (
@@ -338,8 +336,6 @@ export function ImageEditItemActions({ onDuplicate, onBringToFront, onSendToBack
   return (
     <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5">
       {action(copy.duplicate, onDuplicate, <Copy className="size-4" />)}
-      {action(copy.bringToFront, onBringToFront, <ArrowUpToLine className="size-4" />)}
-      {action(copy.sendToBack, onSendToBack, <ArrowDownToLine className="size-4" />)}
       {action(copy.deleteSelected, onDelete, <Trash2 className="size-4" />, true)}
     </div>
   );

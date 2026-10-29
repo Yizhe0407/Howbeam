@@ -22,6 +22,7 @@ interface RowProps {
   index: number;
   /** The number shown on the badge, which follows a drag in progress. */
   position: number;
+  numbered: boolean;
   onDelete: (step: Step) => Promise<void>;
   deleteDisabled: boolean;
   dragHandle: ReactNode;
@@ -29,7 +30,15 @@ interface RowProps {
   overlay: HTMLElement | null;
 }
 
-function NumberBadge({ value }: { value: number }) {
+function NumberBadge({ value, numbered }: { value: number; numbered: boolean }) {
+  // Unnumbered markers are drawn without numbers, so the list shows plain dots to match.
+  if (!numbered) {
+    return (
+      <span className="flex size-6 shrink-0 items-center justify-center">
+        <span className="size-2.5 rounded-full bg-recording" />
+      </span>
+    );
+  }
   return (
     <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-recording text-xs font-bold text-recording-foreground">
       {value}
@@ -39,7 +48,7 @@ function NumberBadge({ value }: { value: number }) {
 
 /** One marker. Deleting it takes the row off the list at once; a failed delete
  * brings it back and is reported with the editor's other edits. */
-function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHandle, overlay }: RowProps) {
+function AnnotationRow({ step, index, position, numbered, onDelete, deleteDisabled, dragHandle, overlay }: RowProps) {
   const {
     description,
     setDescription,
@@ -63,7 +72,7 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
       {overlay && createPortal(
         <div className="flex size-full items-start rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
           <div className="flex min-w-0 flex-1 items-start gap-3">
-            <NumberBadge value={position} />
+            <NumberBadge value={position} numbered={numbered} />
             <span className={cn('min-w-0 flex-1 break-words border-2 border-transparent px-1.5 py-0.5 text-sm leading-relaxed', description ? 'text-foreground' : 'text-muted-foreground')}>
               {description || t().editor.annotations.placeholder}
             </span>
@@ -74,7 +83,7 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
         overlay,
       )}
       <div className="flex items-start gap-3">
-        <NumberBadge value={position} />
+        <NumberBadge value={position} numbered={numbered} />
         {/* Grows with its text so a long marker label is read in full, not cut at the field's edge. */}
         <textarea
           aria-label={t().editor.annotations.descriptionLabel(index + 1)}
@@ -201,6 +210,7 @@ export default function AnnotationList({
                       step={step}
                       index={index}
                       position={previewPositionOf(step.id)}
+                      numbered={numbered}
                       onDelete={onDelete}
                       deleteDisabled={editingDisabled}
                       dragHandle={handle}

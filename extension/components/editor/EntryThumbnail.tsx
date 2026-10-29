@@ -44,6 +44,8 @@ interface Props {
   fit?: 'cover' | 'contain';
   loading?: 'lazy' | 'eager';
   decoding?: 'async' | 'sync' | 'auto';
+  /** See MultiHighlightThumbnail's badges. */
+  badges?: boolean;
 }
 
 /**
@@ -53,7 +55,7 @@ interface Props {
  * shifted by the crop's origin, so the thumbnails below only ever see an
  * ordinary, uncropped image.
  */
-export default function EntryThumbnail({ entry, redactions, imageEdits, crop, reviewing = false, ...presentation }: Props) {
+export default function EntryThumbnail({ entry, redactions, imageEdits, crop, reviewing = false, badges, ...presentation }: Props) {
   const privacy = getEntryPrivacyState(entry);
   const privacyReviewRequired = privacy.reviewRequired && !reviewing;
   const owner = getEntryImageOwner(entry);
@@ -99,6 +101,7 @@ export default function EntryThumbnail({ entry, redactions, imageEdits, crop, re
       privacyReviewRequired={privacyReviewRequired}
       screenshotScale={screenshotScale}
       numbered={owner.numbered ?? false}
+      badges={badges}
       {...presentation}
     />
   );

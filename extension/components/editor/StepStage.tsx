@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bookmark, Pencil, Plus, PencilRuler, ZoomIn } from 'lucide-react';
+import { Bookmark, Plus, PencilRuler, ZoomIn } from 'lucide-react';
 import { entryId, getEntryPrivacyState, type Step, type StepEntry } from '@/lib/storage/models';
 import ImageEditWorkspace from './ImageEditWorkspace';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,8 @@ interface Props {
   onDelete: () => Promise<void>;
   onDeleteAnnotation: (step: Step) => Promise<void>;
   onZoom: () => void;
+  /** Called as the image editor opens over the stage. */
+  onEditImage?: () => void;
   onReorderAnnotations: (reordered: Step[]) => Promise<void>;
   onRecapture: () => Promise<void>;
   onSetNumbered: (entryId: string, next: boolean) => Promise<void>;
@@ -42,6 +44,7 @@ export default function StepStage({
   onDelete,
   onDeleteAnnotation,
   onZoom,
+  onEditImage,
   onReorderAnnotations,
   onRecapture,
   onSetNumbered,
@@ -63,9 +66,8 @@ export default function StepStage({
         onCommitError={(titleError) => {
           setStageError(reportError('[howbeam] failed to rename project', titleError, t().editor.stage.titleSaveFailed));
         }}
-        className="w-fit min-w-[8ch] max-w-[calc(100%-1.75rem)] rounded-md border-2 border-transparent px-2 py-1 text-[22px] leading-tight font-bold text-foreground transition-colors focus-ring hover:border-border-soft focus:border-border focus:bg-card [field-sizing:content]"
+        className="w-fit min-w-[8ch] max-w-full rounded-md border-2 border-transparent px-2 py-1 text-[22px] leading-tight font-bold text-foreground transition-colors focus-ring hover:border-border-soft focus:border-border focus:bg-card [field-sizing:content]"
       />
-      <Pencil className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
     </div>
   );
 
@@ -112,7 +114,10 @@ export default function StepStage({
         {/* Also the way out of a pending mask review: the editor is where masks are checked and confirmed. */}
         <button
           type="button"
-          onClick={() => setImageEditorOpen(true)}
+          onClick={() => {
+            onEditImage?.();
+            setImageEditorOpen(true);
+          }}
           disabled={editingDisabled}
           className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border-2 border-border bg-card px-3 text-xs font-bold text-foreground outline-none transition-colors focus-ring hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
         >

@@ -27,6 +27,7 @@ const state: RecordingToolbarState = {
   mode: 'steps',
   phase: 'recording',
   itemCount: 2,
+  runItemCount: 2,
   error: null,
 };
 
@@ -62,8 +63,8 @@ describe('recording toolbar', () => {
     const { rerender } = await mount(<RecordingToolbar state={{ ...state, projectTitle: '既有教學' }} onCommand={vi.fn()} />);
     expect(screen.queryByText('既有教學')).toBeNull();
     const handle = screen.getByRole('button', { name: /拖曳移動/ });
-    expect(handle.getAttribute('aria-label')).toContain('新步驟會加到「既有教學」');
-    expect(handle.getAttribute('data-tooltip')).toBe('新步驟會加到「既有教學」');
+    expect(handle.getAttribute('aria-label')).toContain('加到「既有教學」');
+    expect(handle.getAttribute('data-tooltip')).toBe('加到「既有教學」');
     rerender(<RecordingToolbar state={{ ...state, projectTitle: null }} onCommand={vi.fn()} />);
     expect(screen.getByRole('button', { name: /拖曳移動/ }).getAttribute('aria-label')).not.toContain('既有教學');
   });
@@ -220,6 +221,13 @@ describe('recording toolbar', () => {
 
     rerender(<RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0 }} onCommand={vi.fn()} />);
     expect(screen.getByRole('button', { name: /待擷取/ })).toBeTruthy();
+  });
+
+  it('keeps the whole run in its count after switching to Mark, even before the first capture', async () => {
+    await mount(<RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0, runItemCount: 2 }} onCommand={vi.fn()} />);
+    const status = screen.getByRole('button', { name: /待擷取/ });
+    expect(status.querySelector('.ft-dot')).toBeTruthy();
+    expect(status.querySelector('.ft-count-badge')?.textContent).toBe('2');
   });
 
   it('walks a snapshot through capture, next and finish with one main button per state', async () => {

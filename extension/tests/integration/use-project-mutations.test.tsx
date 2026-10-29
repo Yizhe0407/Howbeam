@@ -209,12 +209,12 @@ describe('undo', () => {
 describe('a pending undo when another mutation runs (single-level undo)', () => {
   const earlier = { id: 1, message: '已刪除步驟 3', projectId: 'g1', expectedRevision: 1, restore: vi.fn() };
 
-  it('hands the earlier undo to the new one, which says it is now final', async () => {
+  it('replaces the earlier undo with the new one', async () => {
     const { result, options } = renderMutations({ takeUndo: vi.fn(() => earlier) });
 
     await act(() => result.current.handleReorderEntries([...reorderedRows]));
 
-    expect(options.offerUndo).toHaveBeenCalledWith(expect.objectContaining({ expectedRevision: 2 }), 'g1', earlier);
+    expect(options.offerUndo).toHaveBeenCalledWith(expect.objectContaining({ expectedRevision: 2 }), 'g1');
     expect(options.finalizeUndo).not.toHaveBeenCalled();
     expect(options.returnUndo).not.toHaveBeenCalled();
   });

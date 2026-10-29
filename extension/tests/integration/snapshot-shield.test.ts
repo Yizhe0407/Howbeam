@@ -269,6 +269,7 @@ describe('createSnapshotShield', () => {
       mode: 'snapshot',
       phase: 'recording',
       itemCount: 0,
+      runItemCount: 0,
       error: null,
     });
 

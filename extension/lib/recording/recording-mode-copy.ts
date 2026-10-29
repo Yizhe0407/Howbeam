@@ -31,3 +31,10 @@ export function recordingModeCopy(mode: RecordingMode): RecordingModeCopy {
 export function recordingItemCountLabel(mode: RecordingMode, count: number): string {
   return recordingModeCopy(mode).itemCount(count);
 }
+
+/** A live run's count. Once it spans snapshots or modes, the current mode's unit no longer covers everything, so it falls back to a neutral one. */
+export function runItemCountLabel(state: { mode: RecordingMode; itemCount: number; runItemCount: number }): string {
+  return state.runItemCount === state.itemCount
+    ? recordingItemCountLabel(state.mode, state.runItemCount)
+    : t().common.itemCount(state.runItemCount);
+}

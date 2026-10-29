@@ -30,6 +30,12 @@ export function entryHeading(entry: RenderedEntryContent): string {
   return t().export.missingDescription;
 }
 
+/** Whether any marker has a label. Markers start unlabelled, and a list of
+ * nothing but placeholders says less than the numbered image already does. */
+export function hasAnnotationText(annotations: readonly { description: string }[]): boolean {
+  return annotations.some((annotation) => annotation.description.trim() !== '');
+}
+
 export type RenderedEntryImage = {
   content: RenderedEntryContent;
   imageBytes: Uint8Array;

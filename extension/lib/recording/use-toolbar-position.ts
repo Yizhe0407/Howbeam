@@ -144,6 +144,7 @@ export function useToolbarPosition({
     const deltaY = event.clientY - drag.startClientY;
     if (!drag.moved && Math.hypot(deltaX, deltaY) < 4) return;
     drag.moved = true;
+    floatingRef.current?.setAttribute('data-dragging', '');
     drag.position = clampToolbarPosition(
       { x: drag.startPosition.x + deltaX, y: drag.startPosition.y + deltaY },
       floatingSize(),
@@ -158,6 +159,7 @@ export function useToolbarPosition({
     if (!drag || drag.pointerId !== event.pointerId) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     dragRef.current = null;
+    floatingRef.current?.removeAttribute('data-dragging');
     if (!drag.moved) return;
     suppressNextClick.current = true;
     const nextCorner = snapToolbarCorner(drag.position, floatingSize(), viewport());

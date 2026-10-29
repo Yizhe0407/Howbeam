@@ -334,7 +334,8 @@ describe('handleClick in a steps run', () => {
 
 describe('handleClick in a snapshot run', () => {
   it('stores an annotation on the anchor without taking a screenshot', async () => {
-    harness.setState(snapshotRun());
+    // Steps recorded before the switch to Mark stay in the run's count.
+    harness.setState(snapshotRun({ itemCount: 2, runItemCount: 5 }));
     mocks.getStep.mockResolvedValue(anchor());
 
     await expect(handle()).resolves.toEqual({ ok: true });
@@ -345,10 +346,12 @@ describe('handleClick in a snapshot run', () => {
       bounds: click().rect,
       screenshotScale: 2,
       numbered: harness.getState().numbered,
+      // Left empty so the editor shows its placeholder instead of the same generic label on every marker.
+      description: '',
     }));
     expect(itemAt(mocks.storeStep.mock.calls, 0)[0]).not.toHaveProperty('screenshotBlob');
     expect(itemAt(mocks.storeStep.mock.calls, 0)[0]).not.toHaveProperty('order');
-    expect(harness.getState().itemCount).toBe(3);
+    expect(harness.getState()).toMatchObject({ itemCount: 3, runItemCount: 6 });
   });
 
   it('invalidates the snapshot when the viewport no longer matches the anchor', async () => {

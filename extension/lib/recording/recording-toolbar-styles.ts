@@ -205,6 +205,7 @@ export const recordingToolbarStyles = `
    * rather than the app's shadcn Tooltip because this toolbar renders in a
    * closed shadow root and a separate iframe, neither of which load Tailwind. */
   [data-tooltip] { position: relative; }
+  [data-dragging] [data-tooltip]::after, [data-dragging][data-tooltip]::after { display: none; }
   [data-tooltip]::after {
     content: attr(data-tooltip);
     position: absolute; left: 50%; bottom: calc(100% + 8px); z-index: 4;

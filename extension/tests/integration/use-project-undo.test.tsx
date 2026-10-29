@@ -22,16 +22,16 @@ function renderUndo(initial: Project | null = projectAt(2)) {
 beforeEach(() => toast.mockClear());
 
 describe('useProjectUndo', () => {
-  it('names the undo a newer one replaced, so the earlier deletion is never final silently', () => {
+  it('shows only the newest undo when one replaces another', () => {
     const { result, rerender } = renderUndo();
     act(() => result.current.offerUndo(pending('已刪除步驟 3', 2), 'p1'));
 
-    let taken = null as ReturnType<typeof result.current.takeUndo>;
-    act(() => { taken = result.current.takeUndo(); });
+    act(() => { result.current.takeUndo(); });
     rerender({ project: projectAt(3) });
-    act(() => result.current.offerUndo(pending('已刪除步驟 2', 3), 'p1', taken));
+    act(() => result.current.offerUndo(pending('已刪除步驟 2', 3), 'p1'));
 
-    expect(result.current.undoAction).toMatchObject({ message: '已刪除步驟 2', supersedes: '已刪除步驟 3' });
+    expect(result.current.undoAction).toEqual(expect.objectContaining({ message: '已刪除步驟 2' }));
+    expect(Object.keys(result.current.undoAction!)).not.toContain('supersedes');
     expect(toast).not.toHaveBeenCalled();
   });
 
@@ -39,15 +39,14 @@ describe('useProjectUndo', () => {
     const { result, rerender } = renderUndo();
     act(() => result.current.offerUndo(pending('已刪除步驟 3', 2), 'p1'));
 
-    let taken = null as ReturnType<typeof result.current.takeUndo>;
-    act(() => { taken = result.current.takeUndo(); });
+    act(() => { result.current.takeUndo(); });
     expect(result.current.undoAction).toMatchObject({ message: '已刪除步驟 3' });
 
     rerender({ project: projectAt(3) });
     expect(result.current.undoAction).toMatchObject({ message: '已刪除步驟 3' });
     expect(toast).not.toHaveBeenCalled();
 
-    act(() => result.current.offerUndo(pending('已刪除步驟 2', 3), 'p1', taken));
+    act(() => result.current.offerUndo(pending('已刪除步驟 2', 3), 'p1'));
     expect(result.current.undoAction).toMatchObject({ message: '已刪除步驟 2' });
   });
 
@@ -102,8 +101,6 @@ describe('useProjectUndo', () => {
     act(() => result.current.finalizeUndo(taken));
     expect(toast).not.toHaveBeenCalled();
 
-    act(() => result.current.offerUndo(pending('已刪除步驟 2', 3), 'p1', taken));
-    expect(result.current.undoAction?.supersedes).toBeUndefined();
   });
 
   it('offers for use only the undo in play, not one a running mutation took', () => {

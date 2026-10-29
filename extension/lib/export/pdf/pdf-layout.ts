@@ -275,7 +275,8 @@ export class PdfLayouter {
    * column runs across the full width between them (see `chooseAnnotationColumns`).
    */
   private addAnnotations(annotations: LayoutStep['annotations']): void {
-    if (annotations.length === 0) return;
+    // Same rule as hasAnnotationText in project-export-render: unlabelled markers get no list.
+    if (annotations.every((annotation) => annotation.description.trim() === '')) return;
     const style = PDF_TEXT.annotation;
     const texts = annotations.map((annotation) => annotation.description.trim() || this.options.labels.missingDescription);
     const labelFor = (index: number) => `${index + 1}. `;

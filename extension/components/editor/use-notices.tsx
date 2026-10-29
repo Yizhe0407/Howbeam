@@ -27,7 +27,6 @@ export function useUndoNotice({ action, pending, onUndo, onDismiss }: {
 
   const id = action?.id;
   const message = action?.message;
-  const note = action?.supersedes ? action.supersedes : undefined;
 
   useEffect(() => {
     if (id === undefined || message === undefined) {
@@ -37,14 +36,13 @@ export function useUndoNotice({ action, pending, onUndo, onDismiss }: {
     toast.custom(
       <UndoNotice
         message={message}
-        note={note}
         pending={pendingShown}
         onUndo={() => handlers.current.onUndo()}
         onDismiss={() => handlers.current.onDismiss()}
       />,
       { id: UNDO_NOTICE_ID, duration: Infinity },
     );
-  }, [id, message, note, pendingShown]);
+  }, [id, message, pendingShown]);
 
   useEffect(() => {
     if (id === undefined || pending) return;

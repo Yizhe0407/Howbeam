@@ -152,6 +152,18 @@ describe('step hover preview', () => {
     expect(preview.resolveTargetAt(40, 40)).toBe(text);
   });
 
+  it('drops the highlight while the toolbar is dragged, so it never reads as the next step', async () => {
+    await hover();
+    const overlayHost = createViewportOverlayHost('data-howbeam-recording-toolbar');
+    document.body.append(overlayHost);
+    const hiddenBefore = stepPreview.hidden;
+
+    preview.handlers.onPointerMove({ clientX: 500, clientY: 500, buttons: 1, target: overlayHost } as unknown as PointerEvent);
+    await nextFrame();
+
+    expect(stepPreview.hidden).toBeGreaterThan(hiddenBefore);
+  });
+
   it('ignores pointer moves while paused or cropping a region', async () => {
     await hover();
     const shownBefore = stepPreview.shown.length;

@@ -22,13 +22,14 @@ import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import ProjectSectionHeading from './ProjectSectionHeading';
 
 
-const SEAM_PILL = 'relative flex h-[18px] min-w-0 scale-90 items-center gap-1 whitespace-nowrap rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
+const SEAM_PILL = 'relative flex h-[18px] min-w-0 scale-90 items-center gap-1 whitespace-nowrap rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
 
 /**
  * The seam between two steps. It takes no room of its own: a zero-height row
  * whose hit area straddles the existing gap, so the list keeps its density.
- * Invisible until hovered or focused, then a dashed line with its actions
- * floats over the seam: record new steps here, or start a section here.
+ * Invisible until it, or the step above it, is hovered or focused; then a
+ * dashed line with its actions floats over the seam: record new steps here,
+ * or start a section here.
  */
 function SeamActions({
   afterStep,
@@ -48,7 +49,7 @@ function SeamActions({
       <div className="group/slot absolute inset-x-0 -top-1.5 flex h-4 items-center justify-center gap-1 px-2">
         <span
           aria-hidden="true"
-          className="absolute inset-x-2 top-1/2 origin-center scale-x-0 border-t-2 border-dashed border-border opacity-0 transition-[transform,opacity] duration-200 ease-out group-hover/slot:scale-x-100 group-hover/slot:opacity-100 group-focus-within/slot:scale-x-100 group-focus-within/slot:opacity-100 motion-reduce:transition-none"
+          className="absolute inset-x-2 top-1/2 origin-center scale-x-0 border-t-2 border-dashed border-border opacity-0 transition-[transform,opacity] duration-200 ease-out group-hover/slot:scale-x-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-x-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-x-100 group-focus-within/slot:opacity-100 motion-reduce:transition-none"
         />
         {onInsert && (
           <button
@@ -128,6 +129,7 @@ function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: nu
           entry={entry}
           alt=""
           fit="cover"
+          badges={false}
           loading="lazy"
           decoding="async"
           className="size-full"

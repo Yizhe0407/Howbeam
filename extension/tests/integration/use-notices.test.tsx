@@ -59,13 +59,6 @@ describe('useUndoNotice', () => {
     expect(onDismiss).toHaveBeenCalledOnce();
   });
 
-  it('says on the notice that the undo it replaced is now final', () => {
-    renderUndoNotice({ action: action({ supersedes: '已刪除步驟 3' }), pending: false });
-    render(shownNotice());
-
-    expect(screen.getByText('已刪除步驟 3')).toBeTruthy();
-  });
-
   it('auto-dismisses after five idle seconds', () => {
     const { onDismiss } = renderUndoNotice({ action: action(), pending: false });
 

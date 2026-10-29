@@ -2,6 +2,7 @@ import { Download } from 'lucide-react';
 import AppHeader from '../shared/AppHeader';
 import type { ActiveOperation } from '@/lib/storage/recording-state';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import ExportPopover, { type ExportPopoverProps } from './ExportPopover';
 import { t } from '@/lib/shared/i18n';
@@ -22,6 +23,8 @@ interface Props {
   publish?: Omit<ExportPopoverProps, 'trigger'>;
   /** Saves pending descriptions before the tab leaves; false keeps the editor. */
   beforeNavigate?: () => Promise<boolean>;
+  /** Brings the recorded tab forward; the editor is locked while a run is live, so the badge is the way back. */
+  onShowRecording?: () => void;
 }
 
 export default function EditorHeader({
@@ -33,6 +36,7 @@ export default function EditorHeader({
   projectActionsAvailable = true,
   publish,
   beforeNavigate,
+  onShowRecording,
 }: Props) {
   const unavailable = operationActive || editingDisabled;
   const exportButton = (
@@ -53,10 +57,17 @@ export default function EditorHeader({
       currentHeading={{ id: 'howbeam-editor-title' }}
       beforeNavigate={beforeNavigate}
       status={operationActive && (
-        <Badge variant="status" className="min-w-0">
-          <span className="size-1.5 rounded-full bg-recording animate-pulse" />
-          <span className="truncate">{operation === 'recapture' ? t().common.recapturing : t().common.recording}</span>
-        </Badge>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="status" className="min-w-0 hover:bg-danger-soft/70 disabled:pointer-events-none" asChild>
+              <button type="button" onClick={onShowRecording} disabled={!onShowRecording}>
+                <span className="size-1.5 rounded-full bg-recording animate-pulse" />
+                <span className="truncate">{operation === 'recapture' ? t().common.recapturing : t().common.recording}</span>
+              </button>
+            </Badge>
+          </TooltipTrigger>
+          {onShowRecording && <TooltipContent>{t().popup.returnToRecordingTab}</TooltipContent>}
+        </Tooltip>
       )}
       actions={projectActionsAvailable && (
         <>

@@ -88,7 +88,7 @@ test.describe('snapshot recording', () => {
     const anchor = steps.find((step) => step.bounds === null);
     const annotation = steps.find((step) => step.bounds !== null);
     expect(anchor).toMatchObject({ hasScreenshot: true, groupId: expect.any(String) });
-    expect(annotation).toMatchObject({ hasScreenshot: false, description: '標記頁面區域' });
+    expect(annotation).toMatchObject({ hasScreenshot: false, description: '' });
     expect(annotation?.groupId).toBe(anchor?.id);
 
     await stopRecording(popupPage);

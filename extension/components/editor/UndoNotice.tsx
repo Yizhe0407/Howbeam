@@ -4,21 +4,16 @@ import { t } from '@/lib/shared/i18n';
 
 interface Props {
   message: string;
-  /** A second, quieter line, e.g. that the undo this one replaced is now final. */
-  note?: string;
   pending?: boolean;
   onUndo: () => void;
   onDismiss: () => void;
 }
 
 /** The content of the undo notice; `useUndoNotice` puts it on the notice stack. */
-export default function UndoNotice({ message, note, pending = false, onUndo, onDismiss }: Props) {
+export default function UndoNotice({ message, pending = false, onUndo, onDismiss }: Props) {
   return (
     <div role="status" style={{ ...noticeStyle, maxWidth: 'calc(100vw - 2rem)', padding: '6px 6px 6px 14px' }} className="flex items-center gap-2">
-      <span className="flex min-w-0 flex-col">
-        <span className="truncate">{message}</span>
-        {note && <span className="truncate text-xs font-normal text-muted-foreground">{note}</span>}
-      </span>
+      <span className="min-w-0 truncate">{message}</span>
       <button
         type="button"
         onClick={onUndo}

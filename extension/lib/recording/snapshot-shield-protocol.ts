@@ -126,6 +126,7 @@ export interface SnapshotShieldToolbarStateMessage {
     mode: RecordingMode;
     phase: RecordingPhase;
     itemCount: number;
+    runItemCount: number;
     projectTitle?: string | null;
     error: string | null;
   };
@@ -342,6 +343,8 @@ export function isSnapshotShieldFrameMessage(value: unknown, token: string): val
       typeof state.phase === 'string' &&
       Number.isSafeInteger(state.itemCount) &&
       state.itemCount >= 0 &&
+      Number.isSafeInteger(state.runItemCount) &&
+      state.runItemCount >= 0 &&
       (state.projectTitle == null || (typeof state.projectTitle === 'string' && state.projectTitle.length <= 512)) &&
       (state.error === null || typeof state.error === 'string')
     );

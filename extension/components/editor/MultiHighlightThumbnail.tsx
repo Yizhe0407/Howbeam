@@ -33,6 +33,8 @@ interface Props {
   liveMasks?: boolean;
   screenshotScale: number;
   numbered: boolean;
+  /** False drops the marker numbers and their leader lines, for previews too small to read them. */
+  badges?: boolean;
   alt: string;
   className?: string;
   imgClassName?: string;
@@ -82,6 +84,7 @@ export default function MultiHighlightThumbnail({
   liveMasks = false,
   screenshotScale,
   numbered,
+  badges = true,
   alt,
   className,
   imgClassName,
@@ -237,7 +240,7 @@ export default function MultiHighlightThumbnail({
         <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden="true">
           {boxes.map(
             (box) =>
-              box.calloutLeft !== null && box.calloutTop !== null && (
+              badges && box.calloutLeft !== null && box.calloutTop !== null && (
                 <polyline
                   key={`leader-${box.order}`}
                   points={box.leaderPoints}
@@ -274,7 +277,7 @@ export default function MultiHighlightThumbnail({
                 />
               </div>
             ) : box.drawFrame && <HighlightFrame box={box} order={box.order} />}
-            {(numbered || box.calloutLeft) && (
+            {badges && (numbered || box.calloutLeft) && (
               <div
                 className="pointer-events-none absolute flex items-center justify-center rounded-full font-semibold shadow"
                 style={{

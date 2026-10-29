@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { cn } from '@/lib/shared/utils';
 
 interface Props {
@@ -88,6 +89,7 @@ export default function EditableTitle({
       >
         <span className="sr-only">{label} </span>
         <span>{committed}</span>
+        {!disabled && <Pencil className="ml-2 inline size-4 align-[-0.1em] text-muted-foreground" aria-hidden="true" />}
       </button>
     );
   }

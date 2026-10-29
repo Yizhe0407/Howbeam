@@ -17,6 +17,7 @@ export function createToolbarChannel(runId: string) {
       mode: state.mode,
       phase: state.phase,
       itemCount: state.itemCount,
+      runItemCount: state.runItemCount,
       projectTitle: state.targetProjectTitle,
       error: state.recoverableError?.message ?? state.error,
     };

@@ -384,8 +384,6 @@ export default function ImageEditWorkspace({
                 {canActOnSelection && (
                   <ImageEditItemActions
                     onDuplicate={duplicateSelection}
-                    onBringToFront={() => reorderSelection("front")}
-                    onSendToBack={() => reorderSelection("back")}
                     onDelete={() => deleteItem(selectedItem.id)}
                   />
                 )}

@@ -63,7 +63,7 @@ describe('snapshot shield click queue', () => {
       data: {
         type: SNAPSHOT_SHIELD_TOOLBAR_STATE,
         token: 'test-token',
-        state: { runId: 'run-1', mode: 'snapshot', phase, itemCount: 0, error: null },
+        state: { runId: 'run-1', mode: 'snapshot', phase, itemCount: 0, runItemCount: 0, error: null },
       },
     } as MessageEvent<SnapshotShieldFrameMessage>);
 

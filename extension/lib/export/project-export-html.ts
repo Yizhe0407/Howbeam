@@ -16,7 +16,7 @@ import {
 import { chooseAnnotationColumns } from './annotation-columns';
 import { encodeBase64Parts } from './base64';
 import { segmentText, wrapText } from './text-wrap';
-import { entryHeading, renderEntryImages, type RenderedEntryContent } from './project-export-render';
+import { entryHeading, hasAnnotationText, renderEntryImages, type RenderedEntryContent } from './project-export-render';
 import { documentLang, t } from '@/lib/shared/i18n';
 
 /**
@@ -102,7 +102,7 @@ function renderHtmlSectionHeading(section: ProjectSection): string {
 function renderHtmlEntry(entry: RenderedEntryContent, imageSrc: string): string {
   const heading = entryHeading(entry);
   const alt = escapeProjectHtml(textOrDefault(entry.description, t().export.imageAlt));
-  const annotations = entry.annotations.length > 0 ? renderHtmlAnnotations(entry) : '';
+  const annotations = hasAnnotationText(entry.annotations) ? renderHtmlAnnotations(entry) : '';
 
   return [
     `<section class="step">`,

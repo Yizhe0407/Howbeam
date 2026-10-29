@@ -311,7 +311,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
       bounds: message.rect,
       devicePixelRatio: anchor.devicePixelRatio,
       screenshotScale: anchor.screenshotScale,
-      description: generateActionDescription(message),
+      description: '',
       url: message.url,
       timestamp: message.timestamp,
       groupId: anchorId,
@@ -389,6 +389,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
       await updateRunState(message.runId, (currentState) => ({
         ...currentState,
         itemCount: currentState.itemCount + 1,
+        runItemCount: currentState.runItemCount + 1,
         lastCommittedCaptureId: message.captureId,
         error: null,
         recoverableError: null,

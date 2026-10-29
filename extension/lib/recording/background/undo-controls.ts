@@ -64,6 +64,7 @@ export function createUndoControls(deps: { control: ControlPlane; runState: RunS
         (current) => ({
           ...current,
           itemCount: nextCount,
+          runItemCount: Math.max(0, current.runItemCount - 1),
           error: null,
           recoverableError: null,
         }),
@@ -110,6 +111,7 @@ export function createUndoControls(deps: { control: ControlPlane; runState: RunS
         (current) => ({
           ...current,
           itemCount: current.itemCount + 1,
+          runItemCount: current.runItemCount + 1,
           error: null,
           recoverableError: null,
         }),

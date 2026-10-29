@@ -144,7 +144,14 @@ export function createStepHoverPreview(options: StepHoverPreviewOptions): StepHo
     // travelling across the page, and retargeting on the way would leave the
     // highlight on whatever the pointer last crossed rather than on the element
     // the user was aiming at.
-    if (event.target instanceof Element && isExtensionOverlay(event.target)) return;
+    if (event.target instanceof Element && isExtensionOverlay(event.target)) {
+      // A held button over our UI is the toolbar being dragged; a frozen highlight would read as the step about to be recorded.
+      if (event.buttons > 0) {
+        point = null;
+        suspend();
+      }
+      return;
+    }
     point = { clientX: event.clientX, clientY: event.clientY };
     schedule();
     armFallback();

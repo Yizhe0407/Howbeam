@@ -111,3 +111,13 @@ body::after {
   pointer-events: none;
   box-shadow: inset 0 0 0 4px #a8d8ff, inset 0 0 0 5px rgb(28 25 23 / 0.35);
 }
+
+.is-pulsing {
+  animation: snapshot-pulse 0.5s ease-out 2;
+}
+
+@keyframes snapshot-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}

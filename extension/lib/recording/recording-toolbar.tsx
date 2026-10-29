@@ -45,6 +45,7 @@ export interface RecordingToolbarState {
   mode: RecordingMode;
   phase: RecordingPhase;
   itemCount: number;
+  runItemCount: number;
   /** Existing Project the run appends to; null when recording into a new one. */
   projectTitle?: string | null;
   error: string | null;
@@ -228,8 +229,8 @@ export default function RecordingToolbar({
     : state.mode === 'snapshot'
       ? t().toolbar.statusAnnotating(state.itemCount)
       : paused
-        ? t().toolbar.statusPaused(state.itemCount)
-        : t().toolbar.statusRecording(state.itemCount);
+        ? t().toolbar.statusPaused(state.runItemCount)
+        : t().toolbar.statusRecording(state.runItemCount);
   const hint = regionCaptureActive
     ? null
     : preparingNext
@@ -349,7 +350,7 @@ export default function RecordingToolbar({
               }}
             >
               <span className="ft-dot" aria-hidden="true" />
-              <span className="ft-count-badge" style={{ minWidth: '22px', height: '22px', fontSize: '12px' }}>{state.itemCount}</span>
+              <span className="ft-count-badge" style={{ minWidth: '22px', height: '22px', fontSize: '12px' }}>{state.runItemCount}</span>
               <span className="ft-collapsed-expand">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
               </span>
@@ -417,12 +418,8 @@ export default function RecordingToolbar({
                     onPointerCancel={finishPositionDrag}
                   >
                     <GripVertical className="ft-grip" aria-hidden="true" />
-                    {!preparingNext && (
-                      <>
-                        <span className="ft-dot" data-tone={paused ? 'muted' : undefined} aria-hidden="true" />
-                        <span className="ft-count-badge" data-tone={paused ? 'muted' : undefined}>{state.itemCount}</span>
-                      </>
-                    )}
+                    <span className="ft-dot" data-tone={paused ? 'muted' : undefined} aria-hidden="true" />
+                    <span className="ft-count-badge" data-tone={paused ? 'muted' : undefined}>{state.runItemCount}</span>
                   </button>
 
                   <div className="ft-mode-switch" role="radiogroup" aria-label={t().common.recordingMode}>

@@ -17,7 +17,7 @@ vi.mock('@/lib/recording/recording-toolbar', () => ({ default: () => null }));
 
 const { mountRecordingToolbar, TOOLBAR_NOTICE_MS } = await import('@/lib/recording/recording-toolbar-host');
 
-const state = { runId: 'run-1', mode: 'steps' as const, phase: 'recording' as const, itemCount: 0, error: null };
+const state = { runId: 'run-1', mode: 'steps' as const, phase: 'recording' as const, itemCount: 0, runItemCount: 0, error: null };
 const options = { onCommand: vi.fn(async () => ({ ok: true as const })) };
 const lastProps = () => (mocks.render.mock.calls.at(-1)?.[0] as ReactElement<Record<string, unknown>> | null)?.props;
 

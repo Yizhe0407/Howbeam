@@ -30,7 +30,8 @@ import { useProjectUndo } from '@/components/editor/use-project-undo';
 import { useProjectMutations } from '@/components/editor/use-project-mutations';
 import { exportImagesAsZip } from '@/lib/export/export-images';
 import { throwIfAborted } from '@/lib/shared/abort';
-import { getEditorSessionIdFromUrl } from '@/lib/runtime/navigation';
+import { browser } from 'wxt/browser';
+import { focusTab, getEditorSessionIdFromUrl } from '@/lib/runtime/navigation';
 import { useEditorEntryWorkspace } from '@/lib/editor/use-editor-entry-workspace';
 import { useEditorHandoff } from '@/lib/editor/use-editor-handoff';
 import { useExtensionPageRegistration } from '@/lib/runtime/use-extension-page-registration';
@@ -46,6 +47,15 @@ import type {
   FocusStepRecaptureSourceResult,
 } from '@/lib/runtime/messages';
 import { reportError } from '@/components/shared/report-error';
+
+async function showRecordedTab(tabId: number): Promise<void> {
+  try {
+    const tab = await browser.tabs.get(tabId);
+    await focusTab(tabId, tab.windowId);
+  } catch (error) {
+    console.error('[howbeam] failed to show the recording tab', error);
+  }
+}
 
 function EditorApp() {
   const viewedSessionId = useMemo(() => getEditorSessionIdFromUrl(window.location.href), []);
@@ -375,6 +385,7 @@ function EditorApp() {
         projectTitle={project?.title ?? null}
         projectActionsAvailable={projectLoadState !== 'missing' && !projectDeleted}
         beforeNavigate={leaveEditor}
+        onShowRecording={ordinaryRecordingActive && recording.tabId != null ? () => void showRecordedTab(recording.tabId!) : undefined}
         publish={{
           runExport,
           getProjectEntries: publicationEntries,
@@ -513,7 +524,12 @@ function EditorApp() {
                 onTitleChange={(title) => updateProjectMetadata({ title })}
                 onDelete={deleteEntry}
                 onDeleteAnnotation={handleDeleteAnnotation}
-                onZoom={() => setZoomOpen(true)}
+                // The undo notice would sit on top of the full-screen views; a pending undo ends there.
+                onZoom={() => {
+                  clearUndo();
+                  setZoomOpen(true);
+                }}
+                onEditImage={clearUndo}
                 onReorderAnnotations={(reordered) => handleReorderAnnotations(entryId(selectedEntry), reordered)}
                 onRecapture={handleRecapture}
                 onSetNumbered={setSelectedEntryNumbered}

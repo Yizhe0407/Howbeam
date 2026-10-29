@@ -67,4 +67,24 @@ describe('record controls runtime responses', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('無法連接錄製功能');
     expect(onStarted).not.toHaveBeenCalled();
   });
+
+  it('resumes a paused run from its status, and shows the whole run\'s count', async () => {
+    mocks.sendMessage.mockResolvedValue({ ok: true });
+    const paused = makeRecordingState({
+      operation: 'recording',
+      isRecording: true,
+      phase: 'paused',
+      mode: 'snapshot',
+      sessionId: 'project-a',
+      runId: 'run-1',
+      tabId: 7,
+      itemCount: 1,
+      runItemCount: 4,
+    });
+    render(<RecordControls recording={paused} onStarted={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '繼續錄製：已暫停 · 4 項' }));
+
+    await waitFor(() => expect(mocks.sendMessage).toHaveBeenCalledWith({ type: 'RESUME_RECORDING', runId: 'run-1' }));
+  });
 });

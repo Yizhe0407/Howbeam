@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
-import { Camera, Check, ExternalLink, ListOrdered, Loader2, TriangleAlert } from 'lucide-react';
+import { Camera, Check, ExternalLink, ListOrdered, Loader2, Play, TriangleAlert } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import InlineAlert from '@/components/shared/InlineAlert';
 import OpenEditorButton from '@/components/popup/OpenEditorButton';
@@ -10,7 +10,7 @@ import { cn } from '@/lib/shared/utils';
 import type { RecordingMode, RecordingState } from '@/lib/storage/recording-state';
 import { startRecordingIntoProject } from '@/lib/project/project-actions';
 import {
-  recordingItemCountLabel,
+  runItemCountLabel,
   recordingModeCopy,
 } from '@/lib/recording/recording-mode-copy';
 import { needsEditorRecovery } from '@/lib/recording/recording-recovery';
@@ -210,6 +210,21 @@ export default function RecordControls({
     }
   }
 
+  async function resumeRecording() {
+    if (!recording.runId) return;
+    setControlError(null);
+    try {
+      const result = requireRuntimeMessageResult<RecordingControlResult>(
+        await browser.runtime.sendMessage({ type: 'RESUME_RECORDING', runId: recording.runId }),
+        isRecordingControlResult,
+        t().runtime.recordingChannelLost,
+      );
+      if (!result.ok) setControlError(result.error);
+    } catch (error) {
+      setControlError(reportError('[howbeam] failed to resume recording', error, t().toolbar.actionFailed));
+    }
+  }
+
   async function finishRecording() {
     if (finishing || !recording.runId) return;
     setFinishing(true);
@@ -267,14 +282,31 @@ export default function RecordControls({
       <div className={cn('flex flex-col gap-4', className)}>
         {controlError && <InlineAlert>{controlError}</InlineAlert>}
         {runError && runError !== controlError && <InlineAlert>{runError}</InlineAlert>}
-        <div className="rounded-md border-2 border-border bg-surface-raised px-3.5 py-3">
-          <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-            <span className={cn('size-2 rounded-full', recording.phase === 'paused' ? 'bg-muted-foreground' : 'bg-recording')} />
-            {recording.phase === 'paused' ? t().common.paused : t().common.recording}
+        {recording.phase === 'paused' ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => void resumeRecording()}
+                aria-label={`${t().toolbar.resume}：${t().common.paused} · ${runItemCountLabel(recording)}`}
+                className="flex items-center gap-2 rounded-md border-2 border-border bg-surface-raised px-3.5 py-3 text-sm font-bold text-foreground outline-none transition-colors focus-ring hover:bg-secondary"
+              >
+                <Play className="size-3.5 fill-current" aria-hidden="true" />
+                {t().common.paused}
+                {' · '}
+                {runItemCountLabel(recording)}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t().toolbar.resume}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <div className="flex items-center gap-2 rounded-md border-2 border-border bg-surface-raised px-3.5 py-3 text-sm font-bold text-foreground">
+            <span className="size-2 rounded-full bg-recording" />
+            {t().common.recording}
             {' · '}
-            {recordingItemCountLabel(recording.mode, recording.itemCount)}
+            {runItemCountLabel(recording)}
           </div>
-        </div>
+        )}
         <div className="flex flex-col gap-2">
           <button
             type="button"

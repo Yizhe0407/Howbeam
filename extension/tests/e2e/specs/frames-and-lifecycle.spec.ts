@@ -65,10 +65,9 @@ test.describe('frames and recording lifecycle', () => {
     await clickSnapshotTarget(appPage, nestedPoint);
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(3);
 
-    expect((await readSteps(popupPage)).map((step) => step.description).filter(Boolean)).toEqual([
-      '標記頁面區域',
-      '標記頁面區域',
-    ]);
+    // Markers start unlabelled; the editor shows a placeholder until the user writes one.
+    const annotations = (await readSteps(popupPage)).filter((step) => step.bounds !== null);
+    expect(annotations.map((step) => step.description)).toEqual(['', '']);
     await stopRecording(popupPage);
   });
 
@@ -288,7 +287,7 @@ test.describe('frames and recording lifecycle', () => {
 
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
     const annotation = (await readSteps(popupPage)).find((step) => step.bounds !== null);
-    expect(annotation?.description).toBe('標記頁面區域');
+    expect(annotation?.description).toBe('');
     expect(annotation?.bounds?.width).toBeGreaterThan(500);
     await stopRecording(popupPage);
   });

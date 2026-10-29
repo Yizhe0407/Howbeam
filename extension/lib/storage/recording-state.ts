@@ -86,6 +86,8 @@ export interface RecordingState {
   recoverableError: RecoverableRecordingError | null;
   mode: RecordingMode;
   itemCount: number;
+  /** Everything this run recorded, across modes and snapshots. itemCount resets per snapshot and on a mode switch because it numbers the markers; this one is what the toolbar and popup show. */
+  runItemCount: number;
   /** Lets a page whose capture answer was lost check whether it was committed. */
   lastCommittedCaptureId: string | null;
   /** Every run starts numbered; the editor turns it off per snapshot. Captures
@@ -133,6 +135,7 @@ const DEFAULT_STATE: RecordingState = {
   recoverableError: null,
   mode: 'steps',
   itemCount: 0,
+  runItemCount: 0,
   lastCommittedCaptureId: null,
   numbered: true,
   groupAnchorId: null,
