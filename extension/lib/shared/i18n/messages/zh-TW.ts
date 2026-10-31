@@ -380,7 +380,6 @@ export const zhTW = {
       addAt: (step: number) => `從第 ${step} 步開始新章節`,
       create: '建立',
       rename: '重新命名章節',
-      renameHint: '名稱會顯示在步驟列表與匯出的文件中。',
     },
 
     lightbox: {
@@ -459,7 +458,6 @@ export const zhTW = {
       insertNote: (step: number) => `新步驟會插在第 ${step} 步後面。`,
       sourceUnavailableBody: (reason: string) => `${reason}你可以改在目前開啟的網頁分頁繼續錄製。`,
       accessBody: '只會要求這個網站的存取權。',
-      appendNote: '新步驟會接在最後。',
       continueElsewhere: '改在其他頁面接續',
       authorizing: '正在授權…',
       allowAndStart: '允許並開始',

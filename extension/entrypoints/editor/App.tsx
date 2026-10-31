@@ -364,6 +364,11 @@ function EditorApp() {
     onUndo: () => void handleUndo(),
     onDismiss: clearUndo,
   });
+  // The notice stack sits above modals, so a pending undo ends when one opens, as it does for the full-screen views.
+  const modalOpen = sectionDialog !== null || preparedPermission !== null || recaptureActive;
+  useEffect(() => {
+    if (modalOpen) clearUndo();
+  }, [modalOpen, clearUndo]);
 
   return (
     // The editor's layout numbers, read by the stage, the step rail and the notices alike: the content gutter,

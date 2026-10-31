@@ -381,7 +381,6 @@ export const en: Messages = {
       addAt: (step: number) => `Start a section at step ${step}`,
       create: 'Create',
       rename: 'Rename section',
-      renameHint: 'The name appears in the step list and in exported documents.',
     },
 
     lightbox: {
@@ -461,7 +460,6 @@ export const en: Messages = {
       insertNote: (step: number) => `New steps are inserted after step ${step}.`,
       sourceUnavailableBody: (reason: string) => `${reason} You can continue recording in a tab that’s open now.`,
       accessBody: 'Howbeam only asks for access to this site.',
-      appendNote: 'New steps are added at the end.',
       continueElsewhere: 'Continue on another page',
       authorizing: 'Authorizing…',
       allowAndStart: 'Allow and start',

@@ -332,7 +332,7 @@ describe('Editor App structure wiring', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('button', { name: '允許並開始' })).toBeTruthy();
     expect(within(dialog).queryByRole('button', { name: '改在其他頁面接續' })).toBeNull();
-    expect(dialog.textContent).not.toContain('新步驟會接在最後。');
+    expect(dialog.textContent).not.toContain('新步驟會插在');
   });
 
   it('shows the safe missing-id error and never falls back to a global Project without a sessionId URL', async () => {
@@ -412,13 +412,13 @@ describe('Editor continuation on another page (改在其他頁面接續)', () =>
     return await screen.findByRole('dialog');
   }
 
-  it('offers the secondary elsewhere path with the append hint next to the source-locked default', async () => {
+  it('offers the secondary elsewhere path next to the source-locked default', async () => {
     mockContinuationPreflight();
     const dialog = await openContinuationDialog();
 
     expect(dialog.textContent).toContain('接續錄製前需要存取來源網站');
     expect(dialog.textContent).toContain('https://example.test');
-    expect(dialog.textContent).toContain('新步驟會接在最後。');
+    expect(dialog.textContent).not.toContain('新步驟會插在');
     expect(within(dialog).getByRole('button', { name: '允許並開始' })).toBeTruthy();
     expect(within(dialog).getByRole('button', { name: '改在其他頁面接續' })).toBeTruthy();
   });

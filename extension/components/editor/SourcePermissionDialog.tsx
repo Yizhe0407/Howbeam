@@ -1,4 +1,4 @@
-import { ExternalLink, Loader2, ShieldCheck, Video, X } from 'lucide-react';
+import { ExternalLink, Loader2, ShieldCheck, Video } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -145,9 +145,9 @@ export default function SourcePermissionDialog({
           />
         )}
 
-        {onContinueElsewhere && (
+        {onContinueElsewhere && insertAfterStep !== undefined && (
           <p className="mt-3 text-xs leading-5 text-muted-foreground">
-            {insertAfterStep === undefined ? t().editor.permission.appendNote : t().editor.permission.insertNote(insertAfterStep)}
+            {t().editor.permission.insertNote(insertAfterStep)}
           </p>
         )}
 
@@ -157,7 +157,7 @@ export default function SourcePermissionDialog({
 
         <DialogFooter className="mt-6">
           <Button type="button" variant="outline" disabled={anyShown} onClick={() => !anyPending && onCancel()}>
-            <X />{t().common.cancel}
+            {t().common.cancel}
           </Button>
           {pickerOpen ? (
             <Button

@@ -515,7 +515,6 @@ test.describe('editor workflows', () => {
     await editor.getByRole('button', { name: '接續錄製', exact: true }).click();
     const dialog = editor.getByRole('dialog');
     await expect(dialog).toContainText('接續錄製前需要存取來源網站');
-    await expect(dialog).toContainText('新步驟會接在最後。');
     await dialog.getByRole('button', { name: '改在其他頁面接續' }).click();
 
     // The elsewhere path shows an explicit tab picker; navigated.html differs from the project's last-step URL, so it is preselected.
