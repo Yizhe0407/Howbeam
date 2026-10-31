@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -54,7 +54,7 @@ type DownloadPublicationAction = Exclude<PublicationAction, 'images'>;
 
 const FORMATS: readonly PublicationAction[] = ['pdf', 'html', 'markdown', 'images'];
 
-/** Each format's title, label, description and outcome copy, read at render
+/** Each format's title, label and outcome copy, read at render
  * time so it follows the active locale. */
 function publicationCopy(action: PublicationAction) {
   return t().editor.publish[action];
@@ -119,7 +119,6 @@ export default function ExportPopover(props: ExportPopoverProps) {
   const activeController = useRef<AbortController | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const anchor = useHeaderAnchor(triggerRef);
-  const descriptionId = useId();
   const scrollbar = useAutoHideScrollbar<HTMLDivElement>();
   const busy = pendingAction !== null;
   // `busy` guards the export; only how it looks waits until the export proves slow.
@@ -263,7 +262,6 @@ export default function ExportPopover(props: ExportPopoverProps) {
         <div {...scrollbar} className="app-scrollbar-autohide min-h-0 flex-1 overflow-y-auto px-1.5 py-4">
           <RadioGroup
             aria-label={t().editor.publish.format}
-            aria-describedby={descriptionId}
             value={format}
             onValueChange={(next) => setFormat(next as PublicationAction)}
             disabled={busyShown}
@@ -280,7 +278,6 @@ export default function ExportPopover(props: ExportPopoverProps) {
               </RadioGroupItem>
             ))}
           </RadioGroup>
-          <p id={descriptionId} className="mt-3 break-words text-[13px] text-muted-foreground">{copy.description}</p>
 
           {format === 'pdf' && <PdfExportOptions settings={pdfSettings} onChange={setPdfSettings} disabled={busyShown} />}
         </div>
