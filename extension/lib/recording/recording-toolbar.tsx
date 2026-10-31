@@ -16,7 +16,7 @@ import {
   Pause,
   Play,
   Plus,
-  SquareDashed,
+  SquareDashedMousePointer,
   Trash2,
   TriangleAlert,
   Undo2,
@@ -500,7 +500,7 @@ export default function RecordingToolbar({
                           disabled={busy || paused || regionCaptureActive || state.phase !== 'recording'}
                           onClick={() => onStartRegionCapture()}
                         >
-                          <SquareDashed size={17} />
+                          <SquareDashedMousePointer size={17} />
                         </button>
                       )}
                     </div>

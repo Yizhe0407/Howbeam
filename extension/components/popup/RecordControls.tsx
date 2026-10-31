@@ -292,7 +292,7 @@ export default function RecordControls({
             {t().toolbar.resume}
           </button>
         ) : (
-          <div className="flex items-center gap-2 rounded-md border-2 border-border bg-surface-raised px-3.5 py-3 text-sm font-bold text-foreground">
+          <div className="flex items-center justify-center gap-2 py-1 text-sm font-bold text-foreground">
             <span className="size-2 rounded-full bg-recording" />
             {t().common.recording}
             {' · '}
