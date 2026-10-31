@@ -411,7 +411,7 @@ export default function RecordingToolbar({
                     data-howbeam-toolbar-position=""
                     aria-label={t().toolbar.moveLabel(statusLabel)
                       + (state.projectTitle ? `; ${t().toolbar.appendingTo(state.projectTitle)}` : '')}
-                    data-tooltip={state.projectTitle ? t().toolbar.appendingTo(state.projectTitle) : t().toolbar.moveTooltip}
+                    data-tooltip={state.projectTitle ? `${statusLabel}；${t().toolbar.appendingTo(state.projectTitle)}` : t().toolbar.moveLabel(statusLabel)}
                     onPointerDown={handlePositionPointerDown}
                     onPointerMove={handlePositionPointerMove}
                     onPointerUp={finishPositionDrag}
@@ -429,6 +429,7 @@ export default function RecordingToolbar({
                         type="button"
                         role="radio"
                         aria-checked={state.mode === option}
+                        data-tooltip={recordingModeCopy(option).description}
                         disabled={busy || regionCaptureActive}
                         onClick={() => handleSwitchMode(option)}
                       >

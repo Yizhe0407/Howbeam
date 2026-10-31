@@ -566,7 +566,6 @@ export const zhTW = {
     rebuilding: '重建中',
     keepAndRebuild: '保留並重建',
     moveLabel: (status: string) => `${status}；拖曳移動`,
-    moveTooltip: '拖曳移動錄製控制',
     regionCapturing: '區域擷取中',
     undo: '復原上一個',
     undoTooltip: '復原上一步',

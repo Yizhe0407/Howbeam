@@ -568,7 +568,6 @@ export const en: Messages = {
     rebuilding: 'Rebuilding',
     keepAndRebuild: 'Keep and rebuild',
     moveLabel: (status: string) => `${status}; drag to move`,
-    moveTooltip: 'Drag to move the recording controls',
     regionCapturing: 'Capturing region',
     undo: 'Undo last',
     undoTooltip: 'Undo last step',

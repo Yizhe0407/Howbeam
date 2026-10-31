@@ -64,9 +64,16 @@ describe('recording toolbar', () => {
     expect(screen.queryByText('既有教學')).toBeNull();
     const handle = screen.getByRole('button', { name: /拖曳移動/ });
     expect(handle.getAttribute('aria-label')).toContain('加到「既有教學」');
-    expect(handle.getAttribute('data-tooltip')).toBe('加到「既有教學」');
+    expect(handle.getAttribute('data-tooltip')).toBe('錄製中，2 步；加到「既有教學」');
     rerender(<RecordingToolbar state={{ ...state, projectTitle: null }} onCommand={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /拖曳移動/ }).getAttribute('aria-label')).not.toContain('既有教學');
+    const plain = screen.getByRole('button', { name: /拖曳移動/ });
+    expect(plain.getAttribute('aria-label')).not.toContain('既有教學');
+    expect(plain.getAttribute('data-tooltip')).toBe('錄製中，2 步；拖曳移動');
+  });
+
+  it('describes each mode on its switch button', async () => {
+    await mount(<RecordingToolbar state={state} onCommand={vi.fn()} />);
+    expect(screen.getByRole('radio', { name: '標註' }).getAttribute('data-tooltip')).toBe('鎖定目前畫面，在同一張截圖上加入多個標註點。');
   });
 
   it('offers the position control as drag-only: arrow keys do not move it', async () => {
