@@ -283,22 +283,14 @@ export default function RecordControls({
         {controlError && <InlineAlert>{controlError}</InlineAlert>}
         {runError && runError !== controlError && <InlineAlert>{runError}</InlineAlert>}
         {recording.phase === 'paused' ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => void resumeRecording()}
-                aria-label={`${t().toolbar.resume}：${t().common.paused} · ${runItemCountLabel(recording)}`}
-                className="flex items-center gap-2 rounded-md border-2 border-border bg-surface-raised px-3.5 py-3 text-sm font-bold text-foreground outline-none transition-colors focus-ring hover:bg-secondary"
-              >
-                <Play className="size-3.5 fill-current" aria-hidden="true" />
-                {t().common.paused}
-                {' · '}
-                {runItemCountLabel(recording)}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t().toolbar.resume}</TooltipContent>
-          </Tooltip>
+          <button
+            type="button"
+            onClick={() => void resumeRecording()}
+            className={cn(buttonVariants({ variant: 'secondary' }), 'h-12 w-full')}
+          >
+            <Play className="size-3.5 fill-current" aria-hidden="true" />
+            {t().toolbar.resume}
+          </button>
         ) : (
           <div className="flex items-center gap-2 rounded-md border-2 border-border bg-surface-raised px-3.5 py-3 text-sm font-bold text-foreground">
             <span className="size-2 rounded-full bg-recording" />

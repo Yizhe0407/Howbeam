@@ -90,6 +90,7 @@ const project = {
 beforeEach(() => {
   vi.clearAllMocks();
   database.getProjectSummaries.mockResolvedValue([project]);
+  database.getSteps.mockResolvedValue([]);
   storage.getRecordingState.mockResolvedValue({ operation: null, isRecording: false });
   database.deleteProjectPermanently.mockResolvedValue(undefined);
   projectActions.clearSelectedProject.mockResolvedValue(undefined);

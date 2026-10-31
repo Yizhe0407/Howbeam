@@ -34,6 +34,7 @@ import { PROJECT_ARCHIVE_LIMITS, ProjectArchiveError } from '@/lib/export/projec
 import { projectExportFilename } from '@/lib/export/project-export-contract';
 import { downloadBlobViaBrowser } from '@/lib/export/download-utils';
 import { useExtensionPageRegistration } from '@/lib/runtime/use-extension-page-registration';
+import ProjectCover from './ProjectCover';
 
 /** Derives the .howbeam archive name from the same stem the publication
  * exporters use; strips the extension the (unexported) stem helper's facade appends. */
@@ -268,6 +269,16 @@ export default function App() {
                   key={project.id}
                   className="group flex flex-col overflow-hidden rounded-md border-2 border-border bg-card transition-transform duration-200 hover:-translate-y-0.5"
                 >
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    onClick={() => void run(project.id, () => openSelectedProjectInEditor(project.id, { inPlace: true }))}
+                    disabled={actionsLocked}
+                    className="cursor-pointer disabled:cursor-default"
+                  >
+                    <ProjectCover projectId={project.id} revision={project.updatedAt} />
+                  </button>
                   <div className="flex flex-1 flex-col gap-2.5 p-4">
                     <button
                       type="button"

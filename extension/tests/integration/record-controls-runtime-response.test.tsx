@@ -83,7 +83,7 @@ describe('record controls runtime responses', () => {
     });
     render(<RecordControls recording={paused} onStarted={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: '繼續錄製：已暫停 · 4 項' }));
+    fireEvent.click(screen.getByRole('button', { name: '繼續錄製' }));
 
     await waitFor(() => expect(mocks.sendMessage).toHaveBeenCalledWith({ type: 'RESUME_RECORDING', runId: 'run-1' }));
   });

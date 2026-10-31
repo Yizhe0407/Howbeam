@@ -56,9 +56,10 @@ body.has-preview-target {
   display: none;
 }
 
+/* Dashed so it never reads as a mark that is already placed. */
 .snapshot-box--preview {
-  border: 4px solid rgb(255 71 71 / 0.96);
-  background: rgb(255 71 71 / 0.09);
+  border: 3px dashed rgb(255 71 71 / 0.96);
+  background: none;
   box-shadow: none;
 }
 
