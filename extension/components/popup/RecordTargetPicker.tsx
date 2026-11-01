@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getProjectSummaries } from '@/lib/storage/project-repository';
 import { subscribeProjectsChanged } from '@/lib/storage/change-notifier';
@@ -79,7 +79,7 @@ export default function RecordTargetPicker({ value, onChange, disabled = false, 
           className,
         )}
       >
-        <FolderOpen aria-hidden="true" />
+        {selected ? <FolderOpen aria-hidden="true" /> : <Plus aria-hidden="true" />}
         {/* Its own one-line content: the options wrap long titles, which a one-line trigger cannot. */}
         <SelectValue>
           {selected ? (

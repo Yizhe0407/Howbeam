@@ -89,6 +89,7 @@ function SectionTitleFields({ request, onClose, onSubmit }: Props & { request: S
         <Input
           type="text"
           aria-label={copy.nameLabel}
+          placeholder={copy.nameLabel}
           className="mt-5"
           autoFocus
           value={draft}
