@@ -338,57 +338,53 @@ export default function ImageEditWorkspace({
         </DialogDescription>
 
         <header className="flex shrink-0 flex-col gap-2 border-b-2 border-border-soft px-4 py-3 sm:px-6">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <h2 className="text-base font-bold">{copy.title(number)}</h2>
-            <div className="min-w-0 flex-1">
-              <ImageEditHeaderActions
-                canUndo={session.canUndo}
-                canRedo={session.canRedo}
-                onUndo={session.undo}
-                onRedo={session.redo}
-                zoom={zoom}
-                nativeZoom={nativeZoom(zoom, fit, imageSize)}
-                canZoomIn={zoom < maxZoom}
-                canZoomOut={zoom > MIN_ZOOM}
-                onZoomIn={viewport.zoomIn}
-                onZoomOut={viewport.zoomOut}
-                onZoomFit={viewport.zoomFit}
-                saving={session.saving}
-                onDone={() => void requestClose(true)}
-                doneLabel={reviewRequired ? copy.confirmReview : undefined}
-                doneDisabled={closing}
-              />
-            </div>
-          </div>
-          {/* Always present, so showing or hiding controls never resizes the canvas below. */}
-          <div className="flex min-h-10 flex-wrap items-center gap-x-5 gap-y-2">
-            {tool === "crop" ? (
-              <ImageEditCropPanel
-                size={cropPixels}
-                onClear={() => deleteItem(CROP_ITEM_ID)}
-              />
-            ) : (
-              <>
-                {styleFields.length > 0 && (
-                  <ImageEditStylePanel
-                    fields={styleFields}
-                    style={shownStyle}
-                    number={
-                      styleSource?.kind === "step"
-                        ? styleSource.number
-                        : undefined
-                    }
-                    onChange={applyStyle}
-                  />
-                )}
-                {canActOnSelection && (
-                  <ImageEditItemActions
-                    onDuplicate={duplicateSelection}
-                    onDelete={() => deleteItem(selectedItem.id)}
-                  />
-                )}
-              </>
-            )}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+            <h2 className="mr-2 text-base font-bold">{copy.title(number)}</h2>
+            <ImageEditHeaderActions
+              canUndo={session.canUndo}
+              canRedo={session.canRedo}
+              onUndo={session.undo}
+              onRedo={session.redo}
+              zoom={zoom}
+              nativeZoom={nativeZoom(zoom, fit, imageSize)}
+              canZoomIn={zoom < maxZoom}
+              canZoomOut={zoom > MIN_ZOOM}
+              onZoomIn={viewport.zoomIn}
+              onZoomOut={viewport.zoomOut}
+              onZoomFit={viewport.zoomFit}
+              saving={session.saving}
+              onDone={() => void requestClose(true)}
+              doneLabel={reviewRequired ? copy.confirmReview : undefined}
+              doneDisabled={closing}
+            >
+              {tool === "crop" ? (
+                <ImageEditCropPanel
+                  size={cropPixels}
+                  onClear={() => deleteItem(CROP_ITEM_ID)}
+                />
+              ) : (
+                <>
+                  {styleFields.length > 0 && (
+                    <ImageEditStylePanel
+                      fields={styleFields}
+                      style={shownStyle}
+                      number={
+                        styleSource?.kind === "step"
+                          ? styleSource.number
+                          : undefined
+                      }
+                      onChange={applyStyle}
+                    />
+                  )}
+                  {canActOnSelection && (
+                    <ImageEditItemActions
+                      onDuplicate={duplicateSelection}
+                      onDelete={() => deleteItem(selectedItem.id)}
+                    />
+                  )}
+                </>
+              )}
+            </ImageEditHeaderActions>
           </div>
           {reviewRequired && (
             <div

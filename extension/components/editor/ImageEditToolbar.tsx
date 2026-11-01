@@ -32,6 +32,8 @@ interface HeaderProps {
   /** Replaces "Done" when finishing also confirms something (the masks under review). */
   doneLabel?: string;
   doneDisabled?: boolean;
+  /** The active tool's or selection's controls, placed between zoom and Done. */
+  children?: React.ReactNode;
 }
 
 const iconButtonClass =
@@ -102,12 +104,12 @@ export default function ImageEditToolbar({ tool, onToolChange, room = { masks: t
   );
 }
 
-/** History, zoom, save status and Done. */
+/** History, zoom, tool controls, save status and Done, laid out as items of the header row. */
 export function ImageEditHeaderActions(props: HeaderProps) {
   const savingShown = useDeferredBusy(props.saving);
   const copy = t().editor.imageEdit;
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="contents">
       <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5">
         <IconButton label={copy.undo} onClick={props.onUndo} disabled={!props.canUndo}><Undo2 className="size-4" /></IconButton>
         <IconButton label={copy.redo} onClick={props.onRedo} disabled={!props.canRedo}><Redo2 className="size-4" /></IconButton>
@@ -122,6 +124,10 @@ export function ImageEditHeaderActions(props: HeaderProps) {
         <IconButton tooltip={false} label={copy.zoomFit} onClick={props.onZoomFit} disabled={props.zoom === 1}><Maximize className="size-4" /></IconButton>
       </div>
 
+      {/* Below xl the controls get their own line, kept even when empty so switching tools never resizes the canvas. */}
+      <div className="order-last flex min-h-10 basis-full flex-wrap items-center gap-x-5 gap-y-2 xl:order-none xl:min-h-0 xl:basis-auto">
+        {props.children}
+      </div>
 
       <div className="ml-auto flex items-center gap-3">
         {savingShown && (
