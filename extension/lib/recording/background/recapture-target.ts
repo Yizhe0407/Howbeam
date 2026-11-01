@@ -53,7 +53,7 @@ export async function validateRecaptureTarget(
     if (!step || step.sessionId !== sessionId) {
       throw new StepRecaptureStartError('TARGET_NOT_FOUND', t().recaptureFlow.stepNotFound);
     }
-    if (step.groupId || !step.screenshotBlob || !getEffectiveBounds(step)) {
+    if (step.groupId || !step.screenshotBlob) {
       throw new StepRecaptureStartError('TARGET_CHANGED', t().recaptureFlow.stepChanged);
     }
     return { target, entryId: step.id, sourceUrl: step.url };

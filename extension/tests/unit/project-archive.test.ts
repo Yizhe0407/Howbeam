@@ -192,7 +192,9 @@ describe('project archive', () => {
       groupId: 'anchor',
     });
 
-    const { manifest } = await archiveObject([full, anchor, annotation]);
+    const removedBox = makeStep({ id: 'removed-box', order: 3, highlightRemoved: true });
+
+    const { manifest } = await archiveObject([full, anchor, annotation, removedBox]);
     const serializedKeys = new Set<string>(
       manifest.steps.flatMap((step: Record<string, unknown>) => Object.keys(step)),
     );

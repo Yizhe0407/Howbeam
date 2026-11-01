@@ -101,7 +101,7 @@ describe('ImageEditWorkspace and other tabs', () => {
     expect(await screen.findByText(/另一個分頁剛修改了這張圖片/)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
     expect(editItem('their-mask')).toBeTruthy();
-    expect(storage.save).toHaveBeenCalledWith(expect.anything(), expect.anything(), { imageEditRevision: 0, confirmReview: false });
+    expect(storage.save).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ imageEditRevision: 0, confirmReview: false }));
 
     // The next save builds on what the other tab stored.
     storage.save.mockResolvedValue(2);
@@ -109,7 +109,7 @@ describe('ImageEditWorkspace and other tabs', () => {
     fireEvent.click(screen.getByRole('button', { name: '完成' }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const [, saved, base] = storage.save.mock.calls.at(-1)!;
-    expect(base).toEqual({ imageEditRevision: 1, confirmReview: false });
+    expect(base).toMatchObject({ imageEditRevision: 1, confirmReview: false });
     expect(saved.redactions.map((redaction: { id: string }) => redaction.id)).toContain('their-mask');
   });
 
@@ -141,7 +141,7 @@ describe('ImageEditWorkspace mask review', () => {
     fireEvent.click(screen.getByRole('button', { name: '確認遮罩' }));
     await waitFor(() => expect(confirmed.onClose).toHaveBeenCalled());
     expect(storage.save).toHaveBeenCalledTimes(1);
-    expect(itemAt(storage.save.mock.calls, 0)[2]).toEqual({ imageEditRevision: 0, confirmReview: true });
+    expect(itemAt(storage.save.mock.calls, 0)[2]).toMatchObject({ imageEditRevision: 0, confirmReview: true });
   });
 });
 
@@ -164,5 +164,68 @@ describe('ImageEditWorkspace limits', () => {
     expect((toolButton('遮罩')).disabled).toBe(true);
     fireEvent.keyDown(layer(), { key: 'm' });
     expect(toolButton('遮罩').getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
+describe('ImageEditWorkspace recorded boxes', () => {
+  const recorded = { x: 100, y: 50, width: 40, height: 20 };
+  const savedBoxes = () => itemAt(storage.save.mock.calls, 0)[1].highlights;
+
+  function snapshot(count: number): StepEntry {
+    const step = (id: string, order: number) => ({
+      id, sessionId: 'session-1', groupId: 'anchor', order, bounds: { ...recorded, x: order * 100 },
+      devicePixelRatio: 1, description: '', url: 'https://example.test', timestamp: 0,
+    });
+    return {
+      kind: 'group',
+      anchor: { ...step('anchor', 0), bounds: null, screenshotBlob: new Blob(['image']) } as ScreenshotStep,
+      annotations: Array.from({ length: count }, (_, index) => step(`note-${index + 1}`, index + 1)),
+    };
+  }
+
+  it('moves an ordinary step\'s box with the pointer tool', async () => {
+    storage.save.mockResolvedValue(1);
+    const { onClose } = open(entry({ bounds: recorded }));
+
+    const item = editItem('step-1') as HTMLElement;
+    expect(item.getAttribute('aria-label')).toBe('紅框');
+    fireEvent.pointerDown(item, { clientX: 110, clientY: 60, button: 0 });
+    fireEvent.pointerMove(layer(), { clientX: 140, clientY: 80 });
+    fireEvent.pointerUp(layer(), { clientX: 140, clientY: 80 });
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(savedBoxes()).toEqual([{ id: 'step-1', bounds: { ...recorded, x: 130, y: 70 } }]);
+  });
+
+  it('deletes an ordinary step\'s box, but not by copying it', async () => {
+    storage.save.mockResolvedValue(1);
+    const { onClose } = open(entry({ bounds: recorded }));
+
+    fireEvent.pointerDown(editItem('step-1')!, { clientX: 110, clientY: 60, button: 0 });
+    fireEvent.pointerUp(layer(), { clientX: 110, clientY: 60 });
+    expect(screen.queryByRole('button', { name: '複製一份' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '刪除選取項目' }));
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(savedBoxes()).toEqual([]);
+  });
+
+  it('deletes a snapshot annotation\'s box, but keeps the last one', async () => {
+    storage.save.mockResolvedValue(1);
+    const { onClose } = open(snapshot(2));
+
+    fireEvent.keyDown(editItem('note-1')!, { key: 'Delete' });
+    expect(editItem('note-1')).toBeNull();
+    fireEvent.pointerDown(editItem('note-2')!, { clientX: 210, clientY: 60, button: 0 });
+    fireEvent.pointerUp(layer(), { clientX: 210, clientY: 60 });
+    expect(screen.queryByRole('button', { name: '刪除選取項目' })).toBeNull();
+    fireEvent.keyDown(editItem('note-2')!, { key: 'Delete' });
+    expect(editItem('note-2')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(savedBoxes().map((saved: { id: string }) => saved.id)).toEqual(['note-2']);
   });
 });

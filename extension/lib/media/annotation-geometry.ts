@@ -60,7 +60,12 @@ export function fitBoundsInViewport(bounds: Bounds, viewportWidth: number, viewp
  * All single-image renderers use this helper so padding and edge clipping stay
  * identical in previews, thumbnails and exported images. */
 export function fitHighlightFrame(bounds: Bounds, viewportWidth: number, viewportHeight: number): Bounds {
-  return fitBoundsInViewport(inflateBounds(bounds, HIGHLIGHT_PADDING), viewportWidth, viewportHeight);
+  return fitBoundsInViewport(highlightFrame(bounds), viewportWidth, viewportHeight);
+}
+
+/** The highlight's frame around its target before edge fitting: what the image editor selects and drags. */
+export function highlightFrame(bounds: Bounds): Bounds {
+  return inflateBounds(bounds, HIGHLIGHT_PADDING);
 }
 
 export function fitPointInViewport(

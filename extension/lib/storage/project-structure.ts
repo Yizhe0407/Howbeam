@@ -14,11 +14,18 @@ import {
   sanitizeProject,
   sanitizeStepForStorage,
   stepRole,
+  type Bounds,
   type Project,
   type Step,
   type StepEntry,
 } from './models';
 import { notifyProjectsChanged } from './change-notifier';
+import {
+  applyStepChanges,
+  StepImageEditConflictError,
+  StepUpdateConflictError,
+  type StepImageEditChanges,
+} from './step-repository';
 import {
   ProjectNotFoundError,
   requireWritableProject,
@@ -159,6 +166,19 @@ function assertExactRestoredAnnotationIds(
   }
 }
 
+async function loadWritableProjectStructure(
+  tx: ProjectStepsTransaction,
+  sessionId: string,
+  expectedContentRevision?: number,
+): Promise<WritableProjectStructure> {
+  const project = await requireWritableProject(tx, sessionId);
+  if (expectedContentRevision !== undefined && project.contentRevision !== expectedContentRevision) {
+    throw new ProjectContentConflictError(sessionId, expectedContentRevision, project.contentRevision);
+  }
+  const steps = await tx.objectStore('steps').index('by-session').getAll(sessionId);
+  return { ...structureSnapshot(project, steps), steps: orderedSessionSteps(steps) };
+}
+
 async function requireWritableProjectStructure(
   tx: ProjectStepsTransaction,
   sessionId: string,
@@ -167,12 +187,7 @@ async function requireWritableProjectStructure(
   if (!Number.isSafeInteger(expectedContentRevision) || expectedContentRevision < 0) {
     throw new TypeError('Expected content revision must be a non-negative integer.');
   }
-  const project = await requireWritableProject(tx, sessionId);
-  if (project.contentRevision !== expectedContentRevision) {
-    throw new ProjectContentConflictError(sessionId, expectedContentRevision, project.contentRevision);
-  }
-  const steps = await tx.objectStore('steps').index('by-session').getAll(sessionId);
-  return { ...structureSnapshot(project, steps), steps: orderedSessionSteps(steps) };
+  return loadWritableProjectStructure(tx, sessionId, expectedContentRevision);
 }
 
 async function commitProjectStructure(
@@ -457,6 +472,70 @@ export async function restoreProjectAnnotationAtomically(
       [anchorId],
     );
   });
+}
+
+/** A snapshot annotation's box as the image editor leaves it. */
+export interface AnnotationBox {
+  id: string;
+  bounds: Bounds;
+}
+
+export interface SnapshotImageSaveGuard {
+  captureRevision: number;
+  imageEditRevision: number;
+  /** The annotations, in order, that the editor's draft was built on. */
+  annotationIds: readonly string[];
+}
+
+/** Saves a snapshot's image edits and its annotations' boxes in one transaction.
+ * An annotation whose box is gone is deleted; one the editor deleted earlier and
+ * now has back (undo) is put back from `removed`. The image editor works on a
+ * copy of the group, so the save is refused when the image or the group's
+ * annotations changed since that copy was read, like any other image edit. */
+export async function saveSnapshotImageAtomically(
+  sessionId: string,
+  anchorId: string,
+  anchorChanges: StepImageEditChanges,
+  boxes: readonly AnnotationBox[],
+  guard: SnapshotImageSaveGuard,
+  removed: ReadonlyMap<string, Step>,
+): Promise<void> {
+  if (boxes.length === 0) throw new ProjectStructureIntegrityError('A snapshot keeps at least one annotation.');
+  await runProjectStepsWrite(async (tx) => {
+    const structure = await loadWritableProjectStructure(tx, sessionId);
+    const group = requireSnapshotGroup(structure.entries, anchorId);
+    const { anchor } = group;
+    if ((anchor.captureRevision ?? 0) !== guard.captureRevision) {
+      throw new StepUpdateConflictError(anchorId, guard.captureRevision, anchor.captureRevision ?? 0);
+    }
+    const storedIds = group.annotations.map((annotation) => annotation.id);
+    if (
+      (anchor.imageEditRevision ?? 0) !== guard.imageEditRevision
+      || storedIds.length !== guard.annotationIds.length
+      || storedIds.some((id, index) => id !== guard.annotationIds[index])
+    ) {
+      throw new StepImageEditConflictError(anchorId, guard.imageEditRevision, anchor.imageEditRevision ?? 0);
+    }
+    const stored = new Map(group.annotations.map((annotation) => [annotation.id, annotation]));
+    const annotations = boxes.map(({ id, bounds }) => {
+      const row = stored.get(id) ?? removed.get(id);
+      if (!row || row.sessionId !== sessionId || row.groupId !== anchorId || row.id === anchorId) {
+        throw new ProjectStructureIntegrityError('A box does not belong to this snapshot.');
+      }
+      return applyStepChanges(row, { manualBounds: sameBounds(bounds, row.bounds) ? undefined : bounds });
+    });
+    const nextEntries = structure.entries.map((entry): StepEntry => (
+      entryId(entry) === anchorId
+        ? { kind: 'group', anchor: { ...applyStepChanges(anchor, anchorChanges), screenshotBlob: anchor.screenshotBlob }, annotations }
+        : entry
+    ));
+    await commitProjectStructure(tx, structure, nextEntries, structure.project.sections, [anchorId]);
+  });
+}
+
+/** Whether a box is exactly where it was detected, so no override needs storing. */
+export function sameBounds(a: Bounds, b: Bounds | null): boolean {
+  return b !== null && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
 
 export async function deleteProjectEntriesAtomically(

@@ -104,7 +104,8 @@ export interface ArchiveStep {
   order: number;
   screenshotId?: string;
   bounds: ArchiveBounds | null;
-  manualBounds?: ArchiveBounds | null;
+  manualBounds?: ArchiveBounds;
+  highlightRemoved?: true;
   redactions?: ArchiveRedaction[];
   redactionReviewRequired?: boolean;
   imageEdits?: ImageEdit[];
@@ -163,6 +164,7 @@ export const STEP_KEYS = [
   'screenshotId',
   'bounds',
   'manualBounds',
+  'highlightRemoved',
   'redactions',
   'redactionReviewRequired',
   'imageEdits',

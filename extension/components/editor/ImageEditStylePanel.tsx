@@ -33,7 +33,7 @@ interface CropProps {
 
 export interface ItemActions {
   onDuplicate?: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
 }
 
 const pillButton =

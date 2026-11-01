@@ -5,8 +5,8 @@ import { appendItem, newItemId, nextStepNumber, type ImageEditItem } from './ima
 /** How far a pasted or duplicated copy is offset from its original, so it doesn't hide it. */
 export const PASTE_OFFSET = 16;
 
-/** Items that can be copied: everything except the crop, of which there is only one. */
-export const isCopyable = (item: ImageEditItem): boolean => item.kind !== 'crop';
+/** Items that can be copied: everything except the crop, of which there is only one, and recorded boxes, which belong to their steps. */
+export const isCopyable = (item: ImageEditItem): boolean => item.kind !== 'crop' && item.kind !== 'highlight';
 
 /**
  * Adds copies of `source` to the item list: new ids, shifted by `offset`

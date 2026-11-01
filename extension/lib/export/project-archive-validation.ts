@@ -470,8 +470,9 @@ export function validateRuntimeStep(stepValue: unknown, path: string): Step {
   const runId = expectOptionalString(record, 'runId', path);
   if (runId !== undefined) step.runId = runId;
   if (hasOwn(record, 'manualBounds') && record.manualBounds !== undefined) {
-    step.manualBounds = expectNullableBounds(record.manualBounds, `${path}.manualBounds`);
+    step.manualBounds = expectBounds(record.manualBounds, `${path}.manualBounds`);
   }
+  if (expectOptionalBoolean(record, 'highlightRemoved', path) === true) step.highlightRemoved = true;
   if (hasOwn(record, 'redactions') && record.redactions !== undefined) {
     step.redactions = expectRedactions(record.redactions, `${path}.redactions`);
   }

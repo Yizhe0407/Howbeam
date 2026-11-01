@@ -24,6 +24,8 @@ interface Props {
   imageEdits?: ImageEdit[];
   /** The crop to show instead of the entry's saved one; `null` shows the whole image. */
   crop?: Bounds | null;
+  /** Recorded boxes to draw instead of the saved ones, in numbering order, for an editor that has unsaved changes. */
+  boxes?: Bounds[];
   /** The image element is exactly the image's box, so masks can be placed in percentages. */
   exactBox?: boolean;
   /**
@@ -55,7 +57,7 @@ interface Props {
  * shifted by the crop's origin, so the thumbnails below only ever see an
  * ordinary, uncropped image.
  */
-export default function EntryThumbnail({ entry, redactions, imageEdits, crop, reviewing = false, badges, ...presentation }: Props) {
+export default function EntryThumbnail({ entry, redactions, imageEdits, crop, boxes, reviewing = false, badges, ...presentation }: Props) {
   const privacy = getEntryPrivacyState(entry);
   const privacyReviewRequired = privacy.reviewRequired && !reviewing;
   const owner = getEntryImageOwner(entry);
@@ -71,10 +73,17 @@ export default function EntryThumbnail({ entry, redactions, imageEdits, crop, re
     return {
       redactions: offsetRedactions(sourceRedactions, origin),
       imageEdits: offsetImageEdits(sourceImageEdits, origin),
-      bounds: entry.kind === 'single' ? offsetBounds(getEffectiveBounds(entry.step), origin) : null,
-      annotations: entry.kind === 'group' ? offsetAnnotations(getOrderedAnnotations(entry.annotations), origin) : [],
+      bounds: entry.kind === 'single'
+        ? offsetBounds(boxes ? boxes[0] ?? null : getEffectiveBounds(entry.step), origin)
+        : null,
+      annotations: entry.kind === 'group'
+        ? offsetAnnotations(
+          boxes ? boxes.map((bounds, index) => ({ bounds, order: index + 1 })) : getOrderedAnnotations(entry.annotations),
+          origin,
+        )
+        : [],
     };
-  }, [entry, originX, originY, sourceRedactions, sourceImageEdits]);
+  }, [entry, originX, originY, sourceRedactions, sourceImageEdits, boxes]);
 
   // The first cut of a cropped image is still running; never show the uncropped screenshot meanwhile.
   if (!view) return null;

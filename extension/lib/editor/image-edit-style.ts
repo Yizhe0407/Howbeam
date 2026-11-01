@@ -38,7 +38,7 @@ export const STYLE_FIELDS: Record<ImageEdit['kind'], readonly StyleField[]> = {
 export type StylePatch = Partial<ImageEditStyle> & { number?: number };
 
 export function isStyledItem(item: ImageEditItem): item is ImageEdit {
-  return item.kind !== 'redaction' && item.kind !== 'crop';
+  return item.kind !== 'redaction' && item.kind !== 'crop' && item.kind !== 'highlight';
 }
 
 /** Applies the parts of a patch that this kind of item has, leaving the rest alone. */

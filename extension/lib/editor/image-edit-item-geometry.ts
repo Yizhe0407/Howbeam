@@ -1,6 +1,7 @@
 import type { Bounds } from '@/lib/storage/models';
 import type { TextEdit } from '@/lib/storage/image-edit-model';
 import { measureTextEditHeight, measureTextWidth, type TextMeasure } from '@/lib/media/image-edit-render';
+import { highlightFrame } from '@/lib/media/annotation-geometry';
 import {
   moveBounds,
   resizeBounds,
@@ -37,8 +38,10 @@ export function itemHandles(item: ImageEditItem): readonly ItemHandle[] {
   return BOX_HANDLES;
 }
 
-/** The box an item occupies, for its selection frame and for keeping it inside the image. */
+/** The box an item occupies, for its selection frame and for keeping it inside the image.
+ * A recorded box is stored around its target and drawn padded out from it, so it is framed where it is drawn. */
 export function itemBounds(item: ImageEditItem): Bounds {
+  if (item.kind === 'highlight') return highlightFrame(item.bounds);
   if (item.kind === 'arrow') {
     const x = Math.min(item.from.x, item.to.x);
     const y = Math.min(item.from.y, item.to.y);
@@ -69,6 +72,9 @@ export function translateItem(item: ImageEditItem, dx: number, dy: number, size:
     };
   }
   if (item.kind === 'step') return { ...item, center: { x: round(item.center.x + moveX), y: round(item.center.y + moveY) } };
+  if (item.kind === 'highlight') {
+    return { ...item, bounds: { ...item.bounds, x: round(item.bounds.x + moveX), y: round(item.bounds.y + moveY) } };
+  }
   return { ...item, bounds: moveBounds(item.bounds, dx, dy, size) };
 }
 

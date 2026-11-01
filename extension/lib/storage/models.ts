@@ -57,9 +57,12 @@ export interface Step {
   screenshotBlob?: Blob;
   /** Clicked element rect in CSS px, relative to the viewport at capture time. */
   bounds: Bounds | null;
-  /** Non-destructive editor override. The original detected bounds stay intact
-   * so a user can always restore the automatic selection. */
-  manualBounds?: Bounds | null;
+  /** The box after the person moved or resized it in the image editor. The
+   * detected `bounds` stay intact; absent means the detected box is shown. */
+  manualBounds?: Bounds;
+  /** The person removed this ordinary step's box. Snapshot annotations are
+   * never marked: removing one deletes the annotation. */
+  highlightRemoved?: true;
   /** Opaque privacy masks in screenshot CSS coordinates. Ordinary steps own
    * their masks; snapshot groups store them only on the shared anchor. */
   redactions?: Redaction[];
@@ -278,7 +281,8 @@ export function stepDescriptionLimit(step: Pick<Step, 'id' | 'groupId'>): number
     : PERSISTED_STEP_LIMITS.maxStepDescriptionLength;
 }
 
-export function getEffectiveBounds(step: Pick<Step, 'bounds' | 'manualBounds'>): Bounds | null {
+export function getEffectiveBounds(step: Pick<Step, 'bounds' | 'manualBounds' | 'highlightRemoved'>): Bounds | null {
+  if (step.highlightRemoved) return null;
   if (step.manualBounds && isValidBounds(step.manualBounds)) return step.manualBounds;
   return step.bounds && isValidBounds(step.bounds) ? step.bounds : null;
 }
@@ -417,11 +421,8 @@ export function sanitizeStepForStorage(step: Step): Step {
 
   if (step.runId !== undefined) sanitized.runId = requireStorageIdentifier(step.runId, 'Step run id');
   if (!isSnapshotAnnotation && step.screenshotBlob !== undefined) sanitized.screenshotBlob = step.screenshotBlob;
-  if (step.manualBounds !== undefined) {
-    sanitized.manualBounds = step.manualBounds !== null && isValidBounds(step.manualBounds)
-      ? { ...step.manualBounds }
-      : null;
-  }
+  if (step.manualBounds && isValidBounds(step.manualBounds)) sanitized.manualBounds = { ...step.manualBounds };
+  if (step.highlightRemoved === true && stepRole({ id, groupId }) === 'ordinary') sanitized.highlightRemoved = true;
   if (redactions !== undefined) sanitized.redactions = redactions;
   if (imageEdits !== undefined) sanitized.imageEdits = imageEdits;
   if (crop !== undefined) sanitized.crop = crop;

@@ -259,7 +259,7 @@ export const en: Messages = {
         crop: 'Drag to choose the area to keep, then drag its edges to adjust. The original image is never changed, and you can clear the crop any time.',
         navigate: 'Scroll to zoom. Hold Space or the middle mouse button and drag to pan.',
       },
-      itemLabel: (kind: string): string => ({ redaction: 'Mask', text: 'Text', arrow: 'Arrow', rect: 'Box', ellipse: 'Ellipse', step: 'Number', crop: 'Crop area' } as Record<string, string>)[kind] ?? 'Item',
+      itemLabel: (kind: string): string => ({ highlight: 'Highlight', redaction: 'Mask', text: 'Text', arrow: 'Arrow', rect: 'Box', ellipse: 'Ellipse', step: 'Number', crop: 'Crop area' } as Record<string, string>)[kind] ?? 'Item',
       textInput: 'Type text',
       clearCrop: 'Clear crop',
       cropSize: (width: number, height: number) => `After crop: ${width} × ${height} px`,

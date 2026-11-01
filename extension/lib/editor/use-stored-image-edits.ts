@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  getEffectiveBounds,
   getEntryCrop,
   getEntryImageEdits,
   getEntryImageOwner,
   getEntryPrivacyState,
+  type Step,
   type StepEntry,
 } from '@/lib/storage/models';
 import {
@@ -11,9 +13,19 @@ import {
   StepUpdateConflictError,
 } from '@/lib/storage/step-repository';
 import { subscribeProjectsChanged } from '@/lib/storage/change-notifier';
-import { splitItems, toItems, type ImageEditItem } from './image-edit-items';
+import { splitItems, toItems, type Highlight, type ImageEditItem } from './image-edit-items';
 import { ImageEditSessionConflict, useImageEditSession } from './image-edit-session';
 import { isEntryImageStale, loadLatestEntry, saveEntryImageEdits } from './save-entry-image-edits';
+
+/** The steps that carry the entry's recorded boxes. */
+const boxStepsOf = (entry: StepEntry): Step[] => (entry.kind === 'single' ? [entry.step] : entry.annotations);
+
+function highlightsOf(entry: StepEntry): Highlight[] {
+  return boxStepsOf(entry).flatMap((step) => {
+    const bounds = getEffectiveBounds(step);
+    return bounds ? [{ id: step.id, bounds }] : [];
+  });
+}
 
 /** Everything stored on an entry's image, as the editor's item list. */
 function itemsOf(entry: StepEntry): ImageEditItem[] {
@@ -21,8 +33,12 @@ function itemsOf(entry: StepEntry): ImageEditItem[] {
     getEntryPrivacyState(entry).redactions,
     getEntryImageEdits(entry),
     getEntryCrop(entry),
+    highlightsOf(entry),
   );
 }
+
+const annotationsOf = (entry: StepEntry): Step[] => (entry.kind === 'group' ? entry.annotations : []);
+const annotationIdsOf = (entry: StepEntry): string[] => annotationsOf(entry).map((annotation) => annotation.id);
 
 const imageEditRevisionOf = (entry: StepEntry): number =>
   getEntryImageOwner(entry).imageEditRevision ?? 0;
@@ -44,6 +60,10 @@ export function useStoredImageEdits(
   const entryRef = useRef(entry);
   /** The stored image edit revision the draft builds on; every save must replace exactly it. */
   const revisionRef = useRef(imageEditRevisionOf(openedEntry));
+  /** The snapshot's annotations as stored when the draft last met storage. */
+  const annotationIdsRef = useRef(annotationIdsOf(openedEntry));
+  /** Every annotation this editor has seen, so one it deleted can come back on undo. */
+  const [knownAnnotations] = useState(() => new Map(annotationsOf(openedEntry).map((step) => [step.id, step])));
   const [initialItems] = useState(() => itemsOf(openedEntry));
   /** The masks still wait for the person to confirm them (after a retake, or repaired metadata). */
   const [reviewRequired, setReviewRequired] = useState(
@@ -59,20 +79,29 @@ export function useStoredImageEdits(
   const adoptEntry = useCallback((next: StepEntry) => {
     entryRef.current = next;
     revisionRef.current = imageEditRevisionOf(next);
+    annotationIdsRef.current = annotationIdsOf(next);
+    for (const step of annotationsOf(next)) knownAnnotations.set(step.id, step);
     setEntry(next);
     setReviewRequired(getEntryPrivacyState(next).reviewRequired);
-  }, []);
+  }, [knownAnnotations]);
 
   const session = useImageEditSession({
     initialItems,
     persist: async (items) => {
       const confirmReview = confirmReviewRef.current;
+      const split = splitItems(items);
       try {
         revisionRef.current = await saveEntryImageEdits(
           entryRef.current,
-          splitItems(items),
-          { imageEditRevision: revisionRef.current, confirmReview },
+          split,
+          {
+            imageEditRevision: revisionRef.current,
+            annotationIds: annotationIdsRef.current,
+            removed: knownAnnotations,
+            confirmReview,
+          },
         );
+        if (entryRef.current.kind === 'group') annotationIdsRef.current = split.highlights.map((box) => box.id);
         if (confirmReview) setReviewRequired(false);
       } catch (error) {
         if (

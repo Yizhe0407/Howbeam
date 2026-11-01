@@ -52,6 +52,9 @@ async function openEntry(sessionId: string): Promise<StepEntry> {
   return itemAt(buildStepEntries(await getSteps(sessionId)), 0);
 }
 
+/** Single steps have no annotations to track. */
+const SNAPSHOT_FREE = { annotationIds: [], removed: new Map<string, Step>() };
+
 const mask = (id: string): Redaction => ({ id, kind: 'solid', bounds: { x: 10, y: 10, width: 20, height: 20 } });
 const box = (id: string): ImageEdit => ({ id, kind: 'rect', bounds: { x: 5, y: 5, width: 30, height: 30 }, width: 2, color: '#ff4747', fill: 'none' });
 
@@ -62,9 +65,9 @@ describe('image edit revision', () => {
     const tabA = await openEntry(step.sessionId);
     const tabB = await openEntry(step.sessionId);
 
-    await saveEntryImageEdits(tabA, { redactions: [mask('a-mask')], imageEdits: [], crop: null }, { imageEditRevision: 0 });
+    await saveEntryImageEdits(tabA, { redactions: [mask('a-mask')], imageEdits: [], crop: null, highlights: [] }, { ...SNAPSHOT_FREE, imageEditRevision: 0 });
     await expect(
-      saveEntryImageEdits(tabB, { redactions: [], imageEdits: [box('b-box')], crop: null }, { imageEditRevision: 0 }),
+      saveEntryImageEdits(tabB, { redactions: [], imageEdits: [box('b-box')], crop: null, highlights: [] }, { ...SNAPSHOT_FREE, imageEditRevision: 0 }),
     ).rejects.toBeInstanceOf(StepImageEditConflictError);
 
     const stored = await getStep(step.id);
@@ -78,8 +81,8 @@ describe('image edit revision', () => {
     expect(latest.kind === 'single' && latest.step.redactions?.map((redaction) => redaction.id)).toEqual(['a-mask']);
     const next = await saveEntryImageEdits(
       latest,
-      { redactions: [mask('a-mask')], imageEdits: [box('b-box')], crop: null },
-      { imageEditRevision: 1 },
+      { redactions: [mask('a-mask')], imageEdits: [box('b-box')], crop: null, highlights: [] },
+      { ...SNAPSHOT_FREE, imageEditRevision: 1 },
     );
     expect(next).toBe(2);
     expect(await isEntryImageStale(latest, next)).toBe(false);
@@ -98,7 +101,7 @@ describe('image edit revision', () => {
 
     // Only in-place fields are written: a caller can neither move the revision
     // back to sneak past the guard nor change the row's structure.
-    await updateStepsAtomically(step.sessionId, [{ id: step.id, changes: { imageEditRevision: 0, groupId: 'other', crop: null } as never }]);
+    await updateStepsAtomically(step.sessionId, [{ id: step.id, changes: { ...SNAPSHOT_FREE, imageEditRevision: 0, groupId: 'other', crop: null, highlights: [] } as never }]);
     const stored = await getStep(step.id);
     expect(stored?.imageEditRevision).toBe(4);
     expect(stored?.groupId).toBe(step.groupId);
@@ -108,7 +111,7 @@ describe('image edit revision', () => {
     const step = makeStep({ redactions: [mask('legacy')] });
     await addStep(step);
     const entry = await openEntry(step.sessionId);
-    expect(await saveEntryImageEdits(entry, { redactions: [], imageEdits: [], crop: null }, { imageEditRevision: 0 })).toBe(1);
+    expect(await saveEntryImageEdits(entry, { redactions: [], imageEdits: [], crop: null, highlights: [] }, { ...SNAPSHOT_FREE, imageEditRevision: 0 })).toBe(1);
   });
 
   it('refuses to store what the editor would otherwise lose without a word', async () => {
@@ -120,11 +123,11 @@ describe('image edit revision', () => {
       text: 'x'.repeat(IMAGE_EDIT_LIMITS.maxTextLength + 1), fontSize: 24, color: '#111111', look: 'plain',
     };
     await expect(
-      saveEntryImageEdits(entry, { redactions: [], imageEdits: [longText], crop: null }, { imageEditRevision: 0 }),
+      saveEntryImageEdits(entry, { redactions: [], imageEdits: [longText], crop: null, highlights: [] }, { ...SNAPSHOT_FREE, imageEditRevision: 0 }),
     ).rejects.toBeInstanceOf(ImageEditsNotStorableError);
     const tooMany = Array.from({ length: IMAGE_EDIT_LIMITS.maxItems + 1 }, (_, index) => box(`box-${index}`));
     await expect(
-      saveEntryImageEdits(entry, { redactions: [], imageEdits: tooMany, crop: null }, { imageEditRevision: 0 }),
+      saveEntryImageEdits(entry, { redactions: [], imageEdits: tooMany, crop: null, highlights: [] }, { ...SNAPSHOT_FREE, imageEditRevision: 0 }),
     ).rejects.toBeInstanceOf(ImageEditsNotStorableError);
     expect((await getStep(step.id))?.imageEditRevision).toBeUndefined();
   });
@@ -133,11 +136,11 @@ describe('image edit revision', () => {
     const step = makeStep({ redactionReviewRequired: true });
     await addStep(step);
     const entry = await openEntry(step.sessionId);
-    const items = { redactions: [mask('checked')], imageEdits: [], crop: null };
+    const items = { redactions: [mask('checked')], imageEdits: [], crop: null, highlights: [] };
 
-    const revision = await saveEntryImageEdits(entry, items, { imageEditRevision: 0 });
+    const revision = await saveEntryImageEdits(entry, items, { ...SNAPSHOT_FREE, imageEditRevision: 0 });
     expect((await getStep(step.id))?.redactionReviewRequired).toBe(true);
-    await saveEntryImageEdits(entry, items, { imageEditRevision: revision, confirmReview: true });
+    await saveEntryImageEdits(entry, items, { ...SNAPSHOT_FREE, imageEditRevision: revision, confirmReview: true });
     expect((await getStep(step.id))?.redactionReviewRequired).toBeUndefined();
   });
 });

@@ -1,10 +1,11 @@
 import { getStep, updateStepsAtomically } from '../storage/step-repository';
-import { getProjectStructureSnapshot } from '../storage/project-structure';
+import { getProjectStructureSnapshot, sameBounds, saveSnapshotImageAtomically } from '../storage/project-structure';
 import {
   entryId,
   getEntryImageOwner,
   isValidRedaction,
   STEP_STORAGE_LIMITS,
+  type Step,
   type StepEntry,
 } from '../storage/models';
 import { IMAGE_EDIT_LIMITS, isValidImageEdit } from '../storage/image-edit-model';
@@ -13,6 +14,10 @@ import type { SplitItems } from './image-edit-items';
 export interface ImageEditSaveBase {
   /** The `imageEditRevision` of the stored edits this save replaces. */
   imageEditRevision: number;
+  /** A snapshot's annotations, in order, as the draft last saw them stored. */
+  annotationIds: readonly string[];
+  /** Annotations this editor deleted, kept so an undo can put them back. */
+  removed: ReadonlyMap<string, Step>;
   /** Clears the privacy review flag: the person explicitly confirmed the masks. */
   confirmReview?: boolean;
 }
@@ -46,9 +51,16 @@ function assertStorable({ redactions, imageEdits }: SplitItems): void {
   }
 }
 
-/** Saves an entry's masks, drawn edits and crop on the step that owns the image (the
- * step itself, or a snapshot's shared anchor) in one write, and returns the new
- * image edit revision for the next save to build on.
+/** The box fields an ordinary step stores for what the editor left: moved, removed, or as detected. */
+function boxChanges(step: Step, box: SplitItems['highlights'][number] | undefined): Pick<Step, 'manualBounds' | 'highlightRemoved'> {
+  if (!box) return step.bounds ? { manualBounds: undefined, highlightRemoved: true } : {};
+  return { manualBounds: sameBounds(box.bounds, step.bounds) ? undefined : box.bounds, highlightRemoved: undefined };
+}
+
+/** Saves an entry's masks, drawn edits, crop and recorded boxes in one write: on
+ * the step that owns the image (the step itself, or a snapshot's shared anchor),
+ * and for a snapshot also on its annotations. Returns the new image edit
+ * revision for the next save to build on.
  *
  * Two compare-and-set guards keep it from overwriting anything it has not seen:
  * the capture revision (the image was retaken since the editor loaded it) and the
@@ -61,17 +73,26 @@ export async function saveEntryImageEdits(
 ): Promise<number> {
   assertStorable(items);
   const owner = getEntryImageOwner(entry);
-  await updateStepsAtomically(owner.sessionId, [{
-    id: owner.id,
-    changes: {
-      redactions: items.redactions,
-      imageEdits: items.imageEdits,
-      crop: items.crop,
-      ...(base.confirmReview ? { redactionReviewRequired: false } : {}),
-    },
-    expectedCaptureRevision: owner.captureRevision ?? 0,
-    expectedImageEditRevision: base.imageEditRevision,
-  }]);
+  const changes = {
+    redactions: items.redactions,
+    imageEdits: items.imageEdits,
+    crop: items.crop,
+    ...(base.confirmReview ? { redactionReviewRequired: false } : {}),
+  };
+  if (entry.kind === 'group') {
+    await saveSnapshotImageAtomically(owner.sessionId, owner.id, changes, items.highlights, {
+      captureRevision: owner.captureRevision ?? 0,
+      imageEditRevision: base.imageEditRevision,
+      annotationIds: base.annotationIds,
+    }, base.removed);
+  } else {
+    await updateStepsAtomically(owner.sessionId, [{
+      id: owner.id,
+      changes: { ...changes, ...boxChanges(entry.step, items.highlights[0]) },
+      expectedCaptureRevision: owner.captureRevision ?? 0,
+      expectedImageEditRevision: base.imageEditRevision,
+    }]);
+  }
   // Every write of these fields moves the revision forward by exactly one.
   return base.imageEditRevision + 1;
 }

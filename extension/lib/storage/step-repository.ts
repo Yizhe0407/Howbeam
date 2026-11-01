@@ -93,7 +93,7 @@ export class StepRecaptureError extends Error {
 }
 
 /** The fields an image edit writes in place. */
-export type StepImageEditChanges = Partial<Pick<Step, 'redactions' | 'imageEdits' | 'crop' | 'redactionReviewRequired'>>;
+export type StepImageEditChanges = Partial<Pick<Step, 'redactions' | 'imageEdits' | 'crop' | 'redactionReviewRequired' | 'manualBounds' | 'highlightRemoved'>>;
 
 export interface StepUpdate {
   id: string;
@@ -155,7 +155,7 @@ export class StepImageEditConflictError extends Error {
   }
 }
 
-const IMAGE_EDIT_FIELDS = ['redactions', 'imageEdits', 'crop'] as const;
+const IMAGE_EDIT_FIELDS = ['redactions', 'imageEdits', 'crop', 'manualBounds', 'highlightRemoved'] as const;
 /** Every field an in-place edit may write. None of them is structural or
  * counted by the Project summary. */
 const IN_PLACE_FIELDS = [...IMAGE_EDIT_FIELDS, 'redactionReviewRequired', 'description'] as const;
@@ -164,7 +164,7 @@ type InPlaceStepChanges = Partial<Pick<Step, (typeof IN_PLACE_FIELDS)[number]>>;
 /** Copies only the in-place fields `changes` carries, whatever else it holds.
  * The image edit revision is owned by storage: any write that touches a
  * per-image edit field moves it forward. */
-function applyStepChanges(existing: Step, changes: InPlaceStepChanges): Step {
+export function applyStepChanges(existing: Step, changes: InPlaceStepChanges): Step {
   const written: InPlaceStepChanges = Object.fromEntries(
     IN_PLACE_FIELDS.filter((field) => Object.hasOwn(changes, field)).map((field) => [field, changes[field]]),
   );
@@ -174,6 +174,11 @@ function applyStepChanges(existing: Step, changes: InPlaceStepChanges): Step {
     ...written,
     ...(touchesImageEdits ? { imageEditRevision: (existing.imageEditRevision ?? 0) + 1 } : {}),
   });
+}
+
+/** The step without the person's changes to its box, which belong to the old picture. */
+function withoutBoxEdits({ manualBounds: _manualBounds, highlightRemoved: _highlightRemoved, ...step }: Step): Step {
+  return step;
 }
 
 /** Whether a recaptured image must have its masks re-checked: the old masks
@@ -242,9 +247,8 @@ export async function replaceStepCaptureAtomically(
       }
       const captureRevision = (step.captureRevision ?? 0) + 1;
       await tx.objectStore('steps').put(sanitizeStepForStorage({
-        ...step,
+        ...withoutBoxEdits(step),
         ...capture,
-        manualBounds: null,
         redactions: [],
         imageEdits: [],
         crop: null,
@@ -298,9 +302,8 @@ export async function replaceStepCaptureAtomically(
       lastCaptureRunId: recaptureRunId,
     });
     const replacedAnnotation = sanitizeStepForStorage({
-      ...annotation,
+      ...withoutBoxEdits(annotation),
       bounds: capture.bounds,
-      manualBounds: null,
       devicePixelRatio: capture.devicePixelRatio,
       screenshotScale: capture.screenshotScale,
       url: capture.url,

@@ -82,7 +82,7 @@ describe('crop as an item', () => {
   it('round-trips through the item list and is not mistaken for an edit', () => {
     const items = toItems([mask], [], crop);
     expect(items[0]).toMatchObject({ id: CROP_ITEM_ID, kind: 'crop', bounds: crop });
-    expect(splitItems(items)).toEqual({ redactions: [mask], imageEdits: [], crop });
+    expect(splitItems(items)).toEqual({ redactions: [mask], imageEdits: [], crop, highlights: [] });
     expect(splitItems(toItems([mask], [], null)).crop).toBeNull();
   });
 

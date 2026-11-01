@@ -114,6 +114,7 @@ export default function ImageEditWorkspace({
     return list;
   }, [items, preview, editing]);
   const shown = useMemo(() => splitItems(displayItems), [displayItems]);
+  const shownBoxes = useMemo(() => shown.highlights.map((box) => box.bounds), [shown]);
 
   const screenshotScale = owner.screenshotScale ?? owner.devicePixelRatio;
 
@@ -140,9 +141,16 @@ export default function ImageEditWorkspace({
         : items.filter((item) => item.id !== next.id),
     );
   };
+  /** A snapshot keeps at least one annotation: its last box goes with the whole step instead. */
+  const canDelete = (item: ImageEditItem): boolean =>
+    item.kind !== "highlight" ||
+    entry.kind === "single" ||
+    items.filter((candidate) => candidate.kind === "highlight").length > 1;
   const deleteItem = (id: string) => {
+    const item = items.find((candidate) => candidate.id === id);
+    if (!item || !canDelete(item)) return;
     setSelectedId(null);
-    commit(items.filter((item) => item.id !== id));
+    commit(items.filter((candidate) => candidate.id !== id));
   };
   const createItem = (item: ImageEditItem) => {
     if (!hasRoomFor(items, [item])) return;
@@ -247,7 +255,8 @@ export default function ImageEditWorkspace({
     if (selectedItem && isCopyable(selectedItem))
       commit(reorderItem(items, selectedItem.id, to));
   };
-  const canActOnSelection = selectedItem !== null && isCopyable(selectedItem);
+  const canCopySelection = selectedItem !== null && isCopyable(selectedItem);
+  const canDeleteSelection = selectedItem !== null && selectedItem.kind !== "crop" && canDelete(selectedItem);
 
   /** Done (`confirm`) also confirms masks awaiting review; Escape only closes, leaving the review pending. */
   const requestClose = async (confirm = false) => {
@@ -376,10 +385,10 @@ export default function ImageEditWorkspace({
                       onChange={applyStyle}
                     />
                   )}
-                  {canActOnSelection && (
+                  {(canCopySelection || canDeleteSelection) && (
                     <ImageEditItemActions
-                      onDuplicate={duplicateSelection}
-                      onDelete={() => deleteItem(selectedItem.id)}
+                      onDuplicate={canCopySelection ? duplicateSelection : undefined}
+                      onDelete={canDeleteSelection ? () => deleteItem(selectedItem.id) : undefined}
                     />
                   )}
                 </>
@@ -449,6 +458,7 @@ export default function ImageEditWorkspace({
                       crop={null}
                       redactions={shown.redactions}
                       imageEdits={shown.imageEdits}
+                      boxes={shownBoxes}
                       alt={copy.title(number)}
                       fit="contain"
                       exactBox

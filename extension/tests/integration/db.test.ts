@@ -60,13 +60,14 @@ describe('buildStepEntries', () => {
 });
 
 describe('effective visual data', () => {
-  it('prefers a valid manual override and can restore the detected bounds', () => {
+  it('prefers a valid manual override, falls back to the detected bounds, and shows nothing once removed', () => {
     const step = makeStep({
       bounds: { x: 1, y: 2, width: 3, height: 4 },
       manualBounds: { x: 10, y: 20, width: 30, height: 40 },
     });
     expect(getEffectiveBounds(step)).toEqual(step.manualBounds);
-    expect(getEffectiveBounds({ ...step, manualBounds: null })).toEqual(step.bounds);
+    expect(getEffectiveBounds({ ...step, manualBounds: undefined })).toEqual(step.bounds);
+    expect(getEffectiveBounds({ ...step, highlightRemoved: true })).toBeNull();
   });
 
   it('uses manual bounds when building snapshot annotation order', () => {
@@ -135,12 +136,13 @@ describe('step storage boundaries', () => {
     });
     await addStep(step);
 
-    expect((await getSteps(step.sessionId))[0]).toMatchObject({
+    const stored = itemAt(await getSteps(step.sessionId), 0);
+    expect(stored).toMatchObject({
       bounds: null,
-      manualBounds: null,
       redactions: [],
       redactionReviewRequired: true,
     });
+    expect(stored).not.toHaveProperty('manualBounds');
   });
 
   it('rejects descriptions that cannot be represented in project backups', async () => {
@@ -438,7 +440,7 @@ describe('step persistence', () => {
     await addStep(step);
 
     const stored = itemAt((await getSteps(step.sessionId)), 0);
-    expect(stored.manualBounds).toBeNull();
+    expect(stored).not.toHaveProperty('manualBounds');
     expect(stored.redactions).toEqual([
       { id: 'valid-mask', kind: 'solid', bounds: { x: 3, y: 4, width: 5, height: 6 } },
     ]);
@@ -471,7 +473,7 @@ describe('atomic visual edits and recapture', () => {
   });
 
   it('recaptures an ordinary step without changing its identity, order, description or provenance', async () => {
-    const step = makeStep({ order: 7, description: 'keep', runId: 'original-run', manualBounds: { x: 9, y: 9, width: 9, height: 9 }, redactions: [{ id: 'old-mask', kind: 'solid', bounds: { x: 1, y: 1, width: 2, height: 2 } }] });
+    const step = makeStep({ order: 7, description: 'keep', runId: 'original-run', manualBounds: { x: 9, y: 9, width: 9, height: 9 }, highlightRemoved: true, redactions: [{ id: 'old-mask', kind: 'solid', bounds: { x: 1, y: 1, width: 2, height: 2 } }] });
     await addStep(step);
     const screenshotBlob = jpegBlob(4, 4);
 
@@ -492,11 +494,12 @@ describe('atomic visual edits and recapture', () => {
       description: 'keep',
       runId: 'original-run',
       bounds: { x: 20, y: 30, width: 40, height: 50 },
-      manualBounds: null,
       redactions: [],
       captureRevision: 1,
       lastCaptureRunId: 'recapture-run',
     });
+    expect(stored).not.toHaveProperty('manualBounds');
+    expect(stored).not.toHaveProperty('highlightRemoved');
     expect(new Uint8Array(await stored.screenshotBlob!.arrayBuffer())).toEqual(new Uint8Array(await screenshotBlob.arrayBuffer()));
   });
 
@@ -533,7 +536,7 @@ describe('atomic visual edits and recapture', () => {
 
     const stored = itemAt((await getSteps(step.sessionId)), 0);
     expect(stored.captureRevision).toBe(1);
-    expect(stored.manualBounds).toBeNull();
+    expect(stored).not.toHaveProperty('manualBounds');
     expect(stored.crop).toBeUndefined();
     expect(stored.redactions).toEqual([]);
     // The old masks covered the old pixels: the new image waits for its masks to be checked.
@@ -584,7 +587,7 @@ describe('atomic visual edits and recapture', () => {
     expect(storedAnchor.redactions).toEqual([]);
     expect(storedAnchor.redactionReviewRequired).toBe(true);
     expect(storedAnchor.crop).toBeUndefined();
-    expect(storedAnnotation.manualBounds).toBeNull();
+    expect(storedAnnotation).not.toHaveProperty('manualBounds');
     expect(storedAnnotation.bounds).toEqual({ x: 20, y: 30, width: 40, height: 50 });
   });
 

@@ -261,7 +261,7 @@ export const zhTW = {
         crop: '拖曳選出要保留的範圍，再拖曳邊緣調整。原圖不會被改動，隨時可以清除裁切。',
         navigate: '滾輪縮放，按住空白鍵或滑鼠中鍵拖曳平移。',
       },
-      itemLabel: (kind: string): string => ({ redaction: '遮罩', text: '文字', arrow: '箭頭', rect: '外框', ellipse: '橢圓', step: '編號', crop: '裁切範圍' } as Record<string, string>)[kind] ?? '項目',
+      itemLabel: (kind: string): string => ({ highlight: '紅框', redaction: '遮罩', text: '文字', arrow: '箭頭', rect: '外框', ellipse: '橢圓', step: '編號', crop: '裁切範圍' } as Record<string, string>)[kind] ?? '項目',
       textInput: '輸入文字',
       clearCrop: '清除裁切',
       cropSize: (width: number, height: number) => `裁切後 ${width} × ${height} px`,
