@@ -980,7 +980,7 @@ describe('cancelStepRecapture', () => {
       editorSender('project-b'),
     );
 
-    expect(result).toEqual({ ok: false, error: '無法使用這個補拍來源，請回到編輯器重新操作。' });
+    expect(result).toEqual({ ok: false, error: '無法使用這個重拍來源，請回到編輯器重新操作。' });
     expect(harness.getState().operation).toBe('recapture');
   });
 
@@ -1041,7 +1041,7 @@ describe('cancelStepRecapture', () => {
         { type: 'CANCEL_STEP_RECAPTURE', runId: 'some-other-run' },
         editorSender(),
       ),
-    ).resolves.toEqual({ ok: false, error: '這次補拍已經結束。' });
+    ).resolves.toEqual({ ok: false, error: '這次重拍已經結束。' });
   });
 });
 
@@ -1122,14 +1122,14 @@ describe('focusStepRecaptureSource', () => {
         { type: 'FOCUS_STEP_RECAPTURE_SOURCE', runId: 'gone' },
         editorSender(),
       ),
-    ).resolves.toEqual({ ok: false, error: '這次補拍已經結束。' });
+    ).resolves.toEqual({ ok: false, error: '這次重拍已經結束。' });
 
     await expect(
       harness.flow.focusStepRecaptureSource(
         { type: 'FOCUS_STEP_RECAPTURE_SOURCE', runId: 'recapture-1' },
         editorSender('project-b'),
       ),
-    ).resolves.toEqual({ ok: false, error: '無法從這個頁面開始補拍，請回到 Howbeam 編輯器重新操作。' });
+    ).resolves.toEqual({ ok: false, error: '無法從這個頁面開始重拍，請回到 Howbeam 編輯器重新操作。' });
   });
 
   it('reports a source tab that can no longer be focused', async () => {
@@ -1141,6 +1141,6 @@ describe('focusStepRecaptureSource', () => {
         { type: 'FOCUS_STEP_RECAPTURE_SOURCE', runId: 'recapture-1' },
         editorSender(),
       ),
-    ).resolves.toEqual({ ok: false, error: '找不到補拍分頁。' });
+    ).resolves.toEqual({ ok: false, error: '找不到重拍分頁。' });
   });
 });

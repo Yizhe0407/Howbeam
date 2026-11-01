@@ -185,7 +185,7 @@ describe('專案庫', () => {
     storage.emit({ operation: 'recording', isRecording: true });
 
     await waitFor(() => expect(deleteButton.disabled).toBe(true));
-    expect(screen.getByText(/錄製或補拍進行中/)).toBeTruthy();
+    expect(screen.getByText(/錄製或重拍進行中/)).toBeTruthy();
   });
 
   it('複製後在背景更新清單，不以載入畫面取代現有卡片', async () => {

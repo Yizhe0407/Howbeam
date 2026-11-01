@@ -44,7 +44,7 @@ pnpm benchmark:detection
 - 測試固定單 worker 執行，避免 `activeTab`、`captureVisibleTab` quota 與系統剪貼簿互相干擾。
 - 失敗時保存 trace、頁面截圖與 console error；成功案例不保留大型 artifact。
 
-E2E 與 Vitest 的測試檔及測試項目會隨功能持續增加，實際數量與結果請以當次測試命令輸出為準；視覺編輯、補拍與隱私遮罩的跨 context 實機流程仍列在手動／E2E 驗收清單。
+E2E 與 Vitest 的測試檔及測試項目會隨功能持續增加，實際數量與結果請以當次測試命令輸出為準；視覺編輯、重拍與隱私遮罩的跨 context 實機流程仍列在手動／E2E 驗收清單。
 
 ## Element detection benchmark
 

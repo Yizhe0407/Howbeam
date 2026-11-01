@@ -86,7 +86,7 @@ const captureFlow = createCaptureFlow({
   discardPendingUndo: undoWindow.discard,
 });
 
-// 步驟擷取與補拍共用取消及提交標記。
+// 步驟擷取與重拍共用取消及提交標記。
 const recaptureFlow = createRecaptureFlow({
   control,
   runtime: recorderRuntime,

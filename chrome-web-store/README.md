@@ -22,7 +22,7 @@
 ### 一、送審前準備
 
 - [ ] 改掉程式裡會被審核或使用者看到的問題，見 [package.md](package.md) 的「送審前要改的程式」。
-- [ ] 自己完整使用 3 到 5 天，走過錄製、編輯、匯出和自動備份。`extension/tests/README.md` 裡列在手動驗收清單的流程（視覺編輯、補拍、隱私遮罩）要逐項確認。
+- [ ] 自己完整使用 3 到 5 天，走過錄製、編輯、匯出和自動備份。`extension/tests/README.md` 裡列在手動驗收清單的流程（視覺編輯、重拍、隱私遮罩）要逐項確認。
 - [ ] 把 [privacy-policy.md](privacy-policy.md) 推到 main，確認網址打得開：
   `https://github.com/Yizhe0407/Stepmark/blob/main/chrome-web-store/privacy-policy.md`
   上架後**不要搬動或改名這個檔案**，否則商店上的政策連結會失效。

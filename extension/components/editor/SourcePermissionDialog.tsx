@@ -24,7 +24,7 @@ interface Props {
   /** Origin the browser prompt will name. Shown verbatim so the user can compare
    * it against the permission prompt Chrome raises next. */
   sourceOrigin: string;
-  /** What the grant is for, e.g. 補拍 or 接續錄製. */
+  /** What the grant is for, e.g. 重拍 or 接續錄製. */
   actionLabel: string;
   pending?: boolean;
   /** Continuation only: opens the explicit 「改在其他頁面接續」 tab picker,

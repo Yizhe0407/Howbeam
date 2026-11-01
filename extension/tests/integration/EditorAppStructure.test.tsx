@@ -113,7 +113,7 @@ vi.mock('@/components/editor/StepStage', () => ({
         data-editing-disabled={String(props.editingDisabled)}
       >
         <button type="button" disabled={props.editingDisabled} onClick={() => void props.onRecapture()}>
-          準備補拍
+          準備重拍
         </button>
       </main>
     );
@@ -279,18 +279,18 @@ describe('Editor App structure wiring', () => {
     });
     render(<EditorApp />);
 
-    await screen.findByRole('button', { name: '準備補拍' });
+    await screen.findByRole('button', { name: '準備重拍' });
     await rendered.stepRailProps.onSelect('entry-2', { additive: false, range: false });
     await waitFor(() => expect(
       screen.getByLabelText('StepStage test double').getAttribute('data-entry-id'),
     ).toBe('entry-2'));
-    fireEvent.click(screen.getByRole('button', { name: '準備補拍' }));
+    fireEvent.click(screen.getByRole('button', { name: '準備重拍' }));
 
     expect(await screen.findByText('https://fresh.example')).toBeTruthy();
     // The grant is a security decision, so it blocks the editor in a modal
     // rather than a banner the user can scroll away from.
     const permissionDialog = screen.getByRole('dialog');
-    expect(permissionDialog.textContent).toContain('補拍前需要存取來源網站');
+    expect(permissionDialog.textContent).toContain('重拍前需要存取來源網站');
     expect(permissionDialog.textContent).toContain('https://fresh.example');
     expect(browserApi.requestPermission).not.toHaveBeenCalled();
     expect(browserApi.sendMessage).toHaveBeenCalledWith({
@@ -322,12 +322,12 @@ describe('Editor App structure wiring', () => {
     });
     render(<EditorApp />);
 
-    await screen.findByRole('button', { name: '準備補拍' });
+    await screen.findByRole('button', { name: '準備重拍' });
     await rendered.stepRailProps.onSelect('entry-2', { additive: false, range: false });
     await waitFor(() => expect(
       screen.getByLabelText('StepStage test double').getAttribute('data-entry-id'),
     ).toBe('entry-2'));
-    fireEvent.click(screen.getByRole('button', { name: '準備補拍' }));
+    fireEvent.click(screen.getByRole('button', { name: '準備重拍' }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('button', { name: '允許並開始' })).toBeTruthy();
