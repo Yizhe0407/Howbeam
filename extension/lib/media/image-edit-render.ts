@@ -171,6 +171,11 @@ export interface TextPlacement {
   outlineColor: string;
 }
 
+/** Width of the outline stroke drawn behind text of this size; half of it shows outside the glyphs. */
+export function textOutlineWidth(fontSize: number): number {
+  return Math.max(2, fontSize * 0.16);
+}
+
 export function placeText(edit: TextEdit, measure: TextMeasure = measureTextWidth): TextPlacement {
   const lineHeight = textLineHeight(edit.fontSize);
   const offset = textBaselineOffset(edit.fontSize);
@@ -179,7 +184,7 @@ export function placeText(edit: TextEdit, measure: TextMeasure = measureTextWidt
   return {
     x: edit.bounds.x,
     lines: lineTexts.map((text, index) => ({ text, baselineY: edit.bounds.y + index * lineHeight + offset })),
-    outlineWidth: edit.look === 'outline' ? Math.max(2, edit.fontSize * 0.16) : null,
+    outlineWidth: edit.look === 'outline' ? textOutlineWidth(edit.fontSize) : null,
     outlineColor: ink,
   };
 }

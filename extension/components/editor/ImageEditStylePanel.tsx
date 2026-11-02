@@ -10,7 +10,7 @@ import {
 } from '@/lib/storage/image-edit-model';
 import { IMAGE_EDIT_LIMITS } from '@/lib/storage/image-edit-model';
 import type { ImageEditStyle, StyleField, StylePatch } from '@/lib/editor/image-edit-style';
-import { EDIT_SHADOW, contrastColor } from '@/lib/media/image-edit-render';
+import { EDIT_SHADOW, contrastColor, textOutlineWidth } from '@/lib/media/image-edit-render';
 import { cn } from '@/lib/shared/utils';
 import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -267,16 +267,22 @@ export default function ImageEditStylePanel({ fields, style, number, onChange }:
   );
 }
 
+const LOOK_SAMPLE_FONT_SIZE = 14;
+
 /** "Aa" drawn the way the look will render it: the image's shadow, and for outline its stroke. */
 function LookSample({ look, color }: { look: (typeof TEXT_LOOKS)[number]; color: string }) {
   const copy = t().editor.imageEdit;
   return (
     <span
-      className="rounded-[4px] px-1.5 text-sm leading-6 font-bold"
+      className="rounded-[4px] px-1.5 leading-6 font-bold"
       style={{
         color,
+        fontSize: LOOK_SAMPLE_FONT_SIZE,
         filter: `drop-shadow(0 ${EDIT_SHADOW.offsetY}px ${EDIT_SHADOW.blur}px ${EDIT_SHADOW.color})`,
-        ...(look === 'outline' && { WebkitTextStroke: `0.32em ${contrastColor(color)}`, paintOrder: 'stroke fill' }),
+        ...(look === 'outline' && {
+          WebkitTextStroke: `${textOutlineWidth(LOOK_SAMPLE_FONT_SIZE)}px ${contrastColor(color)}`,
+          paintOrder: 'stroke fill',
+        }),
       }}
       aria-hidden="true"
     >
