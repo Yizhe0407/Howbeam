@@ -107,7 +107,6 @@ function tryInitialize(event: MessageEvent): void {
   let interactionsEnabled = false;
   let lastPreviewRect: SnapshotShieldRect | null = null;
   let lastCommitViaKeyboard = false;
-  let lastCommitPoint: { x: number; y: number } | null = null;
   let keyboardAnchors: SnapshotShieldKeyboardAnchor[] = [];
   let keyboardIndex = -1;
   let focusInitialized = false;
@@ -217,7 +216,6 @@ function tryInitialize(event: MessageEvent): void {
     capturing = true;
     activeCaptureId = ++captureSequence;
     lastCommitViaKeyboard = viaKeyboard;
-    lastCommitPoint = { x: clientX, y: clientY };
     hover.beginCapture(clientX, clientY);
     overlay.preview(null);
     lastPreviewRect = null;
@@ -521,7 +519,7 @@ function tryInitialize(event: MessageEvent): void {
         announce(t().shield.annotationNotCreated);
       }
       // A click on something already marked creates nothing; flash that mark so the click visibly landed.
-      if (!event.data.selection && !lastCommitWasRegion && lastCommitPoint) overlay.pulseAt(lastCommitPoint);
+      if (event.data.duplicateOf !== undefined) overlay.pulse(event.data.duplicateOf);
       lastCommitViaKeyboard = false;
       lastCommitWasRegion = false;
       capturing = false;

@@ -19,8 +19,8 @@ export interface SnapshotOverlay {
   commit(selection: SnapshotShieldSelection & { id: number }): void;
   undo(): void;
   relayout(): void;
-  /** Flashes the smallest committed annotation under the point. */
-  pulseAt(point: { x: number; y: number }): void;
+  /** Flashes a committed annotation. */
+  pulse(id: number): void;
 }
 
 export function createOverlay(): SnapshotOverlay {
@@ -215,11 +215,8 @@ export function createOverlay(): SnapshotOverlay {
     relayout() {
       renderCommitted();
     },
-    pulseAt(point) {
-      const hit = committedSelections
-        .filter(({ rect }) => point.x >= rect.x && point.x <= rect.x + rect.width && point.y >= rect.y && point.y <= rect.y + rect.height)
-        .sort((a, b) => a.rect.width * a.rect.height - b.rect.width * b.rect.height)[0];
-      const elements = hit && elementsById.get(hit.id);
+    pulse(id) {
+      const elements = elementsById.get(id);
       if (!elements) return;
       for (const group of [elements.target, elements.badge]) {
         group.classList.remove('is-pulsing');

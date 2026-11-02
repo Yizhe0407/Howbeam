@@ -43,6 +43,11 @@ export interface SnapshotShieldSelection {
   label: number;
 }
 
+/** A click on something already annotated: the rect of the annotation it matched. */
+export interface SnapshotShieldDuplicate {
+  duplicateOf: SnapshotShieldRect;
+}
+
 /** Distributes over a shield message union, dropping the channel token that
  * each side's `post` helper injects. */
 export type WithoutToken<M> = M extends { token: string } ? Omit<M, 'token'> : never;
@@ -105,6 +110,8 @@ interface SnapshotShieldCaptureCompleteMessage {
   /** Echo of the originating capture's captureId. */
   captureId: number;
   selection: (SnapshotShieldSelection & { id: number }) | null;
+  /** Set when nothing was created because the click matched this committed annotation. */
+  duplicateOf?: number;
 }
 
 interface SnapshotShieldCommitMessage {

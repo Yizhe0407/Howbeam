@@ -5,6 +5,8 @@ export interface SnapshotSelectionSet {
   /** True when the target (by live element, stable identity, or rect key) was
    * already annotated on the current snapshot. */
   isSelected(target: ResolvedSnapshotTarget): boolean;
+  /** The annotated target `target` duplicates, or null. */
+  match(target: ResolvedSnapshotTarget): ResolvedSnapshotTarget | null;
   /** Rect-only membership, for region annotations that carry no element. */
   hasRect(rect: SnapshotShieldRect): boolean;
   /** Records a committed annotation and invalidates any pending redo. */
@@ -23,32 +25,36 @@ export interface SnapshotSelectionSet {
  * their composite identity and rect membership.
  */
 export function createSnapshotSelectionSet(): SnapshotSelectionSet {
-  const identities = new Set<string>();
-  const elements = new WeakSet<Element>();
-  const rectKeys = new Set<string>();
+  const identities = new Map<string, ResolvedSnapshotTarget>();
+  const elements = new WeakMap<Element, ResolvedSnapshotTarget>();
+  const rectKeys = new Map<string, ResolvedSnapshotTarget>();
   const history: ResolvedSnapshotTarget[] = [];
   let undoneTarget: ResolvedSnapshotTarget | null = null;
 
   const dedupeElementFor = (target: ResolvedSnapshotTarget): Element | null =>
     target.dedupeElement === undefined ? (target.element ?? null) : target.dedupeElement;
 
+  const match = (target: ResolvedSnapshotTarget): ResolvedSnapshotTarget | null => {
+    const dedupeElement = dedupeElementFor(target);
+    return (
+      (dedupeElement ? elements.get(dedupeElement) : undefined) ??
+      identities.get(target.identity) ??
+      rectKeys.get(snapshotRectKey(target.rect)) ??
+      null
+    );
+  };
+
   return {
-    isSelected(target) {
-      const dedupeElement = dedupeElementFor(target);
-      return (
-        (dedupeElement ? elements.has(dedupeElement) : false) ||
-        identities.has(target.identity) ||
-        rectKeys.has(snapshotRectKey(target.rect))
-      );
-    },
+    isSelected: (target) => match(target) !== null,
+    match,
     hasRect(rect) {
       return rectKeys.has(snapshotRectKey(rect));
     },
     add(target) {
       const dedupeElement = dedupeElementFor(target);
-      identities.add(target.identity);
-      if (dedupeElement) elements.add(dedupeElement);
-      rectKeys.add(snapshotRectKey(target.rect));
+      identities.set(target.identity, target);
+      if (dedupeElement) elements.set(dedupeElement, target);
+      rectKeys.set(snapshotRectKey(target.rect), target);
       history.push(target);
       undoneTarget = null;
     },
@@ -67,9 +73,9 @@ export function createSnapshotSelectionSet(): SnapshotSelectionSet {
       if (!undoneTarget) return null;
       const target = undoneTarget;
       const dedupeElement = dedupeElementFor(target);
-      identities.add(target.identity);
-      if (dedupeElement) elements.add(dedupeElement);
-      rectKeys.add(snapshotRectKey(target.rect));
+      identities.set(target.identity, target);
+      if (dedupeElement) elements.set(dedupeElement, target);
+      rectKeys.set(snapshotRectKey(target.rect), target);
       history.push(target);
       undoneTarget = null;
       return target;

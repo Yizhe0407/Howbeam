@@ -82,6 +82,24 @@ describe('createSnapshotSelectionSet', () => {
     expect(selection.isSelected(moved)).toBe(true);
   });
 
+  it('names the annotated target a click duplicates, until it is undone', () => {
+    const selection = createSnapshotSelectionSet();
+    const button = document.createElement('button');
+    document.body.append(button);
+    const original = createTarget('button:original', { x: 10, y: 10, width: 80, height: 30 }, button);
+    const other = createTarget('region:other', { x: 300, y: 300, width: 40, height: 40 });
+
+    selection.add(original);
+    selection.add(other);
+
+    expect(selection.match(createTarget('button:moved', { x: 200, y: 100, width: 80, height: 30 }, button))).toBe(original);
+    expect(selection.match(createTarget('region:other', { x: 0, y: 0, width: 1, height: 1 }))).toBe(other);
+    expect(selection.match(createTarget('region:new', { x: 500, y: 500, width: 10, height: 10 }))).toBeNull();
+
+    selection.undoLast();
+    expect(selection.match(other)).toBeNull();
+  });
+
   it('removes and restores every dedup dimension for composite targets', () => {
     const selection = createSnapshotSelectionSet();
     const { first, second } = createSharedMapTargets();

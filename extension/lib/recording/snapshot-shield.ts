@@ -17,6 +17,7 @@ import {
   SNAPSHOT_SHIELD_TOKEN_TTL_MS,
   SNAPSHOT_SHIELD_TOOLBAR_STATE,
   SNAPSHOT_SHIELD_UNDO,
+  snapshotRectKey,
   type SnapshotShieldControlMessage,
   type SnapshotShieldFrameMessage,
   type SnapshotShieldInitMessage,
@@ -26,6 +27,8 @@ import {
   type SnapshotShieldRegionCaptureMessage,
   type SnapshotShieldKeyboardAnchor,
   type SnapshotShieldPreviewResult,
+  type SnapshotShieldDuplicate,
+  type SnapshotShieldRect,
   type SnapshotShieldSelection,
   type SnapshotShieldTokenRecord,
   type SnapshotShieldToolbarStateMessage,
@@ -63,9 +66,8 @@ export interface SnapshotShield {
   remove(): void;
 }
 
-type PointHandler = (
-  point: SnapshotShieldPointerDownMessage,
-) => SnapshotShieldSelection | null | void | Promise<SnapshotShieldSelection | null | void>;
+type PointResult = SnapshotShieldSelection | SnapshotShieldDuplicate | null | void;
+type PointHandler = (point: SnapshotShieldPointerDownMessage) => PointResult | Promise<PointResult>;
 type HoverHandler = (
   point: SnapshotShieldPointerMoveMessage,
 ) => SnapshotShieldPreviewResult | Promise<SnapshotShieldPreviewResult>;
@@ -274,6 +276,7 @@ export function createSnapshotShield(
     selection: SnapshotShieldSelection | null,
     generation: number,
     captureId: number,
+    duplicateOf?: SnapshotShieldRect,
   ): void => {
     if (removed) return;
     const committed = selection ? { ...selection, id: nextSelectionId++ } : null;
@@ -283,20 +286,22 @@ export function createSnapshotShield(
     }
 
     if (!isStale(generation)) {
-      post({ type: SNAPSHOT_SHIELD_CAPTURE_COMPLETE, captureId, selection: committed });
+      const matched = duplicateOf && committedSelections.find(({ rect }) => snapshotRectKey(rect) === snapshotRectKey(duplicateOf));
+      post({ type: SNAPSHOT_SHIELD_CAPTURE_COMPLETE, captureId, selection: committed, ...(matched && { duplicateOf: matched.id }) });
     } else if (committed) {
       post({ type: SNAPSHOT_SHIELD_COMMIT, selection: committed });
     }
   };
 
   const handlePoint = async (message: SnapshotShieldPointerDownMessage, generation: number): Promise<void> => {
-    let selection: SnapshotShieldSelection | null = null;
+    let result: PointResult = null;
     try {
-      selection = (await onPoint(message)) ?? null;
+      result = await onPoint(message);
     } catch (error) {
       console.error('[howbeam] failed to handle snapshot shield pointer', error);
     }
-    completeSelection(selection, generation, message.captureId);
+    if (result && 'duplicateOf' in result) completeSelection(null, generation, message.captureId, result.duplicateOf);
+    else completeSelection(result ?? null, generation, message.captureId);
   };
 
   const handleRegion = async (message: SnapshotShieldRegionCaptureMessage, generation: number): Promise<void> => {

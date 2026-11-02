@@ -14,6 +14,7 @@ import type {
   SnapshotShieldPointerMoveMessage,
   SnapshotShieldPreviewResult,
   SnapshotShieldRegionCaptureMessage,
+  SnapshotShieldDuplicate,
   SnapshotShieldSelection,
 } from '../snapshot-shield-protocol';
 import type { ClickCapture, RecordingControlResult, SnapshotInvalidatedMessage } from '../../runtime/messages';
@@ -109,7 +110,7 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
 
   const onPoint = async (
     point: SnapshotShieldPointerDownMessage,
-  ): Promise<SnapshotShieldSelection | null> => {
+  ): Promise<SnapshotShieldSelection | SnapshotShieldDuplicate | null> => {
     const shield = session.shield;
     if (!shield || !freezePage || !interactionsActive) return null;
     const target = await shield.runWithoutShield(() =>
@@ -117,7 +118,8 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     );
     const now = Date.now();
     if (!interactionsActive || !target) return null;
-    if (selection.isSelected(target)) return null;
+    const matched = selection.match(target);
+    if (matched) return { duplicateOf: matched.rect };
     const label = await capture.commitSnapshotAnnotation(target.rect, target, 'element', now);
     if (label === null) return null;
     selection.add(target);

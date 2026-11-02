@@ -80,9 +80,16 @@ test.describe('snapshot recording', () => {
     await expect(shield.locator('.snapshot-annotation__badge-label')).toHaveText('1');
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
 
+    const second = await targetCenter(appPage, '#action-button');
+    await clickSnapshotTarget(appPage, second);
+    await expect(shield.locator('.snapshot-annotation__frame')).toHaveCount(2);
+    await expect.poll(async () => (await readSteps(popupPage)).length).toBe(3);
+
+    // Clicking the first target again adds nothing and flashes that target's mark, not another one.
     await clickSnapshotTarget(appPage, point);
-    await expectSteady(async () => (await readSteps(popupPage)).length, 2);
-    await expect(shield.locator('.snapshot-annotation__frame')).toHaveCount(1);
+    await expectSteady(async () => (await readSteps(popupPage)).length, 3);
+    await expect(shield.locator('.snapshot-annotation__frame')).toHaveCount(2);
+    await expect(shield.locator('.is-pulsing .snapshot-annotation__badge-label')).toHaveText('1');
 
     const steps = await readSteps(popupPage);
     const anchor = steps.find((step) => step.bounds === null);
