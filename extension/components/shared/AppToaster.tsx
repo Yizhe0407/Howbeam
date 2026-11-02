@@ -33,7 +33,8 @@ export default function AppToaster() {
       position="bottom-right"
       gutter={10}
       containerStyle={{
-        zIndex: 60,
+        // Under dialogs (z-50), so an open dialog dims its notices instead of sitting beside them; over the editor's bottom rail (z-30).
+        zIndex: 40,
         right: 'var(--content-gutter, 1rem)',
         bottom: 'calc(var(--bottom-bar-height, 0px) + 1rem)',
       }}

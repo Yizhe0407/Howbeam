@@ -26,8 +26,6 @@ interface Props {
   onDelete: () => Promise<void>;
   onDeleteAnnotation: (step: Step) => Promise<void>;
   onZoom: () => void;
-  /** Called as the image editor opens over the stage. */
-  onEditImage?: () => void;
   onReorderAnnotations: (reordered: Step[]) => Promise<void>;
   onRecapture: () => Promise<void>;
   editingDisabled?: boolean;
@@ -43,7 +41,6 @@ export default function StepStage({
   onDelete,
   onDeleteAnnotation,
   onZoom,
-  onEditImage,
   onReorderAnnotations,
   onRecapture,
   editingDisabled = false,
@@ -103,10 +100,7 @@ export default function StepStage({
         {/* Also the way out of a pending mask review: the editor is where masks are checked and confirmed. */}
         <button
           type="button"
-          onClick={() => {
-            onEditImage?.();
-            setImageEditorOpen(true);
-          }}
+          onClick={() => setImageEditorOpen(true)}
           disabled={editingDisabled}
           className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border-2 border-border bg-card px-3 text-xs font-bold text-foreground outline-none transition-colors focus-ring hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
         >

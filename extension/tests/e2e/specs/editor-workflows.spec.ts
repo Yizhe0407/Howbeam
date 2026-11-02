@@ -567,4 +567,35 @@ test.describe('editor workflows', () => {
     await expect(editor.getByText('步驟 · 1', { exact: true })).toBeVisible();
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
   });
+
+  test('keeps a pending undo under a dialog, out of reach until the dialog closes', async ({
+    appPage,
+    popupPage,
+    extensionContext,
+    extensionId,
+    browserErrors: _browserErrors,
+  }) => {
+    await recordStepTargets(appPage, popupPage, ['#plain-text', '#action-button']);
+    const editor = await openEditor(extensionContext, extensionId, popupPage, 2);
+
+    await editor.getByRole('button', { name: '開啟步驟 2' }).click();
+    await editor.getByRole('button', { name: '刪除步驟', exact: true }).click();
+    const restore = editor.getByRole('button', { name: '還原', exact: true });
+    await expect(restore).toBeVisible();
+    const box = (await restore.boundingBox())!;
+    const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    const noticeOnTop = () => editor.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[role="status"]') != null, center);
+    expect(await noticeOnTop()).toBe(true);
+
+    await editor.getByRole('button', { name: '放大圖片' }).click();
+    await expect(editor.getByRole('dialog')).toBeVisible();
+    // The dialog covers the notice, so a click there lands on the dialog.
+    expect(await noticeOnTop()).toBe(false);
+    await editor.keyboard.press('Escape');
+    await expect(editor.getByRole('dialog')).toBeHidden();
+
+    await restore.click();
+    await expect(editor.getByText('步驟 · 2', { exact: true })).toBeVisible();
+    await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
+  });
 });
