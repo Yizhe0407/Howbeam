@@ -10,7 +10,7 @@ import {
 } from '@/lib/storage/image-edit-model';
 import { IMAGE_EDIT_LIMITS } from '@/lib/storage/image-edit-model';
 import type { ImageEditStyle, StyleField, StylePatch } from '@/lib/editor/image-edit-style';
-import { hexToRgb } from '@/lib/editor/hsv-color';
+import { EDIT_SHADOW, contrastColor } from '@/lib/media/image-edit-render';
 import { cn } from '@/lib/shared/utils';
 import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -267,17 +267,16 @@ export default function ImageEditStylePanel({ fields, style, number, onChange }:
   );
 }
 
-/** "Aa" drawn the way the look will render it, . */
+/** "Aa" drawn the way the look will render it: the image's shadow, and for outline its stroke. */
 function LookSample({ look, color }: { look: (typeof TEXT_LOOKS)[number]; color: string }) {
   const copy = t().editor.imageEdit;
-  const dark = isDark(color);
-  const edge = dark ? '#ffffff' : '#111111';
   return (
     <span
       className="rounded-[4px] px-1.5 text-sm leading-6 font-bold"
       style={{
         color,
-        textShadow: look === 'outline' ? `-1px 0 ${edge}, 1px 0 ${edge}, 0 -1px ${edge}, 0 1px ${edge}` : undefined,
+        filter: `drop-shadow(0 ${EDIT_SHADOW.offsetY}px ${EDIT_SHADOW.blur}px ${EDIT_SHADOW.color})`,
+        ...(look === 'outline' && { WebkitTextStroke: `0.32em ${contrastColor(color)}`, paintOrder: 'stroke fill' }),
       }}
       aria-hidden="true"
     >
@@ -286,18 +285,13 @@ function LookSample({ look, color }: { look: (typeof TEXT_LOOKS)[number]; color:
   );
 }
 
-function isDark(hex: string): boolean {
-  const { r, g, b } = hexToRgb(hex);
-  return 0.299 * r + 0.587 * g + 0.114 * b < 140;
-}
-
 /** What the crop tool offers instead of style controls: the resulting size and a way to undo the crop. */
 export function ImageEditCropPanel({ size, onClear }: CropProps) {
   const copy = t().editor.imageEdit;
   return (
     <div className="flex flex-wrap items-center gap-3">
       <span className="text-xs font-bold text-foreground tabular-nums">
-        {size ? copy.cropSize(size.width, size.height) : copy.noCrop}
+        {size ? copy.cropSize(size.width, size.height) : copy.cropHint}
       </span>
       <button
         type="button"

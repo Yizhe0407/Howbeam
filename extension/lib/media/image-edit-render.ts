@@ -44,7 +44,7 @@ function luminance(hex: string): number {
 }
 
 /** The ink that stays readable on `hex`: dark on light colours, white on dark ones. */
-function contrastColor(hex: ImageEditColor): string {
+export function contrastColor(hex: ImageEditColor): string {
   return luminance(hex) > 0.4 ? DARK_INK : LIGHT_INK;
 }
 

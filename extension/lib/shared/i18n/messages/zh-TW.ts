@@ -265,7 +265,7 @@ export const zhTW = {
       textInput: '輸入文字',
       clearCrop: '清除裁切',
       cropSize: (width: number, height: number) => `裁切後 ${width} × ${height} px`,
-      noCrop: '尚未裁切',
+      cropHint: '拖曳選取範圍',
       styleLabel: '樣式',
       colorLabel: '顏色',
       customColor: '自訂顏色',

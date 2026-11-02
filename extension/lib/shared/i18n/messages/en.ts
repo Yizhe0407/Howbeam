@@ -263,7 +263,7 @@ export const en: Messages = {
       textInput: 'Type text',
       clearCrop: 'Clear crop',
       cropSize: (width: number, height: number) => `After crop: ${width} × ${height} px`,
-      noCrop: 'Not cropped',
+      cropHint: 'Drag to select an area',
       styleLabel: 'Style',
       colorLabel: 'Colour',
       customColor: 'Custom colour',
