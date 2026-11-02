@@ -1,12 +1,12 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
+  Archive,
+  ArchiveRestore,
   CopyPlus,
-  Download,
   Loader2,
   Search,
   Trash2,
-  Upload,
 } from 'lucide-react';
 import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries } from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
@@ -206,7 +206,7 @@ export default function App() {
               onClick={() => importInput.current?.click()}
               disabled={loading || operationLocked || shownId !== null}
             >
-              {shownId === 'import' ? <Loader2 className="animate-spin" /> : <Upload />}
+              {shownId === 'import' ? <Loader2 className="animate-spin" /> : <ArchiveRestore />}
               <span className="hidden sm:inline">{t().library.import}</span>
             </Button>
           </>
@@ -332,7 +332,7 @@ export default function App() {
                             onClick={() => setExportTarget(project)}
                             disabled={actionsLocked}
                           >
-                            <Download />
+                            <Archive />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>{lockedTitle(t().library.exportArchiveTooltip)}</TooltipContent>
