@@ -109,6 +109,18 @@ describe('recording toolbar', () => {
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
   });
 
+  it('shuts the bar behind the discard dialog until the dialog closes', async () => {
+    await mount(<RecordingToolbar state={state} onCommand={vi.fn()} />);
+    const bar = screen.getByRole('toolbar');
+    expect(bar.hasAttribute('inert')).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: '放棄這次錄製' }));
+    expect(bar.hasAttribute('inert')).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: '取消' }));
+    expect(bar.hasAttribute('inert')).toBe(false);
+  });
+
   it('starts a region capture straight from the bar in either mode, and exposes its active state', async () => {
     const onStartRegionCapture = vi.fn();
     const { rerender } = await mount(
@@ -266,6 +278,20 @@ describe('recording toolbar', () => {
 });
 
 describe('recording toolbar collapse', () => {
+  it('greys the collapsed status while paused, as the open bar does', async () => {
+    mocks.get.mockImplementation(async (key: string) => (
+      key === RECORDING_TOOLBAR_COLLAPSED_KEY ? { [key]: { runId: 'run-1', collapsed: true } } : { [RECORDING_TOOLBAR_CORNER_KEY]: 'bottom-right' }
+    ));
+    const { rerender } = await mount(<RecordingToolbar state={state} onCommand={vi.fn()} />);
+    const expand = screen.getByRole('button', { name: /展開錄製控制/ });
+    expect(expand.querySelector('.ft-dot')?.getAttribute('data-tone')).toBeNull();
+
+    rerender(<RecordingToolbar state={{ ...state, phase: 'paused' }} onCommand={vi.fn()} />);
+    const paused = screen.getByRole('button', { name: /展開錄製控制/ });
+    expect(paused.querySelector('.ft-dot')?.getAttribute('data-tone')).toBe('muted');
+    expect(paused.querySelector('.ft-count-badge')?.getAttribute('data-tone')).toBe('muted');
+  });
+
   it('keeps the choice for the run: a toolbar mounted afresh (another tab) comes up collapsed, a new run does not', async () => {
     const { unmount } = await mount(<RecordingToolbar state={state} onCommand={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: '收合控制器' }));

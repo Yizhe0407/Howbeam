@@ -104,6 +104,7 @@ export const recordingToolbarStyles = `
   .ft-dot { width: 10px; height: 10px; flex: none; border-radius: 99px; background: var(--ft-recording); box-shadow: 0 0 0 3px var(--ft-btn-danger-hover-bg); }
   .ft-dot[data-tone="muted"] { background: var(--ft-muted); box-shadow: none; }
   .ft-grip { width: 18px; height: 22px; flex: none; color: var(--ft-muted); }
+  .ft-count-badge[data-size="small"] { min-width: 22px; height: 22px; font-size: 12px; }
   .ft-count-badge[data-tone="muted"] { background: var(--ft-actions-bg); color: var(--ft-muted); }
   .ft-count-badge { min-width: 26px; height: 26px; padding: 0 8px; border: 2px solid var(--ft-border); border-radius: 99px; background: var(--ft-count); color: var(--ft-count-text); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
   .ft-actions-group { flex: none; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: var(--ft-actions-bg); }
@@ -205,7 +206,7 @@ export const recordingToolbarStyles = `
    * rather than the app's shadcn Tooltip because this toolbar renders in a
    * closed shadow root and a separate iframe, neither of which load Tailwind. */
   [data-tooltip] { position: relative; }
-  [data-dragging] [data-tooltip]::after, [data-dragging][data-tooltip]::after, [data-confirming] [data-tooltip]::after { display: none; }
+  [data-dragging] [data-tooltip]::after, [data-dragging][data-tooltip]::after { display: none; }
   [data-tooltip]::after {
     content: attr(data-tooltip);
     position: absolute; left: 50%; bottom: calc(100% + 8px); z-index: 4;

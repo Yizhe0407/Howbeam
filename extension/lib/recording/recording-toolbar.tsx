@@ -51,6 +51,16 @@ export interface RecordingToolbarState {
   error: string | null;
 }
 
+function RunStatus({ paused, count, small }: { paused: boolean; count: number; small?: boolean }) {
+  const tone = paused ? 'muted' : undefined;
+  return (
+    <>
+      <span className="ft-dot" data-tone={tone} aria-hidden="true" />
+      <span className="ft-count-badge" data-tone={tone} data-size={small ? 'small' : undefined}>{count}</span>
+    </>
+  );
+}
+
 interface Props {
   state: RecordingToolbarState;
   onCommand: (action: ToolbarAction, undoToken?: string) => Promise<RecordingControlResult>;
@@ -257,7 +267,6 @@ export default function RecordingToolbar({
       <div
         className="ft-layer"
         data-theme={theme}
-        data-confirming={confirmDiscard ? '' : undefined}
         onKeyDown={(event) => {
           if (event.key !== 'Escape' || pendingRef.current) return;
           setConfirmDiscard(false);
@@ -350,8 +359,7 @@ export default function RecordingToolbar({
                 setCollapsed(false);
               }}
             >
-              <span className="ft-dot" data-tone={paused ? 'muted' : undefined} aria-hidden="true" />
-              <span className="ft-count-badge" data-tone={paused ? 'muted' : undefined} style={{ minWidth: '22px', height: '22px', fontSize: '12px' }}>{state.runItemCount}</span>
+              <RunStatus paused={paused} count={state.runItemCount} small />
               <span className="ft-collapsed-expand">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
               </span>
@@ -360,6 +368,7 @@ export default function RecordingToolbar({
             <div
               ref={(element) => { floatingRef.current = element; }}
               className={`ft-toolbar${invalidated ? ' ft-toolbar--invalidated' : ''}`}
+              inert={confirmDiscard}
               role="toolbar"
               aria-label={t().toolbar.controlsLabel}
             >
@@ -419,8 +428,7 @@ export default function RecordingToolbar({
                     onPointerCancel={finishPositionDrag}
                   >
                     <GripVertical className="ft-grip" aria-hidden="true" />
-                    <span className="ft-dot" data-tone={paused ? 'muted' : undefined} aria-hidden="true" />
-                    <span className="ft-count-badge" data-tone={paused ? 'muted' : undefined}>{state.runItemCount}</span>
+                    <RunStatus paused={paused} count={state.runItemCount} />
                   </button>
 
                   <div className="ft-mode-switch" role="radiogroup" aria-label={t().common.recordingMode}>
