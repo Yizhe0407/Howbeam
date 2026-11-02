@@ -140,7 +140,7 @@ describe('recording toolbar', () => {
     );
     expect(screen.getByRole('button', { name: /區域擷取中/ })).toBeTruthy();
     const active = screen.getByRole('button', { name: '區域擷取進行中' }) as HTMLButtonElement;
-    expect(active.disabled).toBe(true);
+    expect(active.disabled).toBe(false);
     expect(active.getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByText('區域擷取已啟動，請在畫面上拖曳選取範圍')).toBeTruthy();
   });

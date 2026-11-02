@@ -507,7 +507,8 @@ export default function RecordingToolbar({
                           aria-label={regionCaptureActive ? t().toolbar.regionCaptureActive : t().toolbar.cropRegion}
                           data-tooltip={regionCaptureActive ? t().toolbar.regionCaptureActive : t().toolbar.cropRegion}
                           aria-pressed={regionCaptureActive}
-                          disabled={busy || paused || regionCaptureActive || state.phase !== 'recording'}
+                          // Active is pressed, not disabled: the region selector covers the bar, and starting again is a no-op.
+                          disabled={busy || paused || state.phase !== 'recording'}
                           onClick={() => onStartRegionCapture()}
                         >
                           <SquareDashedMousePointer size={17} />
