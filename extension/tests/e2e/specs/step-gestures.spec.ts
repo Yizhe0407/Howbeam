@@ -60,6 +60,19 @@ test.describe('step recording gestures', () => {
     await stopRecording(popupPage);
   });
 
+  test('a text drag selects text while a text field has focus', async ({ appPage, popupPage, browserErrors: _browserErrors }) => {
+    await startRecording(appPage, popupPage, 'steps');
+    await appPage.locator('#gesture-input').focus();
+    const box = (await appPage.locator('#gesture-text').boundingBox())!;
+    await appPage.mouse.move(box.x + 2, box.y + box.height / 2);
+    await appPage.mouse.down();
+    await appPage.mouse.move(box.x + box.width * 0.6, box.y + box.height / 2, { steps: 10 });
+    await appPage.mouse.up();
+    await expect.poll(() => appPage.evaluate(() => window.getSelection()?.toString().length ?? 0)).toBeGreaterThan(3);
+    await expectSteady(async () => (await readSteps(popupPage)).length, 0);
+    await stopRecording(popupPage);
+  });
+
   test('a double click reaches its dblclick handler and records one step', async ({ appPage, popupPage, browserErrors: _browserErrors }) => {
     await startRecording(appPage, popupPage, 'steps');
     const point = await targetCenter(appPage, '#gesture-dbl');

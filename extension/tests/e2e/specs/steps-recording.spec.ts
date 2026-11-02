@@ -479,6 +479,28 @@ test.describe('step recording', () => {
     await stopRecording(popupPage);
   });
 
+  test('records a pick from a button-opened menu that closes when the button loses focus', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
+    await appPage.goto(`${FIXTURE_URL}listbox.html`);
+    await startRecording(appPage, popupPage, 'steps');
+    await clickTarget(appPage, '#trigger');
+    await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
+    await expect(appPage.locator('#option')).toBeVisible();
+    const option = await appPage.locator('#option').boundingBox();
+
+    await clickTarget(appPage, '#option');
+    await expect.poll(async () => (await readSteps(popupPage)).length).toBe(2);
+    await expect(appPage.locator('#picked')).toHaveText('台北');
+    // The step boxes the option, so the menu was still open when the screenshot was taken.
+    const step = itemAt(await readSteps(popupPage), 1);
+    expect(step.bounds!.y).toBeCloseTo(option!.y, 0);
+    expect(await appPage.evaluate(() => document.activeElement?.id)).toBe('trigger');
+    await stopRecording(popupPage);
+  });
+
   test('records a pick from an autocomplete menu that closes when its field loses focus', async ({
     appPage,
     popupPage,

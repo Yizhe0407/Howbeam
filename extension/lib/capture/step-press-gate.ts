@@ -1,4 +1,4 @@
-import { moveFocusAsPressed, replayElementClick, replayElementDoubleClick } from './element-description';
+import { replayElementClick, replayElementDoubleClick } from './element-description';
 import type { LateClickSuppressor } from './step-capture';
 import { isExtensionOverlay } from './viewport-overlay-host';
 
@@ -12,12 +12,12 @@ import { isExtensionOverlay } from './viewport-overlay-host';
  * (`stopImmediatePropagation()` in the capture phase), so a mousedown-driven
  * menu cannot open before the screenshot, while the browser's default actions
  * run untouched: the caret lands where the user clicked, a text selection or
- * native drag can start, a range thumb grabs. The one default held back is
- * focus leaving a text field for content that is not itself a control:
- * autocomplete menus keep that focus by cancelling mousedown in the very
- * handler the gate hides, and would close on blur before the screenshot. The
- * replay hands the page its mousedown and moves focus only if the page did
- * not cancel it, as the browser would have.
+ * native drag can start, a range thumb grabs, focus moves. The focus change is
+ * hidden from the page along with the mousedown that caused it: a menu that
+ * closes on blur, and keeps its focus by cancelling that mousedown, would
+ * otherwise close before the screenshot. When the press is replayed or handed
+ * over, the page gets its mousedown first; if it cancels it, focus goes back
+ * as if it never moved, otherwise the page is told about the move.
  *
  * - Released without travelling → `click`. The trusted `click` event is
  *   cancelled (its activation — navigation, toggling, submission — is what
@@ -57,7 +57,13 @@ export const STEP_PRESS_GATE_EVENTS = [
   'auxclick',
   'contextmenu',
   'dragstart',
+  'focus',
+  'blur',
+  'focusin',
+  'focusout',
 ] as const;
+
+const FOCUS_EVENTS = new Set(['focus', 'blur', 'focusin', 'focusout']);
 
 /** `merged`: a multi-click follow-up folded into the previous step; it gets
  * no step of its own. */
@@ -92,8 +98,8 @@ interface PressRecord extends StepPress {
   /** The page cancelled the handed-over mousedown, i.e. it wanted the native
    * drag/selection suppressed. */
   pageCancelledDown: boolean;
-  /** The trusted mousedown's focus change was held back; the page decides it later. */
-  focusHeld: boolean;
+  /** Where focus went on this press, hidden from the page until its mousedown is handed over; null once decided. */
+  focus: { to: Element | null } | null;
   settle(outcome: StepPressOutcome): void;
 }
 
@@ -163,6 +169,48 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
   let current: PressRecord | null = null;
   /** The latest press, kept for multi-click detection after ownership ends. */
   let last: PressRecord | null = null;
+  /** Presses whose focus change the page has not been told about yet, oldest first. */
+  const focusPending: PressRecord[] = [];
+  /** The element the page last saw take focus. */
+  let pageFocus: Element | null = null;
+  /** Focus events this gate dispatches to tell the page about a move. */
+  const announced = new WeakSet<Event>();
+
+  const announceFocus = (from: Element | null, to: Element | null): void => {
+    if (from === to) return;
+    const send = (at: Element | null, type: string, related: Element | null, bubbles: boolean) => {
+      if (!at?.isConnected) return;
+      const event = new FocusEvent(type, { bubbles, composed: true, relatedTarget: related });
+      announced.add(event);
+      at.dispatchEvent(event);
+    };
+    send(from, 'blur', to, false);
+    send(from, 'focusout', to, true);
+    send(to, 'focus', from, false);
+    send(to, 'focusin', from, true);
+  };
+
+  /** Settles a press's hidden focus move once the page has had its mousedown. Moves are decided in
+   * press order; when the last one is decided, real focus is put where the page now believes it is. */
+  const decideFocus = (press: PressRecord, cancelled: boolean): void => {
+    const focus = press.focus;
+    if (!focus) return;
+    press.focus = null;
+    const index = focusPending.indexOf(press);
+    if (index >= 0) focusPending.splice(index, 1);
+    if (!cancelled) {
+      announceFocus(pageFocus, focus.to);
+      pageFocus = focus.to;
+    }
+    if (focusPending.length > 0) return;
+    // Still hidden: the page was already told where focus is, or that it never moved.
+    if (deepActiveElement() !== pageFocus) {
+      focusPending.push(press);
+      if (pageFocus instanceof HTMLElement || pageFocus instanceof SVGElement) pageFocus.focus({ preventScroll: true });
+      else (deepActiveElement() as HTMLElement | null)?.blur?.();
+      focusPending.pop();
+    }
+  };
 
   const createRecord = (event: PointerEvent, target: Element, previous: PressRecord | null): PressRecord => {
     let resolve!: (outcome: StepPressOutcome) => void;
@@ -186,7 +234,7 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
       dblclick: false,
       replayed: false,
       pageCancelledDown: false,
-      focusHeld: false,
+      focus: null,
       settle(next) {
         if (record.result !== null) return;
         record.result = next;
@@ -231,9 +279,9 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
         const mouseDown = new MouseEvent('mousedown', init);
         press.target.dispatchEvent(mouseDown);
         press.pageCancelledDown = mouseDown.defaultPrevented;
-        if (press.focusHeld && !mouseDown.defaultPrevented) moveFocusAsPressed(press.target);
       }
     }
+    decideFocus(press, press.pageCancelledDown);
     press.settle(outcome);
   };
 
@@ -319,15 +367,25 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
   const replay = (owner: PressRecord): void => {
     if (owner.replayed) return;
     owner.replayed = true;
-    if (!owner.target.isConnected) return;
+    if (!owner.target.isConnected) {
+      decideFocus(owner, false);
+      return;
+    }
     // A trailing trusted click can still arrive after the gesture cleared;
     // suppress it so the page handler runs exactly once — from this replay.
     lateClicks.arm(owner.target);
+    let decided = false;
     replayElementClick(owner.target, {
       clientX: owner.clientX,
       clientY: owner.clientY,
-      ...(owner.focusHeld ? { focus: 'unless-cancelled' as const } : {}),
+      focus: false,
+      afterMouseDown: (cancelled) => {
+        decided = true;
+        decideFocus(owner, cancelled);
+      },
     });
+    // A disabled target dispatches nothing.
+    if (!decided) decideFocus(owner, false);
     replayFollowers(owner);
   };
 
@@ -357,6 +415,17 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
     },
 
     handleEvent(event) {
+      if (FOCUS_EVENTS.has(event.type)) {
+        if (focusPending.length > 0 && isTrusted(event) && !announced.has(event)) {
+          hide(event);
+          // The browser moved focus on this press's mousedown; the move is the latest press's to report.
+          const owner = focusPending.at(-1);
+          const at = (event.composedPath()[0] ?? event.target) as Element;
+          if (owner?.focus && (event.type === 'focus' || event.type === 'focusin')) owner.focus.to = at;
+          if (owner?.focus && event.type === 'blur' && owner.focus.to === at) owner.focus.to = null;
+        }
+        return;
+      }
       if (!isTrusted(event)) return;
       // Howbeam's own controls must always receive their input, even while a
       // capture is in flight; they are never part of a recorded gesture.
@@ -400,9 +469,10 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
           case 'mousedown': {
             const count = (event as MouseEvent).detail;
             if (count >= 2 && fold(press, count, 'mousedown') === 'native') return;
-            if (event.cancelable && takesFocusFromTextEntry(press.target)) {
-              event.preventDefault();
-              press.focusHeld = true;
+            if (press.owner === null && press.focus === null && !press.replayed) {
+              if (focusPending.length === 0) pageFocus = deepActiveElement();
+              press.focus = { to: deepActiveElement() };
+              focusPending.push(press);
             }
             hide(event);
             return;
@@ -458,33 +528,17 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
 
     clear() {
       if (current?.state === 'held') handOver(current, 'cancel');
+      for (const press of [...focusPending]) decideFocus(press, false);
       current = null;
       last = null;
     },
   };
 }
 
-/** Targets whose own mousedown default matters (caret, popup, thumb, native drag). */
-const NATIVE_PRESS_TARGETS = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [draggable="true"], video, audio';
-const TEXT_INPUT_TYPES = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number']);
-
-function isTextEntry(el: Element): boolean {
-  if (el instanceof HTMLTextAreaElement) return true;
-  if (el instanceof HTMLInputElement) return TEXT_INPUT_TYPES.has(el.type);
-  return el instanceof HTMLElement && el.isContentEditable;
-}
-
 function deepActiveElement(): Element | null {
   let active = document.activeElement;
   while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
   return active;
-}
-
-/** Whether this press would natively move focus out of the text field being typed in. */
-function takesFocusFromTextEntry(target: Element): boolean {
-  const active = deepActiveElement();
-  if (!active || !isTextEntry(active) || active.contains(target)) return false;
-  return target.closest(NATIVE_PRESS_TARGETS) === null;
 }
 
 /** A dropdown `<select>` opens a native popup on mousedown that swallows the release. */

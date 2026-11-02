@@ -79,7 +79,8 @@ beforeEach(() => {
   gate = createStepPressGate({
     lateClicks,
     isBusy: () => busy,
-    isTrusted: (event) => trusted.has(event),
+    // Chromium marks focus events from a focus() call trusted too, so every one counts here.
+    isTrusted: (event) => trusted.has(event) || event instanceof FocusEvent,
   });
   document.addEventListener('pointerdown', onPointerDown, { capture: true });
   for (const type of STEP_PRESS_GATE_EVENTS) document.addEventListener(type, onGateEvent, { capture: true });
@@ -307,13 +308,22 @@ describe('createStepPressGate', () => {
     expect(seen).toEqual(['synthetic pointerdown', 'synthetic mousedown']);
   });
 
-  describe('a press while a text field has focus', () => {
-    let field: HTMLInputElement;
+  describe('focus moved by a press', () => {
+    let trigger: HTMLButtonElement;
+    /** Focus events page scripts saw on the trigger and the target. */
+    let focusSeen: string[];
 
-    /** A full trusted click whose mousedown is returned, so its default can be checked. */
-    function clickReturningMouseDown(): MouseEvent {
+    const watchFocus = (el: Element, name: string) => {
+      for (const type of ['blur', 'focus', 'focusout', 'focusin']) {
+        el.addEventListener(type, () => focusSeen.push(`${name} ${type}`));
+      }
+    };
+
+    /** A full trusted click; `browserFocus` is the focus move the browser makes as the mousedown's default. */
+    function clickMovingFocus(browserFocus: () => void): MouseEvent {
       fire(pointer('pointerdown', { buttons: 1 }));
       const down = fire(mouse('mousedown', { buttons: 1 }));
+      if (!down.defaultPrevented) browserFocus();
       fire(pointer('pointerup', { buttons: 0 }));
       fire(mouse('mouseup'));
       fire(mouse('click'));
@@ -321,52 +331,65 @@ describe('createStepPressGate', () => {
     }
 
     beforeEach(() => {
-      field = document.createElement('input');
-      document.body.prepend(field);
-      field.focus();
+      focusSeen = [];
+      trigger = document.createElement('button');
+      document.body.prepend(trigger);
+      trigger.focus();
+      watchFocus(trigger, 'trigger');
+      watchFocus(target, 'target');
     });
 
-    it('keeps the field focused until the replayed mousedown, which an autocomplete menu cancels', async () => {
-      // Autocomplete menus keep focus in the field by cancelling mousedown on their items.
+    it('never cancels the mousedown, so a caret, text selection or drag still starts natively', () => {
+      const field = document.createElement('input');
+      document.body.append(field);
+      field.focus();
+      expect(clickMovingFocus(() => target.focus()).defaultPrevented).toBe(false);
+    });
+
+    it('hides the move until the replay, and takes it back when the page cancels the mousedown', async () => {
+      // A menu item keeps the trigger focused by cancelling mousedown, and the menu closes on the trigger's blur.
       target.addEventListener('mousedown', (event) => event.preventDefault());
-      expect(clickReturningMouseDown().defaultPrevented).toBe(true);
-      expect(document.activeElement).toBe(field);
+      clickMovingFocus(() => trigger.blur());
+      expect(document.activeElement).toBe(document.body);
+      expect(focusSeen).toEqual([]);
       await expect(itemAt(presses, 0).outcome).resolves.toBe('click');
 
       gate.replay(itemAt(presses, 0));
-      expect(document.activeElement).toBe(field);
+      expect(document.activeElement).toBe(trigger);
+      expect(focusSeen).toEqual([]);
       expect(seen).toContain('synthetic click');
     });
 
-    it('moves focus on replay when the page does not cancel the mousedown, as the browser would', () => {
-      clickReturningMouseDown();
-      expect(document.activeElement).toBe(field);
+    it('tells the page about the move right after its mousedown when it does not cancel it', async () => {
+      const order: string[] = [];
+      target.addEventListener('mousedown', () => order.push('mousedown'));
+      target.addEventListener('focus', () => order.push('focus'));
+      target.addEventListener('click', () => order.push('click'));
+      clickMovingFocus(() => target.focus());
+      expect(focusSeen).toEqual([]);
+
       gate.replay(itemAt(presses, 0));
       expect(document.activeElement).toBe(target);
+      expect(focusSeen).toEqual(['trigger blur', 'trigger focusout', 'target focus', 'target focusin']);
+      expect(order).toEqual(['mousedown', 'focus', 'click']);
     });
 
-    it('takes focus off the field on replay when the pressed content cannot hold focus', () => {
-      const text = document.createElement('span');
-      document.body.append(text);
-      target = text as unknown as HTMLButtonElement;
-      clickReturningMouseDown();
-      gate.replay(itemAt(presses, 0));
-      expect(document.activeElement).toBe(document.body);
-    });
-
-    it('leaves a press on another text field to the browser, so its caret lands natively', () => {
-      const other = document.createElement('input');
-      document.body.append(other);
-      target = other as unknown as HTMLButtonElement;
-      expect(clickReturningMouseDown().defaultPrevented).toBe(false);
-    });
-
-    it('gives a drag back with focus decided by the handed-over mousedown', () => {
+    it('decides the move of a drag when the press is handed over', () => {
       fire(pointer('pointerdown', { buttons: 1 }));
       fire(mouse('mousedown', { buttons: 1 }));
-      expect(document.activeElement).toBe(field);
+      target.focus();
+      expect(focusSeen).toEqual([]);
       fire(pointer('pointermove', { buttons: 1, clientX: 10 + STEP_DRAG_THRESHOLD_PX + 1 }));
       expect(document.activeElement).toBe(target);
+      expect(focusSeen).toEqual(['trigger blur', 'trigger focusout', 'target focus', 'target focusin']);
+    });
+
+    it('lets focus moves through once no press is waiting', async () => {
+      clickMovingFocus(() => target.focus());
+      gate.replay(itemAt(presses, 0));
+      focusSeen = [];
+      trigger.focus();
+      expect(focusSeen).toEqual(['target blur', 'target focusout', 'trigger focus', 'trigger focusin']);
     });
   });
 });
