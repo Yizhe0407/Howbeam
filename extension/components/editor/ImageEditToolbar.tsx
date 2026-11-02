@@ -110,23 +110,26 @@ export function ImageEditHeaderActions(props: HeaderProps) {
   const copy = t().editor.imageEdit;
   return (
     <div className="contents">
-      <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5">
-        <IconButton label={copy.undo} onClick={props.onUndo} disabled={!props.canUndo}><Undo2 className="size-4" /></IconButton>
-        <IconButton label={copy.redo} onClick={props.onRedo} disabled={!props.canRedo}><Redo2 className="size-4" /></IconButton>
-      </div>
+      {/* Below xl this group takes its own line under the title. History and zoom are always in it,
+          so the line never stands empty and its height stays put as tools change. */}
+      <div className="order-last flex basis-full flex-wrap items-center gap-2 xl:order-none xl:basis-auto">
+        <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5">
+          <IconButton label={copy.undo} onClick={props.onUndo} disabled={!props.canUndo}><Undo2 className="size-4" /></IconButton>
+          <IconButton label={copy.redo} onClick={props.onRedo} disabled={!props.canRedo}><Redo2 className="size-4" /></IconButton>
+        </div>
 
-      <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5">
-        <IconButton tooltip={false} label={copy.zoomOut} onClick={props.onZoomOut} disabled={!props.canZoomOut}><ZoomOut className="size-4" /></IconButton>
-        <span className="min-w-12 text-center text-xs font-bold text-foreground tabular-nums" aria-live="polite">
-          {copy.zoomLevel(Math.round(props.nativeZoom * 100))}
-        </span>
-        <IconButton tooltip={false} label={copy.zoomIn} onClick={props.onZoomIn} disabled={!props.canZoomIn}><ZoomIn className="size-4" /></IconButton>
-        <IconButton tooltip={false} label={copy.zoomFit} onClick={props.onZoomFit} disabled={props.zoom === 1}><Maximize className="size-4" /></IconButton>
-      </div>
+        <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5">
+          <IconButton tooltip={false} label={copy.zoomOut} onClick={props.onZoomOut} disabled={!props.canZoomOut}><ZoomOut className="size-4" /></IconButton>
+          <span className="min-w-12 text-center text-xs font-bold text-foreground tabular-nums" aria-live="polite">
+            {copy.zoomLevel(Math.round(props.nativeZoom * 100))}
+          </span>
+          <IconButton tooltip={false} label={copy.zoomIn} onClick={props.onZoomIn} disabled={!props.canZoomIn}><ZoomIn className="size-4" /></IconButton>
+          <IconButton tooltip={false} label={copy.zoomFit} onClick={props.onZoomFit} disabled={props.zoom === 1}><Maximize className="size-4" /></IconButton>
+        </div>
 
-      {/* Below xl the controls get their own line, kept even when empty so switching tools never resizes the canvas. */}
-      <div className="order-last flex min-h-10 basis-full flex-wrap items-center gap-x-5 gap-y-2 xl:order-none xl:min-h-0 xl:basis-auto">
-        {props.children}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          {props.children}
+        </div>
       </div>
 
       <div className="ml-auto flex items-center gap-3">
