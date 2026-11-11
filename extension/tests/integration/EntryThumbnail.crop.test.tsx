@@ -9,13 +9,12 @@ const mocks = vi.hoisted(() => ({
   peekCroppedImage: vi.fn(),
 }));
 
-vi.mock('@/components/editor/HighlightThumbnail', () => ({
+vi.mock('@/components/editor/AnnotatedImage', () => ({
   default: (props: unknown) => {
     mocks.highlight(props);
     return <div data-testid="thumb" />;
   },
 }));
-vi.mock('@/components/editor/MultiHighlightThumbnail', () => ({ default: () => null }));
 vi.mock('@/lib/media/crop-image', () => ({
   getCroppedImage: mocks.getCroppedImage,
   peekCroppedImage: mocks.peekCroppedImage,
@@ -61,8 +60,8 @@ describe('EntryThumbnail with a crop', () => {
     expect(view.getByTestId('thumb')).toBeTruthy();
     const props = mocks.highlight.mock.calls.at(-1)![0];
     expect(props.blob).toBe(cropped);
-    expect(props.bounds).toEqual({ x: 50, y: 40, width: 30, height: 40 });
-    expect(props.redactions[0].bounds).toEqual({ x: 20, y: 20, width: 10, height: 10 });
+    expect(props.scene.highlight).toEqual({ x: 50, y: 40, width: 30, height: 40 });
+    expect(props.scene.redactions[0].bounds).toEqual({ x: 20, y: 20, width: 10, height: 10 });
   });
 
   it('uses an already-computed cut straight away, with no blank frame', () => {
@@ -75,7 +74,7 @@ describe('EntryThumbnail with a crop', () => {
   it('shows the whole image with unshifted coordinates when there is no crop, or the editor asks for none', () => {
     const plain = render(<EntryThumbnail entry={entry()} alt="x" />);
     expect(mocks.highlight.mock.calls.at(-1)![0].blob).toBe(original);
-    expect(mocks.highlight.mock.calls.at(-1)![0].bounds).toEqual({ x: 150, y: 90, width: 30, height: 40 });
+    expect(mocks.highlight.mock.calls.at(-1)![0].scene.highlight).toEqual({ x: 150, y: 90, width: 30, height: 40 });
     plain.unmount();
 
     render(<EntryThumbnail entry={entry({ crop })} crop={null} alt="x" />);

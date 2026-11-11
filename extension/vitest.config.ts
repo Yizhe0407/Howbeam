@@ -11,7 +11,7 @@ export default defineConfig({
   },
   test: {
     include: ['tests/unit/**/*.test.{ts,tsx}', 'tests/integration/**/*.test.{ts,tsx}'],
-    setupFiles: ['tests/setup/browser-storage.ts', 'tests/setup/i18n.ts'],
+    setupFiles: ['tests/setup/browser-storage.ts', 'tests/setup/i18n.ts', 'tests/setup/canvas.ts'],
     coverage: {
       provider: 'v8',
       // Opt-in via `pnpm test:coverage`; no thresholds yet so the report

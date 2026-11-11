@@ -13,8 +13,8 @@ import {
 } from '@/lib/storage/models';
 import { offsetAnnotations, offsetBounds, offsetImageEdits, offsetRedactions } from '@/lib/media/crop-offset';
 import { useCroppedImage } from '@/lib/editor/use-cropped-image';
-import HighlightThumbnail from './HighlightThumbnail';
-import MultiHighlightThumbnail from './MultiHighlightThumbnail';
+import type { AnnotationScene } from '@/lib/media/annotation-scene';
+import AnnotatedImage from './AnnotatedImage';
 
 interface Props {
   entry: StepEntry;
@@ -26,13 +26,6 @@ interface Props {
   crop?: Bounds | null;
   /** Recorded boxes to draw instead of the saved ones, in numbering order, for an editor that has unsaved changes. */
   boxes?: Bounds[];
-  /** The image element is exactly the image's box, so masks can be placed in percentages. */
-  exactBox?: boolean;
-  /**
-   * Image editor only: show the stored pixels with the masks drawn live on top,
-   * so they can be edited. Every other preview shows the masks burned in.
-   */
-  liveMasks?: boolean;
   /**
    * Image editor only: the masks are being reviewed right here, so the pixels
    * are shown even while that review is pending (everywhere else they stay hidden).
@@ -45,8 +38,7 @@ interface Props {
   overlay?: ReactNode;
   fit?: 'cover' | 'contain';
   loading?: 'lazy' | 'eager';
-  decoding?: 'async' | 'sync' | 'auto';
-  /** See MultiHighlightThumbnail's badges. */
+  /** False drops the mark numbers, for previews too small to read them. */
   badges?: boolean;
 }
 
@@ -57,7 +49,7 @@ interface Props {
  * shifted by the crop's origin, so the thumbnails below only ever see an
  * ordinary, uncropped image.
  */
-export default function EntryThumbnail({ entry, redactions, imageEdits, crop, boxes, reviewing = false, badges, ...presentation }: Props) {
+export default function EntryThumbnail({ entry, redactions, imageEdits, crop, boxes, reviewing = false, badges = true, ...presentation }: Props) {
   const privacy = getEntryPrivacyState(entry);
   const privacyReviewRequired = privacy.reviewRequired && !reviewing;
   const owner = getEntryImageOwner(entry);
@@ -68,12 +60,10 @@ export default function EntryThumbnail({ entry, redactions, imageEdits, crop, bo
 
   const sourceRedactions = redactions ?? privacy.redactions;
   const sourceImageEdits = imageEdits ?? getEntryImageEdits(entry);
-  const shown = useMemo(() => {
+  const scene = useMemo<AnnotationScene>(() => {
     const origin = { x: originX, y: originY };
     return {
-      redactions: offsetRedactions(sourceRedactions, origin),
-      imageEdits: offsetImageEdits(sourceImageEdits, origin),
-      bounds: entry.kind === 'single'
+      highlight: entry.kind === 'single'
         ? offsetBounds(boxes ? boxes[0] ?? null : getEffectiveBounds(entry.step), origin)
         : null,
       annotations: entry.kind === 'group'
@@ -82,35 +72,15 @@ export default function EntryThumbnail({ entry, redactions, imageEdits, crop, bo
           origin,
         )
         : [],
+      badges,
+      imageEdits: offsetImageEdits(sourceImageEdits, origin),
+      redactions: offsetRedactions(sourceRedactions, origin),
+      privacyBlock: privacyReviewRequired,
     };
-  }, [entry, originX, originY, sourceRedactions, sourceImageEdits, boxes]);
+  }, [entry, originX, originY, sourceRedactions, sourceImageEdits, boxes, badges, privacyReviewRequired]);
 
   // The first cut of a cropped image is still running; never show the uncropped screenshot meanwhile.
   if (!view) return null;
 
-  if (entry.kind === 'single') {
-    return (
-      <HighlightThumbnail
-        blob={view.blob}
-        bounds={shown.bounds}
-        redactions={shown.redactions}
-        imageEdits={shown.imageEdits}
-        privacyReviewRequired={privacyReviewRequired}
-        screenshotScale={screenshotScale}
-        {...presentation}
-      />
-    );
-  }
-  return (
-    <MultiHighlightThumbnail
-      blob={view.blob}
-      annotations={shown.annotations}
-      redactions={shown.redactions}
-      imageEdits={shown.imageEdits}
-      privacyReviewRequired={privacyReviewRequired}
-      screenshotScale={screenshotScale}
-      badges={badges}
-      {...presentation}
-    />
-  );
+  return <AnnotatedImage blob={view.blob} scene={scene} screenshotScale={screenshotScale} {...presentation} />;
 }

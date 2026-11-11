@@ -135,8 +135,6 @@ function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: nu
           alt=""
           fit="cover"
           badges={false}
-          loading="lazy"
-          decoding="async"
           className="size-full"
         />
       </LazyRailPreview>

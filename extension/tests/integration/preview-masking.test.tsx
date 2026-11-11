@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Redaction, ScreenshotStep, Step, StepEntry } from '@/lib/storage/models';
-import { installThumbnailDomStubs, stubImageMetrics } from '../setup/thumbnail-dom';
 
 vi.mock('@/lib/capture/raster-image-validation', () => ({
   validateRasterImageBlob: vi.fn(async (blob: Blob) => {
@@ -19,7 +18,8 @@ import { itemAt } from '../setup/item-at';
  * image" is JSON holding its RGB pixels, createImageBitmap decodes it (with the
  * optional source rectangle a crop uses), and OffscreenCanvas implements the
  * drawImage/fillRect the compositor needs. That lets these tests run the real
- * crop and mask compositor and inspect the pixels a preview <img> would show.
+ * crop pipeline and the preview's own drawing, and inspect the pixels the
+ * preview canvas shows.
  */
 interface Raster {
   width: number;
@@ -55,10 +55,17 @@ class PixelCanvas {
     this.pixels = Array.from({ length: width * height }, () => [0, 0, 0]);
   }
   getContext() {
-    const { width: canvasWidth, height: canvasHeight, pixels: canvasPixels } = this;
-    const canvas = { width: canvasWidth, height: canvasHeight, pixels: canvasPixels };
-    return {
-      fillStyle: '#000000',
+    return pixelContext(this);
+  }
+  async convertToBlob(options?: { type?: string }) {
+    return encode({ width: this.width, height: this.height, pixels: this.pixels }, options?.type);
+  }
+}
+
+/** drawImage and fillRect paint pixels; every other drawing call (strokes, text) is ignored. */
+function pixelContext(canvas: { width: number; height: number; pixels: number[][] }) {
+  const painter = {
+      fillStyle: '#000000' as string,
       drawImage(bitmap: Raster) {
         for (let y = 0; y < Math.min(bitmap.height, canvas.height); y++) {
           for (let x = 0; x < Math.min(bitmap.width, canvas.width); x++) {
@@ -74,14 +81,32 @@ class PixelCanvas {
         const y1 = Math.min(canvas.height, Math.ceil(top + height));
         for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) canvas.pixels[y * canvas.width + x] = [...color];
       },
-    };
-  }
-  async convertToBlob(options?: { type?: string }) {
-    return encode({ width: this.width, height: this.height, pixels: this.pixels }, options?.type);
-  }
+      clearRect() {
+        canvas.pixels.forEach((_, index) => { canvas.pixels[index] = [255, 255, 255]; });
+      },
+  };
+  return new Proxy(painter, {
+    get: (target, key) => (key in target ? target[key as keyof typeof target] : () => ({ width: 0, actualBoundingBoxAscent: 0, actualBoundingBoxDescent: 0 })),
+    set: (target, key, value) => {
+      (target as Record<string | symbol, unknown>)[key] = value;
+      return true;
+    },
+  });
 }
 
-let urls: Map<string, Blob>;
+/** The preview canvases' pixels, kept per canvas and resized with it. */
+const previewPixels = new WeakMap<HTMLCanvasElement, { width: number; height: number; pixels: number[][] }>();
+
+function installPreviewCanvas() {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function getContext(this: HTMLCanvasElement) {
+    let store = previewPixels.get(this);
+    if (!store || store.width !== this.width || store.height !== this.height) {
+      store = { width: this.width, height: this.height, pixels: Array.from({ length: this.width * this.height }, () => [255, 255, 255]) };
+      previewPixels.set(this, store);
+    }
+    return pixelContext(store) as unknown as CanvasRenderingContext2D;
+  } as never);
+}
 
 function installRasterFakes() {
   vi.stubGlobal('OffscreenCanvas', PixelCanvas);
@@ -91,13 +116,6 @@ function installRasterFakes() {
     const pixels: number[][] = [];
     for (let y = sy; y < sy + sh; y++) for (let x = sx; x < sx + sw; x++) pixels.push(itemAt(full.pixels, y * full.width + x));
     return { width: sw, height: sh, pixels, close() {} };
-  });
-  urls = new Map();
-  let next = 0;
-  vi.mocked(URL.createObjectURL).mockImplementation((blob) => {
-    const url = `blob:preview-${++next}`;
-    urls.set(url, blob as Blob);
-    return url;
   });
 }
 
@@ -135,23 +153,19 @@ async function settle() {
   for (let i = 0; i < 5; i++) await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
 }
 
-async function shownRaster(container: HTMLElement): Promise<{ img: HTMLImageElement; blob: Blob; raster: Raster }> {
-  const img = container.querySelector('img');
-  expect(img, 'a preview image is shown').not.toBeNull();
-  const blob = urls.get(img!.getAttribute('src')!);
-  expect(blob, 'the preview src is an object URL made here').toBeDefined();
-  return { img: img!, blob: blob!, raster: await decode(blob!) };
+function shownRaster(container: HTMLElement): Raster {
+  const canvas = container.querySelector('canvas');
+  expect(canvas, 'a preview canvas is shown').not.toBeNull();
+  const store = previewPixels.get(canvas!);
+  expect(store, 'the preview has been drawn').toBeDefined();
+  return { width: store!.width, height: store!.height, pixels: store!.pixels };
 }
 
 const pixelAt = (raster: Raster, x: number, y: number) => raster.pixels[y * raster.width + x];
 
-function expectNeverShown(source: Blob) {
-  expect(vi.mocked(URL.createObjectURL).mock.calls.map(([blob]) => blob)).not.toContain(source);
-}
-
 beforeEach(() => {
-  installThumbnailDomStubs();
   installRasterFakes();
+  installPreviewCanvas();
 });
 
 afterEach(() => {
@@ -161,151 +175,92 @@ afterEach(() => {
 });
 
 describe('preview masking', () => {
-  it('shows a single step with its mask burned into the pixels, never the stored screenshot', async () => {
+  it('draws a single step with its mask in the same pixels', async () => {
     const source = screenshot(12, 8);
     const view = render(<EntryThumbnail entry={singleEntry(source)} alt="step" fit="contain" />);
-
-    // Nothing at all while the masked image is being made.
-    expect(view.container.querySelector('img')).toBeNull();
     await settle();
 
-    const { img, blob, raster } = await shownRaster(view.container);
-    expect(blob).not.toBe(source);
-    expect(img.draggable).toBe(false);
+    const raster = shownRaster(view.container);
     expect([raster.width, raster.height]).toEqual([12, 8]);
     for (const [x, y] of [[2, 1], [4, 3], [7, 5]] as const) expect(pixelAt(raster, x, y), `masked ${x},${y}`).toEqual([0, 0, 0]);
     expect(pixelAt(raster, 8, 3)).toEqual([18, 13, 200]);
     expect(pixelAt(raster, 0, 0)).toEqual([10, 10, 200]);
-    expectNeverShown(source);
   });
 
-  it('burns the mask into a group screenshot as well', async () => {
+  it('masks a group screenshot as well', async () => {
     const source = screenshot(12, 8);
     const view = render(<EntryThumbnail entry={groupEntry(source)} alt="group" fit="contain" />);
     await settle();
 
-    const { raster } = await shownRaster(view.container);
+    const raster = shownRaster(view.container);
     expect(pixelAt(raster, 4, 3)).toEqual([0, 0, 0]);
     expect(pixelAt(raster, 9, 6)).toEqual([19, 16, 200]);
-    expectNeverShown(source);
   });
 
-  it('masks the cropped image with the mask shifted by the crop, and never shows the unmasked cut', async () => {
+  it('masks the cropped image with the mask shifted by the crop', async () => {
     const source = screenshot(12, 8);
     const view = render(
       <EntryThumbnail entry={singleEntry(source, { crop: { x: 3, y: 2, width: 8, height: 5 } })} alt="cropped" fit="contain" />,
     );
     await settle();
 
-    const { raster } = await shownRaster(view.container);
+    const raster = shownRaster(view.container);
     expect([raster.width, raster.height]).toEqual([8, 5]);
     // Source (4,3) lands at (1,1) of the cut; source (9,4) at (6,2).
     expect(pixelAt(raster, 1, 1)).toEqual([0, 0, 0]);
     expect(pixelAt(raster, 4, 3)).toEqual([0, 0, 0]);
     expect(pixelAt(raster, 6, 2)).toEqual([19, 14, 200]);
-    const shownBlobs = vi.mocked(URL.createObjectURL).mock.calls.map(([blob]) => blob as Blob);
-    expect(shownBlobs).toHaveLength(1);
-    expectNeverShown(source);
   });
 
-  it('shows only black pixels while privacy review is pending', async () => {
+  it('draws only black pixels while privacy review is pending', async () => {
     const source = screenshot(12, 8);
     const view = render(
       <EntryThumbnail entry={singleEntry(source, { redactions: [], redactionReviewRequired: true })} alt="review" fit="contain" />,
     );
     await settle();
 
-    const { raster } = await shownRaster(view.container);
+    const raster = shownRaster(view.container);
     expect(raster.pixels.every((pixel) => pixel.join() === '0,0,0')).toBe(true);
-    expectNeverShown(source);
+    expect(view.container.querySelector('canvas')!.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('shows nothing when the masked image cannot be made', async () => {
+  it('shows nothing when the screenshot cannot be decoded', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.stubGlobal('createImageBitmap', async () => {
       throw new Error('decode failed');
     });
-    const source = screenshot(12, 8);
-    const view = render(<EntryThumbnail entry={singleEntry(source)} alt="broken" fit="contain" />);
+    const view = render(<EntryThumbnail entry={singleEntry(screenshot(12, 8))} alt="broken" fit="contain" />);
     await settle();
 
-    expect(view.container.querySelector('img')).toBeNull();
-    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    const canvas = view.container.querySelector('canvas')!;
+    expect(previewPixels.has(canvas)).toBe(false);
+    expect(canvas.style.visibility).toBe('hidden');
   });
 
-  it('shows the stored screenshot as-is when it has nothing to hide', async () => {
-    const source = screenshot(12, 8);
-    const view = render(<EntryThumbnail entry={singleEntry(source, { redactions: [] })} alt="plain" fit="contain" />);
-
-    const { blob } = await shownRaster(view.container);
-    expect(blob).toBe(source);
-  });
-
-  it('never shows a stale image that lacks a newly added mask, but keeps one that hides more', async () => {
+  it('applies an added or removed mask in the very next frame', async () => {
     const source = screenshot(12, 8);
     const second: Redaction = { id: 'mask-2', kind: 'solid', bounds: { x: 9, y: 5, width: 1, height: 1 } };
     const view = render(<EntryThumbnail entry={singleEntry(source)} alt="step" fit="contain" />);
     await settle();
-    const first = (await shownRaster(view.container)).blob;
 
     view.rerender(<EntryThumbnail entry={singleEntry(source, { redactions: [mask, second] })} alt="step" fit="contain" />);
-    expect(view.container.querySelector('img')).toBeNull();
-    await settle();
-    const both = await shownRaster(view.container);
-    expect(both.blob).not.toBe(first);
-    expect(pixelAt(both.raster, 10, 6)).toEqual([0, 0, 0]);
+    expect(pixelAt(shownRaster(view.container), 10, 6)).toEqual([0, 0, 0]);
 
-    // Removing a mask: the image with both masks stays up until the new one is ready.
     view.rerender(<EntryThumbnail entry={singleEntry(source, { redactions: [second] })} alt="step" fit="contain" />);
-    expect((await shownRaster(view.container)).blob).toBe(both.blob);
-    await settle();
-    const onlySecond = await shownRaster(view.container);
-    expect(pixelAt(onlySecond.raster, 4, 3)).toEqual([14, 13, 200]);
-    expect(pixelAt(onlySecond.raster, 10, 6)).toEqual([0, 0, 0]);
-    expectNeverShown(source);
+    const onlySecond = shownRaster(view.container);
+    expect(pixelAt(onlySecond, 4, 3)).toEqual([14, 13, 200]);
+    expect(pixelAt(onlySecond, 10, 6)).toEqual([0, 0, 0]);
   });
 
-  it('composites each image once for every preview showing it', async () => {
+  it('lets the image editor show the pixels under review, with the masks still drawn', async () => {
     const source = screenshot(12, 8);
-    const entry = singleEntry(source);
     const view = render(
-      <>
-        <EntryThumbnail entry={entry} alt="rail" fit="contain" loading="lazy" />
-        <EntryThumbnail entry={entry} alt="stage" fit="contain" />
-        <EntryThumbnail entry={entry} alt="lightbox" fit="contain" />
-      </>,
+      <EntryThumbnail entry={singleEntry(source, { redactionReviewRequired: true })} crop={null} reviewing alt="editor" fit="contain" />,
     );
     await settle();
 
-    const images = [...view.container.querySelectorAll('img')];
-    expect(images).toHaveLength(3);
-    expect(new Set(images.map((img) => img.getAttribute('src'))).size).toBe(1);
-    expect(URL.createObjectURL).toHaveBeenCalledOnce();
-    expect(itemAt(images, 0).getAttribute('loading')).toBe('lazy');
-  });
-
-  it('lets only the image editor show the stored pixels, under live masks, and not be dragged or saved from the menu', async () => {
-    const source = screenshot(12, 8);
-    const view = render(<EntryThumbnail entry={singleEntry(source)} crop={null} alt="editor" fit="contain" exactBox liveMasks />);
-
-    const { img, blob } = await shownRaster(view.container);
-    expect(blob).toBe(source);
-    expect(img.draggable).toBe(false);
-    expect(fireEvent.contextMenu(img)).toBe(false);
-    stubImageMetrics(img, { naturalWidth: 12, naturalHeight: 8, rendered: { width: 120, height: 80 } });
-    act(() => fireEvent.load(img));
-    expect(view.container.querySelector('[data-howbeam-redaction="mask-1"]')).not.toBeNull();
-  });
-
-  it('keeps the editor fail-closed while privacy review is pending', async () => {
-    const source = screenshot(12, 8);
-    const view = render(
-      <EntryThumbnail entry={singleEntry(source, { redactionReviewRequired: true })} crop={null} alt="editor" fit="contain" exactBox liveMasks />,
-    );
-    await settle();
-
-    const { raster } = await shownRaster(view.container);
-    expect(raster.pixels.every((pixel) => pixel.join() === '0,0,0')).toBe(true);
-    expectNeverShown(source);
+    const raster = shownRaster(view.container);
+    expect(pixelAt(raster, 4, 3)).toEqual([0, 0, 0]);
+    expect(pixelAt(raster, 0, 0)).toEqual([10, 10, 200]);
   });
 });

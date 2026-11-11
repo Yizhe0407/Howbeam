@@ -461,8 +461,6 @@ export default function ImageEditWorkspace({
                       boxes={shownBoxes}
                       alt={copy.title(number)}
                       fit="contain"
-                      exactBox
-                      liveMasks
                       reviewing
                       className="h-full w-full"
                       imgClassName="h-full w-full rounded-md object-contain outline-2 outline-border"

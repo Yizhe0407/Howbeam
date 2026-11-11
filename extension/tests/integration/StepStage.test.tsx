@@ -10,11 +10,10 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 function render(ui: Parameters<typeof rtlRender>[0], options?: Parameters<typeof rtlRender>[1]) {
   return rtlRender(ui, { wrapper: TooltipProvider, ...options });
 }
-vi.mock('@/components/editor/HighlightThumbnail', () => ({
-  default: ({ overlay }: { overlay?: ReactNode }) => <div data-testid="single-image-frame">{overlay}</div>,
-}));
-vi.mock('@/components/editor/MultiHighlightThumbnail', () => ({
-  default: ({ overlay }: { overlay?: ReactNode }) => <div data-testid="group-image-frame">{overlay}</div>,
+vi.mock('@/components/editor/AnnotatedImage', () => ({
+  default: ({ overlay, scene }: { overlay?: ReactNode; scene: { highlight: unknown } }) => (
+    <div data-testid={scene.highlight ? 'single-image-frame' : 'group-image-frame'}>{overlay}</div>
+  ),
 }));
 vi.mock('@/components/editor/DescriptionField', () => ({ default: () => null }));
 vi.mock('@/components/editor/AnnotationList', () => ({ default: () => null }));

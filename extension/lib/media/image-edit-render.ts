@@ -213,7 +213,8 @@ export function markerGeometry(edit: StepMarkerEdit): MarkerGeometry {
   };
 }
 
-type Canvas2D = OffscreenCanvasRenderingContext2D;
+/** Both preview canvases and export OffscreenCanvases draw through these functions. */
+export type Canvas2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
 function applyShadow(ctx: Canvas2D, dpr: number) {
   ctx.shadowColor = EDIT_SHADOW.color;

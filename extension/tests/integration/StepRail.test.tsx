@@ -37,7 +37,7 @@ describe('StepRail keyboard navigation', () => {
 
   afterEach(removeStepRailDomStubs);
 
-  it('只為選取或接近 viewport 的步驟建立圖片 URL', async () => {
+  it('只為選取或接近 viewport 的步驟解碼圖片', async () => {
     const observers: Array<{ callback: IntersectionObserverCallback; target?: Element }> = [];
     vi.stubGlobal(
       'IntersectionObserver',
@@ -56,7 +56,7 @@ describe('StepRail keyboard navigation', () => {
         thresholds = [0];
       },
     );
-    const createObjectURL = vi.spyOn(URL, 'createObjectURL');
+    const decode = vi.spyOn(globalThis, 'createImageBitmap');
 
     render(
       <StepRail
@@ -67,14 +67,14 @@ describe('StepRail keyboard navigation', () => {
       />,
     );
 
-    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(decode).toHaveBeenCalledTimes(1));
     expect(observers).toHaveLength(2);
 
     act(() => {
       const record = itemAt(observers, 0);
       record.callback([{ isIntersecting: true, target: record.target } as IntersectionObserverEntry], {} as IntersectionObserver);
     });
-    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(decode).toHaveBeenCalledTimes(2));
   });
 
   it('handles arrows only while focus is inside the rail', () => {

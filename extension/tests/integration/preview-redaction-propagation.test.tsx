@@ -9,15 +9,12 @@ const previewMocks = vi.hoisted(() => ({
   multi: vi.fn(),
 }));
 
-vi.mock('@/components/editor/HighlightThumbnail', () => ({
-  default: (props: unknown) => {
-    previewMocks.highlight(props);
-    return null;
-  },
-}));
-vi.mock('@/components/editor/MultiHighlightThumbnail', () => ({
-  default: (props: unknown) => {
-    previewMocks.multi(props);
+// Steps and snapshots render through the same preview; split the calls by what their scene draws.
+vi.mock('@/components/editor/AnnotatedImage', () => ({
+  default: (props: { scene: { highlight: unknown; annotations: unknown; redactions: unknown } }) => {
+    const { highlight, annotations, redactions } = props.scene;
+    if (highlight) previewMocks.highlight({ bounds: highlight, redactions });
+    else previewMocks.multi({ annotations, redactions });
     return null;
   },
 }));

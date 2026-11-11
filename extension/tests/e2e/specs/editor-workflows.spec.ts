@@ -196,7 +196,7 @@ test.describe('editor workflows', () => {
     await expect.poll(async () => (await readSteps(popupPage)).map((step) => step.id)).toEqual([]);
   });
 
-  test('renders partially overlapping control hit areas as disjoint annotation frames', async ({
+  test('draws both marks of partially overlapping control hit areas into the preview', async ({
     appPage,
     popupPage,
     extensionContext,
@@ -236,15 +236,19 @@ test.describe('editor workflows', () => {
     });
 
     const editor = await openEditor(extensionContext, extensionId, popupPage, 1);
-    const frames = editor.locator('main [data-howbeam-annotation-frame]');
-    await expect(frames).toHaveCount(2);
-    const first = await frames.nth(0).boundingBox();
-    const second = await frames.nth(1).boundingBox();
-    if (!first || !second) throw new Error('Rendered annotation frame has no bounding box');
-
-    expect(first.x + first.width).toBeLessThan(second.x);
-    expect(Math.min(first.y + first.height, second.y + second.height) - Math.max(first.y, second.y))
-      .toBeGreaterThan(0);
+    // The layout splitting the two hit areas apart is unit-tested (annotate.test.ts); here the
+    // real browser must draw both marks into the preview's pixels.
+    const preview = editor.locator('main canvas[data-howbeam-annotated-image]');
+    await expect(preview).toHaveAttribute('data-howbeam-marks', '2');
+    const redPixels = await preview.evaluate((canvas: HTMLCanvasElement) => {
+      const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+      let count = 0;
+      for (let index = 0; index < data.length; index += 4) {
+        if (data[index]! > 230 && data[index + 1]! < 100 && data[index + 2]! < 100) count += 1;
+      }
+      return count;
+    });
+    expect(redPixels).toBeGreaterThan(100);
   });
 
   test('reorders timeline entries and annotations through their drag handles', async ({
@@ -316,19 +320,19 @@ test.describe('editor workflows', () => {
 
     await editor.getByRole('button', { name: '放大圖片' }).click();
     const dialog = editor.getByRole('dialog');
-    await expect(dialog.getByAltText('步驟 1 放大')).toBeVisible();
+    await expect(dialog.getByRole('img', { name: '步驟 1 放大' })).toBeVisible();
     await expect(dialog.getByText('1/ 3', { exact: true })).toBeVisible();
     await expect(dialog.getByRole('button', { name: '上一張' })).toBeDisabled();
 
     await editor.keyboard.press('ArrowRight');
-    await expect(dialog.getByAltText('步驟 2 放大')).toBeVisible();
+    await expect(dialog.getByRole('img', { name: '步驟 2 放大' })).toBeVisible();
     await dialog.getByRole('button', { name: '下一張' }).click();
-    await expect(dialog.getByAltText('步驟 3 放大')).toBeVisible();
+    await expect(dialog.getByRole('img', { name: '步驟 3 放大' })).toBeVisible();
     await expect(dialog.getByText('3/ 3', { exact: true })).toBeVisible();
     await expect(dialog.getByRole('button', { name: '下一張' })).toBeDisabled();
 
     await dialog.getByRole('button', { name: '上一張' }).click();
-    await expect(dialog.getByAltText('步驟 2 放大')).toBeVisible();
+    await expect(dialog.getByRole('img', { name: '步驟 2 放大' })).toBeVisible();
     await editor.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible();
   });

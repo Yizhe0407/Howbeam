@@ -32,7 +32,6 @@ export default function ProjectCover({ projectId, revision }: Props) {
           fit="cover"
           badges={false}
           loading="lazy"
-          decoding="async"
           className="size-full"
         />
       )}
