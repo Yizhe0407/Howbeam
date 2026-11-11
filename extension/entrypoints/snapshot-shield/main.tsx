@@ -29,7 +29,6 @@ import {
   SNAPSHOT_FREEZE_EVENTS,
 } from '@/lib/recording/content-script-constants';
 import type { RecordingControlMessage, RecordingControlResult } from '@/lib/runtime/messages';
-import { featureFlags } from '@/lib/shared/feature-flags';
 import { nextCandidateIndex } from '@/lib/capture/snapshot-candidates';
 import { isDocumentScrollingKey } from '@/lib/recording/recording-guards';
 import { createOverlay } from './overlay';
@@ -402,7 +401,6 @@ function tryInitialize(event: MessageEvent): void {
     // The region controller is registered later on the same capture target; do
     // not let keyboard traversal consume Escape before the controller sees it.
     if (regionCapture?.isActive()) return;
-    if (!featureFlags.snapshotKeyboardNav) return;
     const target = event.target;
     if (target instanceof Element && target.closest('[data-howbeam-shield-toolbar]')) return;
     if (event.key === 'Escape') {
@@ -434,13 +432,12 @@ function tryInitialize(event: MessageEvent): void {
     }
   };
 
-  if (featureFlags.snapshotKeyboardNav) {
-    liveRegion = document.createElement('div');
-    liveRegion.className = 'snapshot-live-region';
-    liveRegion.setAttribute('role', 'status');
-    liveRegion.setAttribute('aria-live', 'polite');
-    document.body.append(liveRegion);
-  }
+  liveRegion = document.createElement('div');
+  liveRegion.className = 'snapshot-live-region';
+  liveRegion.setAttribute('role', 'status');
+  liveRegion.setAttribute('aria-live', 'polite');
+  document.body.append(liveRegion);
+
 
   port.onmessage = (event) => {
     if (!isSnapshotShieldFrameMessage(event.data, token)) return;

@@ -11,19 +11,12 @@ import { t, type Messages } from '@/lib/shared/i18n';
  */
 export type RecordingModeCopy = Messages['mode']['steps'];
 
-/** RecordingState carries a typed `mode`, but persisted state can predate a
- * member rename, so keep the historic "anything that is not steps renders as
- * snapshot" fold-down explicit and in one place. */
-function normalizeRecordingMode(mode: RecordingMode): RecordingMode {
-  return mode === 'steps' ? 'steps' : 'snapshot';
-}
-
 /** Read at render time, so the copy always follows the active locale. The
  * Record-typed catalog keeps the mapping total: a RecordingMode member without
  * copy is a compile error instead of a runtime crash on a failed lookup. */
 export function recordingModeCopy(mode: RecordingMode): RecordingModeCopy {
   const copy: Record<RecordingMode, RecordingModeCopy> = t().mode;
-  return copy[normalizeRecordingMode(mode)];
+  return copy[mode];
 }
 
 /** e.g. `3 個步驟` / `3 steps` — the popup's live summary and the editor stage

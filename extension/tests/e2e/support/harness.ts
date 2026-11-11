@@ -5,7 +5,7 @@ import type { Project } from '../../../lib/storage/models';
 import { firstItems, itemAt } from '../../setup/item-at';
 
 /** Browser 內的 page.evaluate 無法匯入 Node 模組，因此在此集中管理持久化契約字面值。 */
-const SCRIBE_DB = { name: 'howbeam', version: 3 } as const;
+const HOWBEAM_DB = { name: 'howbeam', version: 4 } as const;
 // `as const` keeps the literal types non-widening so the typed chrome.storage.local.get overloads still apply inside evaluate bodies.
 export const RECORDING_STATE_KEY = 'howbeam:recordingState' as const;
 const ACTIVE_PROJECT_ID_KEY = 'howbeam:activeProjectId' as const;
@@ -164,14 +164,14 @@ export interface StoredStep {
 }
 
 export async function resetExtensionData(popup: Page): Promise<void> {
-  await popup.evaluate(async ({ scribeDb, recordingStateKey, activeProjectIdKey, projectTemplate }) => {
+  await popup.evaluate(async ({ howbeamDb, recordingStateKey, activeProjectIdKey, projectTemplate }) => {
     const projectId = crypto.randomUUID();
     const state = await chrome.storage.local.get(recordingStateKey);
     if (state[recordingStateKey]?.isRecording) {
       await chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
     }
     await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open(scribeDb.name, scribeDb.version);
+      const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
       request.onerror = () => reject(request.error);
       request.onblocked = () => reject(new Error('Howbeam IndexedDB reset was blocked.'));
       request.onupgradeneeded = () => {
@@ -184,13 +184,15 @@ export async function resetExtensionData(popup: Page): Promise<void> {
         entries.createIndex('by-member', 'memberIds', { unique: true, multiEntry: true });
         db.createObjectStore('screenshots', { keyPath: 'id' });
         db.createObjectStore('pendingAnchors', { keyPath: 'id' }).createIndex('by-project', 'projectId');
+        db.createObjectStore('deviceState');
+        db.createObjectStore('backupManifest');
       };
       request.onsuccess = () => {
         const db = request.result;
-        const storeNames = ['projects', 'entries', 'screenshots', 'pendingAnchors'];
+        const storeNames = ['projects', 'entries', 'screenshots', 'pendingAnchors', 'deviceState', 'backupManifest'];
         if (!storeNames.every((name) => db.objectStoreNames.contains(name))) {
           db.close();
-          reject(new Error(`Howbeam IndexedDB v${scribeDb.version} stores are incomplete.`));
+          reject(new Error(`Howbeam IndexedDB v${howbeamDb.version} stores are incomplete.`));
           return;
         }
         const tx = db.transaction(storeNames, 'readwrite');
@@ -209,7 +211,7 @@ export async function resetExtensionData(popup: Page): Promise<void> {
       [activeProjectIdKey]: projectId,
     });
   }, {
-    scribeDb: SCRIBE_DB,
+    howbeamDb: HOWBEAM_DB,
     recordingStateKey: RECORDING_STATE_KEY,
     activeProjectIdKey: ACTIVE_PROJECT_ID_KEY,
     projectTemplate: E2E_PROJECT_TEMPLATE,
@@ -219,10 +221,10 @@ export async function resetExtensionData(popup: Page): Promise<void> {
 
 /** Adds another pristine Project (same shape as resetExtensionData) and selects it, so a spec can record into a different Project, as a popup start always does. */
 export async function seedAndSelectProject(popup: Page, title: string): Promise<string> {
-  return popup.evaluate(async ({ scribeDb, activeProjectIdKey, projectTemplate, projectTitle }) => {
+  return popup.evaluate(async ({ howbeamDb, activeProjectIdKey, projectTemplate, projectTitle }) => {
     const projectId = crypto.randomUUID();
     await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open(scribeDb.name, scribeDb.version);
+      const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const db = request.result;
@@ -239,7 +241,7 @@ export async function seedAndSelectProject(popup: Page, title: string): Promise<
     await chrome.storage.local.set({ [activeProjectIdKey]: projectId });
     return projectId;
   }, {
-    scribeDb: SCRIBE_DB,
+    howbeamDb: HOWBEAM_DB,
     activeProjectIdKey: ACTIVE_PROJECT_ID_KEY,
     projectTemplate: E2E_PROJECT_TEMPLATE,
     projectTitle: title,
@@ -254,9 +256,9 @@ export async function readRecordingState(popup: Page): Promise<Record<string, un
 }
 
 export async function readSteps(popup: Page): Promise<StoredStep[]> {
-  return popup.evaluate(async (scribeDb) => {
+  return popup.evaluate(async (howbeamDb) => {
     return await new Promise<StoredStep[]>((resolve, reject) => {
-      const request = indexedDB.open(scribeDb.name, scribeDb.version);
+      const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const db = request.result;
@@ -299,7 +301,7 @@ export async function readSteps(popup: Page): Promise<StoredStep[]> {
         };
       };
     });
-  }, SCRIBE_DB);
+  }, HOWBEAM_DB);
 }
 
 export async function readLatestDownload(popup: Page): Promise<{
@@ -318,9 +320,9 @@ export async function rawScreenshotRosePixels(
   stepId: string,
   boundsOverride?: { x: number; y: number; width: number; height: number },
 ): Promise<number> {
-  return popup.evaluate(async ({ id, boundsOverride, scribeDb }) => {
+  return popup.evaluate(async ({ id, boundsOverride, howbeamDb }) => {
     return await new Promise<number>((resolve, reject) => {
-      const request = indexedDB.open(scribeDb.name, scribeDb.version);
+      const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
       request.onerror = () => reject(request.error);
       request.onsuccess = async () => {
         const db = request.result;
@@ -378,7 +380,7 @@ export async function rawScreenshotRosePixels(
         };
       };
     });
-  }, { id: stepId, boundsOverride, scribeDb: SCRIBE_DB });
+  }, { id: stepId, boundsOverride, howbeamDb: HOWBEAM_DB });
 }
 
 /** Adds a green box that a CSS animation sweeps across the page, far faster
@@ -405,9 +407,9 @@ export async function storedScreenshotShowsMovingTarget(
   stepId: string,
   bounds: { x: number; y: number; width: number; height: number },
 ): Promise<boolean> {
-  return popup.evaluate(async ({ id, bounds, scribeDb }) => {
+  return popup.evaluate(async ({ id, bounds, howbeamDb }) => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(scribeDb.name, scribeDb.version);
+      const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
     });
@@ -432,7 +434,7 @@ export async function storedScreenshotShowsMovingTarget(
       const [red, green, blue] = context.getImageData(Math.floor(x * scale), Math.floor(y * scale), 1, 1).data;
       return (red ?? 255) < 40 && (green ?? 0) > 160 && (blue ?? 255) < 40;
     });
-  }, { id: stepId, bounds, scribeDb: SCRIBE_DB });
+  }, { id: stepId, bounds, howbeamDb: HOWBEAM_DB });
 }
 
 export async function readScreenshotScrollbarStats(popup: Page, stepId: string): Promise<{
@@ -441,14 +443,14 @@ export async function readScreenshotScrollbarStats(popup: Page, stepId: string):
   rootSentinelPixels: number;
   nestedSentinelPixels: number;
 }> {
-  return popup.evaluate(async ({ id, scribeDb }) => {
+  return popup.evaluate(async ({ id, howbeamDb }) => {
     return await new Promise<{
       width: number;
       height: number;
       rootSentinelPixels: number;
       nestedSentinelPixels: number;
     }>((resolve, reject) => {
-      const request = indexedDB.open(scribeDb.name, scribeDb.version);
+      const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const db = request.result;
@@ -517,7 +519,7 @@ export async function readScreenshotScrollbarStats(popup: Page, stepId: string):
         };
       };
     });
-  }, { id: stepId, scribeDb: SCRIBE_DB });
+  }, { id: stepId, howbeamDb: HOWBEAM_DB });
 }
 
 export async function startRecording(appPage: Page, popup: Page, mode: RecordingMode): Promise<void> {

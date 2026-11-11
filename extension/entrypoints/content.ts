@@ -12,7 +12,6 @@ import {
 import { installRecorderLifecycle } from '@/lib/recording/recorder-lifecycle';
 import { createSnapshotShield } from '@/lib/recording/snapshot-shield';
 import { createSnapshotRecorder } from '@/lib/recording/content/snapshot-recorder';
-import { featureFlags } from '@/lib/shared/feature-flags';
 import { getRecordingState, onRecordingStateChange } from '@/lib/storage/storage';
 import { installRecaptureRecorder } from '@/lib/recording/recapture-recorder';
 import { createCaptureSender } from '@/lib/recording/content/capture-sender';
@@ -276,20 +275,19 @@ async function startRecorder(): Promise<void> {
     try {
       await session.shield.ready;
       session.shield.updateToolbar(toolbar.toToolbarState(recordingState));
-      if (featureFlags.snapshotKeyboardNav) {
-        // Defer enumeration off the startup path so a large page cannot stall
-        // the clean-base handoff (§9.5). The frozen page keeps anchors valid.
-        const shield = session.shield;
-        const sendCandidates = () => {
-          try {
-            shield.sendKeyboardCandidates(collectKeyboardCandidateAnchors());
-          } catch (error) {
-            console.warn('[howbeam] failed to enumerate keyboard candidates', error);
-          }
-        };
-        if (typeof requestIdleCallback === 'function') requestIdleCallback(sendCandidates, { timeout: 500 });
-        else setTimeout(sendCandidates, 0);
-      }
+      // Defer enumeration off the startup path so a large page cannot stall
+      // the clean-base handoff (§9.5). The frozen page keeps anchors valid.
+      const shield = session.shield;
+      const sendCandidates = () => {
+        try {
+          shield.sendKeyboardCandidates(collectKeyboardCandidateAnchors());
+        } catch (error) {
+          console.warn('[howbeam] failed to enumerate keyboard candidates', error);
+        }
+      };
+      if (typeof requestIdleCallback === 'function') requestIdleCallback(sendCandidates, { timeout: 500 });
+      else setTimeout(sendCandidates, 0);
+
       await waitForNextFrame();
       await waitForNextFrame();
     } catch (err) {

@@ -12,6 +12,7 @@ import {
   PROJECT_ARCHIVE_VERSION,
   ProjectArchiveError,
   STEP_KEYS,
+  LOCAL_STEP_KEYS,
   archiveScreenshotPath,
 } from '@/lib/export/project-archive-contract';
 import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
@@ -203,16 +204,15 @@ describe('project archive', () => {
     expect([...serializedKeys].sort()).toEqual([...STEP_KEYS].sort());
   });
 
-  it('keeps the image edit revision and rejects a malformed one', async () => {
-    const edited = makeStep({ id: 'edited', imageEditRevision: 7 });
-    const plain = makeStep({ id: 'plain', order: 1 });
-    const { steps } = await importProjectArchive(await exportProjectArchive([edited, plain]));
-    expect(itemAt(steps, 0).imageEditRevision).toBe(7);
-    expect(itemAt(steps, 1).imageEditRevision).toBeUndefined();
+  it('never archives this browser\'s bookkeeping, and refuses an archive that carries it', async () => {
+    const step = makeStep({ id: 'edited', runId: 'run-1', captureRevision: 2, imageEditRevision: 7, lastCaptureRunId: 'r' });
+    const archived = await archiveObject([step]);
+    for (const key of LOCAL_STEP_KEYS) expect(archived.manifest.steps[0]).not.toHaveProperty(key);
+    const { steps } = await importProjectArchive(await exportProjectArchive([step]));
+    expect(itemAt(steps, 0).imageEditRevision).toBeUndefined();
 
-    const malformed = await archiveObject([edited]);
-    malformed.manifest.steps[0].imageEditRevision = -1;
-    await expect(importProjectArchive(pack(malformed))).rejects.toThrow(/imageEditRevision/);
+    archived.manifest.steps[0].imageEditRevision = 7;
+    await expect(importProjectArchive(pack(archived))).rejects.toThrow();
   });
 
   it('produces the same manifest regardless of input step order', async () => {

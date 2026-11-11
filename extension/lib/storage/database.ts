@@ -61,6 +61,16 @@ export interface HowbeamDB extends DBSchema {
     value: PendingAnchor;
     indexes: { 'by-project': string };
   };
+  /** Device-local state, keyed by name: the backup folder and its last run, the recording's undo window. */
+  deviceState: {
+    key: string;
+    value: unknown;
+  };
+  /** What the backup folder holds for each Project. */
+  backupManifest: {
+    key: string;
+    value: unknown;
+  };
 }
 
 type ProjectStores = ['projects', 'entries', 'screenshots', 'pendingAnchors'];
@@ -145,8 +155,8 @@ async function abortTransaction(tx: ProjectWriteTransaction, error: unknown): Pr
 }
 
 /** Howbeam has not shipped, so no older layout is migrated: opening a database
- * from before version 3 drops its stores and starts empty. */
-export const DATABASE_VERSION = 3;
+ * from an earlier version drops its stores and starts empty. */
+export const DATABASE_VERSION = 4;
 
 let databasePromise: Promise<IDBPDatabase<HowbeamDB>> | undefined;
 let databaseConnection: IDBPDatabase<HowbeamDB> | undefined;
@@ -164,6 +174,8 @@ function getDatabase(): Promise<IDBPDatabase<HowbeamDB>> {
       db.createObjectStore('screenshots', { keyPath: 'id' });
       const pending = db.createObjectStore('pendingAnchors', { keyPath: 'id' });
       pending.createIndex('by-project', 'projectId');
+      db.createObjectStore('deviceState');
+      db.createObjectStore('backupManifest');
     },
     blocked(currentVersion, blockedVersion) {
       console.warn(`Howbeam database upgrade to ${blockedVersion ?? 'unknown'} is blocked by version ${currentVersion}.`);

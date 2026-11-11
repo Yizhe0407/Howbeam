@@ -1,26 +1,7 @@
-import { createVersionedMarkerStore, type VersionedMarkerState } from './versioned-marker-store';
+import { browser } from 'wxt/browser';
 
-/**
- * Increment this when the cross-tab permission ask changes enough that users
- * who previously declined should be asked once more. Each version gets its own
- * local-storage key, so an old decline never suppresses a newer ask.
- */
-const CROSS_TAB_DECLINE_VERSION = 1 as const;
-
-const store = createVersionedMarkerStore({
-  name: 'cross-tab-decline',
-  version: CROSS_TAB_DECLINE_VERSION,
-  flagField: 'declined',
-  atField: 'declinedAt',
-});
-
-export const CROSS_TAB_DECLINE_STORAGE_KEY = store.storageKey;
-
-export type CrossTabDeclineState = VersionedMarkerState<
-  typeof CROSS_TAB_DECLINE_VERSION,
-  'declined',
-  'declinedAt'
->;
+/** The user declined the all-sites ask at a steps start: later starts do not ask on their own. */
+export const CROSS_TAB_DECLINE_STORAGE_KEY = 'howbeam:cross-tab-declined';
 
 /**
  * Whether the user has already declined the <all_urls> ask at a steps-recording
@@ -28,13 +9,14 @@ export type CrossTabDeclineState = VersionedMarkerState<
  * the popup still offers a passive opt-in affordance.
  */
 export async function hasDeclinedCrossTabRecording(): Promise<boolean> {
-  return store.isMarked();
+  const stored = await browser.storage.local.get(CROSS_TAB_DECLINE_STORAGE_KEY);
+  return stored[CROSS_TAB_DECLINE_STORAGE_KEY] === true;
 }
 
-export function markCrossTabRecordingDeclined(declinedAt = Date.now()): Promise<CrossTabDeclineState> {
-  return store.mark(declinedAt);
+export async function markCrossTabRecordingDeclined(): Promise<void> {
+  await browser.storage.local.set({ [CROSS_TAB_DECLINE_STORAGE_KEY]: true });
 }
 
 export async function clearCrossTabRecordingDecline(): Promise<void> {
-  await store.clear();
+  await browser.storage.local.remove(CROSS_TAB_DECLINE_STORAGE_KEY);
 }

@@ -6,7 +6,7 @@ import { SCREENSHOT_MEDIA_TYPES } from '../storage/screenshot-rules';
 export const PROJECT_ARCHIVE_FORMAT = 'howbeam-project';
 /** Version 4 is a ZIP: `manifest.json` plus each distinct screenshot stored
  * once, as its original bytes, under `screenshots/` named by its SHA-256. */
-export const PROJECT_ARCHIVE_VERSION = 4;
+export const PROJECT_ARCHIVE_VERSION = 1;
 export const PROJECT_ARCHIVE_MIME_TYPE = 'application/vnd.howbeam.project+zip';
 export const ARCHIVE_MANIFEST_PATH = 'manifest.json';
 
@@ -100,7 +100,6 @@ type ArchiveRedaction = Redaction;
 export interface ArchiveStep {
   id: string;
   sessionId: string;
-  runId?: string;
   order: number;
   screenshotId?: string;
   bounds: ArchiveBounds | null;
@@ -115,9 +114,6 @@ export interface ArchiveStep {
   description: string;
   url: string;
   timestamp: number;
-  captureRevision?: number;
-  imageEditRevision?: number;
-  lastCaptureRunId?: string;
   groupId?: string;
 }
 
@@ -159,7 +155,6 @@ export const POINT_KEYS = ['x', 'y'] as const;
 export const STEP_KEYS = [
   'id',
   'sessionId',
-  'runId',
   'order',
   'screenshotId',
   'bounds',
@@ -174,12 +169,14 @@ export const STEP_KEYS = [
   'description',
   'url',
   'timestamp',
-  'captureRevision',
-  'imageEditRevision',
-  'lastCaptureRunId',
   'groupId',
 ] as const;
-export const RUNTIME_STEP_KEYS = STEP_KEYS.map((key) => (key === 'screenshotId' ? 'screenshotBlob' : key));
+/** Bookkeeping a stored step carries that means nothing outside this browser: never archived. */
+export const LOCAL_STEP_KEYS = ['runId', 'captureRevision', 'imageEditRevision', 'lastCaptureRunId'] as const;
+export const RUNTIME_STEP_KEYS = [
+  ...STEP_KEYS.map((key) => (key === 'screenshotId' ? 'screenshotBlob' : key)),
+  ...LOCAL_STEP_KEYS,
+];
 /** The storage screenshot rule's media types: archives carry exactly what storage accepts. */
 export const SAFE_SCREENSHOT_MEDIA_TYPES = SCREENSHOT_MEDIA_TYPES;
 

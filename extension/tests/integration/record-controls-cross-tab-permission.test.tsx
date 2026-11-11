@@ -111,11 +111,7 @@ describe('cross-tab permission ask at recording start', () => {
     // The selection write for the fresh project also goes through storage.set,
     // so assert the decline record specifically rather than an only-call.
     expect(mocks.storageSet).toHaveBeenCalledWith({
-      [CROSS_TAB_DECLINE_STORAGE_KEY]: {
-        version: 1,
-        declined: true,
-        declinedAt: expect.any(Number),
-      },
+      [CROSS_TAB_DECLINE_STORAGE_KEY]: true,
     });
 
     await clickStartAndWaitForSend(2);
@@ -124,7 +120,7 @@ describe('cross-tab permission ask at recording start', () => {
 
   it('does not ask again in a later session once the decline flag is stored', async () => {
     mocks.storageGet.mockResolvedValue({
-      [CROSS_TAB_DECLINE_STORAGE_KEY]: { version: 1, declined: true, declinedAt: 123 },
+      [CROSS_TAB_DECLINE_STORAGE_KEY]: true,
     });
     await renderIdleControls();
 
@@ -153,7 +149,7 @@ describe('cross-tab permission ask at recording start', () => {
 
   it('offers an inline enable link even after a decline; a grant clears the flag and the hint', async () => {
     mocks.storageGet.mockResolvedValue({
-      [CROSS_TAB_DECLINE_STORAGE_KEY]: { version: 1, declined: true, declinedAt: 123 },
+      [CROSS_TAB_DECLINE_STORAGE_KEY]: true,
     });
     await renderIdleControls();
 

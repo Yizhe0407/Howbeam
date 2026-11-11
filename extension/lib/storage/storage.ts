@@ -156,7 +156,7 @@ function normalizeRecaptureResult(value: unknown): StepRecaptureResult | null {
 export function normalizeRecordingState(stored: Partial<RecordingState> | undefined): RecordingState {
   const raw = stored && typeof stored === 'object' ? stored as Record<string, unknown> : {};
   const mode = raw.mode === 'steps' || raw.mode === 'snapshot' ? raw.mode : DEFAULT_STATE.mode;
-  const requestedRecording = raw.operation === 'recording' || (raw.operation == null && raw.isRecording === true);
+  const requestedRecording = raw.operation === 'recording';
   const requestedRecapture = raw.operation === 'recapture';
   const recapture = normalizeRecaptureContext(raw.recapture);
   const sessionId = normalizeNullableString(raw.sessionId, MAX_STATE_ID_LENGTH);

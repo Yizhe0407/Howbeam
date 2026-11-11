@@ -1,8 +1,8 @@
 import 'fake-indexeddb/auto';
+import { closeDatabase } from '@/lib/storage/database';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
   clearBackupConfig,
-  closeBackupDatabase,
   getBackupConfig,
   getBackupLastRun,
   getBackupManifest,
@@ -15,7 +15,7 @@ import {
 // A real FileSystemDirectoryHandle is structured-cloneable; the fake only needs a name.
 const config = { directory: { kind: 'directory', name: 'Backups' }, folderName: 'Backups' } as unknown as BackupConfig;
 
-afterAll(closeBackupDatabase);
+afterAll(closeDatabase);
 
 describe('backup store', () => {
   it('keeps the chosen folder and the per-project manifest', async () => {
