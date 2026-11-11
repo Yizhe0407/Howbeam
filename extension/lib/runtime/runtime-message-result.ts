@@ -18,6 +18,7 @@ import {
   CONTINUATION_PREFLIGHT_ERROR_CODES,
   RECAPTURE_PREFLIGHT_ERROR_CODES,
   RECAPTURE_START_ERROR_CODES,
+  START_RECORDING_ERROR_CODES,
 } from './messages';
 import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
 import { isBoundedString, isRecord } from '../shared/validation';
@@ -76,7 +77,12 @@ export function isStartRecordingResult(value: unknown): value is StartRecordingR
   if (value.ok === true) {
     return hasOnlyKeys(value, ['ok', 'sessionId', 'runId']) && isId(value.sessionId) && isId(value.runId);
   }
-  return isFailureResult(value);
+  return (
+    value.ok === false &&
+    hasOnlyKeys(value, ['ok', 'error', 'code']) &&
+    isErrorMessage(value.error) &&
+    (value.code === undefined || isOneOf(value.code, START_RECORDING_ERROR_CODES))
+  );
 }
 
 export function isOpenEditorResult(value: unknown): value is OpenEditorResult {

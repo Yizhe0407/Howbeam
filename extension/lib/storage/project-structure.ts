@@ -28,6 +28,7 @@ import {
 } from './step-repository';
 import {
   ProjectNotFoundError,
+  refreshProjectSummaryFromRows,
   requireWritableProject,
   runProjectStepsWrite,
   runWithDatabase,
@@ -301,14 +302,27 @@ export async function getProjectStructureSnapshot(sessionId: string): Promise<Pr
  */
 export async function repairEmptySnapshotAnchors(sessionId: string): Promise<number> {
   return runWithDatabase(async (db) => {
-    const tx = db.transaction(['steps'], 'readwrite');
+    const tx: ProjectStepsTransaction = db.transaction(['projects', 'steps'], 'readwrite');
     const store = tx.objectStore('steps');
     const steps = await store.index('by-session').getAll(sessionId);
     const annotated = new Set(
       steps.filter((step) => step.groupId && stepRole(step) === 'annotation').map((step) => step.groupId),
     );
     const orphans = steps.filter((step) => step.groupId === step.id && stepRole(step) === 'anchor' && !annotated.has(step.id));
-    for (const orphan of orphans) await store.delete(orphan.id);
+    if (orphans.length > 0) {
+      for (const orphan of orphans) await store.delete(orphan.id);
+      // Removed rows change the summary (count, screenshot bytes) and the structure, so the
+      // Project row moves with them in the same transaction.
+      const rawProject = await tx.objectStore('projects').get(sessionId);
+      if (rawProject) {
+        const orphanIds = new Set(orphans.map((orphan) => orphan.id));
+        await refreshProjectSummaryFromRows(
+          tx,
+          sanitizeProject(rawProject),
+          steps.filter((step) => !orphanIds.has(step.id)),
+        );
+      }
+    }
     await tx.done;
     if (orphans.length > 0) notifyProjectsChanged();
     return orphans.length;

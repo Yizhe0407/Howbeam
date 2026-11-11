@@ -204,9 +204,21 @@ export async function duplicateProject(sourceId: string, title?: string): Promis
  * Returns whether it deleted.
  */
 export async function discardPristineProject(projectId: string): Promise<boolean> {
-  const project = await getProject(projectId);
-  if (!project || !isPristineProject(project)) return false;
-  await deleteProjectPermanently(projectId);
+  // The check and the delete share one transaction: a capture or rename that
+  // commits in between would otherwise be deleted along with the shell.
+  const deleted = await runWithDatabase(async (db) => {
+    const tx: ProjectStepsTransaction = db.transaction(['projects', 'steps'], 'readwrite');
+    const rawProject = await tx.objectStore('projects').get(projectId);
+    const pristine =
+      rawProject !== undefined &&
+      isPristineProject(sanitizeProject(rawProject)) &&
+      (await tx.objectStore('steps').index('by-session').count(projectId)) === 0;
+    if (pristine) await tx.objectStore('projects').delete(projectId);
+    await tx.done;
+    return pristine;
+  });
+  if (!deleted) return false;
+  notifyProjectsChanged();
   await clearActiveProjectId(projectId);
   return true;
 }

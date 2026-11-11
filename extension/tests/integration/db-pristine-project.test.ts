@@ -129,6 +129,25 @@ describe('discardPristineProject', () => {
     expect(grown.stepEditRevision).toBe(edited.stepEditRevision);
   });
 
+  it('never deletes a capture that commits while the discard is in flight', async () => {
+    const project = await createProject();
+    const step = makeStep(project.id);
+
+    const [added, discarded] = await Promise.allSettled([
+      addStepsAfter([step], null),
+      discardPristineProject(project.id),
+    ]);
+
+    // Whichever lands first wins outright; a committed capture is never deleted underneath.
+    if (added.status === 'fulfilled') {
+      expect(discarded).toEqual({ status: 'fulfilled', value: false });
+      await expect(getProject(project.id)).resolves.toMatchObject({ stepCount: 1 });
+    } else {
+      expect(discarded).toEqual({ status: 'fulfilled', value: true });
+      await expect(getProject(project.id)).resolves.toBeUndefined();
+    }
+  });
+
   it('treats an already-deleted project as a no-op', async () => {
     await expect(discardPristineProject('project-gone')).resolves.toBe(false);
   });

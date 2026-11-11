@@ -42,10 +42,13 @@ export interface StartRecordingMessage {
 
 /** Machine-readable reason a start failed, for callers that offer a specific
  * recovery. Optional: most failures carry only their localized `error`. */
-export type StartRecordingErrorCode =
+export const START_RECORDING_ERROR_CODES = [
   /** Continuation: the source page failed to load (browser error page); the
    * tab opened for it was closed. Continue from another page instead. */
-  | 'SOURCE_PAGE_UNREACHABLE';
+  'SOURCE_PAGE_UNREACHABLE',
+] as const;
+
+export type StartRecordingErrorCode = (typeof START_RECORDING_ERROR_CODES)[number];
 
 export type StartRecordingResult =
   | { ok: true; sessionId: string; runId: string }

@@ -2,8 +2,8 @@ import 'fake-indexeddb/auto';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectContentConflictError, addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, moveProjectEntriesAtomically, repairEmptySnapshotAnchors, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically } from '@/lib/storage/project-structure';
 import { ProjectStructureIntegrityError, type ProjectSection, type Step } from '@/lib/storage/models';
-import { closeDatabase, runWithDatabase } from '@/lib/storage/database';
-import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
+import { closeDatabase, refreshProjectSummary, runWithDatabase, summarizeSteps } from '@/lib/storage/database';
+import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
 import { pngBlob } from '../setup/raster-fixtures';
 import { itemAt } from '../setup/item-at';
@@ -91,6 +91,31 @@ describe('Project entry-safe atomic structure', () => {
     expect(await repairEmptySnapshotAnchors(project.id)).toBe(0);
     expect((await getSteps(project.id)).some((step) => step.id === orphanId)).toBe(false);
     expect((await getProjectStructureSnapshot(project.id)).entryIds).toEqual(snapshot.entryIds);
+  });
+
+  it('moves the Project summary and revision with the anchors it removes', async () => {
+    const { project } = await createTrackedProject(makeMixedSteps());
+    const orphanId = crypto.randomUUID();
+    // Stored the way a recording stores it: the row and the summary move together.
+    await runWithDatabase(async (db) => {
+      const tx = db.transaction(['projects', 'steps'], 'readwrite');
+      await tx.objectStore('steps').put(makeStep({
+        id: orphanId, sessionId: project.id, groupId: orphanId, bounds: null, order: 5,
+      }));
+      const stored = await tx.objectStore('projects').get(project.id);
+      await refreshProjectSummary(tx, stored!);
+      await tx.done;
+    });
+    const before = (await getProject(project.id))!;
+
+    expect(await repairEmptySnapshotAnchors(project.id)).toBe(1);
+
+    const after = (await getProject(project.id))!;
+    const expected = summarizeSteps(await getSteps(project.id));
+    expect(after.storageBytes).toBe(expected.storageBytes);
+    expect(after.storageBytes).toBeLessThan(before.storageBytes);
+    expect(after.stepCount).toBe(expected.stepCount);
+    expect(after.contentRevision).toBeGreaterThan(before.contentRevision);
   });
 
   it('treats snapshot groups as indivisible and rejects annotation ids', async () => {
