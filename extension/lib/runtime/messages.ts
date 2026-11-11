@@ -203,6 +203,14 @@ export interface HowbeamSnapshotHistoryMessage {
  * rejection leaves the recorder to say the click went unrecorded. */
 export type ClickCaptureResult = { ok: true } | { ok: false; error: string; reported?: true };
 
+/** Bounds on what a child frame may hand the relay: the background refuses
+ * larger requests and the frames refuse larger replies. */
+export const STEP_FRAME_LIMITS = Object.freeze({
+  maxTokenLength: 128,
+  maxTextLength: 200,
+  maxTagLength: 100,
+});
+
 /**
  * Child-frame step gestures use an extension-authenticated runtime handshake
  * before their geometry is allowed onto the page-visible hop channel. Page
@@ -403,28 +411,51 @@ export type FocusStepRecaptureSourceResult =
   | { ok: true }
   | { ok: false; error: string };
 
-export type BackgroundMessage =
-  | ClickCapture
-  | StepFrameRelayBeginMessage
-  | StepFrameRelayClaimMessage
-  | StepFrameRelayRejectMessage
-  | StepFrameRelaySettleMessage
-  | StepFrameRelayAbortMessage
-  | CancelCaptureMessage
-  | SnapshotInvalidatedMessage
-  | SnapshotRecorderFailureMessage
-  | StartRecordingMessage
-  | StopRecordingMessage
-  | OpenEditorMessage
-  | OpenLibraryMessage
-  | RegisterExtensionPageMessage
-  | RecordingControlMessage
-  | RecorderReadyMessage
-  | PreflightStepRecaptureSourcePermissionMessage
-  | PreflightProjectContinuationSourcePermissionMessage
-  | StartStepRecaptureMessage
-  | HowbeamRecaptureReadyMessage
-  | HowbeamRecaptureTargetMessage
-  | CancelStepRecaptureMessage
-  | AckStepRecaptureResultMessage
-  | FocusStepRecaptureSourceMessage;
+type RecordingControlContracts = {
+  [K in RecordingControlMessage['type']]: {
+    request: RecordingControlMessage & { type: K };
+    response: RecordingControlResult;
+  };
+};
+
+/**
+ * Every message the background answers, with the reply its sender gets. The
+ * runtime half of the contract (validation, allowed senders, failure reply)
+ * is BACKGROUND_CONTRACTS in message-contract.ts, typed against this.
+ */
+export interface BackgroundContracts extends RecordingControlContracts {
+  HOWBEAM_CLICK: { request: ClickCapture; response: ClickCaptureResult };
+  HOWBEAM_STEP_FRAME_BEGIN: { request: StepFrameRelayBeginMessage; response: StepFrameRelayBeginResult };
+  HOWBEAM_STEP_FRAME_CLAIM: { request: StepFrameRelayClaimMessage; response: StepFrameRelayClaimResult };
+  HOWBEAM_STEP_FRAME_REJECT: { request: StepFrameRelayRejectMessage; response: StepFrameRelayMutationResult };
+  HOWBEAM_STEP_FRAME_SETTLE: { request: StepFrameRelaySettleMessage; response: StepFrameRelayMutationResult };
+  HOWBEAM_STEP_FRAME_ABORT: { request: StepFrameRelayAbortMessage; response: StepFrameRelayMutationResult };
+  HOWBEAM_CANCEL_CAPTURE: { request: CancelCaptureMessage; response: ClickCaptureResult };
+  SNAPSHOT_INVALIDATED: { request: SnapshotInvalidatedMessage; response: boolean };
+  SNAPSHOT_RECORDER_FAILED: { request: SnapshotRecorderFailureMessage; response: boolean };
+  START_RECORDING: { request: StartRecordingMessage; response: StartRecordingResult };
+  STOP_RECORDING: { request: StopRecordingMessage; response: undefined };
+  OPEN_EDITOR: { request: OpenEditorMessage; response: OpenEditorResult };
+  OPEN_LIBRARY: { request: OpenLibraryMessage; response: OpenLibraryResult };
+  REGISTER_EXTENSION_PAGE: { request: RegisterExtensionPageMessage; response: boolean };
+  HOWBEAM_READY: { request: RecorderReadyMessage; response: boolean };
+  PREFLIGHT_STEP_RECAPTURE_SOURCE_PERMISSION: {
+    request: PreflightStepRecaptureSourcePermissionMessage;
+    response: PreflightStepRecaptureSourcePermissionResult;
+  };
+  PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION: {
+    request: PreflightProjectContinuationSourcePermissionMessage;
+    response: PreflightProjectContinuationSourcePermissionResult;
+  };
+  START_STEP_RECAPTURE: { request: StartStepRecaptureMessage; response: StartStepRecaptureResult };
+  HOWBEAM_RECAPTURE_READY: { request: HowbeamRecaptureReadyMessage; response: boolean };
+  HOWBEAM_RECAPTURE_TARGET: { request: HowbeamRecaptureTargetMessage; response: StepRecaptureTargetResult };
+  CANCEL_STEP_RECAPTURE: { request: CancelStepRecaptureMessage; response: CancelStepRecaptureResult };
+  ACK_STEP_RECAPTURE_RESULT: { request: AckStepRecaptureResultMessage; response: boolean };
+  FOCUS_STEP_RECAPTURE_SOURCE: { request: FocusStepRecaptureSourceMessage; response: FocusStepRecaptureSourceResult };
+}
+
+export type BackgroundMessageType = keyof BackgroundContracts;
+export type BackgroundRequest<K extends BackgroundMessageType> = BackgroundContracts[K]['request'];
+export type BackgroundResponse<K extends BackgroundMessageType> = BackgroundContracts[K]['response'];
+export type BackgroundMessage = BackgroundRequest<BackgroundMessageType>;

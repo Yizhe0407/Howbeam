@@ -27,16 +27,15 @@ import {
   STEP_LATE_CLICK_SUPPRESS_MS,
 } from './content-script-constants';
 import { isFiniteRect } from '../shared/validation';
-import type {
-  HowbeamStepFrameResultMessage,
-  HowbeamStopMessage,
-  StepFrameRelayAbortMessage,
-  StepFrameRelayBeginMessage,
-  StepFrameRelayBeginResult,
-  StepFrameRelayClaimResult,
-  StepFrameRelayMutationResult,
-  StepFrameRelayRejectMessage,
+import {
+  STEP_FRAME_LIMITS,
+  type HowbeamStepFrameResultMessage,
+  type HowbeamStopMessage,
+  type StepFrameRelayAbortMessage,
+  type StepFrameRelayBeginMessage,
+  type StepFrameRelayRejectMessage,
 } from '../runtime/messages';
+import { isStepFrameRelayBeginResult } from '../runtime/runtime-message-result';
 
 /**
  * Child-frame step recording uses two channels with deliberately different
@@ -67,9 +66,7 @@ const STEP_FRAME_RELAY_MAX_CONCURRENT = 8;
 const STEP_FRAME_RELAY_MAX_REQUESTS_PER_WINDOW = 90;
 const STEP_FRAME_RELAY_RATE_WINDOW_MS = 10_000;
 const MAX_SHADOW_SCAN_DEPTH = 8;
-const RUNTIME_ID_LIMIT = 128;
-const STEP_FRAME_TEXT_LIMIT = 200;
-const STEP_FRAME_TAG_LIMIT = 100;
+const RUNTIME_ID_LIMIT = STEP_FRAME_LIMITS.maxTokenLength;
 
 export function stepFrameClickMessageType(runtimeId: string): string {
   return `howbeam_step_frame_click_${runtimeId}`;
@@ -113,36 +110,6 @@ export function isStepFrameHopPayload(value: unknown, messageType: string): valu
     typeof payload.originTimestamp === 'number' &&
     Number.isFinite(payload.originTimestamp)
   );
-}
-
-export function isStepFrameRelayBeginResult(value: unknown): value is StepFrameRelayBeginResult {
-  if (!value || typeof value !== 'object' || typeof (value as { ok?: unknown }).ok !== 'boolean') return false;
-  const result = value as { ok: boolean; relayToken?: unknown };
-  return result.ok ? isBoundedRuntimeId(result.relayToken) : result.relayToken === undefined;
-}
-
-export function isStepFrameRelayClaimResult(value: unknown): value is StepFrameRelayClaimResult {
-  if (!value || typeof value !== 'object' || typeof (value as { ok?: unknown }).ok !== 'boolean') return false;
-  const result = value as {
-    ok: boolean;
-    settleToken?: unknown;
-    target?: { text?: unknown; tagName?: unknown; interactive?: unknown };
-  };
-  if (!result.ok) return result.settleToken === undefined && result.target === undefined;
-  return (
-    isBoundedRuntimeId(result.settleToken) &&
-    Boolean(result.target) &&
-    typeof result.target?.text === 'string' &&
-    result.target.text.length <= STEP_FRAME_TEXT_LIMIT &&
-    typeof result.target.tagName === 'string' &&
-    result.target.tagName.length > 0 &&
-    result.target.tagName.length <= STEP_FRAME_TAG_LIMIT &&
-    typeof result.target.interactive === 'boolean'
-  );
-}
-
-export function isStepFrameRelayMutationResult(value: unknown): value is StepFrameRelayMutationResult {
-  return Boolean(value && typeof value === 'object' && typeof (value as { ok?: unknown }).ok === 'boolean');
 }
 
 export function isHowbeamStepFrameResultMessage(value: unknown): value is HowbeamStepFrameResultMessage {

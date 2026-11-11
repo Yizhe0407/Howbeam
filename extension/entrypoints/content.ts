@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { sendToBackground } from '@/lib/runtime/background-client';
 import {
   collectKeyboardCandidateAnchors,
   installSnapshotFrameProbe,
@@ -13,7 +14,6 @@ import { createSnapshotShield } from '@/lib/recording/snapshot-shield';
 import { createSnapshotRecorder } from '@/lib/recording/content/snapshot-recorder';
 import { featureFlags } from '@/lib/shared/feature-flags';
 import { getRecordingState, onRecordingStateChange } from '@/lib/storage/storage';
-import { isRuntimeBoolean, requireRuntimeMessageResult } from '@/lib/runtime/runtime-message-result';
 import { installRecaptureRecorder } from '@/lib/recording/recapture-recorder';
 import { createCaptureSender } from '@/lib/recording/content/capture-sender';
 import { createContentRecordingSession } from '@/lib/recording/content/recording-session';
@@ -320,11 +320,7 @@ async function startRecorder(): Promise<void> {
           }
         : {}),
     };
-    isCurrentRecordedTab = requireRuntimeMessageResult(
-      await browser.runtime.sendMessage(readyMessage),
-      isRuntimeBoolean,
-      t().runtime.recordingResponseInvalid,
-    );
+    isCurrentRecordedTab = await sendToBackground(readyMessage, t().runtime.recordingResponseInvalid);
   } catch (err) {
     console.error('[howbeam] recorder readiness check failed', err);
   }

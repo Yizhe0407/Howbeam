@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
+import { sendToBackground } from '@/lib/runtime/background-client';
 import { Camera, Check, ExternalLink, ListOrdered, Loader2, Play, TriangleAlert } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import InlineAlert from '@/components/shared/InlineAlert';
@@ -24,8 +25,6 @@ import {
 import { claimPendingStart, discardPendingStart, parkPendingStart } from '@/lib/runtime/pending-start';
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { t } from '@/lib/shared/i18n';
-import type { RecordingControlResult } from '@/lib/runtime/messages';
-import { isRecordingControlResult, requireRuntimeMessageResult } from '@/lib/runtime/runtime-message-result';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Props {
@@ -214,11 +213,7 @@ export default function RecordControls({
     if (!recording.runId) return;
     setControlError(null);
     try {
-      const result = requireRuntimeMessageResult<RecordingControlResult>(
-        await browser.runtime.sendMessage({ type: 'RESUME_RECORDING', runId: recording.runId }),
-        isRecordingControlResult,
-        t().runtime.recordingChannelLost,
-      );
+      const result = await sendToBackground({ type: 'RESUME_RECORDING', runId: recording.runId }, t().runtime.recordingChannelLost);
       if (!result.ok) setControlError(result.error);
     } catch (error) {
       setControlError(reportError('[howbeam] failed to resume recording', error, t().toolbar.actionFailed));
@@ -230,11 +225,7 @@ export default function RecordControls({
     setFinishing(true);
     setControlError(null);
     try {
-      const result = requireRuntimeMessageResult<RecordingControlResult>(
-        await browser.runtime.sendMessage({ type: 'FINISH_RECORDING', runId: recording.runId }),
-        isRecordingControlResult,
-        t().runtime.recordingChannelLost,
-      );
+      const result = await sendToBackground({ type: 'FINISH_RECORDING', runId: recording.runId }, t().runtime.recordingChannelLost);
       if (!result.ok) {
         setControlError(result.error);
         return;

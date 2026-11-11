@@ -12,12 +12,14 @@ vi.mock('wxt/browser', () => ({
 import {
   isHowbeamStepFrameResultMessage,
   isStepFrameHopPayload,
-  isStepFrameRelayBeginResult,
-  isStepFrameRelayClaimResult,
-  isStepFrameRelayMutationResult,
   snapshotFrameScrollPingType,
   stepFrameClickMessageType,
 } from '@/lib/recording/frame-relay';
+import {
+  isStepFrameRelayBeginResult,
+  isStepFrameRelayClaimResult,
+  isStepFrameRelayMutationResult,
+} from '@/lib/runtime/runtime-message-result';
 
 describe('step frame relay protocol', () => {
   const messageType = stepFrameClickMessageType('test-extension');

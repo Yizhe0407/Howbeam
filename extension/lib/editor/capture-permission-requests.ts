@@ -1,19 +1,8 @@
-import { browser } from 'wxt/browser';
+import { sendToBackground } from '../runtime/background-client';
 import { validatePreparedPermissionSource } from './continuation-tabs';
 import { t } from '@/lib/shared/i18n';
-import {
-  isPreflightProjectContinuationSourcePermissionResult,
-  isPreflightStepRecaptureSourcePermissionResult,
-  isStartRecordingResult,
-  isStartStepRecaptureResult,
-  requireRuntimeMessageResult,
-} from '../runtime/runtime-message-result';
 import type {
-  PreflightProjectContinuationSourcePermissionResult,
-  PreflightStepRecaptureSourcePermissionResult,
   StartRecordingMessage,
-  StartRecordingResult,
-  StartStepRecaptureResult,
 } from '../runtime/messages';
 import type { StepRecaptureTarget } from '../storage/recording-state';
 import type { PreparedCapturePermission } from './editor-app-model';
@@ -46,14 +35,11 @@ export async function requestRecapturePreflight(
   target: StepRecaptureTarget,
   targetEntryId: string,
 ): Promise<PreparedCapturePermission> {
-  const result = requireRuntimeMessageResult<PreflightStepRecaptureSourcePermissionResult>(
-    await browser.runtime.sendMessage({
-      type: 'PREFLIGHT_STEP_RECAPTURE_SOURCE_PERMISSION',
-      sessionId,
-      target,
-    }),
-    isPreflightStepRecaptureSourcePermissionResult,
-  );
+  const result = await sendToBackground({
+    type: 'PREFLIGHT_STEP_RECAPTURE_SOURCE_PERMISSION',
+    sessionId,
+    target,
+  });
   if (!result.ok) throw new Error(result.message);
   validatePreparedPermissionSource(result.sourceOrigin, result.permissionPattern);
   return {
@@ -72,14 +58,11 @@ export async function requestContinuationPreflight(
   sessionId: string,
   afterEntryId?: string,
 ): Promise<PreparedCapturePermission> {
-  const result = requireRuntimeMessageResult<PreflightProjectContinuationSourcePermissionResult>(
-    await browser.runtime.sendMessage({
-      type: 'PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION',
-      sessionId,
-      afterEntryId,
-    }),
-    isPreflightProjectContinuationSourcePermissionResult,
-  );
+  const result = await sendToBackground({
+    type: 'PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION',
+    sessionId,
+    afterEntryId,
+  });
   if (!result.ok) {
     // A Project without steps has no source page to lock onto. That is not a
     // terminal error: the dialog still opens and offers the site-agnostic
@@ -105,10 +88,7 @@ export async function requestContinuationPreflight(
 }
 
 export async function startRecordingOrThrow(message: StartRecordingMessage): Promise<void> {
-  const started = requireRuntimeMessageResult<StartRecordingResult>(
-    await browser.runtime.sendMessage(message),
-    isStartRecordingResult,
-  );
+  const started = await sendToBackground(message);
   if (!started.ok) throw new Error(started.error);
 }
 
@@ -116,9 +96,6 @@ export async function startStepRecaptureOrThrow(
   sessionId: string,
   target: StepRecaptureTarget,
 ): Promise<void> {
-  const result = requireRuntimeMessageResult<StartStepRecaptureResult>(
-    await browser.runtime.sendMessage({ type: 'START_STEP_RECAPTURE', sessionId, target }),
-    isStartStepRecaptureResult,
-  );
+  const result = await sendToBackground({ type: 'START_STEP_RECAPTURE', sessionId, target });
   if (!result.ok) throw new Error(result.error);
 }

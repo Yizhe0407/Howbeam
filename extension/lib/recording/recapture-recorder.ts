@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { sendToBackground } from '../runtime/background-client';
 import { resolveSnapshotTargetAtPoint } from './snapshot-targeting';
 import { installRecorderLifecycle } from './recorder-lifecycle';
 import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from '../capture/overlay-layers';
@@ -9,15 +10,9 @@ import {
 } from './recording-guards';
 import { getRecordingState, onRecordingStateChange } from '../storage/storage';
 import { createLatestAsyncRequestRunner } from '../capture/frame-probe';
-import {
-  isRuntimeBoolean,
-  isStepRecaptureTargetResult,
-  requireRuntimeMessageResult,
-} from '../runtime/runtime-message-result';
 import type {
   HowbeamRecaptureTargetMessage,
   HowbeamStopMessage,
-  StepRecaptureTargetResult,
 } from '../runtime/messages';
 import type { StepRecaptureContext } from '../storage/recording-state';
 import { CLEANUP_EVENT, STEP_FOLLOWUP_EVENTS } from './content-script-constants';
@@ -178,11 +173,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
         timestamp: Date.now(),
       };
       try {
-        const result = requireRuntimeMessageResult<StepRecaptureTargetResult>(
-          await browser.runtime.sendMessage(payload),
-          isStepRecaptureTargetResult,
-          t().runtime.recaptureResponseInvalid,
-        );
+        const result = await sendToBackground(payload, t().runtime.recaptureResponseInvalid);
         if (!result.ok && result.status === 'rejected' && !removed) {
           busy = false;
           preview.show(target.rect);
@@ -254,15 +245,11 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
 
   let ready = false;
   try {
-    ready = requireRuntimeMessageResult(
-      await browser.runtime.sendMessage({
-        type: 'HOWBEAM_RECAPTURE_READY',
-        runId,
-        url: location.href,
-      }),
-      isRuntimeBoolean,
-      t().runtime.recaptureResponseInvalid,
-    );
+    ready = await sendToBackground({
+      type: 'HOWBEAM_RECAPTURE_READY',
+      runId,
+      url: location.href,
+    }, t().runtime.recaptureResponseInvalid);
   } catch (error) {
     console.error('[howbeam] recapture readiness check failed', error);
   }

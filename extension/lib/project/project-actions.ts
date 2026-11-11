@@ -1,4 +1,4 @@
-import { browser } from 'wxt/browser';
+import { sendToBackground } from '../runtime/background-client';
 import { createProject, discardPristineProject, getProject } from '../storage/project-repository';
 import { type Project } from '../storage/models';
 import {
@@ -7,13 +7,7 @@ import {
   getRecordingState,
   setActiveProjectId,
 } from '../storage/storage';
-import type { OpenEditorResult, StartRecordingResult } from '../runtime/messages';
 import type { RecordingMode } from '../storage/recording-state';
-import {
-  isOpenEditorResult,
-  isStartRecordingResult,
-  requireRuntimeMessageResult,
-} from '../runtime/runtime-message-result';
 import { t } from '@/lib/shared/i18n';
 
 // Preserve invocation order across async IndexedDB lookups. Without this, a
@@ -138,16 +132,12 @@ export async function startRecordingIntoProject(
   const claim = await claimRecordingProject(targetProjectId);
   const { project } = claim;
   try {
-    const result = requireRuntimeMessageResult<StartRecordingResult>(
-      await browser.runtime.sendMessage({
-        type: 'START_RECORDING',
-        sessionId: project.id,
-        mode,
-        ...(claim.autoCreated ? { autoCreatedProject: true } : {}),
-      }),
-      isStartRecordingResult,
-      t().runtime.recordingServiceUnavailable,
-    );
+    const result = await sendToBackground({
+      type: 'START_RECORDING',
+      sessionId: project.id,
+      mode,
+      ...(claim.autoCreated ? { autoCreatedProject: true } : {}),
+    }, t().runtime.recordingServiceUnavailable);
     if (!result.ok) throw new Error(result.error);
     return project;
   } catch (startError) {
@@ -193,15 +183,11 @@ export function ensureSelectedProject(): Promise<Project> {
  */
 export async function openSelectedProjectInEditor(projectId: string, options: { inPlace?: boolean } = {}): Promise<void> {
   const project = await selectProject(projectId);
-  const result = requireRuntimeMessageResult<OpenEditorResult>(
-    await browser.runtime.sendMessage({
-      type: 'OPEN_EDITOR',
-      sessionId: project.id,
-      ...(options.inPlace ? { inPlace: true } : {}),
-    }),
-    isOpenEditorResult,
-    t().popup.editorServiceUnavailable,
-  );
+  const result = await sendToBackground({
+    type: 'OPEN_EDITOR',
+    sessionId: project.id,
+    ...(options.inPlace ? { inPlace: true } : {}),
+  }, t().popup.editorServiceUnavailable);
   if (!result.ok) throw new Error(result.error);
 }
 

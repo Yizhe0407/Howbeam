@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { isBackgroundMessage, isExtensionPageOnlyMessage } from '@/lib/runtime/message-contract';
 import {
-  isBackgroundMessage,
-  isExtensionPageOnlyMessage,
   isTrustedExtensionPageSender,
   isTrustedKeepAliveSender,
   isTrustedRecorderControlSender,

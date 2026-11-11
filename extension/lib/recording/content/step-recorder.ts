@@ -22,11 +22,10 @@ import {
   type RelayedStepFrameHop,
   STEP_FRAME_CLICK_FAILSAFE_MS,
   createStepFrameRelayLimiter,
-  isStepFrameRelayClaimResult,
-  isStepFrameRelayMutationResult,
   resolveRelayedStepFrameHop,
   stepFrameClickMessageType,
 } from '../frame-relay';
+import { isStepFrameRelayClaimResult, isStepFrameRelayMutationResult } from '../../runtime/runtime-message-result';
 import { isInScrollbarGutter, isPointInAnyScrollGutter } from '../recording-guards';
 import { mountRecordingToolbar, type MountedRecordingToolbar } from '../recording-toolbar-host';
 import { waitForNextFrame } from '../snapshot-targeting';

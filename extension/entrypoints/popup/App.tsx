@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { browser } from 'wxt/browser';
+import { sendToBackground } from '@/lib/runtime/background-client';
 import { AlertCircle, Library, Settings } from 'lucide-react';
 import { useRecordingSession } from '@/lib/recording/use-recording-session';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -7,11 +7,9 @@ import RecordControls from '@/components/popup/RecordControls';
 import { Button } from '@/components/ui/button';
 import BrandMark from '@/components/shared/BrandMark';
 import { needsEditorRecovery } from '@/lib/recording/recording-recovery';
-import type { OpenEditorResult } from '@/lib/runtime/messages';
 import { openLibrary, openSettings } from '@/lib/runtime/actions';
 import { ensureSelectedProject } from '@/lib/project/project-actions';
 import { reportError } from '@/components/shared/report-error';
-import { isOpenEditorResult, requireRuntimeMessageResult } from '@/lib/runtime/runtime-message-result';
 import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -55,14 +53,10 @@ function App() {
       const targetSessionId = editorRecovery
         ? sessionId
         : (await ensureSelectedProject()).id;
-      const result = requireRuntimeMessageResult<OpenEditorResult>(
-        await browser.runtime.sendMessage({
-          type: 'OPEN_EDITOR',
-          sessionId: targetSessionId ?? undefined,
-        }),
-        isOpenEditorResult,
-        t().popup.editorServiceUnavailable,
-      );
+      const result = await sendToBackground({
+        type: 'OPEN_EDITOR',
+        sessionId: targetSessionId ?? undefined,
+      }, t().popup.editorServiceUnavailable);
       if (!result.ok) {
         setEditorOpenError(result.error);
         return;

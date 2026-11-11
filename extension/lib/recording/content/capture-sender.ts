@@ -1,6 +1,5 @@
-import { browser } from 'wxt/browser';
+import { sendToBackground } from '../../runtime/background-client';
 import { getRecordingState } from '../../storage/storage';
-import { isClickCaptureResult, requireRuntimeMessageResult } from '../../runtime/runtime-message-result';
 import type { ClickCapture, ClickCaptureResult } from '../../runtime/messages';
 import type { ResolvedSnapshotTarget } from '../snapshot-targeting';
 import type { SnapshotShieldRect } from '../snapshot-shield-protocol';
@@ -69,11 +68,7 @@ export function createCaptureSender(runId: string) {
       url: location.href,
       timestamp: now,
     };
-    return requireRuntimeMessageResult<ClickCaptureResult>(
-      await browser.runtime.sendMessage(payload),
-      isClickCaptureResult,
-      t().runtime.captureResponseInvalid,
-    );
+    return await sendToBackground(payload, t().runtime.captureResponseInvalid);
   }
 
   /**

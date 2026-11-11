@@ -10,6 +10,9 @@ import type {
   RecordingControlResult,
   StartRecordingResult,
   StartStepRecaptureResult,
+  StepFrameRelayBeginResult,
+  StepFrameRelayClaimResult,
+  StepFrameRelayMutationResult,
   StepRecaptureTargetResult,
 } from './messages';
 // Error-code arrays live beside their result types in messages.ts so the
@@ -19,6 +22,7 @@ import {
   RECAPTURE_PREFLIGHT_ERROR_CODES,
   RECAPTURE_START_ERROR_CODES,
   START_RECORDING_ERROR_CODES,
+  STEP_FRAME_LIMITS,
 } from './messages';
 import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
 import { isBoundedString, isRecord } from '../shared/validation';
@@ -212,6 +216,41 @@ export function isStepRecaptureTargetResult(value: unknown): value is StepRecapt
     isOneOf(value.status, ['rejected', 'cancelled', 'failed'] as const) &&
     isOptionalErrorMessage(value.error)
   );
+}
+
+function isRelayToken(value: unknown): value is string {
+  return isBoundedString(value, STEP_FRAME_LIMITS.maxTokenLength);
+}
+
+export function isStepFrameRelayBeginResult(value: unknown): value is StepFrameRelayBeginResult {
+  if (!isRecord(value)) return false;
+  if (value.ok === true) return hasOnlyKeys(value, ['ok', 'relayToken']) && isRelayToken(value.relayToken);
+  return value.ok === false && hasOnlyKeys(value, ['ok']);
+}
+
+export function isStepFrameRelayClaimResult(value: unknown): value is StepFrameRelayClaimResult {
+  if (!isRecord(value)) return false;
+  if (value.ok === false) return hasOnlyKeys(value, ['ok']);
+  const target = value.target;
+  return (
+    value.ok === true &&
+    hasOnlyKeys(value, ['ok', 'settleToken', 'target']) &&
+    isRelayToken(value.settleToken) &&
+    isRecord(target) &&
+    typeof target.text === 'string' &&
+    target.text.length <= STEP_FRAME_LIMITS.maxTextLength &&
+    isBoundedString(target.tagName, STEP_FRAME_LIMITS.maxTagLength) &&
+    typeof target.interactive === 'boolean'
+  );
+}
+
+export function isStepFrameRelayMutationResult(value: unknown): value is StepFrameRelayMutationResult {
+  return isRecord(value) && typeof value.ok === 'boolean';
+}
+
+/** STOP_RECORDING answers with nothing. */
+export function isRuntimeVoid(value: unknown): value is undefined {
+  return value === undefined;
 }
 
 export function isRuntimeBoolean(value: unknown): value is boolean {

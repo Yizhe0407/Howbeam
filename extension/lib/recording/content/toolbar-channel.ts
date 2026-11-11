@@ -1,6 +1,5 @@
-import { browser } from 'wxt/browser';
+import { sendToBackground } from '../../runtime/background-client';
 import { RECORDING_CONTROL_TIMEOUT_MS } from '../content-script-constants';
-import { isRecordingControlResult, requireRuntimeMessageResult } from '../../runtime/runtime-message-result';
 import type { RecordingControlMessage, RecordingControlResult } from '../../runtime/messages';
 import type { RecordingState } from '../../storage/recording-state';
 import { t } from '@/lib/shared/i18n';
@@ -27,16 +26,8 @@ export function createToolbarChannel(runId: string) {
     action: RecordingControlMessage['type'],
     undoToken?: string,
   ): Promise<RecordingControlResult> {
-    const command = (async () =>
-      requireRuntimeMessageResult<RecordingControlResult>(
-        await browser.runtime.sendMessage({
-          type: action,
-          runId,
-          ...(undoToken ? { undoToken } : {}),
-        } satisfies RecordingControlMessage),
-        isRecordingControlResult,
-        t().runtime.recordingChannelLost,
-      ))();
+    const message: RecordingControlMessage = { type: action, runId, ...(undoToken ? { undoToken } : {}) };
+    const command = sendToBackground(message, t().runtime.recordingChannelLost);
     // A hung background must not wedge the in-page toolbar forever: surface
     // the channel-failure error after the shared control budget (the same
     // one the shield toolbar uses), so controls re-enable and the user sees
