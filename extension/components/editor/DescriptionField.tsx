@@ -2,7 +2,6 @@ import { PERSISTED_STEP_LIMITS } from '@/lib/storage/persistence-limits';
 import { type Step } from '@/lib/storage/models';
 import { useStepDescriptionAutosave } from '@/lib/editor/editor-autosave';
 import { Textarea } from '@/components/ui/textarea';
-import DescriptionDraftRecoveries from './DescriptionDraftRecoveries';
 import DescriptionSaveIssue from './DescriptionSaveIssue';
 import { t } from '@/lib/shared/i18n';
 
@@ -12,18 +11,7 @@ interface Props {
 }
 
 export default function DescriptionField({ step, disabled = false }: Props) {
-  const {
-    description,
-    setDescription,
-    saveIssue,
-    savedDescription,
-    keepSaved,
-    recoveries,
-    restoreRecovery,
-    discardRecovery,
-    flush,
-    confirmOverwrite,
-  } = useStepDescriptionAutosave(step);
+  const { description, setDescription, saveIssue, flush } = useStepDescriptionAutosave(step);
 
   return (
     <div className="mt-4 flex w-full flex-col gap-2">
@@ -44,17 +32,6 @@ export default function DescriptionField({ step, disabled = false }: Props) {
       />
       <DescriptionSaveIssue
         issue={saveIssue}
-        savedDescription={savedDescription}
-        onOverwrite={confirmOverwrite}
-        onKeepSaved={keepSaved}
-        disabled={disabled}
-      />
-      <DescriptionDraftRecoveries
-        recoveries={recoveries}
-        onRestore={restoreRecovery}
-        onDiscard={discardRecovery}
-        onConfirmOverwrite={() => confirmOverwrite()}
-        disabled={disabled}
       />
     </div>
   );

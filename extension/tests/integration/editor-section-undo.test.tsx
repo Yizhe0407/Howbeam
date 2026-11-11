@@ -48,7 +48,6 @@ vi.mock('@/lib/recording/use-recording-session', () => ({
 vi.mock('@/lib/editor/editor-autosave', () => ({
   EditorSaveProvider: ({ children }: any) => children,
   useEditorSaveRegistry: () => ({ flushAll: vi.fn().mockResolvedValue(undefined) }),
-  DraftConfirmationRequiredError: class DraftConfirmationRequiredError extends Error {},
 }));
 vi.mock('@/lib/export/export-images', () => ({ exportImagesAsZip: vi.fn() }));
 

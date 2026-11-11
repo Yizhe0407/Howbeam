@@ -106,16 +106,16 @@ describe('the single editor opener', () => {
     expect(mocks.tabsCreate).not.toHaveBeenCalled();
   });
 
-  it('surfaces a draft-blocked refusal through OpenEditorResult and still focuses the tab', async () => {
+  it('surfaces a refusal over an unsaved description through OpenEditorResult and still focuses the tab', async () => {
     withRegisteredEditor();
-    mocks.tabsSendMessage.mockResolvedValue({ ok: false, error: 'editor.draftConfirmationRequired' });
+    mocks.tabsSendMessage.mockResolvedValue({ ok: false, error: 'editor.descriptionSaveRetry' });
 
     await expect(openEditor({ sessionId: 'project-b' })).resolves.toEqual({
       ok: false,
-      error: 'editor.draftConfirmationRequired',
+      error: 'editor.descriptionSaveRetry',
     });
 
-    // Focused, not navigated: the page keeps its draft on screen.
+    // Focused, not navigated: the page keeps its unsaved text on screen.
     expect(mocks.tabsUpdate).toHaveBeenCalledExactlyOnceWith(12, { active: true });
     expect(mocks.tabsCreate).not.toHaveBeenCalled();
   });

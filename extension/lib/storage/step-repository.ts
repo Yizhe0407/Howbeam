@@ -196,20 +196,6 @@ export class StepNotFoundError extends Error {
   }
 }
 
-/** The persisted description diverged from the value the editor last observed.
- * Carries the winning value so the caller can rebase and ask for confirmation
- * instead of silently losing either tab's text. */
-export class StepDescriptionConflictError extends Error {
-  constructor(
-    public readonly stepId: string,
-    public readonly expectedDescription: string,
-    public readonly actualDescription: string,
-  ) {
-    super('Step description changed before the edit was saved.');
-    this.name = 'StepDescriptionConflictError';
-  }
-}
-
 /** Another write (usually another editor tab) changed the image's masks,
  * drawings or crop after this editor loaded them. Saving the stale copy would
  * silently delete that write, so it is refused. */
@@ -396,27 +382,17 @@ export async function replaceStepCaptureAtomically(
   });
 }
 
-/** Compare-and-set description save for the editor autosave path. It only
- * conflicts when the same step's description diverged from what this editor
- * last observed, so the CAS guards exactly that value. Conflicts surface as StepDescriptionConflictError
- * (with the winning value) instead of last-write-wins.
+/** Saves a step's description. Only one editor tab edits a Project at a time
+ * (editor-lock), so this is a plain write.
  *
  * Resolves with the description as stored (normalized by the stored-text
- * rule), which is the value the caller must compare against from now on. */
-export async function saveStepDescription(
-  id: string,
-  description: string,
-  expectedDescription: string,
-): Promise<string> {
+ * rule), which is the value the caller compares against from now on. */
+export async function saveStepDescription(id: string, description: string): Promise<string> {
   return runProjectWrite(async (tx) => {
     const member = await loadMember(tx, id);
     if (!member) throw new StepNotFoundError(id);
-    const existing = member.step;
-    if (existing.description !== expectedDescription) {
-      throw new StepDescriptionConflictError(id, expectedDescription, existing.description);
-    }
     const project = await requireProject(tx, member.record.projectId);
-    const stored = applyStepChanges(existing, { description });
+    const stored = applyStepChanges(member.step, { description });
     await putEntryInPlace(tx, member.record, replaceInEntry(member.entry, stored));
     await recordStepEdit(tx, project);
     return stored.description;

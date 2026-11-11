@@ -56,7 +56,7 @@ describe('runtime response contracts', () => {
     ['open library', isOpenLibraryResult, { ok: true }],
     ['editor handoff consenting to navigation', isEditorHandoffResult, { ok: true, ready: false }],
     ['editor handoff already showing the target', isEditorHandoffResult, { ok: true, ready: true }],
-    ['editor handoff refused by a draft', isEditorHandoffResult, { ok: false, error: 'editor.draftConfirmationRequired' }],
+    ['editor handoff refused by an unsaved description', isEditorHandoffResult, { ok: false, error: 'editor.descriptionSaveRetry' }],
     [
       'recording control',
       isRecordingControlResult,

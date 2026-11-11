@@ -88,7 +88,7 @@ function drawMask() {
   fireEvent.pointerUp(layer(), { clientX: 60, clientY: 40 });
 }
 
-describe('ImageEditWorkspace and other tabs', () => {
+describe('ImageEditWorkspace and outside changes', () => {
   it('refuses to save over masks another tab saved, shows them and says so', async () => {
     const theirs = entry({ redactions: [mask('their-mask')], imageEditRevision: 1 });
     storage.save.mockRejectedValueOnce(new StepImageEditConflictError('step-1', 0, 1));
@@ -98,7 +98,7 @@ describe('ImageEditWorkspace and other tabs', () => {
     drawMask();
     fireEvent.click(screen.getByRole('button', { name: '完成' }));
 
-    expect(await screen.findByText(/另一個分頁剛修改了這張圖片/)).toBeTruthy();
+    expect(await screen.findByText(/這張圖片剛被其他操作（例如重拍）修改/)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
     expect(editItem('their-mask')).toBeTruthy();
     expect(storage.save).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ imageEditRevision: 0, confirmReview: false }));
@@ -113,14 +113,14 @@ describe('ImageEditWorkspace and other tabs', () => {
     expect(saved.redactions.map((redaction: { id: string }) => redaction.id)).toContain('their-mask');
   });
 
-  it('picks up edits another tab saved while nothing here is unsaved', async () => {
+  it('picks up edits saved elsewhere while nothing here is unsaved', async () => {
     storage.isStale.mockResolvedValue(true);
     storage.loadLatest.mockResolvedValue(entry({ redactions: [mask('their-mask')], imageEditRevision: 3 }));
     open(entry());
 
     await act(async () => { storage.listeners.forEach((listener) => listener()); });
 
-    expect(await screen.findByText('已載入另一個分頁儲存的最新圖片編輯。')).toBeTruthy();
+    expect(await screen.findByText('已載入這張圖片最新儲存的編輯。')).toBeTruthy();
     expect(editItem('their-mask')).toBeTruthy();
   });
 });

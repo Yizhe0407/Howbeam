@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { entryId, type StepEntry } from '@/lib/storage/models';
-import { DraftConfirmationRequiredError } from './editor-autosave';
 
 interface UseEditorEntryWorkspaceOptions {
   entries: StepEntry[];
@@ -47,16 +46,8 @@ export function useEditorEntryWorkspace({
     if (isSelectionBlocked() || id === selectedEntryId) return;
     if (!entries.some((entry) => entryId(entry) === id)) return;
     onSelectionInteraction();
-    try {
-      await flushDescriptions();
-    } catch (error) {
-      // A pending confirmation intentionally blocks the switch: keep the
-      // current field mounted so its unsaved draft remains available. Any
-      // other failure (a genuine DB error) must reach the caller — swallowing
-      // it here would make the click silently do nothing.
-      if (error instanceof DraftConfirmationRequiredError) return;
-      throw error;
-    }
+    // A failure reaches the caller: swallowing it would make the click silently do nothing.
+    await flushDescriptions();
     onSelectionSaved();
     setSelectedEntryId(id);
   }

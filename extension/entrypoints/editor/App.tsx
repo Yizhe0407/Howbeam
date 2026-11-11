@@ -9,7 +9,7 @@ import { entryId, projectDisplayTitle, type StepEntry } from '@/lib/storage/mode
 import { sectionOfEntry } from '@/lib/project/project-sections';
 import { updateProject, type ProjectMetadataChanges } from '@/lib/storage/project-repository';
 import { ProjectNotFoundError } from '@/lib/storage/database';
-import { DraftConfirmationRequiredError, EditorSaveProvider, useEditorSaveRegistry } from '@/lib/editor/editor-autosave';
+import { EditorSaveProvider, useEditorSaveRegistry } from '@/lib/editor/editor-autosave';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import EditorHeader from '@/components/editor/EditorHeader';
 import StepRail from '@/components/editor/StepRail';
@@ -34,6 +34,7 @@ import { browser } from 'wxt/browser';
 import { focusTab, getEditorSessionIdFromUrl } from '@/lib/runtime/navigation';
 import { useEditorEntryWorkspace } from '@/lib/editor/use-editor-entry-workspace';
 import { useEditorHandoff } from '@/lib/editor/use-editor-handoff';
+import { useEditorLock } from '@/lib/editor/editor-lock';
 import { useExtensionPageRegistration } from '@/lib/runtime/use-extension-page-registration';
 import { t } from '@/lib/shared/i18n';
 import {
@@ -76,6 +77,8 @@ function EditorApp() {
   const ordinaryRecordingActive = operationBelongsToViewedProject && recording.operation === 'recording';
   const recaptureActive = operationBelongsToViewedProject && recording.operation === 'recapture' && recording.recapture !== null;
   const { flushAll } = useEditorSaveRegistry();
+  const editorLock = useEditorLock(sessionId);
+  const editingElsewhere = editorLock.state !== 'held';
   const dbEntries = canonicalSnapshot?.entries ?? EMPTY_STEP_ENTRIES;
   const dbSections = project?.sections ?? EMPTY_SECTIONS;
   const operations = useSerialOperations();
@@ -196,13 +199,7 @@ function EditorApp() {
       // A failed save may mean the Project was deleted elsewhere; a fresh read shows it read-only when it was.
       requestReload();
       console.error('[howbeam] failed to save descriptions before an editor operation', saveError);
-      // A pending draft confirmation carries its own user-facing message; only
-      // genuine save failures get the generic retry wording.
-      setOperationError(
-        saveError instanceof DraftConfirmationRequiredError
-          ? saveError.message
-          : t().editor.descriptionSaveRetry,
-      );
+      setOperationError(t().editor.descriptionSaveRetry);
       throw saveError;
     }
   }
@@ -356,7 +353,7 @@ function EditorApp() {
   // Queued edits never lock the screen; only an export does, once it proves slow.
   const exportShown = useDeferredBusy(exporting);
   const loadingShown = useDeferredBusy(projectLoadState === 'loading');
-  const editingLocked = projectDeleted || exportShown || permissionFlowActive;
+  const editingLocked = projectDeleted || exportShown || permissionFlowActive || editingElsewhere;
 
   useBusyNotice(operations.running?.label ?? null);
   useUndoNotice({
@@ -377,7 +374,7 @@ function EditorApp() {
         operation={recording.operation}
         hasSteps={entries.length > 0}
         projectTitle={project?.title ?? null}
-        projectActionsAvailable={projectLoadState !== 'missing' && !projectDeleted}
+        projectActionsAvailable={projectLoadState !== 'missing' && !projectDeleted && !editingElsewhere}
         beforeNavigate={leaveEditor}
         onShowRecording={ordinaryRecordingActive && recording.tabId != null ? () => void showRecordedTab(recording.tabId!) : undefined}
         publish={{
@@ -448,10 +445,21 @@ function EditorApp() {
         </div>
       )}
       <div className="flex min-h-0 flex-1 pb-[var(--step-rail-height,8rem)] lg:pb-0">
-        {projectLoadState === 'loading' ? (
+        {projectLoadState === 'loading' || editorLock.state === 'pending' ? (
           // A quick first read shows nothing here rather than a message that is gone at once.
           <main role={loadingShown ? 'status' : undefined} className="flex min-w-0 flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
             {loadingShown && t().editor.loading}
+          </main>
+        ) : editorLock.state === 'elsewhere' ? (
+          <main className="flex min-w-0 flex-1 items-center justify-center p-8 text-center">
+            <div className="flex max-w-md flex-col items-center text-muted-foreground">
+              <Mascot className="mb-4 size-16" />
+              <h2 className="text-lg font-bold text-foreground">{t().editor.lock.title}</h2>
+              <p className="mt-2 text-sm leading-relaxed">{t().editor.lock.body}</p>
+              <Button variant="outline" className="mt-5" onClick={editorLock.showHolder}>
+                {t().editor.lock.showHolder}
+              </Button>
+            </div>
           </main>
         ) : projectLoadState === 'missing' ? (
           <main className="flex min-w-0 flex-1 items-center justify-center p-8 text-center">

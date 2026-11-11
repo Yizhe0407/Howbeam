@@ -8,7 +8,6 @@ import { type Step } from '@/lib/storage/models';
 import { useSortableReorder, verticalListModifiers } from '@/lib/editor/dnd';
 import { useStepDescriptionAutosave } from '@/lib/editor/editor-autosave';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import DescriptionDraftRecoveries from './DescriptionDraftRecoveries';
 import DescriptionSaveIssue from './DescriptionSaveIssue';
 import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import { t } from '@/lib/shared/i18n';
@@ -46,18 +45,7 @@ function NumberBadge({ value }: { value: number }) {
 /** One marker. Deleting it takes the row off the list at once; a failed delete
  * brings it back and is reported with the editor's other edits. */
 function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHandle, overlay }: RowProps) {
-  const {
-    description,
-    setDescription,
-    saveIssue,
-    savedDescription,
-    keepSaved,
-    recoveries,
-    restoreRecovery,
-    discardRecovery,
-    flush,
-    confirmOverwrite,
-  } = useStepDescriptionAutosave(step);
+  const { description, setDescription, saveIssue, flush } = useStepDescriptionAutosave(step);
 
   function handleDelete() {
     if (deleteDisabled) return;
@@ -124,18 +112,6 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
       </div>
       <DescriptionSaveIssue
         issue={saveIssue}
-        savedDescription={savedDescription}
-        onOverwrite={confirmOverwrite}
-        onKeepSaved={keepSaved}
-        disabled={deleteDisabled}
-        className="mt-2 ml-9"
-      />
-      <DescriptionDraftRecoveries
-        recoveries={recoveries}
-        onRestore={restoreRecovery}
-        onDiscard={discardRecovery}
-        onConfirmOverwrite={() => confirmOverwrite()}
-        disabled={deleteDisabled}
         className="mt-2 ml-9"
       />
     </div>

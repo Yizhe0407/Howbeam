@@ -91,7 +91,7 @@ describe('image edit revision', () => {
   it('moves forward on every write of masks, drawings or crop, and on nothing else', async () => {
     const step = makeStep();
     await addStep(step);
-    await saveStepDescription(step.id, 'text only', step.description);
+    await saveStepDescription(step.id, 'text only');
     expect((await getStep(step.id))?.imageEditRevision).toBeUndefined();
 
     await updateStepsAtomically(step.sessionId, [{ id: step.id, changes: { crop: { x: 0, y: 0, width: 1, height: 1 } } }]);

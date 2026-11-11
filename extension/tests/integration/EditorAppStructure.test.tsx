@@ -71,7 +71,6 @@ vi.mock('@/lib/recording/use-recording-session', () => ({
 vi.mock('@/lib/editor/editor-autosave', () => ({
   EditorSaveProvider: ({ children }: any) => children,
   useEditorSaveRegistry: () => ({ flushAll: editorSave.flushAll }),
-  DraftConfirmationRequiredError: class DraftConfirmationRequiredError extends Error {},
 }));
 vi.mock('@/lib/export/export-images', () => ({ exportImagesAsZip: vi.fn() }));
 
@@ -125,8 +124,6 @@ vi.mock('@/components/editor/ExportPopover', () => ({ default: ({ trigger }: { t
 import EditorApp from '@/entrypoints/editor/App';
 import { notifyProjectsChanged } from '@/lib/storage/change-notifier';
 import { ProjectNotFoundError } from '@/lib/storage/database';
-// Resolves to the mocked module above, so `instanceof` in the handoff matches.
-import { DraftConfirmationRequiredError } from '@/lib/editor/editor-autosave';
 
 const entries = [
   {
@@ -615,18 +612,6 @@ describe('editor handoff answers (單一編輯器分頁)', () => {
     expect(editorSave.flushAll).toHaveBeenCalled();
     // Navigation belongs to the background alone; the page still shows project-1.
     expect(screen.getByTestId('rail-selected').textContent).toBe('entry-1');
-  });
-
-  it('refuses to leave another Project while a draft awaits confirmation', async () => {
-    silenceIntentionalErrorLogs();
-    await mountEditor();
-    // The confirmation error carries its own zh-Hant explanation of what to
-    // resolve, and the reply must relay exactly that rather than a generic one.
-    editorSave.flushAll.mockRejectedValue(new DraftConfirmationRequiredError());
-
-    const reply = await act(async () => handoff({ type: 'EDITOR_HANDOFF', sessionId: 'project-2' }));
-
-    expect(reply).toEqual({ ok: false, error: 'editor.draftConfirmationRequired' });
   });
 
   it('refuses with a retry message when saving genuinely failed', async () => {

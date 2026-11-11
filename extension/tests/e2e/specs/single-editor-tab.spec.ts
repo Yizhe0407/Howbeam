@@ -136,4 +136,27 @@ test.describe('single editor tab', () => {
     await expect.poll(() => new URL(editor.url()).searchParams.get('entryId')).not.toBeNull();
     expect(extensionPages(extensionContext, 'editor')).toHaveLength(1);
   });
+
+  test('lets only one tab edit a Project and hands it over when that tab closes', async ({
+    popupPage,
+    extensionContext,
+    extensionId,
+    browserErrors: _browserErrors,
+  }) => {
+    const projectId = await seedAndSelectProject(popupPage, '同一個專案');
+    const url = `chrome-extension://${extensionId}/editor.html?sessionId=${projectId}`;
+    const first = await extensionContext.newPage();
+    await first.goto(url);
+    await expect(first.getByText('尚未建立內容', { exact: true })).toBeVisible();
+
+    // Typed by hand into a second tab, which the single-tab handoff never sees.
+    const second = await extensionContext.newPage();
+    await second.goto(url);
+    await expect(second.getByRole('heading', { name: '這個專案已在另一個分頁開啟' })).toBeVisible();
+    await expect(second.getByText('尚未建立內容', { exact: true })).toHaveCount(0);
+
+    await first.close();
+    await expect(second.getByText('尚未建立內容', { exact: true })).toBeVisible();
+    await expect(second.getByRole('heading', { name: '這個專案已在另一個分頁開啟' })).toHaveCount(0);
+  });
 });

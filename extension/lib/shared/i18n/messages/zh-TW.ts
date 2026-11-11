@@ -225,7 +225,6 @@ export const zhTW = {
     continuationAction: '接續錄製',
     recaptureAction: '重拍',
     descriptionSaveRetry: '尚有說明無法儲存。請重試後再繼續。',
-    draftConfirmationRequired: '覆寫已儲存的說明前，需要先確認要保留哪一份草稿。',
     multiAnnotationRecaptureBlocked: '有多個標註，無法重拍；請重新錄這張快照。',
     privacyReviewRequiredNotice:
       '這張圖片的敏感資訊遮罩尚未確認，因此預覽會保持全黑，複製與匯出也會被阻擋。請按「檢查遮罩」確認遮罩。',
@@ -297,8 +296,8 @@ export const zhTW = {
       saving: '儲存中…',
       saveFailed: '無法儲存圖片編輯。',
       retry: '再試一次',
-      conflictReloaded: '另一個分頁剛修改了這張圖片。為了不覆蓋那邊的遮罩與編輯，這次的儲存已取消，並載入最新內容；剛才尚未儲存的變更請重新套用。',
-      updatedElsewhere: '已載入另一個分頁儲存的最新圖片編輯。',
+      conflictReloaded: '這張圖片剛被其他操作（例如重拍）修改。為了不覆蓋那邊的遮罩與編輯，這次的儲存已取消，並載入最新內容；剛才尚未儲存的變更請重新套用。',
+      updatedElsewhere: '已載入這張圖片最新儲存的編輯。',
       maskLimitReached: (max: number) => `已達每張圖片 ${max} 個遮罩的上限，請先刪除部分遮罩再新增。`,
       editLimitReached: (max: number) => `已達每張圖片 ${max} 個編輯項目的上限，請先刪除部分項目再新增。`,
       textLimitReached: (max: number) => `文字最多 ${max} 字`,
@@ -332,13 +331,13 @@ export const zhTW = {
       placeholder: '輸入步驟說明…',
     },
 
+    lock: {
+      title: '這個專案已在另一個分頁開啟',
+      body: '同一個專案一次只在一個分頁編輯，兩邊輸入的內容才不會互相蓋掉。另一個分頁關閉後，這裡會自動接手。',
+      showHolder: '前往那個分頁',
+    },
+
     saveIssue: {
-      conflict: '尚未儲存：與其他分頁衝突',
-      conflictBody: '其他分頁已儲存了不同的說明。之後輸入的內容不會儲存，直到你選擇要保留哪一份。',
-      savedVersion: (excerpt: string) => `已儲存的版本：${excerpt}`,
-      savedEmpty: '（空白）',
-      overwrite: '用我的版本覆寫',
-      keepSaved: '改用已儲存的版本',
       missing: '尚未儲存：這個步驟已被刪除。',
       failed: '尚未儲存：說明儲存失敗，繼續編輯時會再試一次。',
     },
@@ -351,22 +350,6 @@ export const zhTW = {
       delete: (number: number) => `刪除標註 ${number}`,
       deleteTooltip: '刪除標註',
       deleteDisabled: '錄製或重拍期間無法刪除標註',
-    },
-
-    drafts: {
-      label: '其他分頁的說明草稿',
-      found: (count: number) => `找到 ${count} 份其他分頁或先前版本的草稿`,
-      intro: '草稿不會自動覆寫目前內容。請先載入並確認，或只捨棄不需要的版本。',
-      empty: '（空白草稿）',
-      conflict: '與已儲存內容衝突',
-      load: '載入草稿',
-      loadLabel: (number: number) => `載入草稿 ${number}`,
-      discard: '捨棄',
-      discardLabel: (number: number) => `捨棄草稿 ${number}`,
-      loadFailed: '無法載入這份草稿，目前內容未變更。請再試一次，或先捨棄其他草稿。',
-      loaded: '已載入草稿，確認後才會覆寫目前內容。',
-      confirm: '確認覆寫',
-      confirmLabel: (number: number) => `確認覆寫草稿 ${number}`,
     },
 
     sections: {

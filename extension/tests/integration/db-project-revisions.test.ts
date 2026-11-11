@@ -63,7 +63,7 @@ describe('Project revisions', () => {
     const step = makeStep(project.id);
     await addStepsAfter([step], null);
     const added = (await getProject(project.id))!;
-    await saveStepDescription(step.id, '新說明', step.description);
+    await saveStepDescription(step.id, '新說明');
     await updateStepsAtomically(project.id, [{ id: step.id, changes: { crop: null, imageEdits: [] } }]);
     const edited = (await getProject(project.id))!;
     expect(edited.contentRevision).toBe(added.contentRevision);

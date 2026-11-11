@@ -221,7 +221,6 @@ export const en: Messages = {
     continuationAction: 'Continue recording',
     recaptureAction: 'Retake',
     descriptionSaveRetry: 'Some descriptions couldn’t be saved. Retry before continuing.',
-    draftConfirmationRequired: 'Choose which draft to keep before overwriting the saved description.',
     multiAnnotationRecaptureBlocked: 'Several markers, so it can’t be retaken. Record this snapshot again.',
     privacyReviewRequiredNotice:
       'The sensitive-information masks on this image haven’t been confirmed, so its preview stays black and copying and exporting are blocked. Choose “Check masks” to confirm them.',
@@ -296,8 +295,8 @@ export const en: Messages = {
       saveFailed: 'Couldn’t save the image edits.',
       retry: 'Try again',
       conflictReloaded:
-        'This image was just changed in another tab. To avoid overwriting its masks and edits, this save was cancelled and the latest version loaded. Please redo the changes you hadn’t saved yet.',
-      updatedElsewhere: 'Loaded the latest image edits saved in another tab.',
+        'This image was just changed elsewhere, for example by a retake. To avoid overwriting its masks and edits, this save was cancelled and the latest version loaded. Please redo the changes you hadn’t saved yet.',
+      updatedElsewhere: 'Loaded the image’s latest saved edits.',
       maskLimitReached: (max: number) => `This image already has the maximum of ${max} masks. Delete some before adding more.`,
       editLimitReached: (max: number) => `This image already has the maximum of ${max} edits. Delete some before adding more.`,
       textLimitReached: (max: number) => `Text is limited to ${max} characters`,
@@ -332,13 +331,13 @@ export const en: Messages = {
       placeholder: 'Describe this step…',
     },
 
+    lock: {
+      title: 'This project is open in another tab',
+      body: 'Only one tab edits a project at a time, so nothing typed in two places is lost. This tab takes over when the other one closes.',
+      showHolder: 'Go to that tab',
+    },
+
     saveIssue: {
-      conflict: 'Not saved: conflicts with another tab',
-      conflictBody: 'Another tab saved a different description. Nothing you type here is saved until you choose which version to keep.',
-      savedVersion: (excerpt: string) => `Saved version: ${excerpt}`,
-      savedEmpty: '(empty)',
-      overwrite: 'Overwrite with mine',
-      keepSaved: 'Use the saved version',
       missing: 'Not saved: this step was deleted.',
       failed: 'Not saved: the description couldn’t be saved. It will retry as you keep editing.',
     },
@@ -351,23 +350,6 @@ export const en: Messages = {
       delete: (number: number) => `Delete marker ${number}`,
       deleteTooltip: 'Delete marker',
       deleteDisabled: 'You can’t delete markers while recording or retaking',
-    },
-
-    drafts: {
-      label: 'Description drafts from other tabs',
-      found: (count: number) =>
-        `Found ${count} ${count === 1 ? 'draft' : 'drafts'} from other tabs or earlier versions`,
-      intro: 'Drafts never overwrite the current text on their own. Load one and confirm, or discard the ones you don’t need.',
-      empty: '(empty draft)',
-      conflict: 'Conflicts with saved text',
-      load: 'Load draft',
-      loadLabel: (number: number) => `Load draft ${number}`,
-      discard: 'Discard',
-      discardLabel: (number: number) => `Discard draft ${number}`,
-      loadFailed: 'Couldn’t load this draft; nothing was changed. Try again, or discard other drafts first.',
-      loaded: 'Draft loaded. It only replaces the current text once you confirm.',
-      confirm: 'Confirm overwrite',
-      confirmLabel: (number: number) => `Confirm overwrite with draft ${number}`,
     },
 
     sections: {

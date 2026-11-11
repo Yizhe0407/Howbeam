@@ -371,7 +371,7 @@ describe('step persistence', () => {
     await addStep(step);
 
     await Promise.all([
-      saveStepDescription(step.id, 'updated', step.description),
+      saveStepDescription(step.id, 'updated'),
       updateStepsAtomically(step.sessionId, [{ id: step.id, changes: { crop: { x: 0, y: 0, width: 1, height: 1 } } }]),
     ]);
 
@@ -410,23 +410,9 @@ describe('step persistence', () => {
 
   it('reports a missing row with a typed error instead of a silent no-op', async () => {
     // An autosave that treats a resolved update as committed would otherwise
-    // clear its draft journal even though nothing was written.
-    await expect(saveStepDescription(crypto.randomUUID(), '孤兒寫入', ''))
+    // clear its local draft even though nothing was written.
+    await expect(saveStepDescription(crypto.randomUUID(), '孤兒寫入'))
       .rejects.toBeInstanceOf(StepNotFoundError);
-  });
-
-  it('saves a description only while the persisted value matches the expected baseline', async () => {
-    const step = makeStep({ description: '原始' });
-    await addStep(step);
-
-    await saveStepDescription(step.id, '分頁 A 的版本', '原始');
-    await expect(saveStepDescription(step.id, '分頁 B 的版本', '原始')).rejects.toMatchObject({
-      name: 'StepDescriptionConflictError',
-      stepId: step.id,
-      actualDescription: '分頁 A 的版本',
-    });
-
-    expect(itemAt((await getSteps(step.sessionId)), 0).description).toBe('分頁 A 的版本');
   });
 
   it('sanitizes malformed manual bounds and redaction records before storage', async () => {
@@ -461,7 +447,7 @@ describe('atomic visual edits and recapture', () => {
     await Promise.all([addStep(anchor), addStep(annotation)]);
 
     await Promise.all([
-      saveStepDescription(annotation.id, 'new description', annotation.description),
+      saveStepDescription(annotation.id, 'new description'),
       updateStepsAtomically(sessionId, [
         { id: annotation.id, changes: { redactions: [{ id: 'wrong-owner', kind: 'solid', bounds: { x: 1, y: 1, width: 2, height: 2 } }] } },
         { id: anchor.id, changes: { redactions: [{ id: 'mask', kind: 'solid', bounds: { x: 8, y: 9, width: 10, height: 11 } }] } },
@@ -704,9 +690,9 @@ describe('stored text and screenshots match the archive rules', () => {
     await addStep(step);
     expect(itemAt((await getSteps(step.sessionId)), 0).description).toBe('abcd');
 
-    await expect(saveStepDescription(step.id, 'x\u009fy\fz', 'abcd')).resolves.toBe('xyz');
+    await expect(saveStepDescription(step.id, 'x\u009fy\fz')).resolves.toBe('xyz');
     // The returned value is the CAS baseline: saving against it succeeds.
-    await expect(saveStepDescription(step.id, 'next', 'xyz')).resolves.toBe('next');
+    await expect(saveStepDescription(step.id, 'next')).resolves.toBe('next');
 
     await updateProject(step.sessionId, { title: '標題\u0085', description: '說明\u0080' });
     const project = (await getProject(step.sessionId))!;

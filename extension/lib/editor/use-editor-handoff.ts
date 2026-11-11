@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { browser, type Browser } from 'wxt/browser';
-import { DraftConfirmationRequiredError } from './editor-autosave';
 import { isRecord } from '../shared/validation';
 import type { EditorHandoffMessage, EditorHandoffResult } from '../runtime/messages';
 
@@ -48,13 +47,8 @@ async function answerHandoff(
     // Leaving this Project would discard whatever is still unsaved, so consent to
     // being navigated is conditional on the flush succeeding.
     await flushDescriptions();
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof DraftConfirmationRequiredError
-        ? 'editor.draftConfirmationRequired'
-        : 'editor.descriptionSaveRetry',
-    };
+  } catch {
+    return { ok: false, error: 'editor.descriptionSaveRetry' };
   }
   return { ok: true, ready: false };
 }

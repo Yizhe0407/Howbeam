@@ -18,11 +18,8 @@ vi.mock('@/lib/editor/editor-autosave', () => ({
   useStepDescriptionAutosave: (step: Step) => ({
     description: step.description,
     setDescription: autosave.setDescription,
-    recoveries: [],
-    restoreRecovery: vi.fn(),
-    discardRecovery: vi.fn(),
+    saveIssue: null,
     flush: vi.fn().mockResolvedValue(undefined),
-    confirmOverwrite: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 
