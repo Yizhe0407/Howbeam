@@ -1,5 +1,4 @@
 import { browser, type Browser } from 'wxt/browser';
-import { queueClick, queueLifecycle } from '@/lib/recording/background-queues';
 import { openWelcomePage, opensWelcomeOnInstall } from '@/lib/runtime/welcome';
 import { syncActionIconWithRecordingState } from '@/lib/recording/background/action-icon';
 import { claimPendingStart } from '@/lib/runtime/pending-start';
@@ -7,37 +6,41 @@ import { clearCrossTabRecordingDecline } from '@/lib/runtime/cross-tab-recording
 import { claimRecordingProject } from '@/lib/project/project-actions';
 import { isTrustedExtensionPageSender, isTrustedKeepAliveSender } from '@/lib/runtime/background-message-validation';
 import { contractFor, isBackgroundMessage, isExtensionPageOnlyMessage } from '@/lib/runtime/message-contract';
-import { createControlPlane } from '@/lib/recording/background/control-plane';
 import { createRecorderRuntime } from '@/lib/recording/background/recorder-runtime';
 import { createStepFrameRelayBroker } from '@/lib/recording/background/step-frame-relay-broker';
-import { createRecaptureFlow } from '@/lib/recording/background/recapture-flow';
-import { createFollowMode } from '@/lib/recording/background/follow-mode';
-import { createRunState } from '@/lib/recording/background/run-state';
-import { createRunControls } from '@/lib/recording/background/run-controls';
-import { createRunEnding } from '@/lib/recording/background/run-ending';
-import { createRunLifecycle } from '@/lib/recording/background/run-lifecycle';
-import { createRecorderMessages } from '@/lib/recording/background/recorder-messages';
-import { createUndoWindow } from '@/lib/recording/background/undo-window';
-import { createRecordedTabUpdates } from '@/lib/recording/background/recorded-tab-updates';
-import { createCaptureFlow } from '@/lib/recording/background/capture-flow';
 import { createKeepAlivePortHandler } from '@/lib/runtime/keep-alive';
-import { createEditorOpen } from '@/lib/recording/background/editor-open';
+import { createEditorOpen, type EditorOpen } from '@/lib/recording/background/editor-open';
 import {
   editorPlacementFor,
   forgetClosedExtensionPage,
   openLibraryPage,
   registerExtensionPage,
 } from '@/lib/recording/background/extension-page-tabs';
+import {
+  checkSourcePermission,
+  isEditorSenderForSession,
+  openVerifiedSourceTab,
+  preflightProjectContinuation,
+  resolveContinuationTab,
+  sourcePermissionPreflightSuccess,
+  withUncommittedSourceTab,
+} from '@/lib/recording/background/source-tab';
+import { isRecaptureSourceTabIntact, validateRecaptureTarget, wasRecaptureCommitted } from '@/lib/recording/background/recapture-target';
+import { createBrowserPorts } from '@/lib/recording/run/browser-ports';
+import { createRun } from '@/lib/recording/run';
+import { toRecordingState } from '@/lib/recording/run/state';
+import { liveRecording } from '@/lib/recording/run/transitions';
 import { describeBrowserError } from '@/lib/runtime/browser-errors';
 import { withMessageFailureFallback } from '@/lib/runtime/background-message-fallback';
-import { getRecordingState } from '@/lib/storage/storage';
+import { discardPendingAnchors, replaceStepCaptureAtomically } from '@/lib/storage/step-repository';
+import { getRecordingState, setRecordingState } from '@/lib/storage/storage';
 import type {
   BackgroundMessageType,
   BackgroundRequest,
   BackgroundResponse,
   RecordingControlMessage,
+  RecordingControlResult,
 } from '@/lib/runtime/messages';
-import type { RecordingState } from '@/lib/storage/recording-state';
 import { initLocalePreference } from '@/lib/runtime/locale-preference';
 
 const recorderRuntime = createRecorderRuntime({
@@ -48,64 +51,82 @@ const recorderRuntime = createRecorderRuntime({
   }),
   sendStopMessage: (tabId, message) => browser.tabs.sendMessage(tabId, message),
 });
-const undoWindow = createUndoWindow();
 
-// 強制控制流程在第一個 await 前同步失效。
-const control = createControlPlane({ discardPendingUndo: undoWindow.discard });
+// The editor opener and the run need each other: the run opens the editor
+// after a finish, and the opener settles the run's editor recovery.
+let editorOpen: EditorOpen | null = null;
 
-const editorOpen = createEditorOpen({ control });
-
-const runState = createRunState({ control });
-
-const followMode = createFollowMode({ control, runtime: recorderRuntime });
-
-const runEnding = createRunEnding({ control, runtime: recorderRuntime, followMode });
-
-const captureFlow = createCaptureFlow({
-  control,
-  runtime: recorderRuntime,
-  runState,
-  stopRunWithError: runEnding.stopRunWithError,
-  handleRecordedTabGone: runEnding.handleRecordedTabGone,
-  discardPendingUndo: undoWindow.discard,
+const run = createRun({
+  store: { load: getRecordingState, save: setRecordingState },
+  ports: createBrowserPorts({
+    runtime: recorderRuntime,
+    openEditor: (target) => editorOpen!.openEditor(target),
+  }),
+  sources: {
+    isEditorSenderForSession,
+    validateTarget: validateRecaptureTarget,
+    permissionPreflight: sourcePermissionPreflightSuccess,
+    checkPermission: checkSourcePermission,
+    openSourceTab: (sourceUrl, preferredTabId) => openVerifiedSourceTab(sourceUrl, preferredTabId, 'failed to open recapture source tab'),
+    withUncommittedTab: withUncommittedSourceTab,
+    replaceCapture: replaceStepCaptureAtomically,
+    wasCommitted: wasRecaptureCommitted,
+    isSourceTabIntact: isRecaptureSourceTabIntact,
+    closeTab: (tabId) => browser.tabs.remove(tabId),
+  },
+  extensionOrigin: browser.runtime.getURL('/'),
+  resolveContinuationTab,
+  discardPendingAnchorsExcept: discardPendingAnchors,
 });
+editorOpen = createEditorOpen({ recovery: run.editorRecovery });
 
-// 步驟擷取與重拍共用取消及提交標記。
-const recaptureFlow = createRecaptureFlow({
-  control,
-  runtime: recorderRuntime,
-  captureScreenshotWithGuard: captureFlow.captureScreenshotWithGuard,
-  openEditor: editorOpen.openEditor,
-});
+/** A recording control, after its sender is checked against the run it names. */
+async function handleRecordingControl(
+  message: RecordingControlMessage,
+  sender: Browser.runtime.MessageSender | null,
+): Promise<RecordingControlResult> {
+  await run.actor.ready();
+  if (sender && !run.lifecycle.isTrustedControlSender(message.runId, sender)) {
+    console.warn('[howbeam] rejected an untrusted recorder control message', message.type);
+    return { ok: false, error: 'background.actionUnavailable' };
+  }
+  const { runId } = message;
+  switch (message.type) {
+    case 'PAUSE_RECORDING': return run.lifecycle.pause(runId);
+    case 'RESUME_RECORDING': return run.lifecycle.resume(runId);
+    case 'UNDO_LAST_CAPTURE': return run.undo.undo(runId);
+    case 'RESTORE_LAST_CAPTURE': return run.undo.restore(runId, message.undoToken);
+    case 'PREPARE_NEXT_SNAPSHOT': return run.snapshot.prepareNext(runId);
+    case 'CREATE_NEXT_SNAPSHOT': return run.snapshot.createNext(runId, 'preparing-next');
+    case 'REBUILD_INVALIDATED_SNAPSHOT': return run.snapshot.createNext(runId, 'invalidated');
+    case 'SWITCH_TO_SNAPSHOT_MODE': return run.snapshot.switchToSnapshot(runId);
+    case 'SWITCH_TO_STEPS_MODE': return run.snapshot.switchToSteps(runId);
+    case 'DISCARD_CURRENT_RECORDING': return run.lifecycle.discard(runId);
+    case 'FINISH_RECORDING': return run.lifecycle.finish(runId);
+  }
+}
 
-const runLifecycle = createRunLifecycle({
-  control,
-  runtime: recorderRuntime,
-  runState,
-  captureFlow,
-  recaptureFlow,
-  runEnding,
-});
-
-const recorderMessages = createRecorderMessages({ control, runState, runEnding });
-
-const runControls = createRunControls({
-  control,
-  runtime: recorderRuntime,
-  runState,
-  undoWindow,
-  captureFlow,
-  editorOpen,
-});
-
-const recordedTabUpdates = createRecordedTabUpdates({
-  control,
-  runtime: recorderRuntime,
-  runState,
-  followMode,
-  recaptureFlow,
-  stopRunWithError: runEnding.stopRunWithError,
-});
+/** Keyboard shortcuts carry no run id: they act on the live run. */
+async function handleCommandShortcut(command: string): Promise<void> {
+  await run.actor.ready();
+  const recording = run.actor.state().operation;
+  if (recording.kind !== 'recording') return;
+  const { runId } = recording;
+  switch (command) {
+    case 'toggle-pause':
+      // Pause is a steps-mode affordance; a snapshot has no pause.
+      if (recording.mode !== 'steps') return;
+      if (recording.phase === 'recording') await handleRecordingControl({ type: 'PAUSE_RECORDING', runId }, null);
+      else if (recording.phase === 'paused') await handleRecordingControl({ type: 'RESUME_RECORDING', runId }, null);
+      return;
+    case 'undo-last-capture':
+      await handleRecordingControl({ type: 'UNDO_LAST_CAPTURE', runId }, null);
+      return;
+    case 'finish-recording':
+      await handleRecordingControl({ type: 'FINISH_RECORDING', runId }, null);
+      return;
+  }
+}
 
 export default defineBackground(() => {
   // Error copy and step descriptions the worker produces follow the chosen
@@ -130,12 +151,13 @@ export default defineBackground(() => {
     },
   });
 
-  // A worker woken by a capture message from a stale persisted run (e.g. a
-  // bfcache-restored recorder) must not race recovery: clicks queue behind it.
+  // A worker woken by a message from a stale persisted run (a bfcache-restored
+  // recorder) must not race recovery: captures wait for it.
   const startupRecovery = (async () => {
     await localeReady;
-    await recaptureFlow.recoverInterruptedRecapture();
-    await runLifecycle.recoverInterruptedRecording();
+    await run.recapture.recover();
+    await run.recovery.recoverInterruptedRecording();
+    await run.undo.recover();
   })().catch((error) => {
     console.error('[howbeam] failed to recover an interrupted operation', error);
   });
@@ -145,32 +167,19 @@ export default defineBackground(() => {
     frameId: sender.frameId ?? null,
   });
 
-  const isActiveStepRelaySender = async (
-    runId: string,
-    sender: Browser.runtime.MessageSender,
-    expectedFrame: 'child' | 'top',
-  ): Promise<boolean> => {
-    const tabId = sender.tab?.id;
-    const frameId = sender.frameId;
-    if (tabId == null || frameId == null) return false;
-    if (expectedFrame === 'child' ? frameId <= 0 : frameId !== 0) return false;
-    if (!control.acceptingClicks) return false;
-    const expectedControlVersion = control.controlVersion;
-    const state = await getRecordingState();
-    return (
-      expectedControlVersion === control.controlVersion &&
-      control.acceptingClicks &&
-      state.operation === 'recording' &&
-      state.isRecording &&
-      state.mode === 'steps' &&
-      state.phase === 'recording' &&
-      state.runId === runId &&
-      state.tabId === tabId
-    );
+  /** A child-frame relay hop from the live steps run's tab: from a child frame to begin, the top frame to claim. */
+  const isActiveStepRelaySender = (runId: string, sender: Browser.runtime.MessageSender, expectedFrame: 'child' | 'top') => {
+    const { frameId } = sender;
+    if (frameId == null || (expectedFrame === 'child' ? frameId <= 0 : frameId !== 0)) return false;
+    const recording = liveRecording(run.actor.state(), runId);
+    return recording?.mode === 'steps' && recording.phase === 'recording' && recording.tabId === sender.tab?.id;
   };
 
-  const handleRecordingControl = (message: RecordingControlMessage, sender: Browser.runtime.MessageSender) =>
-    runControls.handleRecordingControl(message, sender);
+  // After recovery: a restore must find the undo window a restarted worker rebuilds.
+  const handleRecordingControlMessage = async (message: RecordingControlMessage, sender: Browser.runtime.MessageSender) => {
+    await startupRecovery;
+    return handleRecordingControl(message, sender);
+  };
 
   /** One handler per message type; what each answers is fixed by BackgroundContracts. */
   const handlers: {
@@ -179,72 +188,58 @@ export default defineBackground(() => {
       sender: Browser.runtime.MessageSender,
     ) => Promise<BackgroundResponse<K>> | BackgroundResponse<K>;
   } = {
-    START_RECORDING: (message, sender) => queueLifecycle(() => runLifecycle.startRecording(message, sender)),
+    START_RECORDING: (message, sender) => run.lifecycle.startRecording(message, sender),
     STOP_RECORDING: async () => {
-      await queueLifecycle(() => runLifecycle.stopRecording());
+      await run.lifecycle.stopRecording();
       return undefined;
     },
-    OPEN_EDITOR: (message, sender) => editorOpen.openEditorForStoredSession(message, editorPlacementFor(message, sender)),
+    OPEN_EDITOR: (message, sender) => editorOpen!.openEditorForStoredSession(message, editorPlacementFor(message, sender)),
     OPEN_LIBRARY: () => openLibraryPage(),
     REGISTER_EXTENSION_PAGE: (_message, sender) => registerExtensionPage(sender),
-    PREFLIGHT_STEP_RECAPTURE_SOURCE_PERMISSION: (message, sender) =>
-      recaptureFlow.preflightStepRecaptureSourcePermission(message, sender),
-    PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION: (message, sender) =>
-      runLifecycle.preflightProjectContinuationSourcePermission(message, sender),
-    START_STEP_RECAPTURE: (message, sender) => recaptureFlow.startStepRecapture(message, sender),
-    CANCEL_STEP_RECAPTURE: (message, sender) => recaptureFlow.cancelStepRecapture(message, sender),
-    ACK_STEP_RECAPTURE_RESULT: (message, sender) => recaptureFlow.ackStepRecaptureResult(message, sender),
-    FOCUS_STEP_RECAPTURE_SOURCE: (message, sender) => recaptureFlow.focusStepRecaptureSource(message, sender),
-    PAUSE_RECORDING: handleRecordingControl,
-    RESUME_RECORDING: handleRecordingControl,
-    UNDO_LAST_CAPTURE: handleRecordingControl,
-    RESTORE_LAST_CAPTURE: handleRecordingControl,
-    PREPARE_NEXT_SNAPSHOT: handleRecordingControl,
-    CREATE_NEXT_SNAPSHOT: handleRecordingControl,
-    REBUILD_INVALIDATED_SNAPSHOT: handleRecordingControl,
-    SWITCH_TO_SNAPSHOT_MODE: handleRecordingControl,
-    SWITCH_TO_STEPS_MODE: handleRecordingControl,
-    DISCARD_CURRENT_RECORDING: handleRecordingControl,
-    FINISH_RECORDING: handleRecordingControl,
-    SNAPSHOT_INVALIDATED: (message, sender) => recorderMessages.handleSnapshotInvalidated(message, sender),
-    SNAPSHOT_RECORDER_FAILED: (message, sender) => recorderMessages.handleSnapshotRecorderFailure(message, sender),
+    PREFLIGHT_STEP_RECAPTURE_SOURCE_PERMISSION: (message, sender) => run.recapture.preflight(message, sender),
+    PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION: (message, sender) => preflightProjectContinuation(message, sender),
+    START_STEP_RECAPTURE: (message, sender) => run.recapture.start(message, sender),
+    CANCEL_STEP_RECAPTURE: (message, sender) => run.recapture.cancel(message, sender),
+    ACK_STEP_RECAPTURE_RESULT: (message, sender) => run.recapture.acknowledge(message, sender),
+    FOCUS_STEP_RECAPTURE_SOURCE: (message, sender) => run.recapture.focusSource(message, sender),
+    PAUSE_RECORDING: handleRecordingControlMessage,
+    RESUME_RECORDING: handleRecordingControlMessage,
+    UNDO_LAST_CAPTURE: handleRecordingControlMessage,
+    RESTORE_LAST_CAPTURE: handleRecordingControlMessage,
+    PREPARE_NEXT_SNAPSHOT: handleRecordingControlMessage,
+    CREATE_NEXT_SNAPSHOT: handleRecordingControlMessage,
+    REBUILD_INVALIDATED_SNAPSHOT: handleRecordingControlMessage,
+    SWITCH_TO_SNAPSHOT_MODE: handleRecordingControlMessage,
+    SWITCH_TO_STEPS_MODE: handleRecordingControlMessage,
+    DISCARD_CURRENT_RECORDING: handleRecordingControlMessage,
+    FINISH_RECORDING: handleRecordingControlMessage,
+    SNAPSHOT_INVALIDATED: (message, sender) => run.capture.handleSnapshotInvalidated(message, sender),
+    SNAPSHOT_RECORDER_FAILED: (message, sender) => run.capture.handleSnapshotRecorderFailure(message, sender),
     HOWBEAM_RECAPTURE_TARGET: async (message, sender) => {
-      // The recorder listens before its startup finishes; a click in between waits for it.
-      if (control.startupSettled) await control.startupSettled;
-      if (!control.acceptingClicks) return { ok: false, status: 'rejected' };
-      const expectedControlVersion = control.controlVersion;
-      return queueClick(async () => {
-        await startupRecovery;
-        return recaptureFlow.handleRecaptureTarget(message, sender, expectedControlVersion);
-      });
+      await startupRecovery;
+      return run.recapture.handleTarget(message, sender);
     },
     HOWBEAM_STEP_FRAME_BEGIN: async (message, sender) => {
       await startupRecovery;
-      if (!(await isActiveStepRelaySender(message.runId, sender, 'child'))) return { ok: false };
+      if (!isActiveStepRelaySender(message.runId, sender, 'child')) return { ok: false };
       return stepFrameRelayBroker.begin(message, relaySender(sender));
     },
     HOWBEAM_STEP_FRAME_CLAIM: async (message, sender) => {
       await startupRecovery;
-      if (!(await isActiveStepRelaySender(message.runId, sender, 'top'))) return { ok: false };
+      if (!isActiveStepRelaySender(message.runId, sender, 'top')) return { ok: false };
       return stepFrameRelayBroker.claim(message, relaySender(sender));
     },
     HOWBEAM_STEP_FRAME_REJECT: (message, sender) => stepFrameRelayBroker.reject(message, relaySender(sender)),
     HOWBEAM_STEP_FRAME_SETTLE: (message, sender) => stepFrameRelayBroker.settle(message, relaySender(sender)),
     HOWBEAM_STEP_FRAME_ABORT: (message, sender) => stepFrameRelayBroker.abort(message, relaySender(sender)),
     HOWBEAM_CLICK: async (message, sender) => {
-      if (control.startupSettled) await control.startupSettled;
-      if (!control.acceptingClicks) return { ok: false, error: 'not-accepting-clicks' };
-      const expectedControlVersion = control.controlVersion;
-      return queueClick(async () => {
-        // Version read before recovery: if this message woke the worker over a
-        // stale persisted run, recovery settles it and the bumped version rejects silently.
-        await startupRecovery;
-        return captureFlow.handleClick(message, sender, expectedControlVersion);
-      });
+      // A message that woke the worker over a stale persisted run waits for recovery to settle it.
+      await startupRecovery;
+      return run.capture.handleClick(message, sender);
     },
-    HOWBEAM_CANCEL_CAPTURE: (message, sender) => recorderMessages.handleCancelCapture(message, sender),
-    HOWBEAM_READY: (message, sender) => recorderMessages.handleRecorderReady(message, sender),
-    HOWBEAM_RECAPTURE_READY: (message, sender) => recaptureFlow.handleRecaptureReady(message, sender),
+    HOWBEAM_CANCEL_CAPTURE: (message, sender) => run.capture.handleCancelCapture(message, sender),
+    HOWBEAM_READY: (message, sender) => run.capture.handleRecorderReady(message, sender),
+    HOWBEAM_RECAPTURE_READY: (message, sender) => run.recapture.handleReady(message, sender),
   };
 
   /**
@@ -292,7 +287,7 @@ export default defineBackground(() => {
 
   browser.permissions?.onAdded?.addListener((permissions) => {
     if (!permissions.origins?.includes('<all_urls>')) return;
-    void recordedTabUpdates.resumeRunWaitingForSiteAccess().catch((error) => {
+    void run.navigation.resumeAfterSiteAccess().catch((error) => {
       console.error('[howbeam] failed to resume the recording after the permission grant', error);
     });
     void (async () => {
@@ -301,22 +296,20 @@ export default defineBackground(() => {
       await clearCrossTabRecordingDecline();
       const tab = await browser.tabs.get(pending.tabId);
       const claim = await claimRecordingProject(pending.projectId);
-      const result = await queueLifecycle(() =>
-        runLifecycle.startRecording(
-          {
-            type: 'START_RECORDING',
-            sessionId: claim.project.id,
-            mode: pending.mode,
-            ...(claim.autoCreated ? { autoCreatedProject: true } : {}),
-          },
-          {},
-          tab,
-        ),
+      const result = await run.lifecycle.startRecording(
+        {
+          type: 'START_RECORDING',
+          sessionId: claim.project.id,
+          mode: pending.mode,
+          ...(claim.autoCreated ? { autoCreatedProject: true } : {}),
+        },
+        {},
+        tab,
       );
       if (!result.ok) {
         console.warn('[howbeam] resumed start failed', result.error);
-        const live = await getRecordingState();
-        if (!(live.isRecording && live.sessionId === claim.project.id)) await claim.release();
+        const live = run.actor.state().operation;
+        if (!(live.kind === 'recording' && live.sessionId === claim.project.id)) await claim.release();
       }
     })().catch((error) => {
       console.error('[howbeam] failed to resume the start after the permission grant', error);
@@ -324,27 +317,34 @@ export default defineBackground(() => {
   });
 
   browser.commands?.onCommand.addListener((command) => {
-    void runControls.handleCommandShortcut(command).catch((error) => {
+    void handleCommandShortcut(command).catch((error) => {
       console.error('[howbeam] failed to handle command shortcut', error);
     });
   });
 
   const handleKeepAlivePort = createKeepAlivePortHandler({
-    getRecordingState,
-    isTrustedKeepAliveSender: (sender: Browser.runtime.MessageSender | undefined, state: RecordingState) =>
-      isTrustedKeepAliveSender(sender ?? {}, state, control.followOriginTabId),
+    getRecordingState: async () => {
+      await run.actor.ready();
+      return toRecordingState(run.actor.state());
+    },
+    isTrustedKeepAliveSender: (sender, state) =>
+      isTrustedKeepAliveSender(sender ?? {}, state, run.navigation.followOriginTabId()),
     acknowledgeDisconnect: () => void browser.runtime.lastError,
   });
   browser.runtime.onConnect.addListener(handleKeepAlivePort);
 
   browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    void recordedTabUpdates.handleTabUpdated(tabId, changeInfo, tab).catch((error) => {
+    void (async () => {
+      // A recapture's source tab is the recapture's to handle.
+      if (await run.recapture.handleSourceTabUpdated(tabId, changeInfo)) return;
+      await run.navigation.handleTabUpdated(tabId, changeInfo, tab);
+    })().catch((error) => {
       console.error('[howbeam] failed to handle recorded tab update', error);
     });
   });
 
   browser.tabs.onActivated.addListener(({ tabId }) => {
-    followMode.scheduleRecordingFollow(tabId);
+    run.navigation.scheduleFollow(tabId);
   });
 
   // Cross-window switches raise no tabs.onActivated; follow the newly focused
@@ -352,7 +352,7 @@ export default defineBackground(() => {
   browser.windows.onFocusChanged.addListener((windowId) => {
     if (windowId == null || windowId < 0) return;
     void browser.tabs.query({ active: true, windowId }).then(([tab]) => {
-      if (tab?.id != null) followMode.scheduleRecordingFollow(tab.id);
+      if (tab?.id != null) run.navigation.scheduleFollow(tab.id);
     }).catch((error) => {
       console.warn('[howbeam] failed to inspect the focused window', error);
     });
@@ -363,16 +363,10 @@ export default defineBackground(() => {
       // Unconditionally first: a closed extension page must stop being the tab
       // that later opens reuse, whatever else this removal means.
       await forgetClosedExtensionPage(tabId);
-      if (await recaptureFlow.handleSourceTabRemoved(tabId)) return;
-      await runEnding.handleRecordedTabGone(tabId);
+      if (await run.recapture.handleSourceTabRemoved(tabId)) return;
+      await run.lifecycle.recordedTabGone(tabId);
     })().catch((error) => {
       console.error('[howbeam] failed to handle recorded tab removal', error);
     });
-  });
-
-  // Through the click queue so rehydration is ordered before any queued
-  // restore/undo message this startup is already receiving.
-  void queueClick(undoWindow.recover).catch((error) => {
-    console.error('[howbeam] failed to recover the undo window', error);
   });
 });

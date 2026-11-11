@@ -7,6 +7,7 @@ import type {
 } from '@/lib/runtime/messages';
 import type { RecordingState } from '@/lib/storage/recording-state';
 import { makeRecordingState } from '../setup/recording-state';
+import { flushAsyncWork, importBackground } from '../setup/background-test-utils';
 import { type Step } from '@/lib/storage/models';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
@@ -103,12 +104,20 @@ beforeAll(async () => {
   await Promise.resolve();
 });
 
-beforeEach(() => {
+function resetMocks(): void {
   vi.clearAllMocks();
   mocks.getRecordingState.mockResolvedValue(idleState);
   mocks.getProject.mockResolvedValue({ id: 'project-a', title: 'Project A' });
   mocks.getStep.mockResolvedValue(ordinaryStep());
   mocks.getSteps.mockResolvedValue([ordinaryStep()]);
+}
+
+beforeEach(async () => {
+  resetMocks();
+  // A fresh worker per test: it reads the stored run once, when it starts.
+  await importBackground();
+  await flushAsyncWork();
+  resetMocks();
 });
 
 
@@ -158,6 +167,11 @@ describe('background runtime boundary', () => {
 
   it('accepts toolbar controls from the active recorder top frame', async () => {
     mocks.getRecordingState.mockResolvedValue(activeRecordingState());
+    mocks.tabsGet.mockResolvedValue({ id: 4, windowId: 1, active: true, url: 'https://example.com/' });
+    // The worker reads the run once, when it starts, and finds it intact.
+    await importBackground();
+    await flushAsyncWork();
+    mocks.setRecordingState.mockClear();
 
     const result = await send<{ ok: boolean }>(
       { type: 'PAUSE_RECORDING', runId: 'run-1' },
@@ -176,6 +190,11 @@ describe('background runtime boundary', () => {
 
   it('rejects toolbar controls from a different tab before mutation', async () => {
     mocks.getRecordingState.mockResolvedValue(activeRecordingState());
+    mocks.tabsGet.mockResolvedValue({ id: 4, windowId: 1, active: true, url: 'https://example.com/' });
+    // The worker reads the run once, when it starts, and finds it intact.
+    await importBackground();
+    await flushAsyncWork();
+    mocks.setRecordingState.mockClear();
 
     const result = await send<{ ok: boolean }>(
       { type: 'PAUSE_RECORDING', runId: 'run-1' },

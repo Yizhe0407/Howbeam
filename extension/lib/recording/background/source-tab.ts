@@ -4,7 +4,13 @@ import { getStepOutlines } from '../../storage/step-repository';
 import { isRestrictedUrl } from '../../shared/restricted-urls';
 import { waitForTabComplete } from '../../runtime/tab-loading';
 import { isErrorPageError } from '../../runtime/browser-errors';
-import type { SourcePermissionPreflightSuccess, StartRecordingMessage, StartRecordingResult } from '../../runtime/messages';
+import type {
+  PreflightProjectContinuationSourcePermissionMessage,
+  PreflightProjectContinuationSourcePermissionResult,
+  SourcePermissionPreflightSuccess,
+  StartRecordingMessage,
+  StartRecordingResult,
+} from '../../runtime/messages';
 
 export type SourceTabAcquisition = { tab: Browser.tabs.Tab; reused: boolean };
 
@@ -223,4 +229,22 @@ export async function resolveContinuationTab(
     };
   }
   return { ok: true, tab: opened.source.tab };
+}
+
+/**
+ * Whether the editor may continue this Project from its source page, and the
+ * permission it must request first. The source URL is read from the Project,
+ * never taken from the editor.
+ */
+export async function preflightProjectContinuation(
+  message: PreflightProjectContinuationSourcePermissionMessage,
+  sender: Browser.runtime.MessageSender,
+): Promise<PreflightProjectContinuationSourcePermissionResult> {
+  if (!isEditorSenderForSession(sender, message.sessionId)) {
+    return { ok: false, code: 'INVALID_EDITOR', message: 'background.editorOnlyContinuation' };
+  }
+  const sourceUrl = (await resolveProjectContinuationAnchor(message.sessionId, message.afterEntryId))?.sourceUrl;
+  if (!sourceUrl) return { ok: false, code: 'SOURCE_NOT_FOUND', message: 'background.noContinuationSource' };
+  return sourcePermissionPreflightSuccess(sourceUrl)
+    ?? { ok: false, code: 'RESTRICTED_SOURCE', message: 'background.restrictedContinuationSource' };
 }

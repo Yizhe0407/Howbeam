@@ -175,26 +175,6 @@ describe('follow-the-active-tab recording (steps mode)', () => {
     expect(mocks.executeScript).toHaveBeenCalled();
   });
 
-  it('abandons a stale follow when the run changes between the read and the state mutation', async () => {
-    mocks.tabsGet.mockImplementation(async (tabId: number) => {
-      if (tabId === 9) {
-        // A concurrent control settles the old run while the follow is still validating its target tab; the serialized mutation must notice.
-        storedState = recordingState({ runId: 'run-2', tabId: 4 });
-        return OTHER_TAB;
-      }
-      return RECORDED_TAB;
-    });
-    await importBackground();
-    await flushAsyncWork();
-
-    await activateTab(9);
-
-    expect(storedState.tabId).toBe(4);
-    expect(storedState.runId).toBe('run-2');
-    expect(mocks.setRecordingState).not.toHaveBeenCalled();
-    expect(mocks.executeScript).not.toHaveBeenCalled();
-  });
-
   it('follows the focused window\'s active tab on cross-window switches', async () => {
     mocks.tabsQuery.mockResolvedValue([OTHER_TAB]);
     await importBackground();

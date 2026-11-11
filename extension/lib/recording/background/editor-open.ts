@@ -1,7 +1,6 @@
 import { browser } from 'wxt/browser';
 import { getProject } from '../../storage/project-repository';
 import { getStepOutlines } from '../../storage/step-repository';
-import { getRecordingState } from '../../storage/storage';
 import { describeBrowserError } from '../../runtime/browser-errors';
 import { isEditorHandoffResult } from '../../runtime/runtime-message-result';
 import {
@@ -12,15 +11,18 @@ import {
   forgetExtensionPage,
   showExtensionPage,
 } from './extension-page-tabs';
-import {
-  clearEditorRecovery,
-  markEditorOpenFailed,
-  needsEditorRecovery,
-} from '../recording-recovery';
-import type { ControlPlane } from './control-plane';
 import type { EditorHandoffMessage, OpenEditorMessage, OpenEditorResult } from '../../runtime/messages';
-import type { RecordingState } from '../../storage/recording-state';
 import type { CopyKey } from '../../shared/i18n/copy';
+
+/**
+ * The last run's claim on the editor: a run that ended with its tab gone, or
+ * whose editor failed to open, leaves the popup a "finish and open editor"
+ * recovery. Opening the editor for that Project settles it either way.
+ */
+export interface EditorRecovery {
+  current(): Promise<{ sessionId: string | null; needsRecovery: boolean }>;
+  settle(sessionId: string, outcome: 'opened' | 'failed'): Promise<void>;
+}
 
 /** What an editor tab should end up showing. */
 export interface EditorTarget {
@@ -97,9 +99,7 @@ async function negotiateEditorReuse(tabId: number, message: EditorHandoffMessage
  * stays wired in the background entrypoint, mirroring follow-mode's
  * listener/logic split; state writes go through the injected control plane.
  */
-export function createEditorOpen(deps: { control: ControlPlane }) {
-  const { control } = deps;
-
+export function createEditorOpen(deps: { recovery: EditorRecovery }) {
   /**
    * The one way the editor ever opens: finishing a run, the OPEN_EDITOR
    * message, and returning from a recapture all come through here, so the
@@ -146,11 +146,10 @@ export function createEditorOpen(deps: { control: ControlPlane }) {
     message: OpenEditorMessage,
     placement: EditorPlacement = NEW_TAB,
   ): Promise<OpenEditorResult> {
-    const expectedControlVersion = control.controlVersion;
-    let state: RecordingState | null = null;
+    let state: Awaited<ReturnType<EditorRecovery['current']>> | null = null;
     let targetSessionId = message.sessionId;
     try {
-      state = await getRecordingState();
+      state = await deps.recovery.current();
       targetSessionId ??= state.sessionId ?? undefined;
       if (!targetSessionId) return await openEditor({}, placement);
       const project = await getProject(targetSessionId);
@@ -159,26 +158,17 @@ export function createEditorOpen(deps: { control: ControlPlane }) {
       // recovering one whose recorded tab went away. Ordinary navigation opens the
       // project at its first entry — deriving the target from the newest capture
       // made every "open editor" land on the last step.
-      const resumesInterruptedRun =
-        state.sessionId === targetSessionId && needsEditorRecovery(state.recoverableError);
+      const resumesInterruptedRun = state.sessionId === targetSessionId && state.needsRecovery;
       const entryId =
         message.entryId ?? (resumesInterruptedRun ? await latestEntryId(targetSessionId) : null);
       const result = await openEditor({ sessionId: targetSessionId, entryId }, placement);
-      if (state.sessionId === targetSessionId) {
-        await control.writeStateForControl(expectedControlVersion, (current) => {
-          if (current.sessionId !== targetSessionId) return current;
-          return clearEditorRecovery(current);
-        });
-      }
+      if (state.sessionId === targetSessionId) await deps.recovery.settle(targetSessionId, 'opened');
       return result;
     } catch (error) {
       console.error('[howbeam] failed to open editor:', describeBrowserError(error), error);
       if (state?.sessionId === targetSessionId) {
         try {
-          await control.writeStateForControl(expectedControlVersion, (current) => {
-            if (current.sessionId !== targetSessionId) return current;
-            return markEditorOpenFailed(current);
-          });
+          await deps.recovery.settle(targetSessionId!, 'failed');
         } catch (recoveryError) {
           console.error(
             '[howbeam] failed to persist editor recovery state:',

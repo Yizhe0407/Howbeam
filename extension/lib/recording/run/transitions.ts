@@ -193,6 +193,20 @@ export function editorOpenFailed(state: RunState): RunState {
   };
 }
 
+const EDITOR_RECOVERY_CODES = new Set(['RECORDED_TAB_CLOSED', 'EDITOR_OPEN_FAILED']);
+
+/** The ended run left the popup a "finish and open editor" recovery. */
+export function needsEditorRecovery(state: RunState): boolean {
+  const op = state.operation;
+  return op.kind === 'idle' && op.notice?.code != null && EDITOR_RECOVERY_CODES.has(op.notice.code);
+}
+
+/** The editor opened the Project the recovery was for: nothing left to recover. */
+export function editorRecovered(state: RunState): RunState {
+  if (!needsEditorRecovery(state) || state.operation.kind !== 'idle') return state;
+  return { ...state, operation: { ...state.operation, failed: false, notice: null } };
+}
+
 export function withRecording(state: RunState, recording: Recording): RunState {
   return { ...state, operation: recording };
 }

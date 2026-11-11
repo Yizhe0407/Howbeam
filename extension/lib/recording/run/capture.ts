@@ -165,7 +165,11 @@ export function createCapture(deps: CaptureDeps) {
 
   async function annotate(recording: Recording, message: ClickCapture): Promise<void> {
     const { anchor } = recording;
-    if (anchor && !isMatchingSnapshotViewport(anchor.viewport, anchor.devicePixelRatio, message.viewport, message.devicePixelRatio)) {
+    if (
+      anchor?.viewport &&
+      anchor.devicePixelRatio != null &&
+      !isMatchingSnapshotViewport(anchor.viewport, anchor.devicePixelRatio, message.viewport, message.devicePixelRatio)
+    ) {
       throw new SnapshotViewportChangedError();
     }
     if (!anchor) throw new SnapshotAnchorMissingError('The run has no snapshot base image.');
@@ -253,8 +257,9 @@ export function createCapture(deps: CaptureDeps) {
     const recording = liveRecording(ctx.state(), runId);
     if (!recording || recording.mode !== 'snapshot') return false;
     if (recording.phase === 'invalidated') return true;
-    if (recording.phase !== 'recording' || !recording.anchor) return false;
-    if (report && isMatchingSnapshotViewport(recording.anchor.viewport, recording.anchor.devicePixelRatio, report.viewport, report.devicePixelRatio)) {
+    const anchor = recording.anchor;
+    if (recording.phase !== 'recording' || !anchor?.viewport || anchor.devicePixelRatio == null) return false;
+    if (report && isMatchingSnapshotViewport(anchor.viewport, anchor.devicePixelRatio, report.viewport, report.devicePixelRatio)) {
       return false;
     }
     deps.discardUndo();

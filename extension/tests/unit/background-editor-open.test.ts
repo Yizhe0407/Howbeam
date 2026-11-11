@@ -191,6 +191,7 @@ describe('the single editor opener', () => {
     silenceIntentionalErrorLogs();
     storedState = makeRecordingState({ sessionId: 'project-a' });
     mocks.sessionGet.mockRejectedValue(new Error('session storage is unavailable'));
+    await importBackground();
 
     await expect(openEditor({ sessionId: 'project-a' })).resolves.toEqual({
       ok: false,
@@ -212,6 +213,7 @@ describe('finishing a recording twice', () => {
       runId: 'run-1',
     });
     mocks.tabsGet.mockResolvedValue({ id: 4, windowId: 1, active: true, url: 'https://example.com/flow' });
+    await importBackground();
 
     const first = await mocks.messageListener?.(
       { type: 'FINISH_RECORDING', runId: 'run-1' },

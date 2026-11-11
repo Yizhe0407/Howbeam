@@ -27,8 +27,9 @@ export const WAIT_NOTICES: Readonly<Record<WaitReason, Notice>> = {
 /** The snapshot's captured base image, which every annotation is drawn on. */
 export interface SnapshotAnchor {
   id: string;
-  viewport: Viewport;
-  devicePixelRatio: number;
+  /** The viewport the base image was taken at; annotations must match it. Null when unknown. */
+  viewport: Viewport | null;
+  devicePixelRatio: number | null;
 }
 
 export type RecordingPhase =
@@ -213,7 +214,7 @@ export function fromRecordingState(stored: RecordingState): RunState {
     stored.phase !== 'error'
   ) {
     const wait = notice?.code ? WAIT_BY_CODE.get(notice.code) ?? null : null;
-    const anchor = stored.groupAnchorId && stored.snapshotViewport && stored.snapshotDevicePixelRatio != null
+    const anchor = stored.groupAnchorId
       ? { id: stored.groupAnchorId, viewport: stored.snapshotViewport, devicePixelRatio: stored.snapshotDevicePixelRatio }
       : null;
     return {

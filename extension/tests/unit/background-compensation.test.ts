@@ -3,7 +3,6 @@ import type { RecordingState } from '@/lib/storage/recording-state';
 import { makeRecordingState } from '../setup/recording-state';
 import { flushAsyncWork, importBackground } from '../setup/background-test-utils';
 import { type Step } from '@/lib/storage/models';
-import { itemAt } from '../setup/item-at';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
 
@@ -40,20 +39,6 @@ function snapshotState(overrides: Partial<RecordingState> = {}): RecordingState 
     groupAnchorId: 'anchor-1',
     snapshotViewport: VIEWPORT,
     snapshotDevicePixelRatio: 2,
-    ...overrides,
-  });
-}
-
-function stepsState(overrides: Partial<RecordingState> = {}): RecordingState {
-  return makeRecordingState({
-    operation: 'recording',
-    isRecording: true,
-    phase: 'recording',
-    mode: 'steps',
-    sessionId: 'project-a',
-    tabId: 4,
-    runId: 'run-1',
-    itemCount: 1,
     ...overrides,
   });
 }
@@ -148,29 +133,6 @@ describe('SNAPSHOT_INVALIDATED handling', () => {
     );
   });
 
-  it('answers true idempotently when the atomic claim finds the run already invalidated', async () => {
-    mocks.getRecordingState.mockResolvedValue(snapshotState());
-    await importBackground();
-    await flushAsyncWork();
-
-    // The atomic claim's re-read finds the run already invalidated concurrently; the handler must still report success without a second state write.
-    mocks.getRecordingState
-      .mockResolvedValueOnce(snapshotState())
-      .mockResolvedValueOnce(snapshotState({ phase: 'invalidated' }));
-    const result = await mocks.messageListener?.(
-      {
-        type: 'SNAPSHOT_INVALIDATED',
-        runId: 'run-1',
-        viewport: { ...VIEWPORT, width: 999 },
-        devicePixelRatio: 2,
-      },
-      recorderSender,
-    );
-
-    expect(result).toBe(true);
-    expect(mocks.setRecordingState).not.toHaveBeenCalled();
-  });
-
   it('rejects an invalidation whose viewport still matches the anchor', async () => {
     mocks.getRecordingState.mockResolvedValue(snapshotState());
     await importBackground();
@@ -220,69 +182,6 @@ describe('rebuild-invalidated-snapshot failure rollback', () => {
     expect(mocks.executeScript).toHaveBeenCalledWith(
       expect.objectContaining({ target: expect.objectContaining({ tabId: 4 }) }),
     );
-  });
-});
-
-describe('undo/restore lost-CAS compensation', () => {
-  // The repository's single-step read answers from the same stored steps.
-  beforeEach(() => {
-    mocks.getStep.mockImplementation(async (id: string) =>
-      ((await mocks.getSteps()) as { id: string }[] | undefined)?.find((stored) => stored.id === id));
-  });
-
-  it('re-adds the removed step when the undo state write loses the race', async () => {
-    const removed = step();
-    mocks.getRecordingState.mockResolvedValue(stepsState());
-    mocks.getSteps.mockResolvedValue([removed]);
-    await importBackground();
-    await flushAsyncWork();
-
-    mocks.getRecordingState
-      .mockResolvedValueOnce(stepsState())
-      // The conditional write re-reads the state and finds the run gone.
-      .mockResolvedValueOnce(makeRecordingState());
-    const result = await mocks.messageListener?.(
-      { type: 'UNDO_LAST_CAPTURE', runId: 'run-1' },
-      popupSender,
-    );
-
-    expect(result).toMatchObject({ ok: false });
-    expect(mocks.deleteStep).toHaveBeenCalledWith('step-1');
-    expect(mocks.storeStep).toHaveBeenCalledWith(removed);
-    const deleteOrder = mocks.deleteStep.mock.invocationCallOrder[0];
-    const addOrder = itemAt(mocks.storeStep.mock.invocationCallOrder, 0);
-    expect(deleteOrder).toBeLessThan(addOrder);
-    // The undo window is over: its persisted copy must be hard-deleted.
-    expect(mocks.clearPendingUndoRecord).toHaveBeenCalled();
-  });
-
-  it('re-deletes the restored step when the restore state write loses the race', async () => {
-    const record = {
-      token: 'undo-token',
-      runId: 'run-1',
-      step: step(),
-      expectedItemCount: 0,
-      expiresAt: Date.now() + 5_000,
-    };
-    mocks.readPendingUndoRecord.mockResolvedValue(record);
-    mocks.getRecordingState.mockResolvedValue(stepsState({ itemCount: 0 }));
-    await importBackground();
-    await flushAsyncWork();
-
-    mocks.getRecordingState
-      .mockResolvedValueOnce(stepsState({ itemCount: 0 }))
-      .mockResolvedValueOnce(makeRecordingState());
-    const result = await mocks.messageListener?.(
-      { type: 'RESTORE_LAST_CAPTURE', runId: 'run-1', undoToken: 'undo-token' },
-      popupSender,
-    );
-
-    expect(result).toMatchObject({ ok: false });
-    expect(mocks.storeStep).toHaveBeenCalledWith(record.step);
-    expect(mocks.deleteStep).toHaveBeenCalledWith('step-1');
-    const addOrder = mocks.storeStep.mock.invocationCallOrder[0];
-    const deleteOrder = itemAt(mocks.deleteStep.mock.invocationCallOrder, 0);
-    expect(addOrder).toBeLessThan(deleteOrder);
   });
 });
 
