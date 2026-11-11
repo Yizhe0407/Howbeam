@@ -2,92 +2,73 @@ import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from '
 import { notifyProjectsChanged } from './change-notifier';
 import {
   STEP_STORAGE_LIMITS,
-  getEffectiveBounds,
   requireStorageIdentifier,
   sanitizeProject,
-  stepRole,
   storageError,
   type Project,
   type Step,
 } from './models';
 
+/**
+ * One timeline entry per record: an ordinary step, or a snapshot with its
+ * annotations in order. The screenshot is kept in `screenshots` under the same
+ * id, so reading the timeline's structure never loads image bytes.
+ */
+export interface StoredEntry {
+  id: string;
+  projectId: string;
+  order: number;
+  kind: 'single' | 'group';
+  /** The image owner without its Blob: the step itself, or the snapshot's base image. */
+  owner: Step;
+  /** Empty for an ordinary step; a stored snapshot always has at least one. */
+  annotations: Step[];
+  /** Every step id the entry holds, for finding the entry of an annotation. */
+  memberIds: string[];
+  screenshotBytes: number;
+}
+
+export interface StoredScreenshot {
+  id: string;
+  blob: Blob;
+}
+
+/** A snapshot's base image before its first annotation. It is not part of its
+ * Project yet: it becomes an entry together with that annotation. */
+export interface PendingAnchor {
+  id: string;
+  projectId: string;
+  step: Step;
+}
+
 export interface HowbeamDB extends DBSchema {
-  steps: {
-    key: string;
-    value: Step;
-    indexes: { 'by-session': string };
-  };
   projects: {
     key: string;
     value: Project;
     indexes: { 'by-updated-at': number };
   };
-}
-
-export type ProjectStepsTransaction = IDBPTransaction<HowbeamDB, ['projects', 'steps'], 'readwrite'>;
-export type ReadonlyProjectStepsTransaction = IDBPTransaction<HowbeamDB, ['projects', 'steps'], 'readonly'>;
-
-interface GroupSummaryAccumulator {
-  hasAnchorImage: boolean;
-  validAnnotationCount: number;
-  fallbackImageCount: number;
-}
-
-interface SummaryAccumulator {
-  stepCount: number;
-  ordinaryEntryCount: number;
-  storageBytes: number;
-  groups: Map<string, GroupSummaryAccumulator>;
-}
-
-function createSummaryAccumulator(): SummaryAccumulator {
-  return { stepCount: 0, ordinaryEntryCount: 0, storageBytes: 0, groups: new Map() };
-}
-
-function addStepToSummary(summary: SummaryAccumulator, step: Step): void {
-  const role = stepRole(step);
-  // Anchors are shared base images, not user-visible steps.
-  if (role !== 'anchor') summary.stepCount += 1;
-  summary.storageBytes = Math.min(
-    Number.MAX_SAFE_INTEGER,
-    summary.storageBytes + (step.screenshotBlob?.size ?? 0),
-  );
-
-  if (role === 'ordinary') {
-    if (step.screenshotBlob) summary.ordinaryEntryCount += 1;
-    return;
-  }
-
-  const groupId = step.groupId!; // anchors and annotations always carry one
-  let group = summary.groups.get(groupId);
-  if (!group) {
-    group = { hasAnchorImage: false, validAnnotationCount: 0, fallbackImageCount: 0 };
-    summary.groups.set(groupId, group);
-  }
-  if (role === 'anchor' && step.screenshotBlob) group.hasAnchorImage = true;
-  if (role === 'annotation' && getEffectiveBounds(step)) group.validAnnotationCount += 1;
-  if (step.screenshotBlob) group.fallbackImageCount += 1;
-}
-
-function finishSummary(summary: SummaryAccumulator): Pick<Project, 'stepCount' | 'entryCount' | 'storageBytes'> {
-  let entryCount = summary.ordinaryEntryCount;
-  for (const group of summary.groups.values()) {
-    entryCount += group.hasAnchorImage
-      ? Number(group.validAnnotationCount > 0)
-      : group.fallbackImageCount;
-  }
-  return {
-    stepCount: summary.stepCount,
-    entryCount,
-    storageBytes: summary.storageBytes,
+  entries: {
+    key: string;
+    value: StoredEntry;
+    indexes: { 'by-project': string; 'by-member': string };
+  };
+  screenshots: {
+    key: string;
+    value: StoredScreenshot;
+  };
+  pendingAnchors: {
+    key: string;
+    value: PendingAnchor;
+    indexes: { 'by-project': string };
   };
 }
 
-export function summarizeSteps(steps: Iterable<Step>): Pick<Project, 'stepCount' | 'entryCount' | 'storageBytes'> {
-  const summary = createSummaryAccumulator();
-  for (const step of steps) addStepToSummary(summary, step);
-  return finishSummary(summary);
-}
+type ProjectStores = ['projects', 'entries', 'screenshots', 'pendingAnchors'];
+export type ProjectWriteTransaction = IDBPTransaction<HowbeamDB, ProjectStores, 'readwrite'>;
+export type ProjectReadTransaction = IDBPTransaction<HowbeamDB, ProjectStores, 'readonly'>;
+export type ProjectTransaction = ProjectWriteTransaction | ProjectReadTransaction;
+
+export type ProjectSummaryFields = Pick<Project, 'stepCount' | 'entryCount' | 'storageBytes'>;
 
 export function assertProjectStorageLimits(
   summary: Pick<Project, 'stepCount' | 'storageBytes'>,
@@ -111,11 +92,7 @@ export function newProject(
   id: string,
   now: number,
   initial?: Partial<Pick<Project, 'title' | 'description'>>,
-  summary: Pick<Project, 'stepCount' | 'entryCount' | 'storageBytes'> = {
-    stepCount: 0,
-    entryCount: 0,
-    storageBytes: 0,
-  },
+  summary: ProjectSummaryFields = { stepCount: 0, entryCount: 0, storageBytes: 0 },
   contentRevision = 0,
 ): Project {
   return sanitizeProject({
@@ -136,9 +113,7 @@ export function newProject(
  * True while a (sanitized) Project is still exactly the empty shell newProject
  * leaves behind with no initial metadata: nothing recorded, and no
  * user-entered title, description, or sections. An unnamed project's title
- * is empty (see sanitizeProject). contentRevision is
- * deliberately not consulted: transient rows such as a snapshot run's deleted
- * empty anchor bump it without leaving any user content behind.
+ * is empty (see sanitizeProject).
  */
 export function isPristineProject(project: Project): boolean {
   return (
@@ -159,60 +134,15 @@ export class ProjectNotFoundError extends Error {
   }
 }
 
-export async function requireWritableProject(tx: ProjectStepsTransaction, id: string): Promise<Project> {
+export async function requireProject(tx: ProjectTransaction, id: string): Promise<Project> {
   const project = await tx.objectStore('projects').get(id);
   if (!project) throw new ProjectNotFoundError(id);
   return sanitizeProject(project);
 }
 
-/** After rows were added, removed or moved: recomputes the summary and moves
- * the structure revision. */
-export async function refreshProjectSummary(
-  tx: ProjectStepsTransaction,
-  project: Project,
-  timestamp = Date.now(),
-): Promise<Project> {
-  const summary = createSummaryAccumulator();
-  let cursor = await tx.objectStore('steps').index('by-session').openCursor(project.id);
-  while (cursor) {
-    addStepToSummary(summary, cursor.value);
-    cursor = await cursor.continue();
-  }
-  return writeProjectSummary(tx, project, finishSummary(summary), timestamp);
-}
-
-/** refreshProjectSummary for a write that already read the Project's rows:
- * `rows` must be every row the Project holds once this transaction's writes
- * land, so the rows are not walked a second time. */
-export async function refreshProjectSummaryFromRows(
-  tx: ProjectStepsTransaction,
-  project: Project,
-  rows: Iterable<Step>,
-  timestamp = Date.now(),
-): Promise<Project> {
-  return writeProjectSummary(tx, project, summarizeSteps(rows), timestamp);
-}
-
-async function writeProjectSummary(
-  tx: ProjectStepsTransaction,
-  project: Project,
-  finishedSummary: Pick<Project, 'stepCount' | 'entryCount' | 'storageBytes'>,
-  timestamp: number,
-): Promise<Project> {
-  assertProjectStorageLimits(finishedSummary, project);
-  const updated = sanitizeProject({
-    ...project,
-    ...finishedSummary,
-    updatedAt: Math.max(project.updatedAt, timestamp, Date.now()),
-    contentRevision: project.contentRevision + 1,
-  });
-  await tx.objectStore('projects').put(updated);
-  return updated;
-}
-
-/** After a row was edited in place. Such an edit never touches what the
- * summary counts (roles, screenshots, bounds), so nothing is recomputed. */
-export async function recordStepEdit(tx: ProjectStepsTransaction, project: Project): Promise<void> {
+/** After a step was edited in place. Such an edit never touches what the
+ * summary counts (entries, steps, screenshots), so nothing is recomputed. */
+export async function recordStepEdit(tx: ProjectWriteTransaction, project: Project): Promise<void> {
   await tx.objectStore('projects').put(sanitizeProject({
     ...project,
     updatedAt: Math.max(project.updatedAt, Date.now()),
@@ -220,7 +150,7 @@ export async function recordStepEdit(tx: ProjectStepsTransaction, project: Proje
   }));
 }
 
-async function abortTransaction(tx: ProjectStepsTransaction, error: unknown): Promise<never> {
+async function abortTransaction(tx: ProjectWriteTransaction, error: unknown): Promise<never> {
   try {
     tx.abort();
   } catch {
@@ -230,8 +160,9 @@ async function abortTransaction(tx: ProjectStepsTransaction, error: unknown): Pr
   throw error;
 }
 
-// Older databases are not upgraded. It stays 2 because lowering it would stop browsers that already hold version 2 from opening.
-export const DATABASE_VERSION = 2;
+/** Howbeam has not shipped, so no older layout is migrated: opening a database
+ * from before version 3 drops its stores and starts empty. */
+export const DATABASE_VERSION = 3;
 
 let databasePromise: Promise<IDBPDatabase<HowbeamDB>> | undefined;
 let databaseConnection: IDBPDatabase<HowbeamDB> | undefined;
@@ -239,12 +170,16 @@ let databaseConnection: IDBPDatabase<HowbeamDB> | undefined;
 function getDatabase(): Promise<IDBPDatabase<HowbeamDB>> {
   if (databasePromise) return databasePromise;
   databasePromise = openDB<HowbeamDB>('howbeam', DATABASE_VERSION, {
-    upgrade(db, oldVersion) {
-      if (oldVersion >= 1) return;
-      const steps = db.createObjectStore('steps', { keyPath: 'id' });
-      steps.createIndex('by-session', 'sessionId');
+    upgrade(db) {
+      for (const name of [...db.objectStoreNames]) db.deleteObjectStore(name);
       const projects = db.createObjectStore('projects', { keyPath: 'id' });
       projects.createIndex('by-updated-at', 'updatedAt');
+      const entries = db.createObjectStore('entries', { keyPath: 'id' });
+      entries.createIndex('by-project', 'projectId');
+      entries.createIndex('by-member', 'memberIds', { unique: true, multiEntry: true });
+      db.createObjectStore('screenshots', { keyPath: 'id' });
+      const pending = db.createObjectStore('pendingAnchors', { keyPath: 'id' });
+      pending.createIndex('by-project', 'projectId');
     },
     blocked(currentVersion, blockedVersion) {
       console.warn(`Howbeam database upgrade to ${blockedVersion ?? 'unknown'} is blocked by version ${currentVersion}.`);
@@ -296,22 +231,32 @@ export async function runWithDatabase<T>(
   }
 }
 
-/** Standard projects+steps readwrite transaction: closed-connection retry, one
- * commit, and rollback through abortTransaction so a failing body can never
- * leak an unhandled tx.done rejection. */
-export async function runProjectStepsWrite<T>(
-  operation: (tx: ProjectStepsTransaction) => Promise<T>,
+/** One readwrite transaction over a Project and everything it holds: one
+ * commit, closed-connection retry, and rollback through abortTransaction so a
+ * failing body never leaves a partial write behind. */
+export async function runProjectWrite<T>(
+  operation: (tx: ProjectWriteTransaction) => Promise<T>,
+  { notify = true }: { notify?: boolean } = {},
 ): Promise<T> {
   return runWithDatabase(async (db) => {
-    const tx = db.transaction(['projects', 'steps'], 'readwrite');
+    const tx = db.transaction(['projects', 'entries', 'screenshots', 'pendingAnchors'], 'readwrite');
     try {
       const result = await operation(tx);
       await tx.done;
-      notifyProjectsChanged();
+      if (notify) notifyProjectsChanged();
       return result;
     } catch (error) {
       return abortTransaction(tx, error);
     }
+  });
+}
+
+export async function runProjectRead<T>(operation: (tx: ProjectReadTransaction) => Promise<T>): Promise<T> {
+  return runWithDatabase(async (db) => {
+    const tx = db.transaction(['projects', 'entries', 'screenshots', 'pendingAnchors'], 'readonly');
+    const result = await operation(tx);
+    await tx.done;
+    return result;
   });
 }
 
@@ -322,30 +267,4 @@ export async function closeDatabase(): Promise<void> {
   const db = databaseConnection ?? (pending ? await pending.catch(() => undefined) : undefined);
   databaseConnection = undefined;
   db?.close();
-}
-
-
-function sortSessionSteps(sessionSteps: Step[], orderedIds: string[]): Step[] {
-  const byId = new Map(sessionSteps.map((step) => [step.id, step]));
-  const seen = new Set<string>();
-  const reordered: Step[] = [];
-
-  for (const id of orderedIds) {
-    const step = byId.get(id);
-    if (step && !seen.has(id)) {
-      reordered.push(step);
-      seen.add(id);
-    }
-  }
-  for (const step of [...sessionSteps].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))) {
-    if (!seen.has(step.id)) reordered.push(step);
-  }
-  return reordered;
-}
-
-export async function writeDenseOrder(tx: ProjectStepsTransaction, steps: Step[], orderedIds: string[]): Promise<void> {
-  const reordered = sortSessionSteps(steps, orderedIds);
-  for (const [order, step] of reordered.entries()) {
-    if (step.order !== order) await tx.objectStore('steps').put({ ...step, order });
-  }
 }

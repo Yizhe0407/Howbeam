@@ -206,23 +206,25 @@ test.describe('editor workflows', () => {
     await recordSnapshotTargets(appPage, popupPage, ['#action-button', '#disabled-button']);
     await popupPage.evaluate(async () => {
       await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('howbeam', 2);
+        const request = indexedDB.open('howbeam', 3);
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {
           const db = request.result;
-          const tx = db.transaction('steps', 'readwrite');
-          const store = tx.objectStore('steps');
+          const tx = db.transaction('entries', 'readwrite');
+          const store = tx.objectStore('entries');
           const all = store.getAll();
           all.onerror = () => reject(all.error);
           all.onsuccess = () => {
-            const annotations = all.result
-              .filter((step) => step.groupId && step.id !== step.groupId)
-              .sort((first, second) => first.order - second.order);
             const bounds = [
               { x: 100, y: 80, width: 64, height: 48 },
               { x: 150, y: 80, width: 64, height: 48 },
             ];
-            annotations.forEach((step, index) => store.put({ ...step, bounds: bounds[index] }));
+            for (const entry of all.result.filter((candidate) => candidate.kind === 'group')) {
+              store.put({
+                ...entry,
+                annotations: entry.annotations.map((step: object, index: number) => ({ ...step, bounds: bounds[index] })),
+              });
+            }
           };
           tx.oncomplete = () => {
             db.close();

@@ -1,32 +1,53 @@
 import {
   assertMutationItems,
   getEffectiveBounds,
-  orderedSessionSteps,
   sanitizeStepForStorage,
   stepRole,
   type Bounds,
+  type ScreenshotStep,
   type Step,
+  type StepEntry,
 } from './models';
 import type { StepRecaptureTarget } from './recording-state';
 import { assertStorableScreenshots } from './screenshot-rules';
 import {
   recordStepEdit,
-  refreshProjectSummary,
-  refreshProjectSummaryFromRows,
-  requireWritableProject,
-  runProjectStepsWrite,
-  runWithDatabase,
-  writeDenseOrder,
+  requireProject,
+  runProjectRead,
+  runProjectWrite,
+  type ProjectTransaction,
+  type ProjectWriteTransaction,
 } from './database';
+import {
+  commitEntries,
+  entrySteps,
+  findEntryRecord,
+  putEntryInPlace,
+  readEntries,
+  readEntry,
+} from './entry-store';
 
 /** A captured row before it has a place in its Project: the write assigns `order`. */
 export type NewStep = Omit<Step, 'order'>;
 
+function entryHolds(entry: StepEntry, stepId: string): boolean {
+  return entry.kind === 'single'
+    ? entry.step.id === stepId
+    : entry.anchor.id === stepId || entry.annotations.some((annotation) => annotation.id === stepId);
+}
+
+function entryHasRun(entry: StepEntry, runId: string): boolean {
+  return entrySteps([entry]).some((step) => step.runId === runId);
+}
+
 /** Persists rows captured by one recording run. They follow the run's own last
- * row, or `afterStepId` when the run has none yet (a continuation from the
- * middle of a Project); with neither, or when that row is gone, they are
- * appended. Their order is assigned here, from the rows this transaction
- * reads, and the Project's order stays dense. */
+ * entry, or the entry holding `afterStepId` when the run has none yet (a
+ * continuation from the middle of a Project); with neither, or when that entry
+ * is gone, they are appended.
+ *
+ * An ordinary step becomes an entry. A snapshot's base image is kept aside as
+ * a pending anchor until its first annotation arrives; that annotation turns
+ * it into an entry, and later ones join it. */
 export async function addStepsAfter(steps: readonly NewStep[], afterStepId: string | null): Promise<void> {
   const [first] = steps;
   if (!first) return;
@@ -34,35 +55,70 @@ export async function addStepsAfter(steps: readonly NewStep[], afterStepId: stri
   await assertStorableScreenshots(steps.map((step) => step.screenshotBlob));
   const { sessionId, runId } = first;
   let latestTimestamp = first.timestamp;
-  await runProjectStepsWrite(async (tx) => {
-    const project = await requireWritableProject(tx, sessionId);
-    const existing = orderedSessionSteps(await tx.objectStore('steps').index('by-session').getAll(sessionId));
-    const lastOfRun = runId ? existing.findLast((step) => step.runId === runId) : undefined;
-    const anchorId = lastOfRun?.id ?? afterStepId;
-    const at = anchorId === null ? -1 : existing.findIndex((step) => step.id === anchorId);
-    const insertAt = at === -1 ? existing.length : at + 1;
-    const stored = steps.map((step, index) => sanitizeStepForStorage({ ...step, order: insertAt + index }));
-    for (const step of stored) {
-      if (step.sessionId !== sessionId) throw new Error(`Step ${step.id} belongs to another project.`);
+  await runProjectWrite(async (tx) => {
+    const project = await requireProject(tx, sessionId);
+    const previous = await readEntries(tx, sessionId);
+    const next = [...previous];
+    const lastOfRun = runId ? next.findLastIndex((entry) => entryHasRun(entry, runId)) : -1;
+    const after = lastOfRun !== -1
+      ? lastOfRun
+      : afterStepId === null ? -1 : next.findIndex((entry) => entryHolds(entry, afterStepId));
+    let insertAt = after === -1 ? next.length : after + 1;
+    let structureChanged = false;
+
+    for (const raw of steps) {
+      if (raw.sessionId !== sessionId) throw new Error(`Step ${raw.id} belongs to another project.`);
+      const step = sanitizeStepForStorage({ ...raw, order: 0 });
       latestTimestamp = Math.max(latestTimestamp, step.timestamp);
-      await tx.objectStore('steps').add(step);
+      const role = stepRole(step);
+      if (role === 'ordinary') {
+        next.splice(insertAt, 0, { kind: 'single', step: step as ScreenshotStep });
+        insertAt += 1;
+        structureChanged = true;
+        continue;
+      }
+      if (role === 'anchor') {
+        if (!step.screenshotBlob) throw new Error('A snapshot base image needs its screenshot.');
+        if (await findEntryRecord(tx, step.id) || await tx.objectStore('pendingAnchors').get(step.id)) {
+          throw new Error(`Step ${step.id} already exists.`);
+        }
+        await tx.objectStore('pendingAnchors').add({ id: step.id, projectId: sessionId, step });
+        continue;
+      }
+      const groupIndex = next.findIndex((entry) => entry.kind === 'group' && entry.anchor.id === step.groupId);
+      const group = next[groupIndex];
+      if (group?.kind === 'group') {
+        next[groupIndex] = { ...group, annotations: [...group.annotations, step] };
+      } else {
+        const pending = await tx.objectStore('pendingAnchors').get(step.groupId!);
+        if (pending?.projectId !== sessionId) throw new Error(`Snapshot ${step.groupId} is no longer available.`);
+        await tx.objectStore('pendingAnchors').delete(pending.id);
+        next.splice(insertAt, 0, { kind: 'group', anchor: pending.step as ScreenshotStep, annotations: [step] });
+        insertAt += 1;
+      }
+      structureChanged = true;
     }
-    const ordered = existing.map((step) => step.id);
-    ordered.splice(insertAt, 0, ...stored.map((step) => step.id));
-    await writeDenseOrder(tx, [...existing, ...stored], ordered);
-    await refreshProjectSummaryFromRows(tx, project, [...existing, ...stored], latestTimestamp);
+    if (structureChanged) await commitEntries(tx, project, previous, next, { timestamp: latestTimestamp });
   });
 }
 
+/** Every step of the Project's timeline, in order, screenshots included. A
+ * snapshot base image still waiting for its first annotation is not part of it. */
 export async function getSteps(sessionId: string): Promise<Step[]> {
-  return runWithDatabase(async (db) => {
-    const steps = await db.getAllFromIndex('steps', 'by-session', sessionId);
-    return steps.sort((a, b) => a.order - b.order);
-  });
+  return runProjectRead(async (tx) => entrySteps(await readEntries(tx, sessionId)));
 }
 
+async function readStep(tx: ProjectTransaction, id: string): Promise<Step | undefined> {
+  const pending = await tx.objectStore('pendingAnchors').get(id);
+  if (pending) return pending.step;
+  const record = await findEntryRecord(tx, id);
+  if (!record) return undefined;
+  return entrySteps([await readEntry(tx, record)]).find((step) => step.id === id);
+}
+
+/** One step by id, including a snapshot base image that is still pending. */
 export async function getStep(id: string): Promise<Step | undefined> {
-  return runWithDatabase((db) => db.get('steps', id));
+  return runProjectRead((tx) => readStep(tx, id));
 }
 
 export interface CaptureReplacement {
@@ -188,19 +244,37 @@ function hadPrivacyMasks(step: Step): boolean {
     || (Array.isArray(step.redactions) ? step.redactions.length > 0 : step.redactions !== undefined);
 }
 
-/** Applies a visual edit as one IndexedDB transaction. Each row is re-read in
+function replaceInEntry(entry: StepEntry, step: Step): StepEntry {
+  if (entry.kind === 'single') return { kind: 'single', step: { ...step, screenshotBlob: entry.step.screenshotBlob } as ScreenshotStep };
+  if (entry.anchor.id === step.id) {
+    return { ...entry, anchor: { ...step, screenshotBlob: entry.anchor.screenshotBlob } as ScreenshotStep };
+  }
+  return { ...entry, annotations: entry.annotations.map((annotation) => (annotation.id === step.id ? step : annotation)) };
+}
+
+/** Reads a step and the entry holding it inside a write. */
+async function loadMember(tx: ProjectWriteTransaction, id: string) {
+  const record = await findEntryRecord(tx, id);
+  if (!record) return undefined;
+  const entry = await readEntry(tx, record);
+  const step = entrySteps([entry]).find((candidate) => candidate.id === id)!;
+  return { record, entry, step };
+}
+
+/** Applies a visual edit as one IndexedDB transaction. Each step is re-read in
  * the transaction, so description autosaves and reorders cannot be lost by a
- * stale editor draft. Missing or cross-session rows abort the whole commit. */
+ * stale editor draft. Missing or cross-session steps abort the whole commit. */
 export async function updateStepsAtomically(sessionId: string, updates: StepUpdate[]): Promise<void> {
   assertMutationItems(updates, 'Step updates');
   if (updates.length === 0) return;
-  await runProjectStepsWrite(async (tx) => {
-    const project = await requireWritableProject(tx, sessionId);
+  await runProjectWrite(async (tx) => {
+    const project = await requireProject(tx, sessionId);
     for (const update of updates) {
-      const existing = await tx.objectStore('steps').get(update.id);
-      if (!existing || existing.sessionId !== sessionId) {
+      const member = await loadMember(tx, update.id);
+      if (!member || member.record.projectId !== sessionId) {
         throw new Error(`Step ${update.id} is no longer available.`);
       }
+      const existing = member.step;
       if (
         update.expectedCaptureRevision !== undefined &&
         (existing.captureRevision ?? 0) !== update.expectedCaptureRevision
@@ -221,7 +295,7 @@ export async function updateStepsAtomically(sessionId: string, updates: StepUpda
           existing.imageEditRevision ?? 0,
         );
       }
-      await tx.objectStore('steps').put(applyStepChanges(existing, update.changes));
+      await putEntryInPlace(tx, member.record, replaceInEntry(member.entry, applyStepChanges(existing, update.changes)));
     }
     await recordStepEdit(tx, project);
   });
@@ -235,18 +309,19 @@ export async function replaceStepCaptureAtomically(
   recaptureRunId: string,
 ): Promise<{ entryId: string; captureRevision: number }> {
   await assertStorableScreenshots([capture.screenshotBlob]);
-  return runProjectStepsWrite(async (tx) => {
-    const project = await requireWritableProject(tx, sessionId);
+  return runProjectWrite(async (tx) => {
+    const project = await requireProject(tx, sessionId);
+    const previous = await readEntries(tx, sessionId);
     if (target.kind === 'single') {
-      const step = await tx.objectStore('steps').get(target.stepId);
-      if (!step || step.sessionId !== sessionId) {
-        throw new StepRecaptureError('TARGET_NOT_FOUND', 'The step no longer exists.');
-      }
-      if (stepRole(step) !== 'ordinary') {
+      const index = previous.findIndex((entry) => entryHolds(entry, target.stepId));
+      const entry = previous[index];
+      if (!entry) throw new StepRecaptureError('TARGET_NOT_FOUND', 'The step no longer exists.');
+      if (entry.kind !== 'single') {
         throw new StepRecaptureError('TARGET_CHANGED', 'The step is no longer an ordinary step.');
       }
+      const { step } = entry;
       const captureRevision = (step.captureRevision ?? 0) + 1;
-      await tx.objectStore('steps').put(sanitizeStepForStorage({
+      const replaced = sanitizeStepForStorage({
         ...withoutBoxEdits(step),
         ...capture,
         redactions: [],
@@ -256,30 +331,23 @@ export async function replaceStepCaptureAtomically(
         captureRevision,
         imageEditRevision: (step.imageEditRevision ?? 0) + 1,
         lastCaptureRunId: recaptureRunId,
-      }));
-      await refreshProjectSummary(tx, project, capture.timestamp);
+      }) as ScreenshotStep;
+      const next = previous.with(index, { kind: 'single', step: replaced });
+      await commitEntries(tx, project, previous, next, { timestamp: capture.timestamp });
       return { entryId: step.id, captureRevision };
     }
 
-    const anchor = await tx.objectStore('steps').get(target.anchorId);
-    const annotation = await tx.objectStore('steps').get(target.annotationId);
-    if (!anchor || !annotation || anchor.sessionId !== sessionId || annotation.sessionId !== sessionId) {
+    const index = previous.findIndex((entry) => entryHolds(entry, target.anchorId) || entryHolds(entry, target.annotationId));
+    const entry = previous[index];
+    if (!entry || !entryHolds(entry, target.annotationId)) {
       throw new StepRecaptureError('TARGET_NOT_FOUND', 'The snapshot no longer exists.');
     }
-    if (
-      stepRole(anchor) !== 'anchor' ||
-      annotation.groupId !== anchor.id ||
-      stepRole(annotation) !== 'annotation' ||
-      !anchor.screenshotBlob
-    ) {
+    if (entry.kind !== 'group' || entry.anchor.id !== target.anchorId) {
       throw new StepRecaptureError('TARGET_CHANGED', 'The snapshot structure changed before recapture.');
     }
-    const sessionSteps = await tx.objectStore('steps').index('by-session').getAll(sessionId);
-    const annotations = sessionSteps.filter(
-      (step) => step.groupId === anchor.id && stepRole(step) === 'annotation' && getEffectiveBounds(step),
-    );
-    const [only, ...others] = annotations;
-    if (!only || others.length > 0 || only.id !== annotation.id) {
+    const { anchor } = entry;
+    const [only, ...others] = entry.annotations.filter((step) => getEffectiveBounds(step));
+    if (!only || others.length > 0 || only.id !== target.annotationId) {
       throw new StepRecaptureError(
         'UNSUPPORTED_SNAPSHOT_GROUP',
         'A snapshot with multiple annotations must be rebuilt as a whole.',
@@ -300,30 +368,23 @@ export async function replaceStepCaptureAtomically(
       captureRevision,
       imageEditRevision: (anchor.imageEditRevision ?? 0) + 1,
       lastCaptureRunId: recaptureRunId,
-    });
+    }) as ScreenshotStep;
     const replacedAnnotation = sanitizeStepForStorage({
-      ...withoutBoxEdits(annotation),
+      ...withoutBoxEdits(only),
       bounds: capture.bounds,
       devicePixelRatio: capture.devicePixelRatio,
       screenshotScale: capture.screenshotScale,
       url: capture.url,
       timestamp: capture.timestamp,
     });
-    await tx.objectStore('steps').put(replacedAnchor);
-    await tx.objectStore('steps').put(replacedAnnotation);
-    const replaced = new Map([replacedAnchor, replacedAnnotation].map((step) => [step.id, step]));
-    await refreshProjectSummaryFromRows(
-      tx,
-      project,
-      sessionSteps.map((step) => replaced.get(step.id) ?? step),
-      capture.timestamp,
-    );
+    const next = previous.with(index, { kind: 'group', anchor: replacedAnchor, annotations: [replacedAnnotation] });
+    await commitEntries(tx, project, previous, next, { timestamp: capture.timestamp });
     return { entryId: anchor.id, captureRevision };
   });
 }
 
 /** Compare-and-set description save for the editor autosave path. It only
- * conflicts when the same row's description diverged from what this editor
+ * conflicts when the same step's description diverged from what this editor
  * last observed, so the CAS guards exactly that value. Conflicts surface as StepDescriptionConflictError
  * (with the winning value) instead of last-write-wins.
  *
@@ -334,44 +395,73 @@ export async function saveStepDescription(
   description: string,
   expectedDescription: string,
 ): Promise<string> {
-  return runProjectStepsWrite(async (tx) => {
-    const existing = await tx.objectStore('steps').get(id);
-    if (!existing) throw new StepNotFoundError(id);
+  return runProjectWrite(async (tx) => {
+    const member = await loadMember(tx, id);
+    if (!member) throw new StepNotFoundError(id);
+    const existing = member.step;
     if (existing.description !== expectedDescription) {
       throw new StepDescriptionConflictError(id, expectedDescription, existing.description);
     }
-    const project = await requireWritableProject(tx, existing.sessionId);
+    const project = await requireProject(tx, member.record.projectId);
     const stored = applyStepChanges(existing, { description });
-    await tx.objectStore('steps').put(stored);
+    await putEntryInPlace(tx, member.record, replaceInEntry(member.entry, stored));
     await recordStepEdit(tx, project);
     return stored.description;
   });
 }
 
-/** Deletes one row if present. A missing row is success: deletion is
- * idempotent and re-running it cannot lose user content. */
+/** Removes one step if present. A missing step is success: deletion is
+ * idempotent and re-running it cannot lose user content.
+ *
+ * Deleting an ordinary step or a snapshot's base image removes its entry.
+ * Deleting a snapshot's last annotation puts its base image back to pending,
+ * as it was before that annotation: the recording that owns it may add
+ * another, and otherwise discards it when it ends. */
 export async function deleteStep(id: string): Promise<void> {
-  await runProjectStepsWrite(async (tx) => {
-    const existing = await tx.objectStore('steps').get(id);
-    if (!existing) return;
-    const project = await requireWritableProject(tx, existing.sessionId);
-    await tx.objectStore('steps').delete(id);
-    const remaining = await tx.objectStore('steps').index('by-session').getAll(existing.sessionId);
-    await writeDenseOrder(tx, remaining, []);
-    await refreshProjectSummaryFromRows(tx, project, remaining);
+  await runProjectWrite(async (tx) => {
+    const pending = await tx.objectStore('pendingAnchors').get(id);
+    if (pending) {
+      await tx.objectStore('pendingAnchors').delete(id);
+      return;
+    }
+    const record = await findEntryRecord(tx, id);
+    if (!record) return;
+    const project = await requireProject(tx, record.projectId);
+    const previous = await readEntries(tx, record.projectId);
+    const index = previous.findIndex((entry) => entryHolds(entry, id));
+    const entry = previous[index]!;
+    let next: StepEntry[];
+    if (entry.kind === 'single' || entry.anchor.id === id) {
+      next = previous.toSpliced(index, 1);
+    } else {
+      const annotations = entry.annotations.filter((annotation) => annotation.id !== id);
+      if (annotations.length > 0) {
+        next = previous.with(index, { ...entry, annotations });
+      } else {
+        next = previous.toSpliced(index, 1);
+        await tx.objectStore('pendingAnchors').put({ id: entry.anchor.id, projectId: record.projectId, step: entry.anchor });
+      }
+    }
+    await commitEntries(tx, project, previous, next);
   });
 }
 
-/** Deletes only one recording run and closes order gaps without disturbing
- * content from earlier runs that share the same editor session. */
+/** Deletes only one recording run's steps, without disturbing content from
+ * earlier runs that share the same Project. */
 export async function deleteStepsForRun(sessionId: string, runId: string): Promise<void> {
-  await runProjectStepsWrite(async (tx) => {
-    const project = await requireWritableProject(tx, sessionId);
-    const sessionSteps = await tx.objectStore('steps').index('by-session').getAll(sessionId);
-    const removedIds = new Set(sessionSteps.filter((step) => step.runId === runId).map((step) => step.id));
-    for (const id of removedIds) await tx.objectStore('steps').delete(id);
-    const remaining = sessionSteps.filter((step) => !removedIds.has(step.id));
-    await writeDenseOrder(tx, remaining, []);
-    await refreshProjectSummaryFromRows(tx, project, remaining);
+  await runProjectWrite(async (tx) => {
+    const project = await requireProject(tx, sessionId);
+    for (const pending of await tx.objectStore('pendingAnchors').index('by-project').getAll(sessionId)) {
+      if (pending.step.runId === runId) await tx.objectStore('pendingAnchors').delete(pending.id);
+    }
+    const previous = await readEntries(tx, sessionId);
+    const next = previous.flatMap((entry): StepEntry[] => {
+      if (entry.kind === 'single') return entry.step.runId === runId ? [] : [entry];
+      if (entry.anchor.runId === runId) return [];
+      const annotations = entry.annotations.filter((annotation) => annotation.runId !== runId);
+      if (annotations.length === entry.annotations.length) return [entry];
+      return annotations.length > 0 ? [{ ...entry, annotations }] : [];
+    });
+    await commitEntries(tx, project, previous, next);
   });
 }

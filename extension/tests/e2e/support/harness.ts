@@ -5,7 +5,7 @@ import type { Project } from '../../../lib/storage/models';
 import { firstItems, itemAt } from '../../setup/item-at';
 
 /** Browser 內的 page.evaluate 無法匯入 Node 模組，因此在此集中管理持久化契約字面值。 */
-const SCRIBE_DB = { name: 'howbeam', version: 2 } as const;
+const SCRIBE_DB = { name: 'howbeam', version: 3 } as const;
 // `as const` keeps the literal types non-widening so the typed chrome.storage.local.get overloads still apply inside evaluate bodies.
 export const RECORDING_STATE_KEY = 'howbeam:recordingState' as const;
 const ACTIVE_PROJECT_ID_KEY = 'howbeam:activeProjectId' as const;
@@ -175,20 +175,20 @@ export async function resetExtensionData(popup: Page): Promise<void> {
       request.onerror = () => reject(request.error);
       request.onblocked = () => reject(new Error('Howbeam IndexedDB reset was blocked.'));
       request.onupgradeneeded = () => {
+        // Same layout lib/storage/database.ts creates.
         const db = request.result;
-        if (!db.objectStoreNames.contains('steps')) {
-          const steps = db.createObjectStore('steps', { keyPath: 'id' });
-          steps.createIndex('by-session', 'sessionId');
-        }
-        if (!db.objectStoreNames.contains('projects')) {
-          const projects = db.createObjectStore('projects', { keyPath: 'id' });
-          projects.createIndex('by-updated-at', 'updatedAt');
-        }
+        for (const name of Array.from(db.objectStoreNames)) db.deleteObjectStore(name);
+        db.createObjectStore('projects', { keyPath: 'id' }).createIndex('by-updated-at', 'updatedAt');
+        const entries = db.createObjectStore('entries', { keyPath: 'id' });
+        entries.createIndex('by-project', 'projectId');
+        entries.createIndex('by-member', 'memberIds', { unique: true, multiEntry: true });
+        db.createObjectStore('screenshots', { keyPath: 'id' });
+        db.createObjectStore('pendingAnchors', { keyPath: 'id' }).createIndex('by-project', 'projectId');
       };
       request.onsuccess = () => {
         const db = request.result;
-        const storeNames = ['projects', 'steps'].filter((name) => db.objectStoreNames.contains(name));
-        if (storeNames.length !== 2) {
+        const storeNames = ['projects', 'entries', 'screenshots', 'pendingAnchors'];
+        if (!storeNames.every((name) => db.objectStoreNames.contains(name))) {
           db.close();
           reject(new Error(`Howbeam IndexedDB v${scribeDb.version} stores are incomplete.`));
           return;
@@ -260,7 +260,26 @@ export async function readSteps(popup: Page): Promise<StoredStep[]> {
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const db = request.result;
-        const all = db.transaction('steps', 'readonly').objectStore('steps').getAll();
+        const all = (() => {
+          // Every stored step, as the timeline flattens them, then snapshot base images still pending.
+          const tx = db.transaction(['entries', 'screenshots', 'pendingAnchors'], 'readonly');
+          const entries = tx.objectStore('entries').getAll();
+          const shots = tx.objectStore('screenshots').getAll();
+          const pending = tx.objectStore('pendingAnchors').getAll();
+          const request = { result: [] as any[], error: null as DOMException | null, onsuccess: null as null | (() => void), onerror: null as null | (() => void) };
+          tx.oncomplete = () => {
+            const blobs = new Map(shots.result.map((shot) => [shot.id, shot.blob]));
+            request.result = [
+              ...entries.result
+                .sort((first, second) => first.order - second.order)
+                .flatMap((entry) => [{ ...entry.owner, screenshotBlob: blobs.get(entry.id) }, ...entry.annotations]),
+              ...pending.result.map((anchor) => ({ ...anchor.step, order: Number.MAX_SAFE_INTEGER })),
+            ];
+            request.onsuccess?.();
+          };
+          tx.onerror = () => { request.error = tx.error; request.onerror?.(); };
+          return request;
+        })();
         all.onerror = () => reject(all.error);
         all.onsuccess = () => {
           resolve(
@@ -305,7 +324,26 @@ export async function rawScreenshotRosePixels(
       request.onerror = () => reject(request.error);
       request.onsuccess = async () => {
         const db = request.result;
-        const all = db.transaction('steps', 'readonly').objectStore('steps').getAll();
+        const all = (() => {
+          // Every stored step, as the timeline flattens them, then snapshot base images still pending.
+          const tx = db.transaction(['entries', 'screenshots', 'pendingAnchors'], 'readonly');
+          const entries = tx.objectStore('entries').getAll();
+          const shots = tx.objectStore('screenshots').getAll();
+          const pending = tx.objectStore('pendingAnchors').getAll();
+          const request = { result: [] as any[], error: null as DOMException | null, onsuccess: null as null | (() => void), onerror: null as null | (() => void) };
+          tx.oncomplete = () => {
+            const blobs = new Map(shots.result.map((shot) => [shot.id, shot.blob]));
+            request.result = [
+              ...entries.result
+                .sort((first, second) => first.order - second.order)
+                .flatMap((entry) => [{ ...entry.owner, screenshotBlob: blobs.get(entry.id) }, ...entry.annotations]),
+              ...pending.result.map((anchor) => ({ ...anchor.step, order: Number.MAX_SAFE_INTEGER })),
+            ];
+            request.onsuccess?.();
+          };
+          tx.onerror = () => { request.error = tx.error; request.onerror?.(); };
+          return request;
+        })();
         all.onerror = () => reject(all.error);
         all.onsuccess = async () => {
           const step = all.result.find((candidate) => candidate.id === id);
@@ -374,9 +412,11 @@ export async function storedScreenshotShowsMovingTarget(
       request.onsuccess = () => resolve(request.result);
     });
     const step = await new Promise<{ screenshotBlob?: Blob; screenshotScale?: number; devicePixelRatio?: number } | undefined>((resolve, reject) => {
-      const get = db.transaction('steps', 'readonly').objectStore('steps').get(id);
-      get.onerror = () => reject(get.error);
-      get.onsuccess = () => resolve(get.result);
+      const tx = db.transaction(['entries', 'screenshots'], 'readonly');
+      const entry = tx.objectStore('entries').index('by-member').get(id);
+      const shot = tx.objectStore('screenshots').get(id);
+      tx.onerror = () => reject(tx.error);
+      tx.oncomplete = () => resolve(entry.result?.id === id ? { ...entry.result.owner, screenshotBlob: shot.result?.blob } : undefined);
     });
     db.close();
     if (!step?.screenshotBlob) throw new Error(`Screenshot ${id} was not found`);
@@ -412,7 +452,26 @@ export async function readScreenshotScrollbarStats(popup: Page, stepId: string):
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const db = request.result;
-        const all = db.transaction('steps', 'readonly').objectStore('steps').getAll();
+        const all = (() => {
+          // Every stored step, as the timeline flattens them, then snapshot base images still pending.
+          const tx = db.transaction(['entries', 'screenshots', 'pendingAnchors'], 'readonly');
+          const entries = tx.objectStore('entries').getAll();
+          const shots = tx.objectStore('screenshots').getAll();
+          const pending = tx.objectStore('pendingAnchors').getAll();
+          const request = { result: [] as any[], error: null as DOMException | null, onsuccess: null as null | (() => void), onerror: null as null | (() => void) };
+          tx.oncomplete = () => {
+            const blobs = new Map(shots.result.map((shot) => [shot.id, shot.blob]));
+            request.result = [
+              ...entries.result
+                .sort((first, second) => first.order - second.order)
+                .flatMap((entry) => [{ ...entry.owner, screenshotBlob: blobs.get(entry.id) }, ...entry.annotations]),
+              ...pending.result.map((anchor) => ({ ...anchor.step, order: Number.MAX_SAFE_INTEGER })),
+            ];
+            request.onsuccess?.();
+          };
+          tx.onerror = () => { request.error = tx.error; request.onerror?.(); };
+          return request;
+        })();
         all.onerror = () => reject(all.error);
         all.onsuccess = async () => {
           try {

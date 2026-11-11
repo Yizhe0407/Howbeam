@@ -2,9 +2,9 @@ import 'fake-indexeddb/auto';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectContentConflictError, addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, moveProjectEntriesAtomically, repairEmptySnapshotAnchors, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically } from '@/lib/storage/project-structure';
 import { ProjectStructureIntegrityError, type ProjectSection, type Step } from '@/lib/storage/models';
-import { closeDatabase, refreshProjectSummary, runWithDatabase, summarizeSteps } from '@/lib/storage/database';
-import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
-import { getSteps } from '@/lib/storage/step-repository';
+import { closeDatabase } from '@/lib/storage/database';
+import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
+import { addStepsAfter, getStep, getSteps } from '@/lib/storage/step-repository';
 import { pngBlob } from '../setup/raster-fixtures';
 import { itemAt } from '../setup/item-at';
 
@@ -59,63 +59,32 @@ describe('Project entry-safe atomic structure', () => {
     expect(after.project.contentRevision).toBe(moved.project.contentRevision);
   });
 
-  it('reads a Project whose snapshot is still waiting for its first annotation, but will not mutate it', async () => {
+  it('keeps a snapshot waiting for its first annotation out of the Project', async () => {
     const { project, snapshot } = await createTrackedProject(makeMixedSteps());
     const anchorId = crypto.randomUUID();
-    await runWithDatabase(async (db) => {
-      const tx = db.transaction(['steps'], 'readwrite');
-      await tx.objectStore('steps').put(makeStep({
-        id: anchorId, sessionId: project.id, groupId: anchorId, bounds: null, order: 5,
-      }));
-      await tx.done;
-    });
+    await addStepsAfter([makeStep({ id: anchorId, sessionId: project.id, groupId: anchorId, bounds: null })], null);
 
     const during = await getProjectStructureSnapshot(project.id);
     expect(during.entryIds).toEqual(snapshot.entryIds);
-    await expect(deleteProjectEntriesAtomically(project.id, [itemAt(snapshot.entryIds, 0)], during.project.contentRevision))
-      .rejects.toBeInstanceOf(ProjectStructureIntegrityError);
+    expect(during.project).toMatchObject({
+      contentRevision: snapshot.project.contentRevision,
+      stepCount: snapshot.project.stepCount,
+      storageBytes: snapshot.project.storageBytes,
+    });
+    expect(await getStep(anchorId)).toMatchObject({ id: anchorId, groupId: anchorId });
+    // The rest of the Project stays editable meanwhile.
+    await deleteProjectEntriesAtomically(project.id, [itemAt(snapshot.entryIds, 0)], during.project.contentRevision);
   });
 
-  it('removes only the snapshot anchors that never got an annotation', async () => {
+  it('discards only the snapshot base images that never got an annotation', async () => {
     const { project, snapshot } = await createTrackedProject(makeMixedSteps());
     const orphanId = crypto.randomUUID();
-    await runWithDatabase(async (db) => {
-      const tx = db.transaction(['steps'], 'readwrite');
-      await tx.objectStore('steps').put(makeStep({
-        id: orphanId, sessionId: project.id, groupId: orphanId, bounds: null, order: 5,
-      }));
-      await tx.done;
-    });
+    await addStepsAfter([makeStep({ id: orphanId, sessionId: project.id, groupId: orphanId, bounds: null })], null);
 
     expect(await repairEmptySnapshotAnchors(project.id)).toBe(1);
     expect(await repairEmptySnapshotAnchors(project.id)).toBe(0);
-    expect((await getSteps(project.id)).some((step) => step.id === orphanId)).toBe(false);
+    expect(await getStep(orphanId)).toBeUndefined();
     expect((await getProjectStructureSnapshot(project.id)).entryIds).toEqual(snapshot.entryIds);
-  });
-
-  it('moves the Project summary and revision with the anchors it removes', async () => {
-    const { project } = await createTrackedProject(makeMixedSteps());
-    const orphanId = crypto.randomUUID();
-    // Stored the way a recording stores it: the row and the summary move together.
-    await runWithDatabase(async (db) => {
-      const tx = db.transaction(['projects', 'steps'], 'readwrite');
-      await tx.objectStore('steps').put(makeStep({
-        id: orphanId, sessionId: project.id, groupId: orphanId, bounds: null, order: 5,
-      }));
-      const stored = await tx.objectStore('projects').get(project.id);
-      await refreshProjectSummary(tx, stored!);
-      await tx.done;
-    });
-    const before = (await getProject(project.id))!;
-
-    expect(await repairEmptySnapshotAnchors(project.id)).toBe(1);
-
-    const after = (await getProject(project.id))!;
-    const expected = summarizeSteps(await getSteps(project.id));
-    expect(after.storageBytes).toBe(expected.storageBytes);
-    expect(after.storageBytes).toBeLessThan(before.storageBytes);
-    expect(after.stepCount).toBe(expected.stepCount);
-    expect(after.contentRevision).toBeGreaterThan(before.contentRevision);
   });
 
   it('treats snapshot groups as indivisible and rejects annotation ids', async () => {

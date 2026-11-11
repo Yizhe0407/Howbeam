@@ -2,7 +2,9 @@ import 'fake-indexeddb/auto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { addStepsAfter, deleteStep, deleteStepsForRun, getSteps, replaceStepCaptureAtomically, saveStepDescription, StepNotFoundError, updateStepsAtomically } from '@/lib/storage/step-repository';
 import { buildStepEntries, getEffectiveBounds, getOrderedAnnotations, STEP_STORAGE_LIMITS, StepStorageValidationError, type Step } from '@/lib/storage/models';
-import { closeDatabase, ProjectNotFoundError, summarizeSteps } from '@/lib/storage/database';
+import { closeDatabase, ProjectNotFoundError } from '@/lib/storage/database';
+import { summarizeEntries } from '@/lib/storage/entry-store';
+import { getProjectStructureSnapshot } from '@/lib/storage/project-structure';
 import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
 import { jpegBlob, pngBlob } from '../setup/raster-fixtures';
 import { seedSteps } from '../setup/step-fixtures';
@@ -233,7 +235,7 @@ describe('step persistence', () => {
         stepCount: project?.stepCount,
         entryCount: project?.entryCount,
         storageBytes: project?.storageBytes,
-      }).toEqual(summarizeSteps(await getSteps(sessionId)));
+      }).toEqual(summarizeEntries((await getProjectStructureSnapshot(sessionId)).entries));
     };
     const groupId = `${sessionId}-snap`;
 
@@ -490,7 +492,7 @@ describe('atomic visual edits and recapture', () => {
     expect(stored).toMatchObject({
       id: step.id,
       sessionId: step.sessionId,
-      order: 7,
+      order: 0,
       description: 'keep',
       runId: 'original-run',
       bounds: { x: 20, y: 30, width: 40, height: 50 },
