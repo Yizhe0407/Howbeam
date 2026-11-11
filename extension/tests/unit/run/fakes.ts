@@ -86,3 +86,30 @@ export function fakeActor(stored: RecordingState = makeRecordingState()) {
 export async function flush(): Promise<void> {
   for (let index = 0; index < 10; index += 1) await new Promise((resolve) => setTimeout(resolve, 0));
 }
+
+/** Lifecycle, capture and undo wired together as the background wires them. */
+export async function wiredRun(stored: RecordingState = makeRecordingState()) {
+  const { createLifecycle } = await import('@/lib/recording/run/lifecycle');
+  const { createCapture } = await import('@/lib/recording/run/capture');
+  const { createUndo } = await import('@/lib/recording/run/undo');
+  const { toRecordingState } = await import('@/lib/recording/run/state');
+  const { ports, steps } = fakePorts();
+  const { actor, saved, gate } = fakeActor(stored);
+  const undo = createUndo({ actor, ports });
+  // eslint-disable-next-line prefer-const -- capture and lifecycle need each other
+  let capture: ReturnType<typeof createCapture>;
+  const lifecycle = createLifecycle({
+    actor,
+    ports,
+    gate,
+    extensionOrigin: EXTENSION_ORIGIN,
+    captureAnchor: (...args) => capture.captureAnchor(...args),
+    discardUndo: undo.discard,
+    isRecaptureStarting: () => false,
+    resolveContinuationTab: async () => ({ ok: false, error: 'background.continuationSourceMissing' }),
+    continueAfterTabClosed: async () => 'nowhere',
+  });
+  capture = createCapture({ actor, ports, gate, lifecycle, discardUndo: undo.discard });
+  await actor.ready();
+  return { lifecycle, capture, undo, ports, steps, actor, saved, gate, state: () => toRecordingState(actor.state()) };
+}
