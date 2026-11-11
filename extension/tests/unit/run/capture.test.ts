@@ -3,7 +3,7 @@ import type { ClickCapture } from '@/lib/runtime/messages';
 import { makeRecordingState } from '../../setup/recording-state';
 import { PAGE_URL, tab, wiredRun } from './fakes';
 
-const sender = { frameId: 0, url: PAGE_URL, tab: { id: 4, windowId: 1, url: PAGE_URL } };
+const sender = { frameId: 0, url: PAGE_URL, tab: tab({ id: 4, windowId: 1 }) };
 const viewport = { width: 800, height: 600, scrollX: 0, scrollY: 0 };
 const stepsRun = makeRecordingState({
   operation: 'recording', isRecording: true, phase: 'recording', sessionId: 'project-1', tabId: 4, runId: 'run-1',
@@ -44,7 +44,7 @@ describe('a click in a steps run', () => {
 
   it('turns down clicks from another tab, another run, or a paused run', async () => {
     const run = await wiredRun(stepsRun);
-    await expect(run.capture.handleClick(click(), { ...sender, tab: { ...sender.tab, id: 5 } })).resolves.toMatchObject({ ok: false, error: 'untrusted-sender' });
+    await expect(run.capture.handleClick(click(), { ...sender, tab: tab({ id: 5 }) })).resolves.toMatchObject({ ok: false, error: 'untrusted-sender' });
     await expect(run.capture.handleClick(click({ runId: 'run-0' }), sender)).resolves.toMatchObject({ ok: false, error: 'not-recording' });
     await run.lifecycle.pause('run-1');
     await expect(run.capture.handleClick(click(), sender)).resolves.toMatchObject({ ok: false, error: 'wrong-phase' });
