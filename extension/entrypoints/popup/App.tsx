@@ -12,9 +12,11 @@ import { ensureSelectedProject } from '@/lib/project/project-actions';
 import { reportError } from '@/components/shared/report-error';
 import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { copyText } from '@/lib/shared/i18n/copy';
 
 function App() {
   const { recording, isRecording, sessionId, error, recoverableError, dataError } = useRecordingSession();
+  const stateErrorCopy = recoverableError?.copy ?? error;
   const [openingEditor, setOpeningEditor] = useState(false);
   const [editorOpenError, setEditorOpenError] = useState<string | null>(null);
   // The 「錄到哪裡」 selection (null = 新專案).
@@ -58,7 +60,7 @@ function App() {
         sessionId: targetSessionId ?? undefined,
       }, t().popup.editorServiceUnavailable);
       if (!result.ok) {
-        setEditorOpenError(result.error);
+        setEditorOpenError(copyText(result.error));
         return;
       }
       window.close();
@@ -97,10 +99,12 @@ function App() {
         </div>
       </div>
 
-      {(editorOpenError || recoverableError?.message || error || dataError) && !isRecording && (
+      {(editorOpenError || stateErrorCopy || dataError) && !isRecording && (
         <Alert variant="destructive">
           <AlertCircle />
-          <AlertDescription>{editorOpenError ?? recoverableError?.message ?? error ?? dataError}</AlertDescription>
+          <AlertDescription>
+            {editorOpenError ?? (stateErrorCopy ? copyText(stateErrorCopy) : dataError)}
+          </AlertDescription>
         </Alert>
       )}
 

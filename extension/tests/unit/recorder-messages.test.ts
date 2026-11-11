@@ -7,7 +7,6 @@ import { assertCaptureNotCancelled, releaseCapture } from '@/lib/recording/backg
 import { StaleCaptureError } from '@/lib/recording/background-queues';
 import type { RunEnding } from '@/lib/recording/background/run-ending';
 import type { RecordingState } from '@/lib/storage/recording-state';
-import { t } from '@/lib/shared/i18n';
 import { makeRecordingState } from '../setup/recording-state';
 
 /**
@@ -166,9 +165,9 @@ describe('SNAPSHOT_RECORDER_FAILED', () => {
 
     expect(stopRunWithError).toHaveBeenCalledWith(
       RUN_ID,
-      t().background.shieldInterrupted,
+      'background.shieldInterrupted',
       control.controlVersion,
-      { code: 'SNAPSHOT_SHIELD_FAILED', message: t().background.shieldInterrupted },
+      { code: 'SNAPSHOT_SHIELD_FAILED', copy: 'background.shieldInterrupted' },
     );
   });
 

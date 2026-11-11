@@ -43,7 +43,7 @@ const SHIELD_CAPTURE_TIMEOUT_MS = 30_000;
  * recording state) or busy with the previous annotation. */
 const MAX_QUEUED_POINTS = 16;
 function shieldChannelFailure(): RecordingControlResult {
-  return { ok: false, error: t().runtime.recordingChannelLost };
+  return { ok: false, error: 'runtime.recordingChannelLost' };
 }
 
 localizeDocument(t().page.snapshotShield);

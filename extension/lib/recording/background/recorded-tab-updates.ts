@@ -4,7 +4,6 @@ import { getRecordingTabUpdateAction } from '../recording-guards';
 import { describeBrowserError, isErrorPageError, isMissingTabError } from '../../runtime/browser-errors';
 import { getRecordingState } from '../../storage/storage';
 import type { RecordingState, RecoverableRecordingError } from '../../storage/recording-state';
-import { t } from '@/lib/shared/i18n';
 import {
   clearRecordingWait,
   isRecordingWaitError,
@@ -19,6 +18,7 @@ import type { RecorderRuntime } from './recorder-runtime';
 import type { RunState } from './run-state';
 import type { FollowMode } from './follow-mode';
 import type { RecaptureFlow } from './recapture-flow';
+import type { CopyKey } from '../../shared/i18n/copy';
 
 export interface RecordedTabUpdateDependencies {
   control: ControlPlane;
@@ -28,7 +28,7 @@ export interface RecordedTabUpdateDependencies {
   recaptureFlow: RecaptureFlow;
   stopRunWithError(
     runId: string,
-    error: string,
+    error: CopyKey,
     expectedControlVersion: number,
     recoverableError?: RecoverableRecordingError,
   ): Promise<void>;
@@ -151,7 +151,7 @@ export function createRecordedTabUpdates(deps: RecordedTabUpdateDependencies) {
       if (waitReason) {
         await setRunError(
           runId,
-          waitReason === 'site-access' ? recordingWaitError(waitReason).message : t().background.snapshotUnavailableHere,
+          waitReason === 'site-access' ? recordingWaitError(waitReason).copy : 'background.snapshotUnavailableHere',
         );
         return;
       }
@@ -160,7 +160,7 @@ export function createRecordedTabUpdates(deps: RecordedTabUpdateDependencies) {
         '[howbeam] failed to restore snapshot preparation toolbar after navigation:',
       );
       if (restored === 'failed' || restored === 'error-page') {
-        await setRunError(runId, t().background.controlsUnavailableHere);
+        await setRunError(runId, 'background.controlsUnavailableHere');
       }
       return;
     }
@@ -169,7 +169,7 @@ export function createRecordedTabUpdates(deps: RecordedTabUpdateDependencies) {
     // A snapshot's coordinates belong to one immutable document: fail closed as
     // soon as it navigates, never re-inject just because a loading page completes.
     if (updateAction === 'stop-snapshot') {
-      await stopRunWithError(runId, t().background.stoppedSnapshotPageChanged, expectedControlVersion);
+      await stopRunWithError(runId, 'background.stoppedSnapshotPageChanged', expectedControlVersion);
       return;
     }
     if (updateAction !== 'reinject') return;
@@ -193,7 +193,7 @@ export function createRecordedTabUpdates(deps: RecordedTabUpdateDependencies) {
     } else if (reinjected === 'failed') {
       await stopRunWithError(
         runId,
-        t().background.stoppedRecorderUnavailable,
+        'background.stoppedRecorderUnavailable',
         expectedControlVersion,
       );
     }

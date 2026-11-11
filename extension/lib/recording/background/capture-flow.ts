@@ -17,9 +17,8 @@ import {
   markCaptureCommitting,
   releaseCapture,
 } from './capture-registry';
-import { t } from '@/lib/shared/i18n';
 import { describeBrowserError, isMissingTabError } from '../../runtime/browser-errors';
-import { UserFacingError, userFacingErrorMessage } from '../../runtime/user-facing-errors';
+import { UserFacingError, userFacingErrorCopy } from '../../runtime/user-facing-errors';
 import { getRecordingState } from '../../storage/storage';
 import type {
   ClickCapture,
@@ -31,12 +30,13 @@ import type { RecordingState, RecoverableRecordingError } from '../../storage/re
 import type { ControlPlane, SnapshotCaptureContext } from './control-plane';
 import type { RecorderRuntime } from './recorder-runtime';
 import type { RunState } from './run-state';
+import type { CopyKey } from '../../shared/i18n/copy';
 
 /** 標示 anchor viewport 不符，讓整個快照流程失效。 */
 class SnapshotViewportChangedError extends Error {}
 /** 結束 anchor 已無法接受標註的快照流程。 */
 export function snapshotAnchorMissingError(): RecoverableRecordingError {
-  return { code: 'SNAPSHOT_ANCHOR_MISSING', message: t().background.snapshotAnchorLost };
+  return { code: 'SNAPSHOT_ANCHOR_MISSING', copy: 'background.snapshotAnchorLost' };
 }
 
 /** 標示 anchor 圖片遺失，讓流程結束而非持續重試。 */
@@ -48,7 +48,7 @@ export interface CaptureFlowDependencies {
   runState: RunState;
   stopRunWithError(
     runId: string,
-    error: string,
+    error: CopyKey,
     expectedControlVersion: number,
     recoverableError?: RecoverableRecordingError,
   ): Promise<void>;
@@ -87,8 +87,8 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
     });
     if (failure === 'stale-run') throw new StaleCaptureError('Recording changed before the screenshot could be taken.');
     // These two surface to the user through setRunError, so they are localized.
-    if (failure === 'inactive-tab') throw new UserFacingError(t().background.stepSkippedInactiveTab);
-    if (failure === 'changed-url') throw new UserFacingError(t().background.stepSkippedPageChanged);
+    if (failure === 'inactive-tab') throw new UserFacingError('background.stepSkippedInactiveTab');
+    if (failure === 'changed-url') throw new UserFacingError('background.stepSkippedPageChanged');
   }
 
   async function persistRecordingSteps(state: RecordingState, steps: NewStep[]): Promise<void> {
@@ -294,7 +294,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
     }
     // This throw message surfaces to the user through setRunError, so it is localized.
     if (anchor.url !== message.url) {
-      throw new UserFacingError(t().background.annotationSkippedPageChanged);
+      throw new UserFacingError('background.annotationSkippedPageChanged');
     }
     if (expectedControlVersion !== control.controlVersion) {
       throw new StaleCaptureError('Recording control changed while saving the annotation.');
@@ -413,7 +413,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
           console.error('[howbeam] snapshot anchor is gone; settling the run:', err.message);
           await stopRunWithError(
             message.runId,
-            snapshotAnchorMissingError().message,
+            snapshotAnchorMissingError().copy,
             expectedControlVersion,
             snapshotAnchorMissingError(),
           );
@@ -439,7 +439,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
           );
           // The toolbar shows state.error verbatim: localized copy only, never
           // the raw browser diagnostic or its "Error: " rendering.
-          await setRunError(message.runId, userFacingErrorMessage(err, t().background.captureFailed));
+          await setRunError(message.runId, userFacingErrorCopy(err, 'background.captureFailed'));
           reported = true;
         }
       } catch (recoveryError) {

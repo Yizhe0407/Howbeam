@@ -30,7 +30,8 @@ import type { ToolbarTheme } from './snapshot-shield-protocol';
 import { useToolbarPosition } from './use-toolbar-position';
 import { useToolbarCollapsed } from './use-toolbar-collapsed';
 import { useToolbarUndo } from './use-toolbar-undo';
-import { isRecordingControlResult, requireRuntimeMessageResult } from '@/lib/runtime/runtime-message-result';
+import { isRecordingControlResult } from '@/lib/runtime/runtime-message-result';
+import { copyText, type CopyKey } from '@/lib/shared/i18n/copy';
 import { t, useActiveLocale } from '@/lib/shared/i18n';
 
 type ToolbarAction = RecordingControlMessage['type'];
@@ -48,7 +49,7 @@ export interface RecordingToolbarState {
   runItemCount: number;
   /** Existing Project the run appends to; null when recording into a new one. */
   projectTitle?: string | null;
-  error: string | null;
+  error: CopyKey | null;
 }
 
 function RunStatus({ paused, count, small }: { paused: boolean; count: number; small?: boolean }) {
@@ -139,28 +140,23 @@ export default function RecordingToolbar({
   }, [regionCaptureActive]);
 
   async function run(action: ToolbarAction, token?: string): Promise<RecordingControlResult> {
-    if (pendingRef.current) return { ok: false, error: t().toolbar.busy };
+    if (pendingRef.current) return { ok: false, error: 'toolbar.busy' };
     pendingRef.current = action;
     setPending(action);
     setMessage(null);
     try {
-      const result = requireRuntimeMessageResult<RecordingControlResult>(
-        await onCommand(action, token),
-        isRecordingControlResult,
-        t().runtime.recordingChannelLost,
-      );
-      if (!result.ok) setMessage(result.error);
+      const reply = await onCommand(action, token);
+      const result: RecordingControlResult = isRecordingControlResult(reply)
+        ? reply
+        : { ok: false, error: 'runtime.recordingChannelLost' };
+      if (!result.ok) setMessage(copyText(result.error));
       return result;
     } catch (error) {
       // Inline copy of components/shared reportError — the toolbar lives in
       // lib/, which must not depend upward on components/.
       console.error('[howbeam] recording toolbar command failed', error);
-      const result = {
-        ok: false,
-        error: error instanceof Error && error.message ? error.message : t().toolbar.actionFailed,
-      } as const;
-      setMessage(result.error);
-      return result;
+      setMessage(t().toolbar.actionFailed);
+      return { ok: false, error: 'toolbar.actionFailed' };
     } finally {
       pendingRef.current = null;
       setPending(null);
@@ -290,7 +286,7 @@ export default function RecordingToolbar({
         >
           {(message || (state.error && !invalidated) || notice) && (
             <div className="ft-message" data-kind="error" role="alert">
-              {message ?? ((state.error && !invalidated) ? state.error : notice)}
+              {message ?? ((state.error && !invalidated) ? copyText(state.error) : notice)}
             </div>
           )}
           {!message && !state.error && !notice && showSuccess && (

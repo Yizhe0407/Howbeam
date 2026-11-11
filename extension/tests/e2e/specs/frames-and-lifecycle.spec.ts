@@ -301,7 +301,7 @@ test.describe('frames and recording lifecycle', () => {
     await appPage.goto(`${FIXTURE_URL}navigated.html`);
 
     await expect.poll(async () => (await readRecordingState(popupPage)).isRecording).toBe(false);
-    expect((await readRecordingState(popupPage)).error).toBe('錄製已停止，因為快照頁面已變更。');
+    expect((await readRecordingState(popupPage)).error).toBe('background.stoppedSnapshotPageChanged');
     await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(0);
   });
 

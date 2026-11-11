@@ -27,6 +27,7 @@ import {
 import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
 import { isBoundedString, isRecord } from '../shared/validation';
 import { t } from '@/lib/shared/i18n';
+import { isCopyKey, type CopyKey } from '@/lib/shared/i18n/copy';
 
 export type RuntimeMessageResultGuard<T> = (value: unknown) => value is T;
 
@@ -47,9 +48,6 @@ function isErrorMessage(value: unknown): value is string {
   return isBoundedString(value, RUNTIME_ERROR_LIMIT);
 }
 
-function isOptionalErrorMessage(value: unknown): value is string | undefined {
-  return value === undefined || isErrorMessage(value);
-}
 
 function isSafeNonNegativeInteger(value: unknown, maximum = Number.MAX_SAFE_INTEGER): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0 && (value as number) <= maximum;
@@ -72,8 +70,8 @@ function isSourcePermissionPreflightSuccess(
 }
 
 /** The shared `{ ok: false, error }` failure envelope, with no extra keys. */
-function isFailureResult(value: Record<string, unknown>): value is { ok: false; error: string } {
-  return value.ok === false && hasOnlyKeys(value, ['ok', 'error']) && isErrorMessage(value.error);
+function isFailureResult(value: Record<string, unknown>): value is { ok: false; error: CopyKey } {
+  return value.ok === false && hasOnlyKeys(value, ['ok', 'error']) && isCopyKey(value.error);
 }
 
 export function isStartRecordingResult(value: unknown): value is StartRecordingResult {
@@ -84,7 +82,7 @@ export function isStartRecordingResult(value: unknown): value is StartRecordingR
   return (
     value.ok === false &&
     hasOnlyKeys(value, ['ok', 'error', 'code']) &&
-    isErrorMessage(value.error) &&
+    isCopyKey(value.error) &&
     (value.code === undefined || isOneOf(value.code, START_RECORDING_ERROR_CODES))
   );
 }
@@ -147,7 +145,7 @@ function isSourcePermissionPreflightResult(
     value.ok === false &&
     hasOnlyKeys(value, ['ok', 'code', 'message']) &&
     isOneOf(value.code, codes) &&
-    isErrorMessage(value.message)
+    isCopyKey(value.message)
   );
 }
 
@@ -177,7 +175,7 @@ export function isStartStepRecaptureResult(value: unknown): value is StartStepRe
     value.ok === false &&
     hasOnlyKeys(value, ['ok', 'code', 'error']) &&
     isOneOf(value.code, RECAPTURE_START_ERROR_CODES) &&
-    isErrorMessage(value.error)
+    isCopyKey(value.error)
   );
 }
 
@@ -214,7 +212,7 @@ export function isStepRecaptureTargetResult(value: unknown): value is StepRecapt
     value.ok === false &&
     hasOnlyKeys(value, ['ok', 'status', 'error']) &&
     isOneOf(value.status, ['rejected', 'cancelled', 'failed'] as const) &&
-    isOptionalErrorMessage(value.error)
+    (value.error === undefined || isCopyKey(value.error))
   );
 }
 

@@ -238,7 +238,7 @@ describe('follow-the-active-tab recording (steps mode)', () => {
     expect(storedState.tabId).toBe(4);
     expect(storedState.isRecording).toBe(true);
     expect(storedState.recoverableError?.code).toBe('RECORDING_WAITING_FOLLOW_FAILED');
-    expect(storedState.error).toBe(storedState.recoverableError?.message);
+    expect(storedState.error).toBe(storedState.recoverableError?.copy);
     // The previous tab's recorder was never stopped and stays the live one.
     expect(mocks.tabsSendMessage).not.toHaveBeenCalled();
   });

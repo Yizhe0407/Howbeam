@@ -276,7 +276,7 @@ describe('continuation from a source page that no longer loads', () => {
     expect(result).toEqual({
       ok: false,
       code: 'SOURCE_PAGE_UNREACHABLE',
-      error: '無法載入原本的頁面，未開始錄製。請確認網路連線，或改在其他頁面接續錄製。',
+      error: 'background.continuationSourceUnreachable',
     });
     expect(mocks.tabsRemove).toHaveBeenCalledWith(12);
     expect(mocks.tabsUpdate).not.toHaveBeenCalled();

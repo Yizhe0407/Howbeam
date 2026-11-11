@@ -1,13 +1,11 @@
 import type { RecoverableRecordingError, RecordingState } from '../storage/recording-state';
-import { t } from '@/lib/shared/i18n';
 
-/** Built on demand so the message is in the locale active when it is raised. */
 export function recordedTabClosedError(): RecoverableRecordingError {
-  return { code: 'RECORDED_TAB_CLOSED', message: t().runtime.recordingTabClosed };
+  return { code: 'RECORDED_TAB_CLOSED', copy: 'runtime.recordingTabClosed' };
 }
 
 export function editorOpenFailedError(): RecoverableRecordingError {
-  return { code: 'EDITOR_OPEN_FAILED', message: t().runtime.editorOpenAfterRecordingFailed };
+  return { code: 'EDITOR_OPEN_FAILED', copy: 'runtime.editorOpenAfterRecordingFailed' };
 }
 
 export function needsEditorRecovery(error: RecoverableRecordingError | null): boolean {
@@ -19,7 +17,7 @@ export function markEditorOpenFailed(state: RecordingState): RecordingState {
   return {
     ...state,
     phase: 'error',
-    error: 'Recording was saved but the editor could not be opened.',
+    error: 'runtime.editorOpenAfterRecordingFailed',
     recoverableError: editorOpenFailedError(),
   };
 }

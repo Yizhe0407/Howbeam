@@ -31,9 +31,9 @@ describe('background message contracts', () => {
 
 describe('sendToBackground', () => {
   it('returns a reply that matches the message contract', async () => {
-    runtime.sendMessage.mockResolvedValueOnce({ ok: false, code: 'SOURCE_PAGE_UNREACHABLE', error: '來源頁無法載入。' });
+    runtime.sendMessage.mockResolvedValueOnce({ ok: false, code: 'SOURCE_PAGE_UNREACHABLE', error: 'background.continuationSourceUnreachable' });
     await expect(sendToBackground({ type: 'START_RECORDING', sessionId: 'p', mode: 'steps' }))
-      .resolves.toEqual({ ok: false, code: 'SOURCE_PAGE_UNREACHABLE', error: '來源頁無法載入。' });
+      .resolves.toEqual({ ok: false, code: 'SOURCE_PAGE_UNREACHABLE', error: 'background.continuationSourceUnreachable' });
   });
 
   it('throws the caller\'s copy for a missing or malformed reply', async () => {

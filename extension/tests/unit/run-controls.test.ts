@@ -7,7 +7,6 @@ import type { RecordingControlMessage, RecordingControlResult } from '@/lib/runt
 import type { RuntimeMessageSenderLike } from '@/lib/runtime/background-message-validation';
 import type { Step } from '@/lib/storage/models';
 import type { RecordingState } from '@/lib/storage/recording-state';
-import { t } from '@/lib/shared/i18n';
 import { makeRecordingState } from '../setup/recording-state';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 import { itemAt } from '../setup/item-at';
@@ -175,9 +174,9 @@ describe('sender trust', () => {
     silenceIntentionalErrorLogs();
 
     await expect(harness.send('PAUSE_RECORDING', {}, otherTab))
-      .resolves.toEqual({ ok: false, error: t().background.actionUnavailable });
+      .resolves.toEqual({ ok: false, error: 'background.actionUnavailable' });
     await expect(harness.send('PAUSE_RECORDING', {}, subFrame))
-      .resolves.toEqual({ ok: false, error: t().background.actionUnavailable });
+      .resolves.toEqual({ ok: false, error: 'background.actionUnavailable' });
     expect(harness.getState().phase).toBe('recording');
 
     await expect(harness.send('PAUSE_RECORDING', {}, toolbar)).resolves.toEqual({ ok: true });
@@ -203,10 +202,10 @@ describe('pause and resume', () => {
 
   it('has no pause in a snapshot run, nor for another run', async () => {
     harness.setState(snapshotRun());
-    await expect(harness.send('PAUSE_RECORDING')).resolves.toEqual({ ok: false, error: t().background.cannotPause });
+    await expect(harness.send('PAUSE_RECORDING')).resolves.toEqual({ ok: false, error: 'background.cannotPause' });
 
     harness.setState(liveRun({ runId: 'run-2' }));
-    await expect(harness.send('PAUSE_RECORDING')).resolves.toEqual({ ok: false, error: t().background.cannotPause });
+    await expect(harness.send('PAUSE_RECORDING')).resolves.toEqual({ ok: false, error: 'background.cannotPause' });
     expect(harness.getState().phase).toBe('recording');
   });
 
@@ -258,7 +257,7 @@ describe('undo and restore', () => {
     harness.setState(liveRun({ itemCount: 0 }));
 
     await expect(harness.send('UNDO_LAST_CAPTURE'))
-      .resolves.toEqual({ ok: false, error: t().background.nothingToUndo });
+      .resolves.toEqual({ ok: false, error: 'background.nothingToUndo' });
     expect(mocks.deleteStep).not.toHaveBeenCalled();
   });
 
@@ -269,7 +268,7 @@ describe('undo and restore', () => {
     });
 
     await expect(harness.send('UNDO_LAST_CAPTURE'))
-      .resolves.toEqual({ ok: false, error: t().background.undoStateChanged });
+      .resolves.toEqual({ ok: false, error: 'background.undoStateChanged' });
 
     expect(mocks.storeStep).toHaveBeenCalledWith(expect.objectContaining({ id: 'last' }));
     expect(mocks.clearPendingUndoRecord).toHaveBeenCalled();
@@ -286,7 +285,7 @@ describe('undo and restore', () => {
     expect(harness.getState().itemCount).toBe(2);
 
     await expect(harness.send('RESTORE_LAST_CAPTURE', { undoToken }))
-      .resolves.toEqual({ ok: false, error: t().background.cannotRestore });
+      .resolves.toEqual({ ok: false, error: 'background.cannotRestore' });
     expect(mocks.storeStep).toHaveBeenCalledTimes(1);
   });
 
@@ -296,7 +295,7 @@ describe('undo and restore', () => {
     harness.setState({ ...harness.getState(), itemCount: 2 });
 
     await expect(harness.send('RESTORE_LAST_CAPTURE', { undoToken: undone.ok ? undone.undoToken : undefined }))
-      .resolves.toEqual({ ok: false, error: t().background.cannotRestore });
+      .resolves.toEqual({ ok: false, error: 'background.cannotRestore' });
     expect(mocks.storeStep).not.toHaveBeenCalled();
   });
 
@@ -305,7 +304,7 @@ describe('undo and restore', () => {
     await harness.send('UNDO_LAST_CAPTURE');
 
     await expect(harness.send('RESTORE_LAST_CAPTURE', { undoToken: 'forged' }))
-      .resolves.toEqual({ ok: false, error: t().background.cannotRestore });
+      .resolves.toEqual({ ok: false, error: 'background.cannotRestore' });
   });
 });
 
@@ -341,7 +340,7 @@ describe('finish', () => {
   it('answers a second finish while the first is still in flight', async () => {
     harness.setState(liveRun({ phase: 'finishing' }));
 
-    await expect(harness.send('FINISH_RECORDING')).resolves.toEqual({ ok: false, error: t().background.finishing });
+    await expect(harness.send('FINISH_RECORDING')).resolves.toEqual({ ok: false, error: 'background.finishing' });
     expect(harness.openEditor).not.toHaveBeenCalled();
   });
 });
@@ -363,7 +362,7 @@ describe('discard', () => {
     mocks.deleteStepsForRun.mockRejectedValue(new Error('quota'));
 
     await expect(harness.send('DISCARD_CURRENT_RECORDING'))
-      .resolves.toEqual({ ok: false, error: t().background.discardFailed });
+      .resolves.toEqual({ ok: false, error: 'background.discardFailed' });
 
     expect(harness.getState()).toMatchObject({
       isRecording: true,
@@ -376,7 +375,7 @@ describe('discard', () => {
     harness.setState(liveRun({ phase: 'starting' }));
 
     await expect(harness.send('DISCARD_CURRENT_RECORDING'))
-      .resolves.toEqual({ ok: false, error: t().background.cannotDiscard });
+      .resolves.toEqual({ ok: false, error: 'background.cannotDiscard' });
     expect(mocks.deleteStepsForRun).not.toHaveBeenCalled();
   });
 });
@@ -416,7 +415,7 @@ describe('snapshot steps', () => {
     harness.createAndActivateSnapshotAnchor.mockRejectedValue(new Error('capture failed'));
 
     await expect(harness.send('CREATE_NEXT_SNAPSHOT'))
-      .resolves.toEqual({ ok: false, error: t().background.createSnapshotFailed });
+      .resolves.toEqual({ ok: false, error: 'background.createSnapshotFailed' });
 
     expect(harness.getState()).toMatchObject({
       phase: 'preparing-next',
@@ -431,7 +430,7 @@ describe('snapshot steps', () => {
     harness.createAndActivateSnapshotAnchor.mockRejectedValue(new Error('capture failed'));
 
     await expect(harness.send('REBUILD_INVALIDATED_SNAPSHOT'))
-      .resolves.toEqual({ ok: false, error: t().background.rebuildSnapshotFailed });
+      .resolves.toEqual({ ok: false, error: 'background.rebuildSnapshotFailed' });
 
     expect(harness.getState()).toMatchObject({
       phase: 'invalidated',
@@ -456,7 +455,7 @@ describe('mode switches', () => {
     harness.injectRecorder.mockRejectedValueOnce(new Error('Cannot access contents of the page'));
 
     await expect(harness.send('SWITCH_TO_SNAPSHOT_MODE'))
-      .resolves.toEqual({ ok: false, error: t().background.switchToSnapshotFailed });
+      .resolves.toEqual({ ok: false, error: 'background.switchToSnapshotFailed' });
 
     expect(harness.getState()).toMatchObject({ mode: 'steps', phase: 'paused', itemCount: 2 });
     expect(harness.control.acceptingClicks).toBe(false);
@@ -481,7 +480,7 @@ describe('mode switches', () => {
     harness.injectRecorder.mockRejectedValueOnce(new Error('Cannot access contents of the page'));
 
     await expect(harness.send('SWITCH_TO_STEPS_MODE'))
-      .resolves.toEqual({ ok: false, error: t().background.switchToStepsFailed });
+      .resolves.toEqual({ ok: false, error: 'background.switchToStepsFailed' });
 
     expect(harness.getState()).toMatchObject({
       mode: 'snapshot',

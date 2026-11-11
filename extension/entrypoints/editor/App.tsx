@@ -47,6 +47,7 @@ import type {
   FocusStepRecaptureSourceResult,
 } from '@/lib/runtime/messages';
 import { reportError } from '@/components/shared/report-error';
+import { copyText } from '@/lib/shared/i18n/copy';
 
 async function showRecordedTab(tabId: number): Promise<void> {
   try {
@@ -177,7 +178,7 @@ function EditorApp() {
     // The replaced image reaches the screen through the change broadcast like any other write.
     setSelectedEntryId(result.entryId);
     setZoomOpen(false);
-    setOperationError(result.status === 'failed' ? result.message ?? t().editor.recaptureFailed : null);
+    setOperationError(result.status === 'failed' ? (result.copy ? copyText(result.copy) : t().editor.recaptureFailed) : null);
     if (result.status === 'replaced') {
       toast.success(t().editor.recaptureReplaced);
     } else if (result.status === 'cancelled') {
@@ -283,7 +284,7 @@ function EditorApp() {
     if (!runId) return;
     try {
       const result = await send(runId);
-      if (!result.ok) setOperationError(result.error ?? fallback);
+      if (!result.ok) setOperationError(copyText(result.error));
     } catch (error) {
       setOperationError(reportError(label, error, fallback));
     }
@@ -442,7 +443,7 @@ function EditorApp() {
         <div className="border-b-2 border-border bg-card px-3 py-3 sm:px-7">
           <Alert variant="destructive">
             <AlertCircle />
-            <AlertDescription>{error ?? dataError ?? operationError}</AlertDescription>
+            <AlertDescription>{error ? copyText(error) : dataError ?? operationError}</AlertDescription>
           </Alert>
         </div>
       )}

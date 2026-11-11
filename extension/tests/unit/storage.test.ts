@@ -180,19 +180,30 @@ describe('recording state normalization', () => {
     expect(normalized.snapshotDevicePixelRatio).toBeNull();
   });
 
-  it('bounds durable recapture result diagnostics and timestamps', () => {
-    const invalid = normalizeRecordingState({
-      recaptureResult: {
-        runId: 'run-1',
-        status: 'failed',
-        sessionId: 'session-1',
-        entryId: 'step-1',
-        completedAt: -1,
-        message: 'x'.repeat(10_001),
-      },
-    });
+  it('bounds durable recapture result timestamps and drops copy that does not exist', () => {
+    const result = {
+      runId: 'run-1',
+      status: 'failed',
+      sessionId: 'session-1',
+      entryId: 'step-1',
+      completedAt: 1,
+    } as const;
 
-    expect(invalid.recaptureResult).toBeNull();
+    expect(normalizeRecordingState({ recaptureResult: { ...result, completedAt: -1 } }).recaptureResult).toBeNull();
+    expect(normalizeRecordingState({
+      recaptureResult: { ...result, copy: '來源頁無法載入' as never },
+    }).recaptureResult).toBeNull();
+    expect(normalizeRecordingState({ recaptureResult: { ...result, copy: 'recaptureFlow.failed' } }).recaptureResult)
+      .toMatchObject({ copy: 'recaptureFlow.failed' });
+  });
+
+  it('keeps a stored error only when it names existing copy, never stored text', () => {
+    expect(normalizeRecordingState({ error: 'background.captureFailed' }).error).toBe('background.captureFailed');
+    expect(normalizeRecordingState({ error: '擷取失敗' as never }).error).toBeNull();
+    expect(normalizeRecordingState({ error: 'background.toString' as never }).error).toBeNull();
+    expect(normalizeRecordingState({
+      recoverableError: { code: 'CAPTURE_FAILED', copy: 'Error: boom' as never },
+    }).recoverableError).toBeNull();
   });
 
   it('fails closed for a persisted recording count beyond the durable project limit', () => {

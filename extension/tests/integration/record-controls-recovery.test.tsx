@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { t } from '@/lib/shared/i18n';
 import { cleanup, fireEvent, render as rtlRender, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -30,7 +31,7 @@ function recoveryState(recoverableError: RecoverableRecordingError): RecordingSt
   return makeRecordingState({
     phase: 'error',
     sessionId: 'session-1',
-    error: recoverableError.message,
+    error: recoverableError.copy,
     recoverableError,
   });
 }
@@ -57,21 +58,21 @@ describe('record controls recovery', () => {
           sessionId: 'session-1',
           runId: 'run-1',
           tabId: 4,
-          error: '無法在剛才切換到的分頁錄製',
-          recoverableError: { code: 'RECORDING_WAITING_FOLLOW_FAILED', message: '無法在剛才切換到的分頁錄製' },
+          error: 'background.waitingFollowFailed',
+          recoverableError: { code: 'RECORDING_WAITING_FOLLOW_FAILED', copy: 'background.waitingFollowFailed' },
         })}
         onOpenEditor={vi.fn()}
       />,
     );
 
-    expect(screen.getByText('無法在剛才切換到的分頁錄製')).toBeTruthy();
+    expect(screen.getByText(t().background.waitingFollowFailed)).toBeTruthy();
   });
 
   it('offers completion through the editor after the source tab closes', () => {
     const onOpenEditor = vi.fn();
     render(
       <RecordControls
-        recording={recoveryState({ code: 'RECORDED_TAB_CLOSED', message: 'closed' })}
+        recording={recoveryState({ code: 'RECORDED_TAB_CLOSED', copy: 'runtime.recordingTabClosed' })}
         onOpenEditor={onOpenEditor}
       />,
     );
@@ -84,7 +85,7 @@ describe('record controls recovery', () => {
   it('offers a retry and stable pending state after automatic navigation fails', async () => {
     render(
       <RecordControls
-        recording={recoveryState({ code: 'EDITOR_OPEN_FAILED', message: 'failed' })}
+        recording={recoveryState({ code: 'EDITOR_OPEN_FAILED', copy: 'runtime.editorOpenAfterRecordingFailed' })}
         onOpenEditor={vi.fn()}
         openingEditor
       />,
@@ -98,7 +99,7 @@ describe('record controls recovery', () => {
   // Regression: the starting phase used to fall through to the idle form with an enabled start button, allowing a duplicate START_RECORDING.
   it('shows a dedicated disabled state while START_RECORDING is in flight', () => {
     const starting: RecordingState = {
-      ...recoveryState({ code: 'unused', message: 'unused' }),
+      ...recoveryState({ code: 'unused', copy: 'background.captureFailed' }),
       isRecording: true,
       phase: 'starting',
       runId: 'run-1',
@@ -113,7 +114,7 @@ describe('record controls recovery', () => {
 
   it('names the snapshot preparation while a snapshot run is starting', () => {
     const starting: RecordingState = {
-      ...recoveryState({ code: 'unused', message: 'unused' }),
+      ...recoveryState({ code: 'unused', copy: 'background.captureFailed' }),
       isRecording: true,
       phase: 'starting',
       mode: 'snapshot',

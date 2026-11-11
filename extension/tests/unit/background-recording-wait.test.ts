@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RecordingState } from '@/lib/storage/recording-state';
-import { zhTW } from '@/lib/shared/i18n/messages/zh-TW';
 import { makeRecordingState } from '../setup/recording-state';
 import { flushAsyncWork, importBackground } from '../setup/background-test-utils';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
@@ -80,9 +79,9 @@ describe('a steps run whose tab leaves the recordable web', () => {
     expect(storedState).toMatchObject({ isRecording: true, phase: 'recording', tabId: 4, runId: 'run-1' });
     expect(storedState.recoverableError).toEqual({
       code: 'RECORDING_WAITING_RESTRICTED_PAGE',
-      message: zhTW.background.waitingRestrictedPage,
+      copy: 'background.waitingRestrictedPage',
     });
-    expect(storedState.error).toBe(zhTW.background.waitingRestrictedPage);
+    expect(storedState.error).toBe('background.waitingRestrictedPage');
     expect(mocks.executeScript).not.toHaveBeenCalled();
 
     await recordedTabLoaded('https://example.com/next');
@@ -114,7 +113,7 @@ describe('a steps run whose tab leaves the recordable web', () => {
     expect(storedState).toMatchObject({ isRecording: true, tabId: 4 });
     expect(storedState.recoverableError).toEqual({
       code: 'RECORDING_WAITING_SITE_ACCESS',
-      message: zhTW.background.waitingSiteAccess,
+      copy: 'background.waitingSiteAccess',
     });
     expect(mocks.executeScript).not.toHaveBeenCalled();
   });
@@ -150,7 +149,7 @@ describe('a steps run whose tab leaves the recordable web', () => {
     expect(storedState).toMatchObject({ isRecording: true, tabId: 4 });
     expect(storedState.recoverableError).toEqual({
       code: 'RECORDING_WAITING_PAGE_FAILED',
-      message: zhTW.background.errorPageFailedToLoad,
+      copy: 'background.errorPageFailedToLoad',
     });
   });
 
@@ -163,19 +162,19 @@ describe('a steps run whose tab leaves the recordable web', () => {
     await recordedTabLoaded('https://example.com/next');
 
     expect(storedState).toMatchObject({ isRecording: false, phase: 'error' });
-    expect(storedState.error).toBe(zhTW.background.stoppedRecorderUnavailable);
+    expect(storedState.error).toBe('background.stoppedRecorderUnavailable');
   });
 
   it('keeps an unrelated capture error when the run resumes', async () => {
     storedState = recordingState({
-      error: 'retry capture',
-      recoverableError: { code: 'CAPTURE_FAILED', message: 'retry capture' },
+      error: 'background.captureFailed',
+      recoverableError: { code: 'CAPTURE_FAILED', copy: 'background.captureFailed' },
     });
     await importBackground();
     await flushAsyncWork();
 
     await recordedTabLoaded('https://example.com/next');
 
-    expect(storedState.recoverableError).toEqual({ code: 'CAPTURE_FAILED', message: 'retry capture' });
+    expect(storedState.recoverableError).toEqual({ code: 'CAPTURE_FAILED', copy: 'background.captureFailed' });
   });
 });

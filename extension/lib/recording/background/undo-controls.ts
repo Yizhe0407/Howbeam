@@ -4,7 +4,6 @@ import { addStepsAfter, deleteStep, getStep, getStepOutlines } from '../../stora
 import { getRecordingState } from '../../storage/storage';
 import type { HowbeamSnapshotHistoryMessage, RecordingControlMessage, RecordingControlResult } from '../../runtime/messages';
 import { UNDO_WINDOW_MS, type RecordingState } from '../../storage/recording-state';
-import { t } from '@/lib/shared/i18n';
 import { controlFailure } from './control-result';
 import type { ControlPlane } from './control-plane';
 import type { RunState } from './run-state';
@@ -38,14 +37,14 @@ export function createUndoControls(deps: { control: ControlPlane; runState: RunS
         state.runId !== message.runId ||
         (state.phase !== 'recording' && state.phase !== 'paused')
       ) {
-        return controlFailure(t().background.nothingToUndo);
+        return controlFailure('background.nothingToUndo');
       }
 
       const lastOutline = (await getStepOutlines(state.sessionId))
         .findLast((step) => step.runId === message.runId && step.bounds !== null);
       // The undo record must hold the screenshot too, to put the step back.
       const last = lastOutline && await getStep(lastOutline.id);
-      if (!last || state.itemCount === 0) return controlFailure(t().background.nothingToUndo);
+      if (!last || state.itemCount === 0) return controlFailure('background.nothingToUndo');
 
       const nextCount = Math.max(0, state.itemCount - 1);
       const undoRecord = {
@@ -73,7 +72,7 @@ export function createUndoControls(deps: { control: ControlPlane; runState: RunS
       if (!updated) {
         await addStepsAfter([last], state.insertAfterStepId);
         undoWindow.discard();
-        return controlFailure(t().background.undoStateChanged);
+        return controlFailure('background.undoStateChanged');
       }
 
       undoWindow.open(undoRecord);
@@ -102,7 +101,7 @@ export function createUndoControls(deps: { control: ControlPlane; runState: RunS
         (state.phase !== 'recording' && state.phase !== 'paused')
       ) {
         undoWindow.discard();
-        return controlFailure(t().background.cannotRestore);
+        return controlFailure('background.cannotRestore');
       }
 
       await addStepsAfter([undo.step], state.insertAfterStepId);
@@ -119,7 +118,7 @@ export function createUndoControls(deps: { control: ControlPlane; runState: RunS
       );
       if (!updated) {
         await deleteStep(undo.step.id);
-        return controlFailure(t().background.restoreStateChanged);
+        return controlFailure('background.restoreStateChanged');
       }
       undoWindow.discard();
       notifySnapshotHistory(state, message.runId, 'restore');

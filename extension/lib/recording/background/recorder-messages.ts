@@ -1,7 +1,6 @@
 import type { Browser } from 'wxt/browser';
 import { isTrustedRecorderControlSender } from '../../runtime/background-message-validation';
 import { isValidSnapshotViewportContext } from '../recording-guards';
-import { t } from '@/lib/shared/i18n';
 import { getRecordingState } from '../../storage/storage';
 import type {
   BackgroundMessage,
@@ -122,10 +121,10 @@ export function createRecorderMessages(deps: { control: ControlPlane; runState: 
     });
     if (!validated) return false;
     const { expectedControlVersion } = validated;
-    const error = t().background.shieldInterrupted;
+    const error = 'background.shieldInterrupted';
     await stopRunWithError(message.runId, error, expectedControlVersion, {
       code: 'SNAPSHOT_SHIELD_FAILED',
-      message: error,
+      copy: error,
     });
     return true;
   }

@@ -2,6 +2,8 @@ import { RECORDING_CONTROL_TYPES, type RecordingControlMessage, type RecordingCo
 import type { RecordingMode, RecordingPhase } from '../storage/recording-state';
 import { REGION_CAPTURE_MIN_SIZE, isRegionRectLargeEnough } from '../capture/region-capture';
 import { isFiniteRect } from '../shared/validation';
+import { isCopyKey, type CopyKey } from '../shared/i18n/copy';
+import { isRecordingControlResult } from '../runtime/runtime-message-result';
 
 export const SNAPSHOT_SHIELD_INIT = 'HOWBEAM_SNAPSHOT_SHIELD_INIT';
 export const SNAPSHOT_SHIELD_READY = 'HOWBEAM_SNAPSHOT_SHIELD_READY';
@@ -135,7 +137,7 @@ export interface SnapshotShieldToolbarStateMessage {
     itemCount: number;
     runItemCount: number;
     projectTitle?: string | null;
-    error: string | null;
+    error: CopyKey | null;
   };
 }
 
@@ -353,10 +355,10 @@ export function isSnapshotShieldFrameMessage(value: unknown, token: string): val
       Number.isSafeInteger(state.runItemCount) &&
       state.runItemCount >= 0 &&
       (state.projectTitle == null || (typeof state.projectTitle === 'string' && state.projectTitle.length <= 512)) &&
-      (state.error === null || typeof state.error === 'string')
+      (state.error === null || isCopyKey(state.error))
     );
   }
   if (message.type !== SNAPSHOT_SHIELD_CONTROL_RESULT) return false;
   const result = message.result;
-  return isRequestId(message.requestId) && result != null && typeof result.ok === 'boolean';
+  return isRequestId(message.requestId) && isRecordingControlResult(result);
 }

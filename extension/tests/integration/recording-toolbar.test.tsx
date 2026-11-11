@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { t } from '@/lib/shared/i18n';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -53,8 +54,8 @@ describe('recording toolbar', () => {
   it('shows a page-side notice as an alert, behind any run error', async () => {
     const { rerender } = await mount(<RecordingToolbar state={state} onCommand={vi.fn()} notice="剛才的點擊沒有記錄" />);
     expect(screen.getByRole('alert').textContent).toBe('剛才的點擊沒有記錄');
-    rerender(<RecordingToolbar state={{ ...state, error: '擷取失敗' }} onCommand={vi.fn()} notice="剛才的點擊沒有記錄" />);
-    expect(screen.getByRole('alert').textContent).toBe('擷取失敗');
+    rerender(<RecordingToolbar state={{ ...state, error: 'background.captureFailed' }} onCommand={vi.fn()} notice="剛才的點擊沒有記錄" />);
+    expect(screen.getByRole('alert').textContent).toBe(t().background.captureFailed);
     rerender(<RecordingToolbar state={state} onCommand={vi.fn()} notice={null} />);
     expect(screen.queryByRole('alert')).toBeNull();
   });

@@ -4,7 +4,6 @@ import { isRecordableTabUrl } from '../../shared/restricted-urls';
 import { focusTab } from '../../runtime/navigation';
 import { discardPendingAnchors, getStep } from '../../storage/step-repository';
 import { getProject } from '../../storage/project-repository';
-import { t } from '@/lib/shared/i18n';
 import { projectDisplayTitle } from '@/lib/storage/models';
 import { describeBrowserError } from '../../runtime/browser-errors';
 import { getRecordingState, resetRunStateToIdle } from '../../storage/storage';
@@ -31,6 +30,7 @@ import type { RecaptureFlow } from './recapture-flow';
 import type { RecorderRuntime } from './recorder-runtime';
 import type { RunEnding } from './run-ending';
 import type { RunState } from './run-state';
+import type { CopyKey } from '../../shared/i18n/copy';
 
 export interface RunLifecycleDependencies {
   control: ControlPlane;
@@ -49,7 +49,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
 
   function continuationPreflightFailure(
     code: PreflightProjectContinuationSourcePermissionErrorCode,
-    message: string,
+    message: CopyKey,
   ): PreflightProjectContinuationSourcePermissionResult {
     return { ok: false, code, message };
   }
@@ -63,16 +63,16 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
       message.sessionId.trim().length === 0 ||
       !isEditorSenderForSession(sender, message.sessionId)
     ) {
-      return continuationPreflightFailure('INVALID_EDITOR', t().background.editorOnlyContinuation);
+      return continuationPreflightFailure('INVALID_EDITOR', 'background.editorOnlyContinuation');
     }
     const anchor = await resolveProjectContinuationAnchor(message.sessionId, message.afterEntryId);
     const sourceUrl = anchor?.sourceUrl;
     if (!sourceUrl) {
-      return continuationPreflightFailure('SOURCE_NOT_FOUND', t().background.noContinuationSource);
+      return continuationPreflightFailure('SOURCE_NOT_FOUND', 'background.noContinuationSource');
     }
     return (
       sourcePermissionPreflightSuccess(sourceUrl) ??
-      continuationPreflightFailure('RESTRICTED_SOURCE', t().background.restrictedContinuationSource)
+      continuationPreflightFailure('RESTRICTED_SOURCE', 'background.restrictedContinuationSource')
     );
   }
 
@@ -114,7 +114,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
       : recordedTabClosedError();
     await stopRunWithError(
       state.runId,
-      recoverableError.message,
+      recoverableError.copy,
       expectedControlVersion,
       recoverableError,
     );
@@ -156,7 +156,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
     current: RecordingState,
     mode: StartRecordingMessage['mode'],
     code: string,
-    message: string,
+    copy: CopyKey,
   ): RecordingState {
     return {
       ...current,
@@ -164,8 +164,8 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
       isRecording: false,
       phase: 'error',
       tabId: null,
-      error: message,
-      recoverableError: { code, message },
+      error: copy,
+      recoverableError: { code, copy },
       mode,
       itemCount: 0,
       runItemCount: 0,
@@ -185,10 +185,10 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
     // A global capture operation remains single-owner. Never let a second start
     // invalidate another Project's recording or one-shot replacement.
     if (current.operation !== null || current.isRecording || recaptureFlow.isStartingRecapture()) {
-      return { ok: false, error: t().recaptureFlow.activeOperation };
+      return { ok: false, error: 'recaptureFlow.activeOperation' };
     }
     const targetProject = await getProject(message.sessionId);
-    if (!targetProject) return { ok: false, error: t().background.recordTargetMissing };
+    if (!targetProject) return { ok: false, error: 'background.recordTargetMissing' };
 
     let continuationTab: Browser.tabs.Tab | null = targetTab;
     if (message.continuation) {
@@ -213,7 +213,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
     ) {
       return { ok: true, sessionId: message.sessionId, runId: started.runId };
     }
-    return { ok: false, error: started.recoverableError?.message ?? started.error ?? t().background.cannotStartHere };
+    return { ok: false, error: started.recoverableError?.copy ?? started.error ?? 'background.cannotStartHere' };
   }
 
   async function handleStartRecording(
@@ -234,13 +234,13 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
     if (version !== control.controlVersion) return;
     if (!tab?.id) {
       await control.writeStateForControl(version, (current) =>
-        startFailureState(current, message.mode, 'NO_ACTIVE_TAB', t().background.noActiveTab));
+        startFailureState(current, message.mode, 'NO_ACTIVE_TAB', 'background.noActiveTab'));
       return;
     }
 
     if (!isRecordableTabUrl(tab.url)) {
       await control.writeStateForControl(version, (current) =>
-        startFailureState(current, message.mode, 'RESTRICTED_PAGE', t().background.restrictedBrowserPage));
+        startFailureState(current, message.mode, 'RESTRICTED_PAGE', 'background.restrictedBrowserPage'));
       return;
     }
 
@@ -252,7 +252,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
       } catch (error) {
         console.error('[howbeam] failed to focus the continuation source tab', error);
         await control.writeStateForControl(version, (current) =>
-          startFailureState(current, message.mode, 'SOURCE_TAB_FAILED', t().background.sourceTabSwitchFailed));
+          startFailureState(current, message.mode, 'SOURCE_TAB_FAILED', 'background.sourceTabSwitchFailed'));
         return;
       }
       if (version !== control.controlVersion) return;
@@ -335,7 +335,7 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
       if (startupAnchorId) await captureFlow.withdrawAnchorThenDelete(runId, startupAnchorId, version, true);
       if (version !== control.controlVersion) return;
       try {
-        await stopRunWithError(runId, t().background.injectFailed, version);
+        await stopRunWithError(runId, 'background.injectFailed', version);
       } catch (recoveryError) {
         control.acceptingClicks = false;
         console.error(

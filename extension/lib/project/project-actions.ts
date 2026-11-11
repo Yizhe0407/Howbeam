@@ -9,6 +9,7 @@ import {
 } from '../storage/storage';
 import type { RecordingMode } from '../storage/recording-state';
 import { t } from '@/lib/shared/i18n';
+import { copyText } from '@/lib/shared/i18n/copy';
 
 // Preserve invocation order across async IndexedDB lookups. Without this, a
 // slow earlier select could overwrite a newer selection after its lookup ends.
@@ -138,7 +139,7 @@ export async function startRecordingIntoProject(
       mode,
       ...(claim.autoCreated ? { autoCreatedProject: true } : {}),
     }, t().runtime.recordingServiceUnavailable);
-    if (!result.ok) throw new Error(result.error);
+    if (!result.ok) throw new Error(copyText(result.error));
     return project;
   } catch (startError) {
     // Best-effort rollback of the claim above. The recording-state probe
@@ -188,7 +189,7 @@ export async function openSelectedProjectInEditor(projectId: string, options: { 
     sessionId: project.id,
     ...(options.inPlace ? { inPlace: true } : {}),
   }, t().popup.editorServiceUnavailable);
-  if (!result.ok) throw new Error(result.error);
+  if (!result.ok) throw new Error(copyText(result.error));
 }
 
 /** Compare-and-clears only the matching UI selection. It deliberately does

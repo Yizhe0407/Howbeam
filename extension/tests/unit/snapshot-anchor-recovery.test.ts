@@ -303,8 +303,7 @@ describe('empty-anchor cleanup ordering in finishRecording', () => {
 });
 
 describe('annotation failures shown to the user', () => {
-  it('stores the localized reason verbatim, never as "Error: …"', async () => {
-    const { zhTW } = await import('@/lib/shared/i18n/messages/zh-TW');
+  it('stores the reason as its copy key, never as "Error: …"', async () => {
     let stored = snapshotState();
     mocks.getRecordingState.mockImplementation(async () => stored);
     mocks.setRecordingState.mockImplementation(async (next: RecordingState) => {
@@ -320,7 +319,7 @@ describe('annotation failures shown to the user', () => {
     const result = await mocks.messageListener?.(clickMessage(), recordedPageSender);
 
     expect(result).toMatchObject({ ok: false });
-    expect(stored.error).toBe(zhTW.background.annotationSkippedPageChanged);
-    expect(stored.recoverableError?.message).toBe(zhTW.background.annotationSkippedPageChanged);
+    expect(stored.error).toBe('background.annotationSkippedPageChanged');
+    expect(stored.recoverableError?.copy).toBe('background.annotationSkippedPageChanged');
   });
 });

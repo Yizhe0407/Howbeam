@@ -4,6 +4,7 @@ import type {
   CancelStepRecaptureResult,
   FocusStepRecaptureSourceResult,
 } from './messages';
+import { copyText } from '@/lib/shared/i18n/copy';
 
 /** Opens the options page, focusing it if it is already open. */
 export async function openSettings(): Promise<void> {
@@ -18,7 +19,7 @@ export async function openSettings(): Promise<void> {
  */
 export async function openLibrary(): Promise<void> {
   const result = await sendToBackground({ type: 'OPEN_LIBRARY' });
-  if (!result.ok) throw new Error(result.error);
+  if (!result.ok) throw new Error(copyText(result.error));
 }
 
 /** Confirms a delivered recapture result so the background clears the durable

@@ -1,3 +1,4 @@
+import { t } from '@/lib/shared/i18n';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -194,10 +195,10 @@ describe('popup start transaction (startRecordingIntoProject)', () => {
   });
 
   it('rolls back the fresh project and restores the previous selection on failure', async () => {
-    mocks.sendMessage.mockResolvedValue({ ok: false, error: '此頁面不允許錄製。' });
+    mocks.sendMessage.mockResolvedValue({ ok: false, error: 'background.cannotStartHere' });
     mocks.discardPristineProject.mockResolvedValue(true);
 
-    await expect(startRecordingIntoProject('steps')).rejects.toThrow('此頁面不允許錄製');
+    await expect(startRecordingIntoProject('steps')).rejects.toThrow(t().background.cannotStartHere);
 
     expect(mocks.discardPristineProject).toHaveBeenCalledExactlyOnceWith('project-new');
     expect(mocks.setActiveProjectId).toHaveBeenLastCalledWith('project-old');
@@ -236,9 +237,9 @@ describe('popup start transaction into an existing project', () => {
   });
 
   it('restores the previous selection and never deletes the project when start fails', async () => {
-    mocks.sendMessage.mockResolvedValue({ ok: false, error: '此頁面不允許錄製。' });
+    mocks.sendMessage.mockResolvedValue({ ok: false, error: 'background.cannotStartHere' });
 
-    await expect(startRecordingIntoProject('steps', 'project-target')).rejects.toThrow('此頁面不允許錄製');
+    await expect(startRecordingIntoProject('steps', 'project-target')).rejects.toThrow(t().background.cannotStartHere);
 
     expect(mocks.discardPristineProject).not.toHaveBeenCalled();
     expect(mocks.setActiveProjectId).toHaveBeenLastCalledWith('project-old');

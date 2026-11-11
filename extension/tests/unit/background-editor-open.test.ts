@@ -108,11 +108,11 @@ describe('the single editor opener', () => {
 
   it('surfaces a draft-blocked refusal through OpenEditorResult and still focuses the tab', async () => {
     withRegisteredEditor();
-    mocks.tabsSendMessage.mockResolvedValue({ ok: false, error: '需要先確認要保留哪一份草稿。' });
+    mocks.tabsSendMessage.mockResolvedValue({ ok: false, error: 'editor.draftConfirmationRequired' });
 
     await expect(openEditor({ sessionId: 'project-b' })).resolves.toEqual({
       ok: false,
-      error: '需要先確認要保留哪一份草稿。',
+      error: 'editor.draftConfirmationRequired',
     });
 
     // Focused, not navigated: the page keeps its draft on screen.
@@ -169,7 +169,7 @@ describe('the single editor opener', () => {
 
     await expect(openEditor({ sessionId: 'project-gone' })).resolves.toEqual({
       ok: false,
-      error: '找不到這個專案。',
+      error: 'runtime.projectNotFound',
     });
 
     expect(mocks.tabsSendMessage).not.toHaveBeenCalled();
@@ -194,7 +194,7 @@ describe('the single editor opener', () => {
 
     await expect(openEditor({ sessionId: 'project-a' })).resolves.toEqual({
       ok: false,
-      error: '無法開啟編輯器，請再試一次。',
+      error: 'runtime.editorOpenFailed',
     });
 
     expect(storedState.recoverableError?.code).toBe('EDITOR_OPEN_FAILED');

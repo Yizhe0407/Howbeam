@@ -6,7 +6,7 @@ import type {
   StartStepRecaptureMessage,
 } from '../../runtime/messages';
 import type { RecordingState } from '../../storage/recording-state';
-import { t } from '@/lib/shared/i18n';
+import type { CopyKey } from '../../shared/i18n/copy';
 
 /** What a recapture may replace, read back from storage: the step (or the
  * snapshot anchor) it reopens in the editor and the page it was taken on. */
@@ -24,23 +24,23 @@ type StepRecaptureValidationErrorCode = Exclude<
 export class StepRecaptureStartError extends Error {
   constructor(
     readonly code: StepRecaptureValidationErrorCode,
-    message: string,
+    readonly copy: CopyKey,
   ) {
-    super(message);
+    super(copy);
     this.name = 'StepRecaptureStartError';
   }
 }
 
-/** Localized copy for a replacement the repository refused; its own messages
+/** The copy for a replacement the repository refused; its own messages
  * are English diagnostics for the console. */
-export function recaptureTargetErrorMessage(
+export function recaptureTargetErrorCopy(
   code: StepRecaptureError['code'],
   kind: StepRecaptureTarget['kind'],
-): string {
+): CopyKey {
   const single = kind === 'single';
-  if (code === 'TARGET_NOT_FOUND') return single ? t().recaptureFlow.stepNotFound : t().recaptureFlow.snapshotNotFound;
-  if (code === 'TARGET_CHANGED') return single ? t().recaptureFlow.stepChanged : t().recaptureFlow.snapshotChanged;
-  return t().recaptureFlow.multiAnnotation;
+  if (code === 'TARGET_NOT_FOUND') return single ? 'recaptureFlow.stepNotFound' : 'recaptureFlow.snapshotNotFound';
+  if (code === 'TARGET_CHANGED') return single ? 'recaptureFlow.stepChanged' : 'recaptureFlow.snapshotChanged';
+  return 'recaptureFlow.multiAnnotation';
 }
 
 /** A single step with its own image, or a snapshot with exactly one annotation. */
@@ -51,10 +51,10 @@ export async function validateRecaptureTarget(
   if (target.kind === 'single') {
     const step = await getStep(target.stepId);
     if (!step || step.sessionId !== sessionId) {
-      throw new StepRecaptureStartError('TARGET_NOT_FOUND', t().recaptureFlow.stepNotFound);
+      throw new StepRecaptureStartError('TARGET_NOT_FOUND', 'recaptureFlow.stepNotFound');
     }
     if (step.groupId || !step.screenshotBlob) {
-      throw new StepRecaptureStartError('TARGET_CHANGED', t().recaptureFlow.stepChanged);
+      throw new StepRecaptureStartError('TARGET_CHANGED', 'recaptureFlow.stepChanged');
     }
     return { target, entryId: step.id, sourceUrl: step.url };
   }
@@ -65,7 +65,7 @@ export async function validateRecaptureTarget(
     getStepOutlines(sessionId),
   ]);
   if (!anchor || !annotation || anchor.sessionId !== sessionId || annotation.sessionId !== sessionId) {
-    throw new StepRecaptureStartError('TARGET_NOT_FOUND', t().recaptureFlow.snapshotNotFound);
+    throw new StepRecaptureStartError('TARGET_NOT_FOUND', 'recaptureFlow.snapshotNotFound');
   }
   if (
     stepRole(anchor) !== 'anchor' ||
@@ -74,7 +74,7 @@ export async function validateRecaptureTarget(
     !anchor.screenshotBlob ||
     !getEffectiveBounds(annotation)
   ) {
-    throw new StepRecaptureStartError('TARGET_CHANGED', t().recaptureFlow.snapshotChanged);
+    throw new StepRecaptureStartError('TARGET_CHANGED', 'recaptureFlow.snapshotChanged');
   }
   const annotations = steps.filter(
     (step) => step.groupId === anchor.id && stepRole(step) === 'annotation' && getEffectiveBounds(step),
@@ -83,7 +83,7 @@ export async function validateRecaptureTarget(
   if (!only || others.length > 0 || only.id !== annotation.id) {
     throw new StepRecaptureStartError(
       'UNSUPPORTED_SNAPSHOT_GROUP',
-      t().recaptureFlow.multiAnnotation,
+      'recaptureFlow.multiAnnotation',
     );
   }
   return { target, entryId: anchor.id, sourceUrl: anchor.url };

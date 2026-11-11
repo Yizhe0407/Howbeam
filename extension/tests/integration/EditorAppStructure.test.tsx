@@ -3,7 +3,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
-import { t } from '@/lib/shared/i18n';
 
 const database = await vi.hoisted(async () => (await import('../setup/editor-app-mocks')).makeEditorDatabaseMocks());
 
@@ -537,7 +536,7 @@ describe('Editor continuation on another page (改在其他頁面接續)', () =>
   it('opens the dialog in elsewhere-only mode when the Project has no continuation source', async () => {
     browserApi.sendMessage.mockImplementation(async (message: any) => {
       if (message.type === 'PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION') {
-        return { ok: false, code: 'SOURCE_NOT_FOUND', message: '這個專案還沒有可接續的來源頁面。' };
+        return { ok: false, code: 'SOURCE_NOT_FOUND', message: 'background.noContinuationSource' };
       }
       if (message.type === 'START_RECORDING') {
         return { ok: true, sessionId: 'project-1', runId: 'run-elsewhere' };
@@ -623,13 +622,11 @@ describe('editor handoff answers (單一編輯器分頁)', () => {
     await mountEditor();
     // The confirmation error carries its own zh-Hant explanation of what to
     // resolve, and the reply must relay exactly that rather than a generic one.
-    const draftConfirmation = new DraftConfirmationRequiredError();
-    draftConfirmation.message = '覆寫已儲存的說明前，需要先確認要保留哪一份草稿。';
-    editorSave.flushAll.mockRejectedValue(draftConfirmation);
+    editorSave.flushAll.mockRejectedValue(new DraftConfirmationRequiredError());
 
     const reply = await act(async () => handoff({ type: 'EDITOR_HANDOFF', sessionId: 'project-2' }));
 
-    expect(reply).toEqual({ ok: false, error: draftConfirmation.message });
+    expect(reply).toEqual({ ok: false, error: 'editor.draftConfirmationRequired' });
   });
 
   it('refuses with a retry message when saving genuinely failed', async () => {
@@ -639,7 +636,7 @@ describe('editor handoff answers (單一編輯器分頁)', () => {
 
     const reply = await act(async () => handoff({ type: 'EDITOR_HANDOFF', sessionId: 'project-2' }));
 
-    expect(reply).toEqual({ ok: false, error: t().editor.descriptionSaveRetry });
+    expect(reply).toEqual({ ok: false, error: 'editor.descriptionSaveRetry' });
   });
 
   it('still reports ready for its own Project when the save is blocked, because nothing will navigate', async () => {

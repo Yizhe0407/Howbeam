@@ -6,6 +6,7 @@ import { deleteEmptySnapshotAnchorBestEffort } from './run-cleanup';
 import type { ControlPlane } from './control-plane';
 import type { FollowMode } from './follow-mode';
 import type { RecorderRuntime } from './recorder-runtime';
+import type { CopyKey } from '../../shared/i18n/copy';
 
 /** How a live run ends on an error, and what happens when its tab is gone. */
 export function createRunEnding(deps: { control: ControlPlane; runtime: RecorderRuntime; followMode: FollowMode }) {
@@ -13,7 +14,7 @@ export function createRunEnding(deps: { control: ControlPlane; runtime: Recorder
 
   function stopRunWithError(
     runId: string,
-    error: string,
+    error: CopyKey,
     expectedControlVersion: number,
     recoverableError?: RecoverableRecordingError,
   ): Promise<void> {
@@ -46,7 +47,7 @@ export function createRunEnding(deps: { control: ControlPlane; runtime: Recorder
       if (outcome !== 'nowhere') return;
       await stopRunWithError(
         state.runId,
-        recordedTabClosedError().message,
+        recordedTabClosedError().copy,
         expectedControlVersion,
         recordedTabClosedError(),
       );
@@ -55,7 +56,7 @@ export function createRunEnding(deps: { control: ControlPlane; runtime: Recorder
 
   async function handleStopRunWithError(
     runId: string,
-    error: string,
+    error: CopyKey,
     version: number,
     recoverableError?: RecoverableRecordingError,
   ): Promise<void> {
@@ -71,7 +72,7 @@ export function createRunEnding(deps: { control: ControlPlane; runtime: Recorder
         phase: 'error',
         tabId: null,
         error,
-        recoverableError: recoverableError ?? { code: 'RECORDING_STOPPED', message: error },
+        recoverableError: recoverableError ?? { code: 'RECORDING_STOPPED', copy: error },
         groupAnchorId: null,
         runId: null,
         // Error stops never reclaim the auto-created Project: the recovery flow

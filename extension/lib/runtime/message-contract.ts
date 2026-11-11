@@ -31,7 +31,6 @@ import {
   isStepFrameRelayMutationResult,
   isStepRecaptureTargetResult,
 } from './runtime-message-result';
-import { t } from '../shared/i18n';
 import type { StepRecaptureTarget } from '../storage/recording-state';
 import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
 import {
@@ -145,7 +144,7 @@ const recordingControl = {
   senders: 'handler-checked',
   isRequest: isRecordingControl,
   isResponse: isRecordingControlResult,
-  failure: () => ({ ok: false, error: t().background.recordingServiceFailed }),
+  failure: () => ({ ok: false, error: 'background.recordingServiceFailed' }),
 } satisfies MessageContract<RecordingControlMessage['type']>;
 
 const relayMutation = {
@@ -176,7 +175,7 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
       (value.insertAfterEntryId === undefined || typeof value.insertAfterEntryId === 'string')
     ),
     isResponse: isStartRecordingResult,
-    failure: () => ({ ok: false, error: t().background.startServiceFailed }),
+    failure: () => ({ ok: false, error: 'background.startServiceFailed' }),
   },
   // Sent only by the e2e harness; product surfaces end a run with FINISH_RECORDING or DISCARD_CURRENT_RECORDING.
   STOP_RECORDING: {
@@ -193,13 +192,13 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
       (value.inPlace === undefined || typeof value.inPlace === 'boolean')
     ),
     isResponse: isOpenEditorResult,
-    failure: () => ({ ok: false, error: t().runtime.editorOpenFailed }),
+    failure: () => ({ ok: false, error: 'runtime.editorOpenFailed' }),
   },
   OPEN_LIBRARY: {
     senders: 'extension-pages',
     isRequest: () => true,
     isResponse: isOpenLibraryResult,
-    failure: () => ({ ok: false, error: t().nav.libraryOpenFailed }),
+    failure: () => ({ ok: false, error: 'nav.libraryOpenFailed' }),
   },
   // Which page registered is derived from the authenticated sender, so the payload carries nothing to forge.
   REGISTER_EXTENSION_PAGE: {
@@ -213,13 +212,13 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
     senders: 'handler-checked',
     isRequest: (value) => isString(value.sessionId) && isTarget(value.target),
     isResponse: isPreflightStepRecaptureSourcePermissionResult,
-    failure: () => ({ ok: false, code: 'INVALID_EDITOR', message: t().background.recaptureServiceFailedReload }),
+    failure: () => ({ ok: false, code: 'INVALID_EDITOR', message: 'background.recaptureServiceFailedReload' }),
   },
   PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION: {
     senders: 'handler-checked',
     isRequest: (value) => isString(value.sessionId) && (value.afterEntryId === undefined || isString(value.afterEntryId)),
     isResponse: isPreflightProjectContinuationSourcePermissionResult,
-    failure: () => ({ ok: false, code: 'INVALID_EDITOR', message: t().background.continuationServiceFailed }),
+    failure: () => ({ ok: false, code: 'INVALID_EDITOR', message: 'background.continuationServiceFailed' }),
   },
   START_STEP_RECAPTURE: {
     senders: 'handler-checked',
@@ -229,13 +228,13 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
       (value.preferredTabId === undefined || isBrowserId(value.preferredTabId))
     ),
     isResponse: isStartStepRecaptureResult,
-    failure: () => ({ ok: false, code: 'INJECTION_FAILED', error: t().background.recaptureServiceFailed }),
+    failure: () => ({ ok: false, code: 'INJECTION_FAILED', error: 'background.recaptureServiceFailed' }),
   },
   CANCEL_STEP_RECAPTURE: {
     senders: 'handler-checked',
     isRequest: isRunId,
     isResponse: isCancelStepRecaptureResult,
-    failure: () => ({ ok: false, error: t().background.recaptureCancelFailed }),
+    failure: () => ({ ok: false, error: 'background.recaptureCancelFailed' }),
   },
   ACK_STEP_RECAPTURE_RESULT: {
     senders: 'handler-checked',
@@ -247,7 +246,7 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
     senders: 'handler-checked',
     isRequest: isRunId,
     isResponse: isFocusStepRecaptureSourceResult,
-    failure: () => ({ ok: false, error: t().background.recaptureTabSwitchFailed }),
+    failure: () => ({ ok: false, error: 'background.recaptureTabSwitchFailed' }),
   },
   HOWBEAM_RECAPTURE_READY: {
     senders: 'handler-checked',

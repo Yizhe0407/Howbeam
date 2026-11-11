@@ -1,11 +1,11 @@
 import { browser } from 'wxt/browser';
 import { getRecordingState } from '../../storage/storage';
 import type { StepRecaptureResult } from '../../storage/recording-state';
-import { t } from '@/lib/shared/i18n';
 import { cancelCapture } from './capture-registry';
 import { isRecaptureSourceTabIntact, wasRecaptureCommitted } from './recapture-target';
 import type { ControlPlane } from './control-plane';
 import type { RecorderRuntime } from './recorder-runtime';
+import type { CopyKey } from '../../shared/i18n/copy';
 
 export interface RecaptureSettlementDeps {
   control: ControlPlane;
@@ -27,7 +27,7 @@ export function createRecaptureSettlement(deps: RecaptureSettlementDeps) {
     status: StepRecaptureResult['status'],
     version: number,
     errorCode?: string,
-    message?: string,
+    copy?: CopyKey,
   ): Promise<boolean> {
     const settled = await control.writeStateIf(
       version,
@@ -40,7 +40,7 @@ export function createRecaptureSettlement(deps: RecaptureSettlementDeps) {
           sessionId: recapture.sessionId,
           entryId: recapture.entryId,
           ...(errorCode ? { errorCode } : {}),
-          ...(message ? { message } : {}),
+          ...(copy ? { copy } : {}),
           completedAt: Date.now(),
         };
         // Not resetRunStateToIdle: settling a recapture deliberately leaves the
@@ -55,7 +55,7 @@ export function createRecaptureSettlement(deps: RecaptureSettlementDeps) {
           runId: null,
           recapture: null,
           recaptureResult: result,
-          error: status === 'failed' ? message ?? t().recaptureFlow.failed : null,
+          error: status === 'failed' ? copy ?? 'recaptureFlow.failed' : null,
           recoverableError: null,
         };
       },
@@ -81,7 +81,7 @@ export function createRecaptureSettlement(deps: RecaptureSettlementDeps) {
   function fail(
     runId: string,
     errorCode: string,
-    message: string,
+    message: CopyKey,
     expectedControlVersion: number,
   ): Promise<boolean> {
     if (expectedControlVersion !== control.controlVersion) return Promise.resolve(false);
@@ -113,7 +113,7 @@ export function createRecaptureSettlement(deps: RecaptureSettlementDeps) {
         'failed',
         version,
         'SOURCE_TAB_CLOSED',
-        t().recaptureFlow.sourceTabChanged,
+        'recaptureFlow.sourceTabChanged',
       );
       return;
     }
@@ -129,7 +129,7 @@ export function createRecaptureSettlement(deps: RecaptureSettlementDeps) {
       'failed',
       version,
       'WORKER_RESTARTED',
-      t().recaptureFlow.interrupted,
+      'recaptureFlow.interrupted',
     );
   }
 

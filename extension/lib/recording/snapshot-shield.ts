@@ -38,7 +38,6 @@ import { deepElementFromPoint } from '../capture/selector/element-availability';
 import { createViewportOverlayHost, setImportantStyle } from '../capture/viewport-overlay-host';
 import { REAPPEAR_TRANSITION } from '../capture/capture-presentation';
 import type { RecordingControlResult } from '../runtime/messages';
-import { t } from '@/lib/shared/i18n';
 
 const SHIELD_PAGE = '/snapshot-shield.html';
 const SHIELD_READY_TIMEOUT_MS = 4_000;
@@ -315,12 +314,12 @@ export function createSnapshotShield(
   };
 
   const handleControl = async (message: SnapshotShieldControlMessage, generation: number): Promise<void> => {
-    let result: RecordingControlResult = { ok: false, error: t().runtime.shieldActionUnavailable };
+    let result: RecordingControlResult = { ok: false, error: 'runtime.shieldActionUnavailable' };
     try {
       if (onControl) result = await onControl(message);
     } catch (error) {
       console.error('[howbeam] failed to handle snapshot toolbar command', error);
-      result = { ok: false, error: t().runtime.shieldActionFailed };
+      result = { ok: false, error: 'runtime.shieldActionFailed' };
     }
     if (isStale(generation)) return;
     post({ type: SNAPSHOT_SHIELD_CONTROL_RESULT, requestId: message.requestId, result });

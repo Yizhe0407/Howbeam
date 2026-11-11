@@ -9,7 +9,6 @@ import { describeBrowserError } from '../../runtime/browser-errors';
 import { getRecordingState, setRecordingState } from '../../storage/storage';
 import type { RecordingControlMessage, RecordingControlResult } from '../../runtime/messages';
 import type { RecordingState } from '../../storage/recording-state';
-import { t } from '@/lib/shared/i18n';
 import { controlFailure } from './control-result';
 import { deleteEmptySnapshotAnchor } from './run-cleanup';
 import type { CaptureFlow } from './capture-flow';
@@ -39,7 +38,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
       initial.mode !== 'snapshot' ||
       initial.phase !== 'recording'
     ) {
-      return controlFailure(t().background.cannotCreateNextSnapshot);
+      return controlFailure('background.cannotCreateNextSnapshot');
     }
 
     control.claimControl({ discardUndo: true, bumpVersion: false });
@@ -67,7 +66,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
       });
       return current;
     });
-    if (!previous) return controlFailure(t().background.nextSnapshotStateChanged);
+    if (!previous) return controlFailure('background.nextSnapshotStateChanged');
 
     await deleteEmptySnapshotAnchor(previous);
     try {
@@ -77,8 +76,8 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
       await recorderRuntime.injectRecorder(previous.tabId, true);
     } catch (error) {
       console.error('[howbeam] failed to enter snapshot preparation state', error);
-      await setRunError(message.runId, t().background.nextSnapshotControlsFailed);
-      return controlFailure(t().background.nextSnapshotPrepareFailed);
+      await setRunError(message.runId, 'background.nextSnapshotControlsFailed');
+      return controlFailure('background.nextSnapshotPrepareFailed');
     }
     return { ok: true };
   }
@@ -113,7 +112,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
       await setRecordingState(next);
       return { state: next, previous: current, version };
     });
-    if (!claimed) return controlFailure(t().background.cannotCreateNextSnapshot);
+    if (!claimed) return controlFailure('background.cannotCreateNextSnapshot');
 
     // Version already bumped in the claim mutation above; cancelling the recorder gate
     // here (not via manual pre-cancel) lets the ready-gate helper publish into an empty slot.
@@ -154,7 +153,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
       console.error('[howbeam] failed to create next snapshot', error);
       control.acceptingClicks = false;
       const rebuildingInvalidated = sourcePhase === 'invalidated';
-      const errorMessage = rebuildingInvalidated ? t().background.rebuildSnapshotFailed : t().background.createSnapshotFailed;
+      const errorMessage = rebuildingInvalidated ? 'background.rebuildSnapshotFailed' : 'background.createSnapshotFailed';
       if (version === control.controlVersion) {
         await updateRunState(
           message.runId,
@@ -168,7 +167,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
             error: errorMessage,
             recoverableError: {
               code: rebuildingInvalidated ? 'REBUILD_SNAPSHOT_FAILED' : 'CREATE_SNAPSHOT_FAILED',
-              message: errorMessage,
+              copy: errorMessage,
             },
           }),
           version,
@@ -191,7 +190,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
       state.tabId != null &&
       state.mode === 'steps' &&
       (state.phase === 'recording' || state.phase === 'paused');
-    if (!isSwitchable(await getRecordingState())) return controlFailure(t().background.cannotSwitchToSnapshot);
+    if (!isSwitchable(await getRecordingState())) return controlFailure('background.cannotSwitchToSnapshot');
 
     control.claimControl({ discardUndo: true, bumpVersion: false });
     control.acceptingClicks = false;
@@ -213,7 +212,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
       });
       return current;
     });
-    if (!previous) return controlFailure(t().background.switchStateChanged);
+    if (!previous) return controlFailure('background.switchStateChanged');
 
     try {
       await recorderRuntime.injectRecorder(previous.tabId!, true);
@@ -226,7 +225,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
       } catch (restoreError) {
         console.error('[howbeam] failed to restore the step recorder', describeBrowserError(restoreError), restoreError);
       }
-      return controlFailure(t().background.switchToSnapshotFailed);
+      return controlFailure('background.switchToSnapshotFailed');
     }
     return { ok: true };
   }
@@ -240,7 +239,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
       state.tabId != null &&
       state.mode === 'snapshot' &&
       (state.phase === 'recording' || state.phase === 'preparing-next' || state.phase === 'invalidated');
-    if (!isSwitchable(await getRecordingState())) return controlFailure(t().background.cannotSwitchToSteps);
+    if (!isSwitchable(await getRecordingState())) return controlFailure('background.cannotSwitchToSteps');
 
     control.claimControl({ discardUndo: true, bumpVersion: false });
     control.acceptingClicks = false;
@@ -263,7 +262,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
       });
       return { previous: current, version };
     });
-    if (!claimed) return controlFailure(t().background.switchStateChanged);
+    if (!claimed) return controlFailure('background.switchStateChanged');
     const { previous, version } = claimed;
     control.claimControl({
       cancelRecorderGate: true,
@@ -301,8 +300,8 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
             ...current,
             mode: 'snapshot',
             phase: 'preparing-next',
-            error: t().background.switchToStepsFailed,
-            recoverableError: { code: 'SWITCH_TO_STEPS_FAILED', message: t().background.switchToStepsFailed },
+            error: 'background.switchToStepsFailed',
+            recoverableError: { code: 'SWITCH_TO_STEPS_FAILED', copy: 'background.switchToStepsFailed' },
           }),
           version,
         );
@@ -312,7 +311,7 @@ export function createSnapshotControls(deps: SnapshotControlDependencies) {
           console.error('[howbeam] failed to restore snapshot preparation toolbar', reinjectionError);
         }
       }
-      return controlFailure(t().background.switchToStepsFailed);
+      return controlFailure('background.switchToStepsFailed');
     }
   }
 

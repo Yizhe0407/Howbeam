@@ -5,7 +5,6 @@ import { isRestrictedUrl } from '../../shared/restricted-urls';
 import { waitForTabComplete } from '../../runtime/tab-loading';
 import { isErrorPageError } from '../../runtime/browser-errors';
 import type { SourcePermissionPreflightSuccess, StartRecordingMessage, StartRecordingResult } from '../../runtime/messages';
-import { t } from '@/lib/shared/i18n';
 
 export type SourceTabAcquisition = { tab: Browser.tabs.Tab; reused: boolean };
 
@@ -195,19 +194,19 @@ export async function resolveContinuationTab(
   sender: Browser.runtime.MessageSender,
 ): Promise<{ ok: true; tab: Browser.tabs.Tab } | Extract<StartRecordingResult, { ok: false }>> {
   if (!isEditorSenderForSession(sender, message.sessionId)) {
-    return { ok: false, error: t().background.editorOnlyContinuation };
+    return { ok: false, error: 'background.editorOnlyContinuation' };
   }
   const anchor = await resolveProjectContinuationAnchor(message.sessionId, message.insertAfterEntryId);
   const sourceUrl = anchor?.sourceUrl;
   if (!sourceUrl) {
-    return { ok: false, error: t().background.continuationSourceMissing };
+    return { ok: false, error: 'background.continuationSourceMissing' };
   }
   const permission = await checkSourcePermission(sourceUrl);
   if (permission === 'restricted') {
-    return { ok: false, error: t().background.restrictedContinuationSource };
+    return { ok: false, error: 'background.restrictedContinuationSource' };
   }
   if (permission === 'permission-required') {
-    return { ok: false, error: t().background.continuationAccessRequired };
+    return { ok: false, error: 'background.continuationAccessRequired' };
   }
   const opened = await openVerifiedSourceTab(
     sourceUrl,
@@ -216,11 +215,11 @@ export async function resolveContinuationTab(
   );
   if (!opened.ok) {
     if (opened.reason === 'unreachable') {
-      return { ok: false, code: 'SOURCE_PAGE_UNREACHABLE', error: t().background.continuationSourceUnreachable };
+      return { ok: false, code: 'SOURCE_PAGE_UNREACHABLE', error: 'background.continuationSourceUnreachable' };
     }
     return {
       ok: false,
-      error: opened.reason === 'open-failed' ? t().background.sourceTabOpenFailed : t().background.continuationSourceRedirected,
+      error: opened.reason === 'open-failed' ? 'background.sourceTabOpenFailed' : 'background.continuationSourceRedirected',
     };
   }
   return { ok: true, tab: opened.source.tab };

@@ -201,7 +201,7 @@ describe('rebuild-invalidated-snapshot failure rollback', () => {
       popupSender,
     );
 
-    expect(result).toEqual({ ok: false, error: '無法重建快照，請重試。' });
+    expect(result).toEqual({ ok: false, error: 'background.rebuildSnapshotFailed' });
     // The claim first cleared run-scoped fields into 'starting'; the rollback must restore every one of them.
     expect(mocks.setRecordingState).toHaveBeenCalledWith(
       expect.objectContaining({ phase: 'starting', itemCount: 0, groupAnchorId: null }),

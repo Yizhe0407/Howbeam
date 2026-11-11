@@ -3,8 +3,8 @@ import { isMatchingSnapshotViewport } from '../recording-guards';
 import { getRecordingState, setRecordingState } from '../../storage/storage';
 import type { ClickCapture } from '../../runtime/messages';
 import type { RecordingState } from '../../storage/recording-state';
-import { t } from '@/lib/shared/i18n';
 import type { ControlPlane } from './control-plane';
+import type { CopyKey } from '../../shared/i18n/copy';
 
 /** Guarded writes to the live recording run's state. */
 export function createRunState(deps: { control: ControlPlane }) {
@@ -25,11 +25,11 @@ export function createRunState(deps: { control: ControlPlane }) {
     return written !== null;
   }
 
-  async function setRunError(runId: string, error: string): Promise<void> {
+  async function setRunError(runId: string, error: CopyKey): Promise<void> {
     await updateRunState(runId, (current) => ({
       ...current,
       error,
-      recoverableError: { code: 'CAPTURE_FAILED', message: error },
+      recoverableError: { code: 'CAPTURE_FAILED', copy: error },
     }));
   }
 
@@ -76,7 +76,7 @@ export function createRunState(deps: { control: ControlPlane }) {
         error: null,
         recoverableError: {
           code: 'SNAPSHOT_VIEWPORT_CHANGED',
-          message: t().background.snapshotViewportChanged,
+          copy: 'background.snapshotViewportChanged',
         },
       });
       return true;

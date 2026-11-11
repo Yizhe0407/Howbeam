@@ -14,7 +14,7 @@ describe('recording recovery state', () => {
   it('recognizes only recovery states that should lead to the editor', () => {
     expect(needsEditorRecovery(recordedTabClosedError())).toBe(true);
     expect(needsEditorRecovery(editorOpenFailedError())).toBe(true);
-    expect(needsEditorRecovery({ code: 'CAPTURE_FAILED', message: 'retry capture' })).toBe(false);
+    expect(needsEditorRecovery({ code: 'CAPTURE_FAILED', copy: 'background.captureFailed' })).toBe(false);
     expect(needsEditorRecovery(null)).toBe(false);
   });
 
@@ -37,7 +37,7 @@ describe('recording recovery state', () => {
       phase: 'error',
       recoverableError: recordedTabClosedError(),
     })).toMatchObject({ phase: 'idle', error: null, recoverableError: null });
-    const unrelated = { ...idleState, recoverableError: { code: 'CAPTURE_FAILED', message: 'retry capture' } };
+    const unrelated = { ...idleState, recoverableError: { code: 'CAPTURE_FAILED', copy: 'background.captureFailed' as const } };
     expect(clearEditorRecovery(unrelated)).toBe(unrelated);
   });
 });

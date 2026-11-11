@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { t } from '@/lib/shared/i18n';
 import { cleanup, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
@@ -101,14 +102,14 @@ describe('popup start always records into a fresh project', () => {
   it('rolls back the fresh project and restores the previous selection when start fails', async () => {
     silenceIntentionalErrorLogs();
     selectProjectInStorage(SELECTED_PROJECT_WITH_CONTENT);
-    mocks.sendMessage.mockResolvedValue({ ok: false, error: '此頁面不允許錄製。' });
+    mocks.sendMessage.mockResolvedValue({ ok: false, error: 'background.cannotStartHere' });
     const onStarted = vi.fn();
     render(<RecordControls recording={IDLE_RECORDING} onStarted={onStarted} />);
     await waitFor(() => expect(mocks.query).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole('button', { name: '開始錄製' }));
 
-    expect((await screen.findByRole('alert')).textContent).toContain('此頁面不允許錄製');
+    expect((await screen.findByRole('alert')).textContent).toContain(t().background.cannotStartHere);
     expect(mocks.discardPristineProject).toHaveBeenCalledExactlyOnceWith('project-new');
     // The pre-start selection is put back so the aborted attempt is invisible.
     expect(mocks.storageSet).toHaveBeenLastCalledWith({ [ACTIVE_PROJECT_ID_KEY]: 'project-old' });

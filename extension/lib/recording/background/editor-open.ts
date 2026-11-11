@@ -4,7 +4,6 @@ import { getStepOutlines } from '../../storage/step-repository';
 import { getRecordingState } from '../../storage/storage';
 import { describeBrowserError } from '../../runtime/browser-errors';
 import { isEditorHandoffResult } from '../../runtime/runtime-message-result';
-import { t } from '@/lib/shared/i18n';
 import {
   createExtensionPage,
   type EditorPlacement,
@@ -21,6 +20,7 @@ import {
 import type { ControlPlane } from './control-plane';
 import type { EditorHandoffMessage, OpenEditorMessage, OpenEditorResult } from '../../runtime/messages';
 import type { RecordingState } from '../../storage/recording-state';
+import type { CopyKey } from '../../shared/i18n/copy';
 
 /** What an editor tab should end up showing. */
 export interface EditorTarget {
@@ -43,7 +43,7 @@ async function placeEditor(url: string, placement: EditorPlacement): Promise<voi
 type EditorReuse =
   | { action: 'focus' | 'navigate' }
   /** The page is holding a draft it needs the user to resolve first. */
-  | { action: 'blocked'; error: string }
+  | { action: 'blocked'; error: CopyKey }
   /** The record no longer names a live tab. */
   | { action: 'discard' };
 
@@ -154,7 +154,7 @@ export function createEditorOpen(deps: { control: ControlPlane }) {
       targetSessionId ??= state.sessionId ?? undefined;
       if (!targetSessionId) return await openEditor({}, placement);
       const project = await getProject(targetSessionId);
-      if (!project) return { ok: false, error: t().runtime.projectNotFound };
+      if (!project) return { ok: false, error: 'runtime.projectNotFound' };
       // Only a hand-off continues where the capture stopped: finishing a run, or
       // recovering one whose recorded tab went away. Ordinary navigation opens the
       // project at its first entry — deriving the target from the newest capture
@@ -187,7 +187,7 @@ export function createEditorOpen(deps: { control: ControlPlane }) {
           );
         }
       }
-      return { ok: false, error: t().runtime.editorOpenFailed };
+      return { ok: false, error: 'runtime.editorOpenFailed' };
     }
   }
 

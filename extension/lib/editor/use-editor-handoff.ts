@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { browser, type Browser } from 'wxt/browser';
 import { DraftConfirmationRequiredError } from './editor-autosave';
-import { t } from '@/lib/shared/i18n';
 import { isRecord } from '../shared/validation';
 import type { EditorHandoffMessage, EditorHandoffResult } from '../runtime/messages';
 
@@ -52,10 +51,9 @@ async function answerHandoff(
   } catch (error) {
     return {
       ok: false,
-      error:
-        error instanceof DraftConfirmationRequiredError
-          ? error.message
-          : t().editor.descriptionSaveRetry,
+      error: error instanceof DraftConfirmationRequiredError
+        ? 'editor.draftConfirmationRequired'
+        : 'editor.descriptionSaveRetry',
     };
   }
   return { ok: true, ready: false };

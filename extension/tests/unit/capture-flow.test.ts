@@ -7,7 +7,6 @@ import { cancelCapture } from '@/lib/recording/background/capture-registry';
 import type { ClickCapture } from '@/lib/runtime/messages';
 import type { Step } from '@/lib/storage/models';
 import type { RecordingState } from '@/lib/storage/recording-state';
-import { t } from '@/lib/shared/i18n';
 import { makeRecordingState } from '../setup/recording-state';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 import { itemAt } from '../setup/item-at';
@@ -176,7 +175,7 @@ const handle = (message = click(), from = sender()) =>
 
 describe('handleClick in a steps run', () => {
   it('stores the step and counts it on the run', async () => {
-    harness.setState(liveRun({ error: 'old', recoverableError: { code: 'CAPTURE_FAILED', message: 'old' } }));
+    harness.setState(liveRun({ error: 'background.stepSkippedPageChanged', recoverableError: { code: 'CAPTURE_FAILED', copy: 'background.stepSkippedPageChanged' } }));
 
     await expect(handle()).resolves.toEqual({ ok: true });
 
@@ -254,8 +253,8 @@ describe('handleClick in a steps run', () => {
     await expect(handle()).resolves.toMatchObject({ ok: false, reported: true });
 
     expect(harness.getState()).toMatchObject({
-      error: t().background.stepSkippedInactiveTab,
-      recoverableError: { code: 'CAPTURE_FAILED', message: t().background.stepSkippedInactiveTab },
+      error: 'background.stepSkippedInactiveTab',
+      recoverableError: { code: 'CAPTURE_FAILED', copy: 'background.stepSkippedInactiveTab' },
     });
   });
 
@@ -307,7 +306,7 @@ describe('handleClick in a steps run', () => {
 
     await expect(handle()).resolves.toMatchObject({ ok: false, reported: true });
 
-    expect(harness.getState().error).toBe(t().background.captureFailed);
+    expect(harness.getState().error).toBe('background.captureFailed');
   });
 
   it('hands a closed tab to the tab-gone path without writing an error', async () => {
@@ -379,9 +378,9 @@ describe('handleClick in a snapshot run', () => {
 
     expect(harness.stopRunWithError).toHaveBeenCalledWith(
       RUN_ID,
-      t().background.snapshotAnchorLost,
+      'background.snapshotAnchorLost',
       expect.any(Number),
-      { code: 'SNAPSHOT_ANCHOR_MISSING', message: t().background.snapshotAnchorLost },
+      { code: 'SNAPSHOT_ANCHOR_MISSING', copy: 'background.snapshotAnchorLost' },
     );
   });
 
@@ -391,7 +390,7 @@ describe('handleClick in a snapshot run', () => {
 
     await expect(handle()).resolves.toMatchObject({ ok: false, reported: true });
 
-    expect(harness.getState().error).toBe(t().background.annotationSkippedPageChanged);
+    expect(harness.getState().error).toBe('background.annotationSkippedPageChanged');
   });
 });
 

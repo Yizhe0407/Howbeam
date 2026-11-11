@@ -13,6 +13,7 @@ import {
   type StepRecaptureResult,
   type StepRecaptureTarget,
 } from './recording-state';
+import { isCopyKey } from '../shared/i18n/copy';
 
 const DEFAULT_STATE: RecordingState = createDefaultRecordingState();
 
@@ -47,7 +48,6 @@ export function resetRunStateToIdle(current: RecordingState): RecordingState {
 
 const MAX_STATE_ID_LENGTH = PERSISTED_STEP_LIMITS.maxIdLength;
 const MAX_STATE_VALUE_LENGTH = 512;
-const MAX_STATE_MESSAGE_LENGTH = 10_000;
 const MAX_VIEWPORT_MAGNITUDE = 10_000_000;
 const MAX_DEVICE_PIXEL_RATIO = 32;
 
@@ -77,8 +77,8 @@ function normalizeSourceUrl(value: unknown): string | null {
 function normalizeRecoverableError(value: unknown): RecoverableRecordingError | null {
   if (!value || typeof value !== 'object') return null;
   const error = value as Partial<RecoverableRecordingError>;
-  if (!isBoundedString(error.code, MAX_STATE_VALUE_LENGTH) || !isBoundedString(error.message, MAX_STATE_MESSAGE_LENGTH)) return null;
-  return { code: error.code, message: error.message };
+  if (!isBoundedString(error.code, MAX_STATE_VALUE_LENGTH) || !isCopyKey(error.copy)) return null;
+  return { code: error.code, copy: error.copy };
 }
 
 function normalizeViewport(value: unknown): RecordingState['snapshotViewport'] {
@@ -167,7 +167,7 @@ function normalizeRecaptureResult(value: unknown): StepRecaptureResult | null {
     !isBoundedString(result.entryId, MAX_STATE_ID_LENGTH) ||
     !isSafeId(result.completedAt) ||
     (result.errorCode !== undefined && !isBoundedString(result.errorCode, MAX_STATE_VALUE_LENGTH)) ||
-    (result.message !== undefined && !isBoundedString(result.message, MAX_STATE_MESSAGE_LENGTH))
+    (result.copy !== undefined && !isCopyKey(result.copy))
   ) {
     return null;
   }
@@ -177,7 +177,7 @@ function normalizeRecaptureResult(value: unknown): StepRecaptureResult | null {
     sessionId: result.sessionId,
     entryId: result.entryId,
     ...(result.errorCode ? { errorCode: result.errorCode } : {}),
-    ...(result.message ? { message: result.message } : {}),
+    ...(result.copy ? { copy: result.copy } : {}),
     completedAt: result.completedAt!,
   };
 }
@@ -226,7 +226,7 @@ export function normalizeRecordingState(stored: Partial<RecordingState> | undefi
     phase,
     sessionId: operation === 'recapture' ? recapture!.sessionId : sessionId,
     tabId: operation === 'recording' ? tabId : null,
-    error: normalizeNullableString(raw.error, MAX_STATE_MESSAGE_LENGTH),
+    error: isCopyKey(raw.error) ? raw.error : null,
     recoverableError: normalizeRecoverableError(raw.recoverableError),
     mode,
     itemCount:

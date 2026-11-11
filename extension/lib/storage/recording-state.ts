@@ -5,6 +5,7 @@
  * so this module must stay dependency-free: messages depends on the persisted
  * schema, never the other way around.
  */
+import type { CopyKey } from '../shared/i18n/copy';
 
 /** 'steps': one screenshot per selection (default). 'snapshot': every
  * selection in the session is annotated onto one shared screenshot instead. */
@@ -28,7 +29,8 @@ export type RecordingPhase = (typeof RECORDING_PHASES)[number];
 
 export interface RecoverableRecordingError {
   code: string;
-  message: string;
+  /** What to tell the user, named rather than written: the page renders it in its own language. */
+  copy: CopyKey;
 }
 
 /** CSS viewport occupied by a screenshot, used to derive its real pixel scale. */
@@ -71,7 +73,7 @@ export interface StepRecaptureResult {
   sessionId: string;
   entryId: string;
   errorCode?: string;
-  message?: string;
+  copy?: CopyKey;
   completedAt: number;
 }
 
@@ -82,7 +84,7 @@ export interface RecordingState {
   phase: RecordingPhase;
   sessionId: string | null;
   tabId: number | null;
-  error: string | null;
+  error: CopyKey | null;
   recoverableError: RecoverableRecordingError | null;
   mode: RecordingMode;
   itemCount: number;

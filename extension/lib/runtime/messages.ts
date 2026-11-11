@@ -1,4 +1,5 @@
 import type { RecordingMode, StepRecaptureTarget, Viewport } from '../storage/recording-state';
+import type { CopyKey } from '../shared/i18n/copy';
 
 type CaptureIntent = 'click' | 'mark';
 
@@ -52,7 +53,7 @@ export type StartRecordingErrorCode = (typeof START_RECORDING_ERROR_CODES)[numbe
 
 export type StartRecordingResult =
   | { ok: true; sessionId: string; runId: string }
-  | { ok: false; error: string; code?: StartRecordingErrorCode };
+  | { ok: false; error: CopyKey; code?: StartRecordingErrorCode };
 
 export interface SourcePermissionPreflightSuccess {
   ok: true;
@@ -83,7 +84,7 @@ interface OpenLibraryMessage {
   type: 'OPEN_LIBRARY';
 }
 
-export type OpenLibraryResult = { ok: true } | { ok: false; error: string };
+export type OpenLibraryResult = { ok: true } | { ok: false; error: CopyKey };
 
 /**
  * An extension page telling the background which tab it occupies. The
@@ -111,9 +112,9 @@ export interface EditorHandoffMessage {
 
 export type EditorHandoffResult =
   | { ok: true; ready: boolean }
-  | { ok: false; error: string };
+  | { ok: false; error: CopyKey };
 
-export type OpenEditorResult = { ok: true } | { ok: false; error: string };
+export type OpenEditorResult = { ok: true } | { ok: false; error: CopyKey };
 
 export const RECORDING_CONTROL_TYPES = [
   'PAUSE_RECORDING',
@@ -166,7 +167,7 @@ export type RecordingControlResult =
       removedItemNumber?: number;
       finish?: FinishResult;
     }
-  | { ok: false; error: string };
+  | { ok: false; error: CopyKey };
 
 /** 在 BackgroundMessage 外傳送，用於卸載 tab 錄製器並釋放 keep-alive port。 */
 export interface HowbeamStopMessage {
@@ -321,7 +322,7 @@ export type PreflightStepRecaptureSourcePermissionErrorCode =
 
 export type PreflightStepRecaptureSourcePermissionResult =
   | SourcePermissionPreflightSuccess
-  | { ok: false; code: PreflightStepRecaptureSourcePermissionErrorCode; message: string };
+  | { ok: false; code: PreflightStepRecaptureSourcePermissionErrorCode; message: CopyKey };
 
 export interface PreflightProjectContinuationSourcePermissionMessage {
   type: 'PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION';
@@ -341,7 +342,7 @@ export type PreflightProjectContinuationSourcePermissionErrorCode =
 
 export type PreflightProjectContinuationSourcePermissionResult =
   | SourcePermissionPreflightSuccess
-  | { ok: false; code: PreflightProjectContinuationSourcePermissionErrorCode; message: string };
+  | { ok: false; code: PreflightProjectContinuationSourcePermissionErrorCode; message: CopyKey };
 
 export interface StartStepRecaptureMessage {
   type: 'START_STEP_RECAPTURE';
@@ -364,7 +365,7 @@ type StartStepRecaptureErrorCode = (typeof RECAPTURE_START_ERROR_CODES)[number];
 
 export type StartStepRecaptureResult =
   | { ok: true; runId: string; tabId: number; reusedTab: boolean }
-  | { ok: false; code: StartStepRecaptureErrorCode; error: string };
+  | { ok: false; code: StartStepRecaptureErrorCode; error: CopyKey };
 
 export interface HowbeamRecaptureReadyMessage {
   type: 'HOWBEAM_RECAPTURE_READY';
@@ -385,7 +386,7 @@ export interface HowbeamRecaptureTargetMessage {
 
 export type StepRecaptureTargetResult =
   | { ok: true; status: 'replaced' }
-  | { ok: false; status: 'rejected' | 'cancelled' | 'failed'; error?: string };
+  | { ok: false; status: 'rejected' | 'cancelled' | 'failed'; error?: CopyKey };
 
 export interface CancelStepRecaptureMessage {
   type: 'CANCEL_STEP_RECAPTURE';
@@ -394,7 +395,7 @@ export interface CancelStepRecaptureMessage {
 
 export type CancelStepRecaptureResult =
   | { ok: true; status: 'cancelled' | 'already-completed' }
-  | { ok: false; error: string };
+  | { ok: false; error: CopyKey };
 
 export interface AckStepRecaptureResultMessage {
   type: 'ACK_STEP_RECAPTURE_RESULT';
@@ -409,7 +410,7 @@ export interface FocusStepRecaptureSourceMessage {
 
 export type FocusStepRecaptureSourceResult =
   | { ok: true }
-  | { ok: false; error: string };
+  | { ok: false; error: CopyKey };
 
 type RecordingControlContracts = {
   [K in RecordingControlMessage['type']]: {

@@ -26,6 +26,7 @@ import { claimPendingStart, discardPendingStart, parkPendingStart } from '@/lib/
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { copyText } from '@/lib/shared/i18n/copy';
 
 interface Props {
   recording: RecordingState;
@@ -214,7 +215,7 @@ export default function RecordControls({
     setControlError(null);
     try {
       const result = await sendToBackground({ type: 'RESUME_RECORDING', runId: recording.runId }, t().runtime.recordingChannelLost);
-      if (!result.ok) setControlError(result.error);
+      if (!result.ok) setControlError(copyText(result.error));
     } catch (error) {
       setControlError(reportError('[howbeam] failed to resume recording', error, t().toolbar.actionFailed));
     }
@@ -227,7 +228,7 @@ export default function RecordControls({
     try {
       const result = await sendToBackground({ type: 'FINISH_RECORDING', runId: recording.runId }, t().runtime.recordingChannelLost);
       if (!result.ok) {
-        setControlError(result.error);
+        setControlError(copyText(result.error));
         return;
       }
       window.close();
@@ -268,7 +269,8 @@ export default function RecordControls({
 
   if (recording.isRecording && recording.runId) {
     // Why the run is on hold or what went wrong, for a user who is not looking at the recorded tab.
-    const runError = recording.recoverableError?.message ?? recording.error;
+    const runErrorCopy = recording.recoverableError?.copy ?? recording.error;
+    const runError = runErrorCopy ? copyText(runErrorCopy) : null;
     return (
       <div className={cn('flex flex-col gap-4', className)}>
         {controlError && <InlineAlert>{controlError}</InlineAlert>}

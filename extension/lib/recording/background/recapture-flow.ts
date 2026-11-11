@@ -20,7 +20,7 @@ import {
 } from './capture-registry';
 import { createRecaptureSettlement } from './recapture-settlement';
 import {
-  recaptureTargetErrorMessage,
+  recaptureTargetErrorCopy,
   StepRecaptureStartError,
   validateRecaptureTarget,
   type ValidatedRecaptureTarget,
@@ -43,12 +43,12 @@ import type {
   StepRecaptureTargetResult,
 } from '../../runtime/messages';
 import type { RecordingState } from '../../storage/recording-state';
-import { t } from '@/lib/shared/i18n';
-import { UserFacingError, userFacingErrorMessage } from '../../runtime/user-facing-errors';
+import { UserFacingError, userFacingErrorCopy } from '../../runtime/user-facing-errors';
+import type { CopyKey } from '../../shared/i18n/copy';
 
 function recaptureFailure(
   code: Exclude<StartStepRecaptureResult, { ok: true }>['code'],
-  error: string,
+  error: CopyKey,
 ): StartStepRecaptureResult {
   return { ok: false, code, error };
 }
@@ -62,7 +62,7 @@ function isRecaptureSourceSender(
 
 function recapturePreflightFailure(
   code: Exclude<PreflightStepRecaptureSourcePermissionResult, { ok: true }>['code'],
-  message: string,
+  message: CopyKey,
 ): PreflightStepRecaptureSourcePermissionResult {
   return { ok: false, code, message };
 }
@@ -131,7 +131,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
       await failStepRecapture(
         context.runId,
         'SOURCE_NAVIGATED',
-        t().recaptureFlow.sourceNavigated,
+        'recaptureFlow.sourceNavigated',
         expectedControlVersion,
       );
     }
@@ -152,7 +152,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     await failStepRecapture(
       state.recapture.runId,
       'SOURCE_TAB_CLOSED',
-      t().recaptureFlow.sourceTabClosed,
+      'recaptureFlow.sourceTabClosed',
       expectedControlVersion,
     );
     return true;
@@ -191,7 +191,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
       message.sessionId.trim().length === 0 ||
       !isEditorSenderForSession(sender, message.sessionId)
     ) {
-      return recapturePreflightFailure('INVALID_EDITOR', t().recaptureFlow.editorOnlyPreflight);
+      return recapturePreflightFailure('INVALID_EDITOR', 'recaptureFlow.editorOnlyPreflight');
     }
 
     let validated: ValidatedRecaptureTarget;
@@ -199,14 +199,14 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
       validated = await validateRecaptureTarget(message.sessionId, message.target);
     } catch (error) {
       if (error instanceof StepRecaptureStartError) {
-        return recapturePreflightFailure(error.code, error.message);
+        return recapturePreflightFailure(error.code, error.copy);
       }
       throw error;
     }
 
     return (
       sourcePermissionPreflightSuccess(validated.sourceUrl) ??
-      recapturePreflightFailure('RESTRICTED_SOURCE', t().recaptureFlow.restrictedSource)
+      recapturePreflightFailure('RESTRICTED_SOURCE', 'recaptureFlow.restrictedSource')
     );
   }
 
@@ -216,29 +216,29 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     version: number,
   ): Promise<StartStepRecaptureResult> {
     await waitForQueuedClicks();
-    if (version !== control.controlVersion) return recaptureFailure('ACTIVE_OPERATION', t().recaptureFlow.operationChanged);
+    if (version !== control.controlVersion) return recaptureFailure('ACTIVE_OPERATION', 'recaptureFlow.operationChanged');
 
     if (!isEditorSenderForSession(sender, message.sessionId)) {
-      return recaptureFailure('INVALID_EDITOR', t().recaptureFlow.editorOnlyStart);
+      return recaptureFailure('INVALID_EDITOR', 'recaptureFlow.editorOnlyStart');
     }
     const current = await getRecordingState();
     if (current.operation !== null || current.isRecording) {
-      return recaptureFailure('ACTIVE_OPERATION', t().recaptureFlow.activeOperation);
+      return recaptureFailure('ACTIVE_OPERATION', 'recaptureFlow.activeOperation');
     }
 
     let validated: ValidatedRecaptureTarget;
     try {
       validated = await validateRecaptureTarget(message.sessionId, message.target);
     } catch (error) {
-      if (error instanceof StepRecaptureStartError) return recaptureFailure(error.code, error.message);
+      if (error instanceof StepRecaptureStartError) return recaptureFailure(error.code, error.copy);
       throw error;
     }
     const permission = await checkSourcePermission(validated.sourceUrl);
     if (permission === 'restricted') {
-      return recaptureFailure('RESTRICTED_SOURCE', t().recaptureFlow.restrictedSource);
+      return recaptureFailure('RESTRICTED_SOURCE', 'recaptureFlow.restrictedSource');
     }
     if (permission === 'permission-required') {
-      return recaptureFailure('HOST_PERMISSION_REQUIRED', t().recaptureFlow.accessRequired);
+      return recaptureFailure('HOST_PERMISSION_REQUIRED', 'recaptureFlow.accessRequired');
     }
 
     const opened = await openVerifiedSourceTab(
@@ -250,10 +250,10 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
       return recaptureFailure(
         'SOURCE_TAB_FAILED',
         opened.reason === 'open-failed'
-          ? t().background.sourceTabOpenFailed
+          ? 'background.sourceTabOpenFailed'
           : opened.reason === 'unreachable'
-            ? t().recaptureFlow.sourceUnreachable
-            : t().recaptureFlow.sourceRedirected,
+            ? 'recaptureFlow.sourceUnreachable'
+            : 'recaptureFlow.sourceRedirected',
       );
     }
     const source = opened.source;
@@ -261,10 +261,10 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
 
     return withUncommittedSourceTab(source, async (commit) => {
       if (sourceTab.id == null || sourceTab.windowId == null) {
-        return recaptureFailure('SOURCE_TAB_FAILED', t().recaptureFlow.sourceRedirected);
+        return recaptureFailure('SOURCE_TAB_FAILED', 'recaptureFlow.sourceRedirected');
       }
       if (version !== control.controlVersion) {
-        return recaptureFailure('ACTIVE_OPERATION', t().recaptureFlow.operationChanged);
+        return recaptureFailure('ACTIVE_OPERATION', 'recaptureFlow.operationChanged');
       }
 
       const runId = crypto.randomUUID();
@@ -294,7 +294,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
         recaptureResult: null,
       }));
       if (!started) {
-        return recaptureFailure('ACTIVE_OPERATION', t().recaptureFlow.operationChanged);
+        return recaptureFailure('ACTIVE_OPERATION', 'recaptureFlow.operationChanged');
       }
       // From here the persisted recapture context owns the tab; failure paths
       // settle through failStepRecapture, which closes a created tab itself.
@@ -327,9 +327,9 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
       } catch (error) {
         console.error('[howbeam] failed to start recapture recorder', error);
         if (version === control.controlVersion) {
-          await failStepRecapture(runId, 'INJECTION_FAILED', t().recaptureFlow.injectFailed, version);
+          await failStepRecapture(runId, 'INJECTION_FAILED', 'recaptureFlow.injectFailed', version);
         }
-        return recaptureFailure('INJECTION_FAILED', t().recaptureFlow.injectFailed);
+        return recaptureFailure('INJECTION_FAILED', 'recaptureFlow.injectFailed');
       }
     });
   }
@@ -339,14 +339,14 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     sender: Browser.runtime.MessageSender,
   ): Promise<StartStepRecaptureResult> {
     if (!isEditorSenderForSession(sender, message.sessionId)) {
-      return recaptureFailure('INVALID_EDITOR', t().recaptureFlow.editorOnlyProjectStart);
+      return recaptureFailure('INVALID_EDITOR', 'recaptureFlow.editorOnlyProjectStart');
     }
-    if (startingRecapture) return recaptureFailure('ACTIVE_OPERATION', t().recaptureFlow.alreadyStarting);
+    if (startingRecapture) return recaptureFailure('ACTIVE_OPERATION', 'recaptureFlow.alreadyStarting');
     startingRecapture = true;
     try {
       const current = await getRecordingState();
       if (current.operation !== null || current.isRecording) {
-        return recaptureFailure('ACTIVE_OPERATION', t().recaptureFlow.activeOperation);
+        return recaptureFailure('ACTIVE_OPERATION', 'recaptureFlow.activeOperation');
       }
       const version = control.claimControl({
         cancelRecorderGate: true,
@@ -366,11 +366,11 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     const state = await getRecordingState();
     if (state.recaptureResult?.runId === message.runId) return { ok: true, status: 'already-completed' };
     if (state.operation !== 'recapture' || state.recapture?.runId !== message.runId) {
-      return { ok: false, error: t().recaptureFlow.alreadyEnded };
+      return { ok: false, error: 'recaptureFlow.alreadyEnded' };
     }
     const context = state.recapture;
     if (!isEditorSenderForSession(sender, context.sessionId) && !isRecaptureSourceSender(sender, context)) {
-      return { ok: false, error: t().recaptureFlow.invalidSource };
+      return { ok: false, error: 'recaptureFlow.invalidSource' };
     }
     const captureId = settlement.activeCaptureId();
     if (captureId && isCaptureCommitting(captureId)) {
@@ -381,7 +381,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     const version = control.claimControl({ cancelRecaptureGate: true });
     await waitForQueuedClicks();
     // 原本內容 (not 原內容) matches the editor's own recapture wording.
-    const settled = await settleStepRecapture(message.runId, 'cancelled', version, 'CANCELLED', t().recaptureFlow.cancelled);
+    const settled = await settleStepRecapture(message.runId, 'cancelled', version, 'CANCELLED', 'recaptureFlow.cancelled');
     return settled ? { ok: true, status: 'cancelled' } : { ok: true, status: 'already-completed' };
   }
 
@@ -406,16 +406,16 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
   ): Promise<FocusStepRecaptureSourceResult> {
     const state = await getRecordingState();
     if (state.operation !== 'recapture' || state.recapture?.runId !== message.runId) {
-      return { ok: false, error: t().recaptureFlow.alreadyEnded };
+      return { ok: false, error: 'recaptureFlow.alreadyEnded' };
     }
     if (!isEditorSenderForSession(sender, state.recapture.sessionId)) {
-      return { ok: false, error: t().recaptureFlow.invalidEditor };
+      return { ok: false, error: 'recaptureFlow.invalidEditor' };
     }
     try {
       await focusTab(state.recapture.sourceTabId, state.recapture.sourceWindowId);
       return { ok: true };
     } catch {
-      return { ok: false, error: t().recaptureFlow.tabMissing };
+      return { ok: false, error: 'recaptureFlow.tabMissing' };
     }
   }
 
@@ -445,8 +445,8 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     ) {
       throw new StaleCaptureError('Recapture changed before the screenshot could be taken.');
     }
-    if (activeTab?.id !== tabId) throw new UserFacingError(t().recaptureFlow.sourceNotActive);
-    if (activeTab.url !== expectedUrl) throw new UserFacingError(t().recaptureFlow.sourceChanged);
+    if (activeTab?.id !== tabId) throw new UserFacingError('recaptureFlow.sourceNotActive');
+    if (activeTab.url !== expectedUrl) throw new UserFacingError('recaptureFlow.sourceChanged');
   }
 
   async function handleRecaptureTarget(
@@ -454,7 +454,7 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     sender: Browser.runtime.MessageSender,
     expectedControlVersion: number,
   ): Promise<StepRecaptureTargetResult> {
-    const reject = (status: 'rejected' | 'cancelled' | 'failed', error?: string): StepRecaptureTargetResult => ({
+    const reject = (status: 'rejected' | 'cancelled' | 'failed', error?: CopyKey): StepRecaptureTargetResult => ({
       ok: false,
       status,
       ...(error ? { error } : {}),
@@ -537,19 +537,18 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     } catch (error) {
       if (error instanceof StaleCaptureError) return reject('cancelled');
       const errorCode = error instanceof StepRecaptureError ? error.code : 'CAPTURE_FAILED';
-      // The editor shows this text verbatim: localized copy only, never a raw
-      // repository or browser diagnostic.
-      const errorMessage =
+      // The editor shows this copy: never a raw repository or browser diagnostic.
+      const errorCopy =
         error instanceof StepRecaptureError
-          ? recaptureTargetErrorMessage(error.code, context.target.kind)
+          ? recaptureTargetErrorCopy(error.code, context.target.kind)
           // 原本內容 (not 原內容) matches the editor's own recapture wording.
-          : userFacingErrorMessage(error, t().recaptureFlow.failedUnchanged);
+          : userFacingErrorCopy(error, 'recaptureFlow.failedUnchanged');
       console.error('[howbeam] failed to replace step capture', error);
       if (expectedControlVersion === control.controlVersion) {
         const version = control.bumpVersion();
-        await settleStepRecapture(message.runId, 'failed', version, errorCode, errorMessage);
+        await settleStepRecapture(message.runId, 'failed', version, errorCode, errorCopy);
       }
-      return reject('failed', errorMessage);
+      return reject('failed', errorCopy);
     } finally {
       releaseCapture(message.captureId);
       settlement.releaseCapture(message.captureId);

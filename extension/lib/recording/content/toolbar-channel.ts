@@ -2,7 +2,6 @@ import { sendToBackground } from '../../runtime/background-client';
 import { RECORDING_CONTROL_TIMEOUT_MS } from '../content-script-constants';
 import type { RecordingControlMessage, RecordingControlResult } from '../../runtime/messages';
 import type { RecordingState } from '../../storage/recording-state';
-import { t } from '@/lib/shared/i18n';
 
 export type ToolbarChannel = ReturnType<typeof createToolbarChannel>;
 
@@ -18,7 +17,7 @@ export function createToolbarChannel(runId: string) {
       itemCount: state.itemCount,
       runItemCount: state.runItemCount,
       projectTitle: state.targetProjectTitle,
-      error: state.recoverableError?.message ?? state.error,
+      error: state.recoverableError?.copy ?? state.error,
     };
   }
 
@@ -27,7 +26,9 @@ export function createToolbarChannel(runId: string) {
     undoToken?: string,
   ): Promise<RecordingControlResult> {
     const message: RecordingControlMessage = { type: action, runId, ...(undoToken ? { undoToken } : {}) };
-    const command = sendToBackground(message, t().runtime.recordingChannelLost);
+    const command = sendToBackground(message).catch((): RecordingControlResult => (
+      { ok: false, error: 'runtime.recordingChannelLost' }
+    ));
     // A hung background must not wedge the in-page toolbar forever: surface
     // the channel-failure error after the shared control budget (the same
     // one the shield toolbar uses), so controls re-enable and the user sees
@@ -38,7 +39,7 @@ export function createToolbarChannel(runId: string) {
         command,
         new Promise<RecordingControlResult>((resolve) => {
           timeout = setTimeout(
-            () => resolve({ ok: false, error: t().runtime.recordingChannelLost }),
+            () => resolve({ ok: false, error: 'runtime.recordingChannelLost' }),
             RECORDING_CONTROL_TIMEOUT_MS,
           );
         }),

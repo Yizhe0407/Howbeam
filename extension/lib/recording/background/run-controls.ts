@@ -9,7 +9,6 @@ import { deleteStepsForRun, getStepOutlines } from '../../storage/step-repositor
 import { getRecordingState, resetRunStateToIdle } from '../../storage/storage';
 import { markEditorOpenFailed } from '../recording-recovery';
 import type { FinishResult, RecordingControlMessage, RecordingControlResult } from '../../runtime/messages';
-import { t } from '@/lib/shared/i18n';
 import { controlFailure } from './control-result';
 import { createSnapshotControls } from './snapshot-controls';
 import { createUndoControls } from './undo-controls';
@@ -54,11 +53,11 @@ export function createRunControls(deps: RunControlDependencies) {
       state.mode !== 'steps' ||
       state.phase !== 'recording'
     ) {
-      return controlFailure(t().background.cannotPause);
+      return controlFailure('background.cannotPause');
     }
     control.acceptingClicks = false;
     const updated = await updateRunState(message.runId, (current) => ({ ...current, phase: 'paused' }));
-    if (!updated) return controlFailure(t().background.stateChangedRetry);
+    if (!updated) return controlFailure('background.stateChangedRetry');
     return { ok: true };
   }
 
@@ -70,10 +69,10 @@ export function createRunControls(deps: RunControlDependencies) {
       state.mode !== 'steps' ||
       state.phase !== 'paused'
     ) {
-      return controlFailure(t().background.cannotResume);
+      return controlFailure('background.cannotResume');
     }
     const updated = await updateRunState(message.runId, (current) => ({ ...current, phase: 'recording' }));
-    if (!updated) return controlFailure(t().background.stateChangedRetry);
+    if (!updated) return controlFailure('background.stateChangedRetry');
     control.acceptingClicks = true;
     return { ok: true };
   }
@@ -89,7 +88,7 @@ export function createRunControls(deps: RunControlDependencies) {
         initial.phase !== 'preparing-next' &&
         initial.phase !== 'invalidated')
     ) {
-      return controlFailure(initial.phase === 'finishing' ? t().background.finishing : t().background.alreadyEnded);
+      return controlFailure(initial.phase === 'finishing' ? 'background.finishing' : 'background.alreadyEnded');
     }
 
     control.claimControl({ discardUndo: true, bumpVersion: false });
@@ -104,14 +103,14 @@ export function createRunControls(deps: RunControlDependencies) {
           current.phase === 'invalidated'),
       (current) => ({ ...current, phase: 'finishing', error: null, recoverableError: null }),
     );
-    if (!markedFinishing) return controlFailure(t().background.stateChangedRetry);
+    if (!markedFinishing) return controlFailure('background.stateChangedRetry');
 
     await waitForQueuedClicks();
-    if (startedAtControlVersion !== control.controlVersion) return controlFailure(t().background.stateChanged);
+    if (startedAtControlVersion !== control.controlVersion) return controlFailure('background.stateChanged');
 
     const state = await getRecordingState();
     if (!state.isRecording || !state.sessionId || state.runId !== message.runId) {
-      return controlFailure(t().background.alreadyEnded);
+      return controlFailure('background.alreadyEnded');
     }
     const steps = await getStepOutlines(state.sessionId);
     const runItems = steps.filter((step) => step.runId === message.runId && step.bounds !== null);
@@ -126,7 +125,7 @@ export function createRunControls(deps: RunControlDependencies) {
     // No reclaim on FINISH even at zero items: openEditor below opens this very
     // Project, and the user reaches it visibly in the editor.
     const stopped = await control.writeStateForControl(version, resetRunStateToIdle);
-    if (!stopped) return controlFailure(t().background.finishFailed);
+    if (!stopped) return controlFailure('background.finishFailed');
 
     // Only after the finish won the state write: doing it earlier risked leaving a
     // run in phase 'finishing' whose groupAnchorId pointed at a deleted anchor row.
@@ -153,7 +152,7 @@ export function createRunControls(deps: RunControlDependencies) {
       initial.phase === 'starting' ||
       initial.phase === 'finishing'
     ) {
-      return controlFailure(t().background.cannotDiscard);
+      return controlFailure('background.cannotDiscard');
     }
 
     const version = control.claimControl({ discardUndo: true });
@@ -166,13 +165,13 @@ export function createRunControls(deps: RunControlDependencies) {
       !state.sessionId ||
       state.runId !== message.runId
     ) {
-      return controlFailure(t().background.stateChangedRetry);
+      return controlFailure('background.stateChangedRetry');
     }
 
     try {
       await deleteStepsForRun(state.sessionId, message.runId);
       const stopped = await control.writeStateForControl(version, resetRunStateToIdle);
-      if (!stopped) return controlFailure(t().background.discardFailed);
+      if (!stopped) return controlFailure('background.discardFailed');
       await recorderRuntime.stopRecorderInTab(state.tabId);
       // The run's steps are already deleted, so a popup-created Project is back to
       // an empty shell here — the exact case the reclaim exists for.
@@ -182,10 +181,10 @@ export function createRunControls(deps: RunControlDependencies) {
       console.error('[howbeam] failed to discard current recording', error);
       await control.writeStateForControl(version, (current) => ({
         ...current,
-        error: t().background.discardFailed,
-        recoverableError: { code: 'DISCARD_FAILED', message: t().background.discardFailed },
+        error: 'background.discardFailed',
+        recoverableError: { code: 'DISCARD_FAILED', copy: 'background.discardFailed' },
       }));
-      return controlFailure(t().background.discardFailed);
+      return controlFailure('background.discardFailed');
     }
   }
 
@@ -201,7 +200,7 @@ export function createRunControls(deps: RunControlDependencies) {
         !isTrustedRecorderControlSender(sender, state.tabId)
       ) {
         console.warn('[howbeam] rejected an untrusted recorder control message', message.type);
-        return controlFailure(t().background.actionUnavailable);
+        return controlFailure('background.actionUnavailable');
       }
     }
 

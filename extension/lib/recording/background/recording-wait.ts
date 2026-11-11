@@ -1,7 +1,7 @@
 import { browser } from 'wxt/browser';
 import { isRecordableTabUrl } from '../../shared/restricted-urls';
 import type { RecordingState, RecoverableRecordingError } from '../../storage/recording-state';
-import { t } from '@/lib/shared/i18n';
+import type { CopyKey } from '../../shared/i18n/copy';
 
 /**
  * Why a live run is on hold in a page the recorder cannot run on. The run is
@@ -24,16 +24,15 @@ const WAIT_CODES: Record<RecordingWaitReason, string> = {
   'follow-failed': 'RECORDING_WAITING_FOLLOW_FAILED',
 };
 
-const WAIT_MESSAGES: Record<RecordingWaitReason, () => string> = {
-  'restricted-page': () => t().background.waitingRestrictedPage,
-  'site-access': () => t().background.waitingSiteAccess,
-  'page-failed': () => t().background.errorPageFailedToLoad,
-  'follow-failed': () => t().background.waitingFollowFailed,
+const WAIT_COPY: Record<RecordingWaitReason, CopyKey> = {
+  'restricted-page': 'background.waitingRestrictedPage',
+  'site-access': 'background.waitingSiteAccess',
+  'page-failed': 'background.errorPageFailedToLoad',
+  'follow-failed': 'background.waitingFollowFailed',
 };
 
-/** Built on demand so the message is in the locale active when it is raised. */
 export function recordingWaitError(reason: RecordingWaitReason): RecoverableRecordingError {
-  return { code: WAIT_CODES[reason], message: WAIT_MESSAGES[reason]() };
+  return { code: WAIT_CODES[reason], copy: WAIT_COPY[reason] };
 }
 
 export function isRecordingWaitError(error: RecoverableRecordingError | null): boolean {
@@ -47,7 +46,7 @@ export function isWaitingForSiteAccess(state: Pick<RecordingState, 'recoverableE
 /** Puts a live run on hold, keeping its phase (a paused run stays paused). */
 export function markRecordingWait(state: RecordingState, reason: RecordingWaitReason): RecordingState {
   const error = recordingWaitError(reason);
-  return { ...state, error: error.message, recoverableError: error };
+  return { ...state, error: error.copy, recoverableError: error };
 }
 
 /** Lifts a hold once the run is back on a recordable page; any other error is kept. */

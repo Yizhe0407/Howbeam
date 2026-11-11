@@ -50,13 +50,13 @@ describe('runtime response contracts', () => {
     [
       'start recording refused with a recovery code',
       isStartRecordingResult,
-      { ok: false, code: 'SOURCE_PAGE_UNREACHABLE', error: '來源頁無法載入。' },
+      { ok: false, code: 'SOURCE_PAGE_UNREACHABLE', error: 'background.continuationSourceUnreachable' },
     ],
-    ['open editor', isOpenEditorResult, { ok: false, error: 'cannot open' }],
+    ['open editor', isOpenEditorResult, { ok: false, error: 'runtime.editorOpenFailed' }],
     ['open library', isOpenLibraryResult, { ok: true }],
     ['editor handoff consenting to navigation', isEditorHandoffResult, { ok: true, ready: false }],
     ['editor handoff already showing the target', isEditorHandoffResult, { ok: true, ready: true }],
-    ['editor handoff refused by a draft', isEditorHandoffResult, { ok: false, error: '請先確認草稿。' }],
+    ['editor handoff refused by a draft', isEditorHandoffResult, { ok: false, error: 'editor.draftConfirmationRequired' }],
     [
       'recording control',
       isRecordingControlResult,
@@ -70,7 +70,7 @@ describe('runtime response contracts', () => {
     [
       'recapture preflight',
       isPreflightStepRecaptureSourcePermissionResult,
-      { ok: false, code: 'TARGET_CHANGED', message: 'target changed' },
+      { ok: false, code: 'TARGET_CHANGED', message: 'recaptureFlow.stepChanged' },
     ],
     [
       'continuation preflight',
@@ -91,7 +91,7 @@ describe('runtime response contracts', () => {
     ['cancel recapture', isCancelStepRecaptureResult, { ok: true, status: 'already-completed' }],
     ['click capture', isClickCaptureResult, { ok: false, error: 'wrong-phase' }],
     ['reported click capture failure', isClickCaptureResult, { ok: false, error: 'capture-failed', reported: true }],
-    ['recapture target', isStepRecaptureTargetResult, { ok: false, status: 'rejected', error: 'retry' }],
+    ['recapture target', isStepRecaptureTargetResult, { ok: false, status: 'rejected', error: 'recaptureFlow.failed' }],
     ['readiness boolean', isRuntimeBoolean, true],
   ] as const)('accepts a complete %s response', (_name, guard, value) => {
     expect(guard(value)).toBe(true);

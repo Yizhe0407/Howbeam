@@ -6,7 +6,6 @@ import { createRunState } from '@/lib/recording/background/run-state';
 import type { Step } from '@/lib/storage/models';
 import type { RecordingState } from '@/lib/storage/recording-state';
 import type { StartRecordingMessage } from '@/lib/runtime/messages';
-import { t } from '@/lib/shared/i18n';
 import { makeRecordingState } from '../setup/recording-state';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 
@@ -161,12 +160,12 @@ describe('startRecording', () => {
   it('refuses while another operation owns the recorder', async () => {
     state = liveRun({ sessionId: 'project-b' });
     await expect(lifecycle.startRecording(start(), popup))
-      .resolves.toEqual({ ok: false, error: t().recaptureFlow.activeOperation });
+      .resolves.toEqual({ ok: false, error: 'recaptureFlow.activeOperation' });
 
     state = makeRecordingState();
     isStartingRecapture.mockReturnValue(true);
     await expect(lifecycle.startRecording(start(), popup))
-      .resolves.toEqual({ ok: false, error: t().recaptureFlow.activeOperation });
+      .resolves.toEqual({ ok: false, error: 'recaptureFlow.activeOperation' });
     expect(injectRecorder).not.toHaveBeenCalled();
   });
 
@@ -174,14 +173,14 @@ describe('startRecording', () => {
     repositories.getProject.mockResolvedValue(undefined);
 
     await expect(lifecycle.startRecording(start(), popup))
-      .resolves.toEqual({ ok: false, error: t().background.recordTargetMissing });
+      .resolves.toEqual({ ok: false, error: 'background.recordTargetMissing' });
   });
 
   it('records why it cannot start on a browser page', async () => {
     mocks.tabsQuery.mockResolvedValue([{ id: TAB_ID, windowId: WINDOW_ID, url: 'chrome://settings' }]);
 
     await expect(lifecycle.startRecording(start(), popup))
-      .resolves.toEqual({ ok: false, error: t().background.restrictedBrowserPage });
+      .resolves.toEqual({ ok: false, error: 'background.restrictedBrowserPage' });
     expect(state).toMatchObject({ phase: 'error', recoverableError: { code: 'RESTRICTED_PAGE' } });
   });
 
@@ -189,7 +188,7 @@ describe('startRecording', () => {
     mocks.tabsQuery.mockResolvedValue([]);
 
     await expect(lifecycle.startRecording(start(), popup))
-      .resolves.toEqual({ ok: false, error: t().background.noActiveTab });
+      .resolves.toEqual({ ok: false, error: 'background.noActiveTab' });
     expect(state.recoverableError?.code).toBe('NO_ACTIVE_TAB');
   });
 
@@ -199,18 +198,18 @@ describe('startRecording', () => {
 
     await lifecycle.startRecording(start(), popup);
 
-    expect(stopRunWithError).toHaveBeenCalledWith(state.runId, t().background.injectFailed, control.controlVersion);
+    expect(stopRunWithError).toHaveBeenCalledWith(state.runId, 'background.injectFailed', control.controlVersion);
     expect(control.acceptingClicks).toBe(false);
   });
 });
 
 describe('stopRecording', () => {
   it('ends the run, keeps its notice, and cleans up after the run stopped', async () => {
-    state = liveRun({ error: 'shown', recoverableError: { code: 'CAPTURE_FAILED', message: 'shown' } });
+    state = liveRun({ error: 'background.captureFailed', recoverableError: { code: 'CAPTURE_FAILED', copy: 'background.captureFailed' } });
 
     await lifecycle.stopRecording();
 
-    expect(state).toMatchObject({ isRecording: false, phase: 'idle', runId: null, error: 'shown' });
+    expect(state).toMatchObject({ isRecording: false, phase: 'idle', runId: null, error: 'background.captureFailed' });
     expect(cleanup.deleteEmptySnapshotAnchorBestEffort).toHaveBeenCalledWith(expect.objectContaining({ runId: 'run-1' }));
     expect(stopRecorderInTab).toHaveBeenCalledWith(TAB_ID);
     expect(cleanup.reclaimAbandonedAutoCreatedProject).toHaveBeenCalledWith(expect.objectContaining({ runId: 'run-1' }));
