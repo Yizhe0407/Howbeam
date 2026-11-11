@@ -77,6 +77,8 @@ export interface Idle {
   /** Counters the popup keeps showing after a run ends. */
   itemCount: number;
   runItemCount: number;
+  /** Lets a recorder whose capture answer was lost check whether it was committed. */
+  lastCommittedCaptureId: string | null;
 }
 
 export type Operation = Idle | Recording | Recapture;
@@ -90,7 +92,16 @@ export interface RunState {
 
 export function idleState(): RunState {
   return {
-    operation: { kind: 'idle', sessionId: null, mode: 'steps', failed: false, notice: null, itemCount: 0, runItemCount: 0 },
+    operation: {
+      kind: 'idle',
+      sessionId: null,
+      mode: 'steps',
+      failed: false,
+      notice: null,
+      itemCount: 0,
+      runItemCount: 0,
+      lastCommittedCaptureId: null,
+    },
     recaptureResult: null,
   };
 }
@@ -171,6 +182,7 @@ export function toRecordingState(state: RunState): RecordingState {
     mode: operation.mode,
     itemCount: operation.itemCount,
     runItemCount: operation.runItemCount,
+    lastCommittedCaptureId: operation.lastCommittedCaptureId,
     recapture: null,
     recaptureResult,
   };
@@ -234,6 +246,7 @@ export function fromRecordingState(stored: RecordingState): RunState {
       notice,
       itemCount: stored.itemCount,
       runItemCount: stored.runItemCount,
+      lastCommittedCaptureId: stored.lastCommittedCaptureId,
     },
     recaptureResult,
   };
