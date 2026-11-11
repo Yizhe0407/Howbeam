@@ -1,8 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { makeRecordingState } from '../setup/recording-state';
 import {
-  getCaptureGuardFailure,
   isDocumentScrollingKey,
   getRecordingTabUpdateAction,
   isInScrollableElementGutter,
@@ -12,41 +10,6 @@ import {
   isTrustedRecordedPageSender,
   isValidSnapshotViewportContext,
 } from '@/lib/recording/recording-guards';
-
-const state = makeRecordingState({
-  isRecording: true,
-  operation: 'recording',
-  phase: 'recording',
-  sessionId: 'session-1',
-  tabId: 7,
-  runId: 'run-1',
-});
-
-const validGuard = {
-  expectedControlVersion: 3,
-  currentControlVersion: 3,
-  runId: 'run-1',
-  sessionId: 'session-1',
-  tabId: 7,
-  expectedUrl: 'https://example.com/page',
-  state,
-  activeTab: { id: 7, url: 'https://example.com/page' },
-};
-
-describe('getCaptureGuardFailure', () => {
-  it('accepts only the current run on the expected active tab and URL', () => {
-    expect(getCaptureGuardFailure(validGuard)).toBeNull();
-    expect(getCaptureGuardFailure({ ...validGuard, currentControlVersion: 4 })).toBe('stale-run');
-    expect(getCaptureGuardFailure({ ...validGuard, runId: 'old-run' })).toBe('stale-run');
-    expect(getCaptureGuardFailure({ ...validGuard, sessionId: 'old-session' })).toBe('stale-run');
-    expect(getCaptureGuardFailure({ ...validGuard, activeTab: { id: 8, url: validGuard.expectedUrl } })).toBe(
-      'inactive-tab',
-    );
-    expect(getCaptureGuardFailure({ ...validGuard, activeTab: { id: 7, url: 'https://example.com/next' } })).toBe(
-      'changed-url',
-    );
-  });
-});
 
 describe('isTrustedRecordedPageSender', () => {
   const validSender = {

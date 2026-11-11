@@ -17,35 +17,6 @@ import { isCopyKey } from '../shared/i18n/copy';
 
 const DEFAULT_STATE: RecordingState = createDefaultRecordingState();
 
-/**
- * Ends the current run by returning every run-scoped field to its idle
- * default while preserving durable, non-run state: sessionId (the Project the
- * UI still targets), mode, and the recapture handoff fields
- * (recapture/recaptureResult), which have their own lifecycle. This is the
- * clean-stop shape; error stops differ deliberately (phase 'error' plus a
- * message) and must keep hand-writing their fields.
- */
-export function resetRunStateToIdle(current: RecordingState): RecordingState {
-  return {
-    ...current,
-    operation: null,
-    isRecording: false,
-    phase: 'idle',
-    tabId: null,
-    error: null,
-    recoverableError: null,
-    itemCount: 0,
-    runItemCount: 0,
-    groupAnchorId: null,
-    runId: null,
-    autoCreatedProjectId: null,
-    targetProjectTitle: null,
-    insertAfterStepId: null,
-    snapshotViewport: null,
-    snapshotDevicePixelRatio: null,
-  };
-}
-
 const MAX_STATE_ID_LENGTH = PERSISTED_STEP_LIMITS.maxIdLength;
 const MAX_STATE_VALUE_LENGTH = 512;
 const MAX_VIEWPORT_MAGNITUDE = 10_000_000;

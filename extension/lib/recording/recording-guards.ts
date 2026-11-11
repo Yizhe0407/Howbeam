@@ -1,8 +1,7 @@
 import type { ClickCapture } from '../runtime/messages';
-import type { RecordingMode, RecordingState } from '../storage/recording-state';
+import type { RecordingMode } from '../storage/recording-state';
 import { deepElementFromPoint, getComposedParent } from '../capture/selector/element-availability';
 
-export type CaptureGuardFailure = 'stale-run' | 'inactive-tab' | 'changed-url' | null;
 export type RecordingTabUpdateAction = 'ignore' | 'reinject' | 'stop-snapshot';
 
 /** 原生捲軸間隙位於 layout viewport 外，不可被記錄為步驟。 */
@@ -96,31 +95,6 @@ export function getRecordingTabUpdateAction(
   return changeInfo.status === 'complete' ? 'reinject' : 'ignore';
 }
 
-export function getCaptureGuardFailure(input: {
-  expectedControlVersion: number;
-  currentControlVersion: number;
-  runId: string;
-  sessionId: string;
-  tabId: number;
-  expectedUrl: string;
-  state: RecordingState;
-  activeTab: { id?: number; url?: string } | undefined;
-}): CaptureGuardFailure {
-  const { state } = input;
-  if (
-    input.expectedControlVersion !== input.currentControlVersion ||
-    !state.isRecording ||
-    state.runId !== input.runId ||
-    state.sessionId !== input.sessionId ||
-    state.tabId !== input.tabId
-  ) {
-    return 'stale-run';
-  }
-  if (input.activeTab?.id !== input.tabId) return 'inactive-tab';
-  if (input.activeTab.url && input.activeTab.url !== input.expectedUrl) return 'changed-url';
-  return null;
-}
-
 function isSameOrigin(a: string, b: string): boolean {
   try {
     return new URL(a).origin === new URL(b).origin;
@@ -132,9 +106,8 @@ function isSameOrigin(a: string, b: string): boolean {
 /** Trusts a HOWBEAM_CLICK sender by identity (the tab/frame), not exact
  * URL: sender.url/tab.url lag behind SPA history.pushState navigations, so
  * comparing full URLs rejected legitimate clicks. Origin is still checked to
- * reject a stale content script left on a different site; getCaptureGuardFailure's
- * changed-url guard (an exact match, checked after the capture round-trip) is
- * what catches a real same-tab navigation during the capture window. */
+ * reject a stale content script left on a different site; the capture
+ * guard's exact URL match (checked before every screenshot) is what catches a real same-tab navigation during the capture window. */
 export function isTrustedRecordedPageSender(
   messageUrl: string,
   sender: { frameId?: number; url?: string; tab?: { id?: number; url?: string } },

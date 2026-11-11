@@ -17,28 +17,4 @@ export function queueCapture<T>(task: () => Promise<T>): Promise<T> {
   return result;
 }
 
-function serializedQueue() {
-  let chain: Promise<unknown> = Promise.resolve();
-  return {
-    enqueue<T>(task: () => Promise<T>): Promise<T> {
-      const result = chain.then(task, task);
-      chain = result.then(() => undefined, () => undefined);
-      return result;
-    },
-    wait(): Promise<void> {
-      return chain.then(() => undefined);
-    },
-  };
-}
-
-/** Click, lifecycle and persisted-state writes have deliberately independent
- * queues; callers place barriers explicitly where their transaction needs it. */
-const clickQueue = serializedQueue();
-const lifecycleQueue = serializedQueue();
-const stateMutationQueue = serializedQueue();
-export const queueClick = clickQueue.enqueue;
-export const queueLifecycle = lifecycleQueue.enqueue;
-export const queueStateMutation = stateMutationQueue.enqueue;
-export const waitForQueuedClicks = () => clickQueue.wait();
-
 export class StaleCaptureError extends Error {}

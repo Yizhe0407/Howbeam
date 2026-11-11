@@ -16,7 +16,6 @@ import {
   withNotice,
 } from '@/lib/recording/run/transitions';
 import { idleState, toRecordingState, type RunState } from '@/lib/recording/run/state';
-import { resetRunStateToIdle } from '@/lib/storage/storage';
 
 const run = startingRun({
   runId: 'run-1',
@@ -47,9 +46,13 @@ describe('run transitions', () => {
     expect(waiting({ ...live, phase: 'paused' }, 'restricted-page')).toMatchObject({ phase: 'paused', wait: 'restricted-page' });
   });
 
-  it('ends a run the way the persisted idle reset does', () => {
-    const before = toRecordingState(state);
-    expect(toRecordingState(ended(state, live))).toEqual({ ...resetRunStateToIdle(before), lastCommittedCaptureId: 'c2' });
+  it('ends a run back to idle, keeping its Project, mode and last committed capture', () => {
+    expect(toRecordingState(ended(state, live))).toEqual({
+      ...toRecordingState(idleState()),
+      sessionId: 'project-1',
+      mode: 'snapshot',
+      lastCommittedCaptureId: 'c2',
+    });
   });
 
   it('keeps the notice on STOP, and the Project and counters on an error stop', () => {
