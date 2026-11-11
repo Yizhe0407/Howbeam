@@ -120,6 +120,11 @@ export async function mockStepRepositoryModule(
     ...actual,
     getStep: mocks.getStep,
     getSteps: mocks.getSteps,
+    getStepOutlines: mocks.getSteps,
+    discardPendingAnchor: async (id: string) => {
+      await mocks.deleteStep(id);
+      return true;
+    },
     addStepsAfter: async (steps: readonly unknown[]) => {
       for (const step of steps) await mocks.storeStep(step);
     },

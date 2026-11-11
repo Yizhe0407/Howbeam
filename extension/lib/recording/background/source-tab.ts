@@ -1,6 +1,6 @@
 import { browser, type Browser } from 'wxt/browser';
 import { isTrustedEditorSenderForSession } from '../../capture/recapture-guards';
-import { getSteps } from '../../storage/step-repository';
+import { getStepOutlines } from '../../storage/step-repository';
 import { isRestrictedUrl } from '../../shared/restricted-urls';
 import { waitForTabComplete } from '../../runtime/tab-loading';
 import { isErrorPageError } from '../../runtime/browser-errors';
@@ -173,7 +173,7 @@ export async function resolveProjectContinuationAnchor(
   sessionId: string,
   afterEntryId?: string,
 ): Promise<{ sourceUrl: string; afterStepId: string | null } | null> {
-  const steps = await getSteps(sessionId);
+  const steps = await getStepOutlines(sessionId);
   if (afterEntryId === undefined) {
     const last = steps[steps.length - 1];
     return last ? { sourceUrl: last.url, afterStepId: null } : null;

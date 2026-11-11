@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
 import { getProject } from '../../storage/project-repository';
-import { getSteps } from '../../storage/step-repository';
+import { getStepOutlines } from '../../storage/step-repository';
 import { getRecordingState } from '../../storage/storage';
 import { describeBrowserError } from '../../runtime/browser-errors';
 import { isEditorHandoffResult } from '../../runtime/runtime-message-result';
@@ -137,7 +137,7 @@ export function createEditorOpen(deps: { control: ControlPlane }) {
 
   /** The newest capture in a Project: where an interrupted run resumes. */
   async function latestEntryId(sessionId: string): Promise<string | null> {
-    const steps = await getSteps(sessionId);
+    const steps = await getStepOutlines(sessionId);
     const lastItem = steps.filter((step) => step.bounds !== null).at(-1) ?? null;
     return lastItem?.groupId ?? lastItem?.id ?? null;
   }

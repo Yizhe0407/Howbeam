@@ -1,6 +1,5 @@
 import { discardPristineProject } from '../../storage/project-repository';
-import { deleteStep, getSteps } from '../../storage/step-repository';
-import { stepRole } from '../../storage/models';
+import { discardPendingAnchor } from '../../storage/step-repository';
 import { describeBrowserError } from '../../runtime/browser-errors';
 import type { RecordingState } from '../../storage/recording-state';
 
@@ -21,15 +20,10 @@ export async function reclaimAbandonedAutoCreatedProject(state: RecordingState):
   }
 }
 
-export async function deleteEmptySnapshotAnchor(state: RecordingState): Promise<string | null> {
-  if (state.mode !== 'snapshot' || !state.sessionId || !state.groupAnchorId) return null;
-  const steps = await getSteps(state.sessionId);
-  const hasAnnotations = steps.some(
-    (step) => step.groupId === state.groupAnchorId && stepRole(step) === 'annotation' && step.bounds !== null,
-  );
-  if (hasAnnotations) return null;
-  await deleteStep(state.groupAnchorId);
-  return state.groupAnchorId;
+/** Discards the run's snapshot base image if no annotation was ever added to it. */
+export async function deleteEmptySnapshotAnchor(state: RecordingState): Promise<void> {
+  if (state.mode !== 'snapshot' || !state.groupAnchorId) return;
+  await discardPendingAnchor(state.groupAnchorId);
 }
 
 /** 停止後盡力清理；失敗可能留下孤立資料，但不可讓停止操作失敗。 */

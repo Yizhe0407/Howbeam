@@ -224,6 +224,12 @@ describe('rebuild-invalidated-snapshot failure rollback', () => {
 });
 
 describe('undo/restore lost-CAS compensation', () => {
+  // The repository's single-step read answers from the same stored steps.
+  beforeEach(() => {
+    mocks.getStep.mockImplementation(async (id: string) =>
+      ((await mocks.getSteps()) as { id: string }[] | undefined)?.find((stored) => stored.id === id));
+  });
+
   it('re-adds the removed step when the undo state write loses the race', async () => {
     const removed = step();
     mocks.getRecordingState.mockResolvedValue(stepsState());

@@ -20,6 +20,7 @@ vi.mock('@/lib/storage/step-repository', async (importOriginal) => {
     ...actual,
     getStep: mocks.getStep,
     getSteps: mocks.getSteps,
+    getStepOutlines: mocks.getSteps,
   };
 });
 

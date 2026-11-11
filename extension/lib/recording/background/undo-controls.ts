@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
 import { queueClick } from '../background-queues';
-import { addStepsAfter, deleteStep, getSteps } from '../../storage/step-repository';
+import { addStepsAfter, deleteStep, getStep, getStepOutlines } from '../../storage/step-repository';
 import { getRecordingState } from '../../storage/storage';
 import type { HowbeamSnapshotHistoryMessage, RecordingControlMessage, RecordingControlResult } from '../../runtime/messages';
 import { UNDO_WINDOW_MS, type RecordingState } from '../../storage/recording-state';
@@ -41,10 +41,10 @@ export function createUndoControls(deps: { control: ControlPlane; runState: RunS
         return controlFailure(t().background.nothingToUndo);
       }
 
-      const steps = await getSteps(state.sessionId);
-      const last = [...steps]
-        .reverse()
-        .find((step) => step.runId === message.runId && step.bounds !== null);
+      const lastOutline = (await getStepOutlines(state.sessionId))
+        .findLast((step) => step.runId === message.runId && step.bounds !== null);
+      // The undo record must hold the screenshot too, to put the step back.
+      const last = lastOutline && await getStep(lastOutline.id);
       if (!last || state.itemCount === 0) return controlFailure(t().background.nothingToUndo);
 
       const nextCount = Math.max(0, state.itemCount - 1);

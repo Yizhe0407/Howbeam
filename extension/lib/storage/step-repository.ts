@@ -25,6 +25,7 @@ import {
   putEntryInPlace,
   readEntries,
   readEntry,
+  readEntryRecords,
 } from './entry-store';
 
 /** A captured row before it has a place in its Project: the write assigns `order`. */
@@ -114,6 +115,14 @@ async function readStep(tx: ProjectTransaction, id: string): Promise<Step | unde
   const record = await findEntryRecord(tx, id);
   if (!record) return undefined;
   return entrySteps([await readEntry(tx, record)]).find((step) => step.id === id);
+}
+
+/** Every step of the Project's timeline, in order, without screenshots: for
+ * questions about the timeline's shape (its last entry, a run's steps, a
+ * step's URL) that need no image bytes. */
+export async function getStepOutlines(sessionId: string): Promise<Step[]> {
+  return runProjectRead(async (tx) => (await readEntryRecords(tx, sessionId))
+    .flatMap((record) => [record.owner, ...record.annotations]));
 }
 
 /** One step by id, including a snapshot base image that is still pending. */
@@ -474,5 +483,15 @@ export async function discardPendingAnchors(keep: string | null): Promise<number
     const ids = (await tx.objectStore('pendingAnchors').getAllKeys()).filter((id) => id !== keep);
     for (const id of ids) await tx.objectStore('pendingAnchors').delete(id);
     return ids.length;
+  }, { notify: false });
+}
+
+/** Discards a snapshot base image that never got an annotation. One that did
+ * is an entry of its Project by now and is left alone. */
+export async function discardPendingAnchor(id: string): Promise<boolean> {
+  return runProjectWrite(async (tx) => {
+    if (!await tx.objectStore('pendingAnchors').get(id)) return false;
+    await tx.objectStore('pendingAnchors').delete(id);
+    return true;
   }, { notify: false });
 }

@@ -4,7 +4,7 @@ import { ProjectContentConflictError, addProjectSectionAtomically, deleteProject
 import { ProjectStructureIntegrityError, type ProjectSection, type Step } from '@/lib/storage/models';
 import { closeDatabase } from '@/lib/storage/database';
 import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
-import { addStepsAfter, discardPendingAnchors, getStep, getSteps } from '@/lib/storage/step-repository';
+import { addStepsAfter, discardPendingAnchor, discardPendingAnchors, getStep, getStepOutlines, getSteps } from '@/lib/storage/step-repository';
 import { pngBlob } from '../setup/raster-fixtures';
 import { itemAt } from '../setup/item-at';
 
@@ -74,6 +74,26 @@ describe('Project entry-safe atomic structure', () => {
     expect(await getStep(anchorId)).toMatchObject({ id: anchorId, groupId: anchorId });
     // The rest of the Project stays editable meanwhile.
     await deleteProjectEntriesAtomically(project.id, [itemAt(snapshot.entryIds, 0)], during.project.contentRevision);
+  });
+
+  it('outlines the timeline in order without reading any screenshot', async () => {
+    const { project, snapshot } = await createTrackedProject(makeMixedSteps());
+    const outlines = await getStepOutlines(project.id);
+    expect(outlines.map((step) => step.id)).toEqual((await getSteps(project.id)).map((step) => step.id));
+    expect(outlines.every((step) => step.screenshotBlob === undefined)).toBe(true);
+    expect(outlines.at(-1)?.id).toBe(snapshot.entryIds.at(-1));
+  });
+
+  it('discards a pending snapshot base image, but never one that became an entry', async () => {
+    const { project, snapshot } = await createTrackedProject(makeMixedSteps());
+    const pendingId = crypto.randomUUID();
+    await addStepsAfter([makeStep({ id: pendingId, sessionId: project.id, groupId: pendingId, bounds: null })], null);
+    const group = itemAt(snapshot.entries, 1);
+
+    expect(await discardPendingAnchor(pendingId)).toBe(true);
+    expect(await discardPendingAnchor(group.kind === 'group' ? group.anchor.id : '')).toBe(false);
+    expect(await getStep(pendingId)).toBeUndefined();
+    expect((await getProjectStructureSnapshot(project.id)).entryIds).toEqual(snapshot.entryIds);
   });
 
   it('discards pending snapshot base images except the one a live recording keeps', async () => {

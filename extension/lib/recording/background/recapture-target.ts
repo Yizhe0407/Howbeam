@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
 import { getEffectiveBounds, stepRole } from '../../storage/models';
-import { getStep, getSteps, type StepRecaptureError, type StepRecaptureTarget } from '../../storage/step-repository';
+import { getStep, getStepOutlines, type StepRecaptureError, type StepRecaptureTarget } from '../../storage/step-repository';
 import type {
   PreflightStepRecaptureSourcePermissionErrorCode,
   StartStepRecaptureMessage,
@@ -62,7 +62,7 @@ export async function validateRecaptureTarget(
   const [anchor, annotation, steps] = await Promise.all([
     getStep(target.anchorId),
     getStep(target.annotationId),
-    getSteps(sessionId),
+    getStepOutlines(sessionId),
   ]);
   if (!anchor || !annotation || anchor.sessionId !== sessionId || annotation.sessionId !== sessionId) {
     throw new StepRecaptureStartError('TARGET_NOT_FOUND', t().recaptureFlow.snapshotNotFound);

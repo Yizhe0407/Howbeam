@@ -230,6 +230,12 @@ describe('undo and restore', () => {
     step('other-run', { runId: 'run-0' }),
   ];
 
+  // The repository's single-step read answers from the same stored steps.
+  beforeEach(() => {
+    mocks.getStep.mockImplementation(async (id: string) =>
+      ((await mocks.getSteps()) as { id: string }[] | undefined)?.find((stored) => stored.id === id));
+  });
+
   it('soft-deletes the run’s last item after persisting its copy', async () => {
     mocks.getSteps.mockResolvedValue(runSteps());
 

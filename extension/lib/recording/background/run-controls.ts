@@ -5,7 +5,7 @@ import {
   isTrustedRecorderControlSender,
   type RuntimeMessageSenderLike,
 } from '../../runtime/background-message-validation';
-import { deleteStepsForRun, getSteps } from '../../storage/step-repository';
+import { deleteStepsForRun, getStepOutlines } from '../../storage/step-repository';
 import { getRecordingState, resetRunStateToIdle } from '../../storage/storage';
 import { markEditorOpenFailed } from '../recording-recovery';
 import type { FinishResult, RecordingControlMessage, RecordingControlResult } from '../../runtime/messages';
@@ -113,7 +113,7 @@ export function createRunControls(deps: RunControlDependencies) {
     if (!state.isRecording || !state.sessionId || state.runId !== message.runId) {
       return controlFailure(t().background.alreadyEnded);
     }
-    const steps = await getSteps(state.sessionId);
+    const steps = await getStepOutlines(state.sessionId);
     const runItems = steps.filter((step) => step.runId === message.runId && step.bounds !== null);
     const lastItem = runItems.at(-1) ?? null;
     const result: FinishResult = {
