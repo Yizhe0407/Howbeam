@@ -177,6 +177,21 @@ describe('startup recovery validates the snapshot anchor', () => {
     expect(mocks.setRecordingState).not.toHaveBeenCalled();
   });
 
+  it('discards leftover pending snapshot images at startup, but not the live run\'s', async () => {
+    mocks.getRecordingState.mockResolvedValue(snapshotState());
+    mocks.getStep.mockResolvedValue(anchorStep());
+
+    await importBackground();
+    await vi.waitFor(() => expect(mocks.discardPendingAnchors).toHaveBeenCalledWith('anchor-1'));
+  });
+
+  it('discards every pending snapshot image at startup when nothing is recording', async () => {
+    mocks.getRecordingState.mockResolvedValue(snapshotState({ isRecording: false, operation: null }));
+
+    await importBackground();
+    await vi.waitFor(() => expect(mocks.discardPendingAnchors).toHaveBeenCalledWith(null));
+  });
+
   it('keeps a preparing-next run, whose anchor is legitimately absent', async () => {
     mocks.getRecordingState.mockResolvedValue(
       snapshotState({ phase: 'preparing-next', groupAnchorId: null }),
@@ -206,6 +221,7 @@ describe('a click that wakes the worker over a stale persisted run', () => {
     mocks.getSteps.mockResolvedValue([]);
 
     await importBackground();
+    await vi.waitFor(() => expect(mocks.tabsGet).toHaveBeenCalled());
     // Recovery is still blocked on tabs.get when the click arrives.
     const pendingClick = mocks.messageListener?.(clickMessage(), recordedPageSender) as Promise<unknown>;
     releaseTabGet({ id: 4, windowId: 6, url: PAGE_URL });

@@ -258,16 +258,13 @@ export function useProjectMutations({
         );
         adoptCommitted(result);
         selectInsteadOf(currentEntryId, snapshot.entryIds, result.entryIds);
-        const deletedSteps = deletingEntry.kind === 'single'
-          ? [deletingEntry.step]
-          : [deletingEntry.anchor, ...deletingEntry.annotations];
         return {
           message: t().editor.mutations.deleteStep.done(deletingIndex + 1),
           expectedRevision: result.project.contentRevision,
           restoreSelectionId: currentEntryId,
           restore: () => restoreProjectEntriesAtomically(
             projectId,
-            deletedSteps,
+            [deletingEntry],
             snapshot.entryIds,
             snapshot.project.sections,
             result.project.contentRevision,
@@ -304,18 +301,17 @@ export function useProjectMutations({
           snapshot.project.contentRevision,
         );
         adoptCommitted(result);
-        if (result.removedEntry) selectInsteadOf(groupId, result.previousEntryIds, result.entryIds);
-        const deletedAnnotation = result.deletedSteps.find((deleted) => deleted.id === step.id);
-        if (!deletedAnnotation) throw new Error(t().editor.mutations.deleteAnnotation.restoreDataMissing);
+        if (result.deletedEntry) selectInsteadOf(groupId, result.previousEntryIds, result.entryIds);
+        const { deletedAnnotation, deletedEntry } = result;
         const restoredIndex = result.previousAnnotationIds.indexOf(step.id);
         return {
           message: t().editor.mutations.deleteAnnotation.done((restoredIndex >= 0 ? restoredIndex : annotationIndex) + 1),
           expectedRevision: result.project.contentRevision,
           restoreSelectionId: groupId,
-          restore: result.removedEntry
+          restore: deletedEntry
             ? () => restoreProjectEntriesAtomically(
                 projectId,
-                result.deletedSteps,
+                [deletedEntry],
                 result.previousEntryIds,
                 result.previousSections,
                 result.project.contentRevision,

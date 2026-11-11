@@ -12,9 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/storage/project-repository', () => ({ getProject: mocks.getProject }));
 vi.mock('@/lib/storage/project-structure', () => ({
   getProjectStructureSnapshot: mocks.getProjectStructureSnapshot,
-  repairEmptySnapshotAnchors: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('@/lib/storage/storage', () => ({ getRecordingState: vi.fn().mockResolvedValue({ isRecording: false }) }));
 vi.mock('@/lib/storage/change-notifier', () => ({
   subscribeProjectsChanged: (listener: () => void) => {
     mocks.listeners.add(listener);

@@ -6,7 +6,6 @@ import {
 } from '../project/project-sections';
 import {
   assertExactEntryIds,
-  buildCompleteStepEntries,
   entryId,
   ProjectStructureIntegrityError,
   type Bounds,
@@ -26,7 +25,7 @@ import {
   runProjectWrite,
   type ProjectWriteTransaction,
 } from './database';
-import { commitEntries, entrySteps, findEntryRecord, readEntries } from './entry-store';
+import { commitEntries, entrySteps, findEntryRecord, readEntries, readEntry, readEntryRecords } from './entry-store';
 
 export class ProjectContentConflictError extends Error {
   constructor(
@@ -61,15 +60,13 @@ export interface ReorderProjectEntriesResult extends ProjectStructureMutationRes
 }
 
 export interface DeleteProjectAnnotationResult extends ProjectStructureMutationResult {
-  /** Canonical snapshot read in the same transaction before any rows changed. */
-  beforeSnapshot: ProjectStructureSnapshot;
   /** Annotation order read from the persisted group, never from editor state. */
   previousAnnotationIds: string[];
   previousEntryIds: string[];
   previousSections: ProjectSection[];
-  /** One annotation normally; anchor + annotation when the group became empty. */
-  deletedSteps: Step[];
-  removedEntry: boolean;
+  deletedAnnotation: Step;
+  /** The whole snapshot, as it was, when its last annotation was deleted and it left the timeline. */
+  deletedEntry: StepEntry | null;
 }
 
 export interface ReorderProjectAnnotationsResult extends ProjectStructureMutationResult {
@@ -83,25 +80,6 @@ function structureSnapshot(project: Project, entries: StepEntry[]): ProjectStruc
     project: { ...project, sections: repairProjectSections(project.sections, entries) },
     entries,
     entryIds: entries.map(entryId),
-  };
-}
-
-function copyStructureSnapshot(structure: ProjectStructureSnapshot): ProjectStructureSnapshot {
-  return {
-    project: {
-      ...structure.project,
-      sections: structure.project.sections.map((section) => ({ ...section })),
-    },
-    entries: structure.entries.map((entry): StepEntry => (
-      entry.kind === 'single'
-        ? { kind: 'single', step: { ...entry.step } }
-        : {
-            kind: 'group',
-            anchor: { ...entry.anchor },
-            annotations: entry.annotations.map((annotation) => ({ ...annotation })),
-          }
-    )),
-    entryIds: [...structure.entryIds],
   };
 }
 
@@ -242,18 +220,12 @@ export async function getProjectStructureSnapshot(sessionId: string): Promise<Pr
   return runProjectRead(async (tx) => structureSnapshot(await requireProject(tx, sessionId), await readEntries(tx, sessionId)));
 }
 
-/**
- * Discards snapshot base images that never received an annotation. A recording discards its
- * own, but one can be left behind when the browser is closed mid-recording. They were never
- * part of the Project, so only the pending images go. The caller must make sure no recording
- * is still adding to this Project. Returns how many were removed.
- */
-export async function repairEmptySnapshotAnchors(sessionId: string): Promise<number> {
-  return runProjectWrite(async (tx) => {
-    const pending = await tx.objectStore('pendingAnchors').index('by-project').getAllKeys(sessionId);
-    for (const id of pending) await tx.objectStore('pendingAnchors').delete(id);
-    return pending.length;
-  }, { notify: false });
+/** The Project's first entry, reading only its screenshot (a Library cover). */
+export async function getFirstProjectEntry(sessionId: string): Promise<StepEntry | null> {
+  return runProjectRead(async (tx) => {
+    const [first] = await readEntryRecords(tx, sessionId);
+    return first ? readEntry(tx, first) : null;
+  });
 }
 
 export async function reorderProjectEntriesAtomically(
@@ -291,47 +263,35 @@ export async function deleteProjectAnnotationAtomically(
       throw new ProjectStructureIntegrityError('Annotation does not belong to the requested snapshot group.');
     }
 
-    const beforeSnapshot = copyStructureSnapshot(structure);
     const previousAnnotationIds = group.annotations.map((annotation) => annotation.id);
     const previousEntryIds = [...structure.entryIds];
     const previousSections = structure.project.sections.map((section) => ({ ...section }));
-    const removedEntry = group.annotations.length === 1;
+    const deletedEntry = group.annotations.length === 1 ? group : null;
     let nextEntries: StepEntry[];
     let nextSections: ProjectSection[] = structure.project.sections;
-    let deletedSteps: Step[];
 
-    if (removedEntry) {
+    if (deletedEntry) {
       nextEntries = structure.entries.filter((entry) => entryId(entry) !== anchorId);
-      const survivingIds = new Set(nextEntries.map(entryId));
       nextSections = rebaseSectionsAfterDelete(
         structure.project.sections,
         structure.entryIds,
-        survivingIds,
+        new Set(nextEntries.map(entryId)),
       );
-      deletedSteps = [group.anchor, removed];
     } else {
       const annotations = group.annotations.filter((annotation) => annotation.id !== annotationId);
       nextEntries = structure.entries.map((entry): StepEntry => (
         entryId(entry) === anchorId ? { kind: 'group', anchor: group.anchor, annotations } : entry
       ));
-      deletedSteps = [removed];
     }
 
-    const result = await commitProjectStructure(
-      tx,
-      structure,
-      nextEntries,
-      nextSections,
-      [anchorId],
-    );
+    const result = await commitProjectStructure(tx, structure, nextEntries, nextSections, [anchorId]);
     return {
       ...result,
-      beforeSnapshot,
       previousAnnotationIds,
       previousEntryIds,
       previousSections,
-      deletedSteps,
-      removedEntry,
+      deletedAnnotation: removed,
+      deletedEntry,
     };
   });
 }
@@ -493,20 +453,20 @@ export async function deleteProjectEntriesAtomically(
   });
 }
 
+/** Puts deleted entries back, whole, where they were. */
 export async function restoreProjectEntriesAtomically(
   sessionId: string,
-  restoredSteps: readonly Step[],
+  restoredEntries: readonly StepEntry[],
   previousEntryIds: readonly string[],
   previousSections: readonly ProjectSection[],
   expectedContentRevision: number,
 ): Promise<ProjectStructureMutationResult> {
   return runProjectStructureMutation(sessionId, expectedContentRevision, async (tx, structure) => {
-    if (restoredSteps.length === 0) throw new ProjectStructureIntegrityError('No entries were provided for restore.');
+    if (restoredEntries.length === 0) throw new ProjectStructureIntegrityError('No entries were provided for restore.');
     const currentStepIds = new Set(entrySteps(structure.entries).map((step) => step.id));
-    if (restoredSteps.some((step) => step.sessionId !== sessionId || currentStepIds.has(step.id))) {
-      throw new ProjectStructureIntegrityError('Restored rows conflict with the current Project.');
+    if (entrySteps(restoredEntries).some((step) => currentStepIds.has(step.id))) {
+      throw new ProjectStructureIntegrityError('Restored entries conflict with the current Project.');
     }
-    const restoredEntries = buildCompleteStepEntries(restoredSteps, sessionId);
     const allEntries = [...structure.entries, ...restoredEntries];
     assertExactEntryIds(allEntries, previousEntryIds);
     const byId = new Map(allEntries.map((entry) => [entryId(entry), entry]));
@@ -515,7 +475,7 @@ export async function restoreProjectEntriesAtomically(
       tx,
       structure,
       nextEntries,
-      repairProjectSections(previousSections, nextEntries),
+      previousSections,
       restoredEntries.map(entryId),
     );
   });

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { buildStepEntries, type StepEntry } from '@/lib/storage/models';
-import { getSteps } from '@/lib/storage/step-repository';
+import type { StepEntry } from '@/lib/storage/models';
+import { getFirstProjectEntry } from '@/lib/storage/project-structure';
 import EntryThumbnail from '@/components/editor/EntryThumbnail';
 
 interface Props {
@@ -15,8 +15,8 @@ export default function ProjectCover({ projectId, revision }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    void getSteps(projectId).then((steps) => {
-      if (!cancelled) setEntry(buildStepEntries(steps)[0] ?? null);
+    void getFirstProjectEntry(projectId).then((first) => {
+      if (!cancelled) setEntry(first);
     }).catch((error: unknown) => {
       console.error('[howbeam] failed to load project cover', error);
     });

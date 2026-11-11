@@ -50,6 +50,7 @@ vi.mock('@/lib/storage/project-repository', () => ({
   updateProject: database.updateProject,
 }));
 vi.mock('@/lib/storage/step-repository', () => ({ getSteps: database.getSteps }));
+vi.mock('@/lib/storage/project-structure', () => ({ getFirstProjectEntry: vi.fn().mockResolvedValue(null) }));
 vi.mock('@/lib/project/project-actions', () => projectActions);
 vi.mock('@/lib/storage/storage', () => storage);
 vi.mock('@/lib/export/project-archive-serialize', () => ({ exportProjectArchive: archive.exportProjectArchive }));

@@ -465,3 +465,14 @@ export async function deleteStepsForRun(sessionId: string, runId: string): Promi
     await commitEntries(tx, project, previous, next);
   });
 }
+
+/** Discards every snapshot base image still waiting for its first annotation,
+ * except `keep` (the one a live recording is annotating). Only a recording
+ * that ended without finishing (the browser closed mid-snapshot) leaves one. */
+export async function discardPendingAnchors(keep: string | null): Promise<number> {
+  return runProjectWrite(async (tx) => {
+    const ids = (await tx.objectStore('pendingAnchors').getAllKeys()).filter((id) => id !== keep);
+    for (const id of ids) await tx.objectStore('pendingAnchors').delete(id);
+    return ids.length;
+  }, { notify: false });
+}

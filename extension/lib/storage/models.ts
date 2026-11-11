@@ -508,13 +508,11 @@ export function orderedSessionSteps(steps: readonly Step[]): Step[] {
   return [...steps].sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
 }
 
-/** DB mutations use a strict topology parser instead of the UI's fail-soft
- * buildStepEntries(). Every persisted row must belong to exactly one complete,
- * contiguous entry so a snapshot can never be partially mutated. */
+/** Groups flat rows (an imported archive's) into entries, strictly: every row
+ * must belong to exactly one complete, contiguous entry. */
 export function buildCompleteStepEntries(
   steps: readonly Step[],
   expectedSessionId?: string,
-  { skipPendingGroups = false }: { skipPendingGroups?: boolean } = {},
 ): StepEntry[] {
   const sorted = orderedSessionSteps(steps);
   const entries: StepEntry[] = [];
@@ -561,10 +559,6 @@ export function buildCompleteStepEntries(
       index += 1;
     }
     if (annotations.length === 0) {
-      // A snapshot being recorded owns its anchor from the moment it is captured, before the
-      // first annotation exists. That is a normal state, not corruption, so a read-only view
-      // may leave it out; anything that mutates the Project still refuses it.
-      if (skipPendingGroups) continue;
       throw new ProjectStructureIntegrityError('A snapshot group has no complete annotation.');
     }
     if ((lastGroupIndex.get(groupId) ?? -1) >= index) {
@@ -573,14 +567,6 @@ export function buildCompleteStepEntries(
     entries.push({ kind: 'group', anchor, annotations });
   }
   return entries;
-}
-
-function entrySteps(entry: StepEntry): Step[] {
-  return entry.kind === 'single' ? [entry.step] : [entry.anchor, ...entry.annotations];
-}
-
-export function flattenEntrySteps(entries: readonly StepEntry[]): Step[] {
-  return entries.flatMap(entrySteps);
 }
 
 export function assertExactEntryIds(actualEntries: readonly StepEntry[], requestedIds: readonly string[]): void {

@@ -28,6 +28,7 @@ export function makeBackgroundMocks() {
     storeStep: vi.fn(),
     deleteStep: vi.fn(),
     deleteStepsForRun: vi.fn(),
+    discardPendingAnchors: vi.fn(async () => 0),
     discardPristineProject: vi.fn(),
     getRecordingState: vi.fn(),
     setRecordingState: vi.fn(),
@@ -123,6 +124,7 @@ export async function mockStepRepositoryModule(
       for (const step of steps) await mocks.storeStep(step);
     },
     deleteStep: mocks.deleteStep,
+    discardPendingAnchors: mocks.discardPendingAnchors,
     replaceStepCaptureAtomically: mocks.replaceStepCaptureAtomically,
     ...overrides,
   };

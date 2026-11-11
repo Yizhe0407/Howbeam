@@ -2,7 +2,7 @@ import { browser, type Browser } from 'wxt/browser';
 import { waitForQueuedClicks } from '../background-queues';
 import { isRecordableTabUrl } from '../../shared/restricted-urls';
 import { focusTab } from '../../runtime/navigation';
-import { getStep } from '../../storage/step-repository';
+import { discardPendingAnchors, getStep } from '../../storage/step-repository';
 import { getProject } from '../../storage/project-repository';
 import { t } from '@/lib/shared/i18n';
 import { projectDisplayTitle } from '@/lib/storage/models';
@@ -82,6 +82,10 @@ export function createRunLifecycle(deps: RunLifecycleDependencies) {
    */
   async function recoverInterruptedRecording(): Promise<void> {
     const state = await getRecordingState();
+    // Only the live run's snapshot may still be waiting for its first annotation.
+    await discardPendingAnchors(state.isRecording ? state.groupAnchorId : null).catch((error) => {
+      console.error('[howbeam] failed to discard leftover snapshot images:', describeBrowserError(error), error);
+    });
     if (state.operation !== 'recording' || !state.isRecording || !state.runId) return;
     const expectedControlVersion = control.controlVersion;
     const assessment = await assessInterruptedRecording(state);

@@ -503,7 +503,6 @@ export const en: Messages = {
         failed: 'Couldn’t delete the marker. The current data was reloaded.',
         done: (number: number) => `Deleted marker ${number}`,
         notSnapshot: 'Markers can only be deleted one at a time from a snapshot.',
-        restoreDataMissing: 'Couldn’t confirm the marker was deleted. Reload the page to see the current state.',
       },
       addSection: {
         pending: 'Adding section…',

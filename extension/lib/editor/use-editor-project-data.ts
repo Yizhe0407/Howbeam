@@ -4,29 +4,13 @@ import { subscribeProjectsChanged } from '../storage/change-notifier';
 import { ProjectNotFoundError } from '../storage/database';
 import {
   getProjectStructureSnapshot,
-  repairEmptySnapshotAnchors,
   type ProjectStructureMutationResult,
   type ProjectStructureSnapshot,
 } from '../storage/project-structure';
-import { getRecordingState } from '../storage/storage';
 import { type Project } from '../storage/models';
 import { retainScreenshotBlobs } from './retain-screenshot-blobs';
 
 export type EditorProjectLoadState = 'loading' | 'ready' | 'missing' | 'invalid';
-
-/** Sessions whose leftover empty snapshot anchors were already swept in this page. */
-const sweptSessions = new Set<string>();
-
-/** Once per Project per page load, and never while a recording may still be filling it. */
-async function sweepEmptySnapshotAnchors(sessionId: string): Promise<void> {
-  if (sweptSessions.has(sessionId)) return;
-  const recording = await getRecordingState().catch(() => null);
-  if (!recording || (recording.isRecording && recording.sessionId === sessionId)) return;
-  sweptSessions.add(sessionId);
-  await repairEmptySnapshotAnchors(sessionId).catch((error) => {
-    console.warn('[howbeam] failed to remove an empty snapshot anchor', error);
-  });
-}
 
 type ContentRevisions = Pick<Project, 'contentRevision' | 'stepEditRevision'>;
 
@@ -168,16 +152,10 @@ export function useEditorProjectData(sessionId: string | null) {
       setProjectLoadState('missing');
       return undefined;
     }
-    let disposed = false;
     setProjectLoadState((current) => (current === 'ready' ? current : 'loading'));
-    void sweepEmptySnapshotAnchors(sessionId).then(() => {
-      if (!disposed) requestReload();
-    });
+    requestReload();
     const unsubscribe = subscribeProjectsChanged(requestReload);
-    return () => {
-      disposed = true;
-      unsubscribe();
-    };
+    return unsubscribe;
   }, [requestReload, sessionId]);
 
   return {

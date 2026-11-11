@@ -501,7 +501,6 @@ export const zhTW = {
         failed: '標註刪除失敗，已重新載入目前資料。',
         done: (number: number) => `已刪除標註 ${number}`,
         notSnapshot: '只有快照標註可以個別刪除。',
-        restoreDataMissing: '無法確認標註是否已刪除，請重新整理後查看目前內容。',
       },
       addSection: {
         pending: '正在新增章節…',
