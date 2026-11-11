@@ -19,7 +19,6 @@ import { createCaptureSender } from '@/lib/recording/content/capture-sender';
 import { createContentRecordingSession } from '@/lib/recording/content/recording-session';
 import { installStepRecorder } from '@/lib/recording/content/step-recorder';
 import { createToolbarChannel } from '@/lib/recording/content/toolbar-channel';
-import { CLEANUP_EVENT } from '@/lib/recording/content-script-constants';
 import type {
   HowbeamCaptureTakenMessage,
   HowbeamSnapshotActiveMessage,
@@ -34,6 +33,7 @@ import {
   detectUnrecordablePage,
   isChildFrameUnrecordable,
 } from '@/lib/recording/content/recordable-page';
+import { addRecorderCleanup, removeRecorderCleanup, runRecorderCleanup } from '@/lib/recording/content/recorder-cleanup';
 
 const INSTANCE_KEY = `__howbeam_instance_${browser.runtime.id}`;
 /** The live recorder module of this document's extension world. */
@@ -78,7 +78,7 @@ export default defineContentScript({
 async function startRecorder(): Promise<void> {
   // Concurrent executeScript calls can both dispatch cleanup before either reaches
   // its first await; the instance token makes only the latest one install listeners.
-  document.dispatchEvent(new CustomEvent(CLEANUP_EVENT));
+  runRecorderCleanup();
   const instanceId = crypto.randomUUID();
   const instanceHost = globalThis as unknown as Record<string, unknown>;
   instanceHost[INSTANCE_KEY] = instanceId;
@@ -90,7 +90,7 @@ async function startRecorder(): Promise<void> {
       stopFollowing();
       return;
     }
-    document.addEventListener(CLEANUP_EVENT, stopFollowing, { once: true });
+    addRecorderCleanup(stopFollowing);
   });
 
   const recordingState = await getRecordingState();
@@ -245,12 +245,12 @@ async function startRecorder(): Promise<void> {
     session.toolbar = null;
     session.hoverPreview?.destroy();
     session.hoverPreview = null;
-    document.removeEventListener(CLEANUP_EVENT, cleanup);
+    removeRecorderCleanup(cleanup);
     browser.runtime.onMessage.removeListener(onRecorderMessage);
     unsubscribeRecordingState();
     recorderLifecycle.stop();
   };
-  document.addEventListener(CLEANUP_EVENT, cleanup);
+  addRecorderCleanup(cleanup);
   browser.runtime.onMessage.addListener(onRecorderMessage);
 
   if (shouldFreezeSnapshot) {

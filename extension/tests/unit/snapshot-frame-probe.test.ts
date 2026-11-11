@@ -11,7 +11,7 @@ vi.mock('wxt/browser', () => ({
 }));
 
 import { installSnapshotFrameProbe, resolveSnapshotTargetAtPoint } from '@/lib/recording/snapshot-targeting';
-import { CLEANUP_EVENT } from '@/lib/recording/content-script-constants';
+import { runRecorderCleanup } from '@/lib/recording/content/recorder-cleanup';
 import { itemAt } from '../setup/item-at';
 
 /**
@@ -173,7 +173,7 @@ describe('the child frame’s probe responder', () => {
     probe(channel.port2);
 
     expect(await answered).toMatchObject({ rect: { x: 10, y: 20, width: 60, height: 24 }, text: 'Save', tagName: 'button' });
-    document.dispatchEvent(new Event(CLEANUP_EVENT));
+    runRecorderCleanup();
     channel.port1.close();
   });
 
@@ -188,6 +188,6 @@ describe('the child frame’s probe responder', () => {
 
     await closed;
     expect(onAnswer).not.toHaveBeenCalled();
-    document.dispatchEvent(new Event(CLEANUP_EVENT));
+    runRecorderCleanup();
   });
 });

@@ -27,7 +27,6 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 vi.mock('@/lib/recording/snapshot-targeting', () => ({
-  CLEANUP_EVENT: 'howbeam_cleanup_test-extension',
   resolveSnapshotTargetAtPoint: mocks.resolveTarget,
 }));
 vi.mock('@/lib/capture/step-preview', () => ({

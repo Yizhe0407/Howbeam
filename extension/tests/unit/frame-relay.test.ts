@@ -14,6 +14,7 @@ import {
   isStepFrameHopPayload,
   snapshotFrameScrollPingType,
   stepFrameClickMessageType,
+  isThirdPartyFrame,
 } from '@/lib/recording/frame-relay';
 import {
   isStepFrameRelayBeginResult,
@@ -108,5 +109,24 @@ describe('step frame relay protocol', () => {
     expect(isHowbeamStepFrameResultMessage({ ...valid, runId: '' })).toBe(false);
     expect(isHowbeamStepFrameResultMessage({ ...valid, captureId: 'x'.repeat(129) })).toBe(false);
     expect(isHowbeamStepFrameResultMessage({ ...valid, replay: 'true' })).toBe(false);
+  });
+});
+
+describe('isThirdPartyFrame', () => {
+  const frame = (top: unknown, origin = 'https://app.example') => {
+    const win: { location: { origin: string }; top?: unknown } = { location: { origin } };
+    win.top = top === 'self' ? win : top;
+    return win as unknown as Window;
+  };
+
+  it('treats the top frame and same-origin frames as first-party', () => {
+    expect(isThirdPartyFrame(frame('self'))).toBe(false);
+    expect(isThirdPartyFrame(frame({ location: { origin: 'https://app.example' } }))).toBe(false);
+  });
+
+  it('treats another origin, or a top it cannot read, as third-party', () => {
+    expect(isThirdPartyFrame(frame({ location: { origin: 'https://widget.example' } }))).toBe(true);
+    const unreadable = { get location(): Location { throw new DOMException('Blocked', 'SecurityError'); } };
+    expect(isThirdPartyFrame(frame(unreadable))).toBe(true);
   });
 });

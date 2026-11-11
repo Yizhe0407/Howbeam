@@ -1,4 +1,3 @@
-import { browser } from 'wxt/browser';
 import { KEEPALIVE_PORT_NAME } from '../runtime/keep-alive';
 
 /** The background matches keep-alive ports by this exact name; both sides
@@ -32,8 +31,6 @@ export const CAPTURE_FAILSAFE_MS = 2_000;
 /** Trailing-trusted-click suppression window, likewise shared by the top
  * frame and every instrumented child frame. */
 export const STEP_LATE_CLICK_SUPPRESS_MS = 2_000;
-
-export const CLEANUP_EVENT = `howbeam_cleanup_${browser.runtime.id}`;
 
 /** Events a frozen snapshot page must consume before the input shield is
  * ready (and, in child frames, for the whole snapshot). Kept aligned with the

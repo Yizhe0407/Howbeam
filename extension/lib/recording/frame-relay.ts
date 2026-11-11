@@ -22,7 +22,6 @@ import {
 import { onRecordingStateChange } from '../storage/storage';
 import {
   CAPTURE_FAILSAFE_MS,
-  CLEANUP_EVENT,
   SNAPSHOT_FREEZE_EVENTS,
   STEP_LATE_CLICK_SUPPRESS_MS,
 } from './content-script-constants';
@@ -36,6 +35,7 @@ import {
   type StepFrameRelayRejectMessage,
 } from '../runtime/messages';
 import { isStepFrameRelayBeginResult } from '../runtime/runtime-message-result';
+import { addRecorderCleanup, removeRecorderCleanup } from './content/recorder-cleanup';
 
 /**
  * Child-frame step recording uses two channels with deliberately different
@@ -201,9 +201,15 @@ export function createStepFrameRelayLimiter(): FrameProbeRateLimiter {
  * Installs the step recorder for one child frame. A trusted pointerdown is
  * swallowed locally, authenticated with the background, and then sent upward
  * as geometry-only hops. Replay arrives over browser.runtime, never over a
- * page-visible MessagePort.
+ * page-visible MessagePort. A `passive` frame (by default, one from another
+ * site) swallows nothing: a real click reaches its page as usual and is
+ * relayed the same way, with nothing to replay.
  */
-export function installStepFrameRecorder(runId: string, initiallyPaused: boolean): void {
+export function installStepFrameRecorder(
+  runId: string,
+  initiallyPaused: boolean,
+  { passive = isThirdPartyFrame() }: { passive?: boolean } = {},
+): void {
   if (window.top === window) return;
   const clickType = stepFrameClickMessageType(browser.runtime.id);
   let paused = initiallyPaused;
@@ -236,14 +242,28 @@ export function installStepFrameRecorder(runId: string, initiallyPaused: boolean
       gesture.release();
       return;
     }
-    const el = press.target;
+    return relayClick(gesture, press.target, press.clientX, press.clientY, () => pressGate.replay(press));
+  };
+
+  /**
+   * Relays one click's target to the top frame and waits for it to settle.
+   * `replay` gives the held click back to the page; a passive frame has
+   * nothing to give back.
+   */
+  const relayClick = (
+    gesture: StepGesture,
+    el: Element,
+    clientX: number,
+    clientY: number,
+    replayPress: (() => void) | null,
+  ): Promise<void> => {
     const releaseMotion = pauseMotion();
-    const rect = getVisibleHighlightBounds(el, press.clientX, press.clientY);
+    const rect = getVisibleHighlightBounds(el, clientX, clientY);
     if (!rect) {
       releaseMotion();
       gesture.release();
-      pressGate.replay(press);
-      return;
+      replayPress?.();
+      return Promise.resolve();
     }
 
     return new Promise<void>((resolveGesture) => {
@@ -260,7 +280,7 @@ export function installStepFrameRecorder(runId: string, initiallyPaused: boolean
         activeCaptureId = null;
         releaseMotion();
         gesture.release();
-        if (!removed && !gesture.isCancelled() && replay) pressGate.replay(press);
+        if (!removed && !gesture.isCancelled() && replay) replayPress?.();
         resolveGesture();
       };
       settleActiveRelay = settle;
@@ -343,6 +363,25 @@ export function installStepFrameRecorder(runId: string, initiallyPaused: boolean
     });
   };
 
+  /**
+   * A frame from another site is not intercepted: its page gets every event
+   * untouched (no synthetic replay, no hidden focus changes), and a real click
+   * is still recorded. Its screenshot may show the moment just after the click.
+   */
+  const onPassiveClick = (event: MouseEvent) => {
+    if (!event.isTrusted || event.button !== 0 || paused) return;
+    if (isInScrollbarGutter(event.clientX, event.clientY, document.documentElement)) return;
+    const el = resolveVisualTargetAtPoint(event.clientX, event.clientY, ACTIVATION_TARGETING_POLICY)?.element ?? null;
+    if (!el) return;
+    const { clientX, clientY } = event;
+    gestureQueue.enqueue({
+      captureId: crypto.randomUUID(),
+      validate: () => el.isConnected,
+      onSkipped: () => {},
+      start: (gesture) => relayClick(gesture, el, clientX, clientY, null),
+    });
+  };
+
   const onFollowup = (event: Event) => pressGate.handleEvent(event);
   const onBlur = () => pressGate.handleBlur();
 
@@ -400,11 +439,15 @@ export function installStepFrameRecorder(runId: string, initiallyPaused: boolean
     gestureQueue.cancelActive();
     gestureQueue.purgePending();
     pressGate.clear();
-    document.removeEventListener('pointerdown', onPointerDown, { capture: true });
-    for (const type of STEP_PRESS_GATE_EVENTS) document.removeEventListener(type, onFollowup, { capture: true });
-    window.removeEventListener('blur', onBlur);
+    if (passive) {
+      document.removeEventListener('click', onPassiveClick, { capture: true });
+    } else {
+      document.removeEventListener('pointerdown', onPointerDown, { capture: true });
+      for (const type of STEP_PRESS_GATE_EVENTS) document.removeEventListener(type, onFollowup, { capture: true });
+      window.removeEventListener('blur', onBlur);
+    }
     window.removeEventListener('message', onRelayMessage);
-    document.removeEventListener(CLEANUP_EVENT, cleanup);
+    removeRecorderCleanup(cleanup);
     browser.runtime.onMessage.removeListener(onRuntimeMessage);
     unsubscribe();
   }
@@ -417,12 +460,30 @@ export function installStepFrameRecorder(runId: string, initiallyPaused: boolean
     if (paused) gestureQueue.purgePending();
   });
 
-  document.addEventListener('pointerdown', onPointerDown, { capture: true });
-  for (const type of STEP_PRESS_GATE_EVENTS) document.addEventListener(type, onFollowup, { capture: true });
-  window.addEventListener('blur', onBlur);
+  if (passive) {
+    document.addEventListener('click', onPassiveClick, { capture: true, passive: true });
+  } else {
+    document.addEventListener('pointerdown', onPointerDown, { capture: true });
+    for (const type of STEP_PRESS_GATE_EVENTS) document.addEventListener(type, onFollowup, { capture: true });
+    window.addEventListener('blur', onBlur);
+  }
   window.addEventListener('message', onRelayMessage);
-  document.addEventListener(CLEANUP_EVENT, cleanup);
+  addRecorderCleanup(cleanup);
   browser.runtime.onMessage.addListener(onRuntimeMessage);
+}
+
+/**
+ * A frame from another site than the top page (third-party widgets, embeds):
+ * by default the step recorder does not intercept clicks there. A frame whose
+ * top cannot be read is cross-origin by definition.
+ */
+export function isThirdPartyFrame(win: Window = window): boolean {
+  if (win.top === win) return false;
+  try {
+    return win.top!.location.origin !== win.location.origin;
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -472,7 +533,7 @@ export function installSnapshotFrameFreeze(): void {
     window.removeEventListener('scroll', onScroll, { capture: true });
     window.removeEventListener('resize', ping);
     window.removeEventListener('message', onMessage);
-    document.removeEventListener(CLEANUP_EVENT, cleanup);
+    removeRecorderCleanup(cleanup);
     browser.runtime.onMessage.removeListener(onStop);
   };
 
@@ -480,6 +541,6 @@ export function installSnapshotFrameFreeze(): void {
   window.addEventListener('scroll', onScroll, { capture: true, passive: true });
   window.addEventListener('resize', ping, { passive: true });
   window.addEventListener('message', onMessage);
-  document.addEventListener(CLEANUP_EVENT, cleanup);
+  addRecorderCleanup(cleanup);
   browser.runtime.onMessage.addListener(onStop);
 }

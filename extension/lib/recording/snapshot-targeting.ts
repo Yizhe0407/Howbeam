@@ -24,8 +24,8 @@ import {
 } from '../capture/frame-probe';
 import { findImageForArea, resolveImageMapTargetAtPoint } from './image-map-resolver';
 import { isFiniteRect } from '../shared/validation';
-import { CLEANUP_EVENT } from './content-script-constants';
 import type { HowbeamStopMessage } from '../runtime/messages';
+import { addRecorderCleanup, removeRecorderCleanup } from './content/recorder-cleanup';
 
 const FRAME_PROBE_MESSAGE = `howbeam_snapshot_probe_${browser.runtime.id}`;
 const FRAME_PROBE_TIMEOUT_MS = 120;
@@ -331,13 +331,13 @@ export function installSnapshotFrameProbe(runId: string): void {
   };
   const cleanup = () => {
     window.removeEventListener('message', onMessage);
-    document.removeEventListener(CLEANUP_EVENT, cleanup);
+    removeRecorderCleanup(cleanup);
     browser.runtime.onMessage.removeListener(onStop);
   };
   const onStop = (message: HowbeamStopMessage) => {
     if (message?.type === 'HOWBEAM_STOP') cleanup();
   };
   window.addEventListener('message', onMessage);
-  document.addEventListener(CLEANUP_EVENT, cleanup);
+  addRecorderCleanup(cleanup);
   browser.runtime.onMessage.addListener(onStop);
 }

@@ -15,8 +15,9 @@ import type {
   HowbeamStopMessage,
 } from '../runtime/messages';
 import type { StepRecaptureContext } from '../storage/recording-state';
-import { CLEANUP_EVENT, STEP_FOLLOWUP_EVENTS } from './content-script-constants';
+import { STEP_FOLLOWUP_EVENTS } from './content-script-constants';
 import { t } from '@/lib/shared/i18n';
+import { addRecorderCleanup, removeRecorderCleanup } from './content/recorder-cleanup';
 
 function createRecaptureToolbar(onCancel: () => void): { host: HTMLElement; remove(): void } {
   const host = document.createElement('div');
@@ -211,7 +212,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
     document.removeEventListener('pointerdown', onPointerDown, { capture: true });
     for (const type of STEP_FOLLOWUP_EVENTS) document.removeEventListener(type, onFollowup, { capture: true });
     window.removeEventListener('keydown', onKeyDown, { capture: true });
-    document.removeEventListener(CLEANUP_EVENT, cleanup);
+    removeRecorderCleanup(cleanup);
     browser.runtime.onMessage.removeListener(onStop);
     unsubscribe();
     lifecycle.stop();
@@ -240,7 +241,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
   document.addEventListener('pointerdown', onPointerDown, { capture: true });
   for (const type of STEP_FOLLOWUP_EVENTS) document.addEventListener(type, onFollowup, { capture: true });
   window.addEventListener('keydown', onKeyDown, { capture: true });
-  document.addEventListener(CLEANUP_EVENT, cleanup);
+  addRecorderCleanup(cleanup);
   browser.runtime.onMessage.addListener(onStop);
 
   let ready = false;
