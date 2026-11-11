@@ -1,3 +1,5 @@
+@import '../../assets/tokens.css';
+
 /* Chromium paints an iframe canvas opaque when the iframe element and embedded
  * root use different color schemes; keep this only-light scheme paired with
  * hardenFrame()'s matching iframe scheme, or dark pages get covered by a white sheet. */
@@ -63,26 +65,24 @@ body.has-preview-target {
   box-shadow: none;
 }
 
-/* #ff4747 mirrors BRAND_DANGER in lib/capture/brand-colors.ts (CSS cannot
- * import TS); change together. */
 .snapshot-annotation__leader {
   fill: none;
-  stroke: #ff4747;
+  stroke: var(--mark);
 }
 
 .snapshot-annotation__frame {
-  fill: rgb(255 71 71 / 0.055);
-  stroke: #ff4747;
+  fill: var(--mark-fill);
+  stroke: var(--mark);
 }
 
 .snapshot-annotation__marker {
   fill: #fff;
-  stroke: #ff4747;
+  stroke: var(--mark);
 }
 
 .snapshot-annotation__marker-inner,
 .snapshot-annotation__badge {
-  fill: #ff4747;
+  fill: var(--mark);
 }
 
 .snapshot-annotation__badge {
@@ -103,14 +103,13 @@ body.has-region-capture .snapshot-overlay {
   cursor: crosshair;
 }
 
-/* Marks the page as frozen while the shield is up. #a8d8ff mirrors
- * BRAND_ACCENT in lib/capture/brand-colors.ts; change together. */
+/* Marks the page as frozen while the shield is up. */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 0 4px #a8d8ff, inset 0 0 0 5px rgb(28 25 23 / 0.35);
+  box-shadow: inset 0 0 0 4px var(--sora), inset 0 0 0 5px rgb(28 25 23 / 0.35);
 }
 
 .is-pulsing {

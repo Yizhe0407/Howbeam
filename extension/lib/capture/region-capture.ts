@@ -1,4 +1,4 @@
-import { BRAND_DANGER } from './brand-colors';
+import { palette } from '../shared/design-tokens';
 import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from './overlay-layers';
 import { createViewportOverlayHost } from './viewport-overlay-host';
 import { OVERLAY_FONT_STACK } from './overlay-font';
@@ -173,16 +173,16 @@ const REGION_CAPTURE_STYLES = `
     font-family: ${OVERLAY_FONT_STACK};
   }
   .ft-region-selection {
-    position: absolute; display: none; border: 2px solid ${BRAND_DANGER}; border-radius: 8px;
-    background: rgb(255 71 71 / .08); box-shadow: 0 0 0 99999px rgb(15 23 42 / .32);
+    position: absolute; display: none; border: 2px solid ${palette.mark}; border-radius: 8px;
+    background: ${palette.markPreviewFill}; box-shadow: 0 0 0 99999px rgb(15 23 42 / .32);
     pointer-events: none;
   }
   .ft-region-selection[data-visible="true"] { display: block; }
   /* Once drawn, the box can be moved and resized until it is confirmed. */
   .ft-region-selection[data-interactive="true"] { pointer-events: auto; cursor: move; }
   .ft-region-handle {
-    position: absolute; width: 14px; height: 14px; border: 2px solid ${BRAND_DANGER}; border-radius: 99px;
-    background: #fffdf8; display: none;
+    position: absolute; width: 14px; height: 14px; border: 2px solid ${palette.mark}; border-radius: 99px;
+    background: ${palette.surface}; display: none;
   }
   .ft-region-selection[data-interactive="true"] .ft-region-handle { display: block; }
   .ft-region-handle[data-handle="nw"] { left: -8px; top: -8px; cursor: nwse-resize; }
@@ -196,28 +196,28 @@ const REGION_CAPTURE_STYLES = `
   /* Guidance only: it never takes the pointer, so a box can be drawn right under it. */
   .ft-region-hint {
     position: fixed; top: 16px; left: 50%; max-width: calc(100vw - 32px); padding: 6px 14px;
-    transform: translateX(-50%); border: 2px solid #1f1b16; border-radius: 999px;
-    background: #fffdf8; color: #1f1b16; font-size: 13px; line-height: 1.4; font-weight: 700;
+    transform: translateX(-50%); border: 2px solid ${palette.line}; border-radius: 999px;
+    background: ${palette.surface}; color: ${palette.line}; font-size: 13px; line-height: 1.4; font-weight: 700;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
   }
   /* Attached to the selection (see placeRegionActions) rather than a fixed corner. */
   .ft-region-actions {
     position: fixed; left: 0; top: 0; display: none; align-items: center; gap: 8px; padding: 4px;
-    border: 2px solid #1f1b16; border-radius: 999px; background: #fffdf8; cursor: default; pointer-events: auto;
+    border: 2px solid ${palette.line}; border-radius: 999px; background: ${palette.surface}; cursor: default; pointer-events: auto;
   }
   .ft-region-actions[data-visible="true"] { display: flex; }
   .ft-region-cancel {
-    min-width: 40px; min-height: 32px; padding: 0 12px; border: 2px solid #1f1b16; border-radius: 999px;
-    background: #f2e9d9; color: #1f1b16; font: inherit; font-weight: 700; cursor: pointer;
+    min-width: 40px; min-height: 32px; padding: 0 12px; border: 2px solid ${palette.line}; border-radius: 999px;
+    background: ${palette.surfaceMuted}; color: ${palette.line}; font: inherit; font-weight: 700; cursor: pointer;
   }
-  .ft-region-cancel:hover { background: #ffe27a; }
+  .ft-region-cancel:hover { background: ${palette.tamago}; }
   .ft-region-confirm {
-    min-width: 40px; min-height: 32px; padding: 0 14px; border: 2px solid #1f1b16; border-radius: 999px;
-    background: #a8d8ff; color: #1f1b16; font: inherit; font-weight: 800; cursor: pointer;
+    min-width: 40px; min-height: 32px; padding: 0 14px; border: 2px solid ${palette.line}; border-radius: 999px;
+    background: ${palette.sora}; color: ${palette.line}; font: inherit; font-weight: 800; cursor: pointer;
   }
   .ft-region-confirm[hidden] { display: none; }
   .ft-region-confirm:hover { filter: brightness(.95); }
-  .ft-region-cancel:focus-visible, .ft-region-confirm:focus-visible { outline: 2px solid #2f6fed; outline-offset: 2px; }
+  .ft-region-cancel:focus-visible, .ft-region-confirm:focus-visible { outline: 2px solid ${palette.focus}; outline-offset: 2px; }
   .ft-region-blocker[data-capturing="true"] { cursor: wait; }
   .ft-region-blocker[data-capturing="true"] .ft-region-selection,
   .ft-region-blocker[data-capturing="true"] .ft-region-hint,

@@ -17,6 +17,7 @@ import type {
 import type { StepRecaptureContext } from '../storage/recording-state';
 import { STEP_FOLLOWUP_EVENTS } from './content-script-constants';
 import { t } from '@/lib/shared/i18n';
+import { palette, RADIUS_PX } from '../shared/design-tokens';
 import { addRecorderCleanup, removeRecorderCleanup } from './content/recorder-cleanup';
 
 function createRecaptureToolbar(onCancel: () => void): { host: HTMLElement; remove(): void } {
@@ -39,11 +40,10 @@ function createRecaptureToolbar(onCancel: () => void): { host: HTMLElement; remo
     'align-items:center',
     'gap:12px',
     'padding:10px 12px',
-    'border:1px solid rgba(255,255,255,.18)',
-    'border-radius:8px',
-    'background:#111827',
-    'box-shadow:0 12px 32px rgba(0,0,0,.35)',
-    'color:#f9fafb',
+    `border:2px solid ${palette.line}`,
+    `border-radius:${RADIUS_PX}px`,
+    `background:${palette.surface}`,
+    `color:${palette.text}`,
     'font:600 14px/1.3 system-ui,sans-serif',
   ].join(';');
   const label = document.createElement('span');
@@ -55,9 +55,10 @@ function createRecaptureToolbar(onCancel: () => void): { host: HTMLElement; remo
     'all:initial',
     'cursor:pointer',
     'padding:7px 10px',
-    'border-radius:8px',
-    'background:#374151',
-    'color:#fff',
+    `border:2px solid ${palette.line}`,
+    'border-radius:999px',
+    `background:${palette.surfaceMuted}`,
+    `color:${palette.text}`,
     'font:600 14px/1 system-ui,sans-serif',
   ].join(';');
   cancel.addEventListener('click', (event) => {

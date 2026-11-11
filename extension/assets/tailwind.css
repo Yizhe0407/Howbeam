@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+/* Every colour value lives in lib/shared/design-tokens.ts; this generated file declares them. */
+@import './tokens.css';
 
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
@@ -25,8 +27,8 @@
  *   Focus    `focus-ring` (defined below) is the single focus treatment: a 2px
  *            --focus outline offset by 2px, kept distinct from every fill.
  *
- * --sora is mirrored by BRAND_ACCENT in lib/capture/brand-colors.ts and the
- * recording toolbar's own stylesheet (CSS cannot import TS); change together.
+ * The colour values themselves are tokens (lib/shared/design-tokens.ts), shared
+ * with the UI the extension puts into recorded pages.
  */
 @font-face {
   /* jf open 粉圓 (Huninn), SIL OFL 1.1 — public/fonts/Huninn-OFL.txt. Bundled
@@ -40,40 +42,7 @@
 }
 
 :root {
-  --radius: 12px;
   --radius-inset: calc(var(--radius) - 4px);
-
-  --canvas: #fbf5ea;
-  --surface: #fffdf8;
-  --surface-muted: #f2e9d9;
-  /* A panel that sits on top of --surface (annotation rows, export cards). */
-  --surface-raised: #f8f1e4;
-  --text: #1f1b16;
-  --text-muted: #6b6156;
-  --line: #1f1b16;
-  --line-soft: rgb(31 27 22 / 0.14);
-
-  /* Pastel sticker fills. Text on any of them is always --on-accent. */
-  --sora: #a8d8ff;
-  --sora-hover: #93ceff;
-  --tamago: #ffe27a;
-  --sakura: #ffb5c5;
-  --matcha: #b8e0a0;
-  --on-accent: #1f1b16;
-
-  --brand: #a8d8ff;
-  --brand-text: #2b5fc8;
-  --brand-bg-soft: #e4f2ff;
-  --selected: #ffe27a;
-  --recording: #d93a3f;
-  --recording-hover: #c4333a;
-  --recording-text: #ffffff;
-  --focus: #2f6fed;
-  /* Destructive *hover* affordances: the softer text/background pair used when
-   * hovering a delete or reset control. */
-  --danger-text: #c8323a;
-  --danger-soft: #ffe6e6;
-  --warning-soft: #fff4c2;
 
   --background: var(--canvas);
   --foreground: var(--text);
@@ -96,32 +65,6 @@
   --input: var(--line);
   --ring: var(--focus);
 }
-/*
- * Dark mode follows the OS only — there is no in-app theme switch. This media
- * query is therefore the single source of dark truth, and it must stay in sync
- * with the `dark` custom variant declared above. Pastel fills keep their light
- * values: a sticker stays the same colour on a dark board.
- */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #1a1714;
-    --surface: #24201b;
-    --surface-muted: #322c25;
-    --surface-raised: #2b261f;
-    --text: #f6eedf;
-    --text-muted: #b5aa99;
-    --line: #d9cdb8;
-    --line-soft: rgb(246 238 223 / 0.16);
-
-    --brand-text: #8ab4ff;
-    --brand-bg-soft: rgb(168 216 255 / 0.16);
-    --focus: #8ab4ff;
-    --danger-text: #ff8a8a;
-    --danger-soft: rgb(217 58 63 / 0.22);
-    --warning-soft: rgb(255 226 122 / 0.16);
-  }
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

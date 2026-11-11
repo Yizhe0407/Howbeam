@@ -1,24 +1,26 @@
-import { BRAND_ACCENT, BRAND_DANGER } from '../capture/brand-colors';
+import { darkPalette, palette, RADIUS_PX } from '../shared/design-tokens';
 import { OVERLAY_FONT_STACK } from '../capture/overlay-font';
+
+const dark = { ...palette, ...darkPalette };
 
 /** The dark palette, applied by the OS preference or by an explicit `data-theme`. */
 const darkTokens = `
   color-scheme: dark;
-  --ft-surface: #24201b;
-  --ft-text: #f6eedf;
-  --ft-status-text: #f6eedf;
-  --ft-muted: #b5aa99;
-  --ft-border: #d9cdb8;
-  --ft-focus: #8ab4ff;
-  --ft-divider: rgba(246, 238, 223, .16);
-  --ft-actions-bg: #322c25;
-  --ft-btn-text: #f6eedf;
-  --ft-btn-hover-bg: rgba(246, 238, 223, .12);
-  --ft-btn-danger-hover-bg: rgba(217, 58, 63, .22);
-  --ft-btn-danger-hover-text: #ff8a8a;
-  --ft-error-text: #ff8a8a;
-  --ft-warning: #ffe27a;
-  --ft-link: #8ab4ff;
+  --ft-surface: ${dark.surface};
+  --ft-text: ${dark.text};
+  --ft-status-text: ${dark.text};
+  --ft-muted: ${dark.textMuted};
+  --ft-border: ${dark.line};
+  --ft-focus: ${dark.focus};
+  --ft-divider: ${dark.lineSoft};
+  --ft-actions-bg: ${dark.surfaceMuted};
+  --ft-btn-text: ${dark.text};
+  --ft-btn-hover-bg: ${dark.hoverTint};
+  --ft-btn-danger-hover-bg: ${dark.dangerSoft};
+  --ft-btn-danger-hover-text: ${dark.dangerText};
+  --ft-error-text: ${dark.dangerText};
+  --ft-warning: ${dark.warningText};
+  --ft-link: ${dark.brandText};
 `;
 
 /**
@@ -34,33 +36,33 @@ export const recordingToolbarStyles = `
    * (transparent surface, wrong text colors). */
   :host, .ft-layer {
     color-scheme: light;
-    /* Mirrors the app's "sticker" tokens (assets/tailwind.css): 2px ink
+    /* The app's "sticker" style, from the shared design tokens: 2px ink
      * outlines, flat pastel fills with ink text, one 12px radius, no shadows. */
-    --ft-radius: 12px;
+    --ft-radius: ${RADIUS_PX}px;
     /* One height for the bar in both shapes, expanded and collapsed. */
     --ft-bar-height: 58px;
-    --ft-surface: #fffdf8;
-    --ft-text: #1f1b16;
-    --ft-status-text: #1f1b16;
-    --ft-muted: #6b6156;
-    --ft-border: #1f1b16;
-    --ft-primary: ${BRAND_ACCENT};
-    --ft-primary-hover: #93ceff;
-    --ft-primary-text: #1f1b16;
-    --ft-count: #ffe27a;
-    --ft-count-text: #1f1b16;
-    --ft-recording: ${BRAND_DANGER};
-    --ft-focus: #2f6fed;
-    --ft-divider: rgba(31, 27, 22, .14);
-    --ft-actions-bg: #f2e9d9;
-    --ft-segment-active-bg: #ffe27a;
-    --ft-btn-text: #1f1b16;
-    --ft-btn-hover-bg: rgba(31, 27, 22, .1);
-    --ft-btn-danger-hover-bg: #ffe6e6;
-    --ft-btn-danger-hover-text: #c8323a;
-    --ft-error-text: #c8323a;
-    --ft-warning: #9a6b00;
-    --ft-link: #2b5fc8;
+    --ft-surface: ${palette.surface};
+    --ft-text: ${palette.text};
+    --ft-status-text: ${palette.text};
+    --ft-muted: ${palette.textMuted};
+    --ft-border: ${palette.line};
+    --ft-primary: ${palette.sora};
+    --ft-primary-hover: ${palette.soraHover};
+    --ft-primary-text: ${palette.onAccent};
+    --ft-count: ${palette.tamago};
+    --ft-count-text: ${palette.onAccent};
+    --ft-recording: ${palette.mark};
+    --ft-focus: ${palette.focus};
+    --ft-divider: ${palette.lineSoft};
+    --ft-actions-bg: ${palette.surfaceMuted};
+    --ft-segment-active-bg: ${palette.selected};
+    --ft-btn-text: ${palette.text};
+    --ft-btn-hover-bg: ${palette.hoverTint};
+    --ft-btn-danger-hover-bg: ${palette.dangerSoft};
+    --ft-btn-danger-hover-text: ${palette.dangerText};
+    --ft-error-text: ${palette.dangerText};
+    --ft-warning: ${palette.warningText};
+    --ft-link: ${palette.brandText};
   }
   @media (prefers-color-scheme: dark) {
     :host, .ft-layer:not([data-theme]) {
@@ -117,7 +119,7 @@ export const recordingToolbarStyles = `
     font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s;
   }
   .ft-mode-switch button:hover:not(:disabled):not([aria-checked="true"]) { background: var(--ft-btn-hover-bg); color: var(--ft-text); }
-  .ft-mode-switch button[aria-checked="true"] { border-color: var(--ft-border); background: var(--ft-segment-active-bg); color: #1f1b16; }
+  .ft-mode-switch button[aria-checked="true"] { border-color: var(--ft-border); background: var(--ft-segment-active-bg); color: ${palette.onAccent}; }
   .ft-mode-switch button:disabled { opacity: .5; cursor: default; }
   .ft-mode-switch button:focus-visible { outline: 2px solid var(--ft-focus); outline-offset: 2px; }
   .ft-mode-switch svg { width: 14px; height: 14px; }
@@ -129,11 +131,11 @@ export const recordingToolbarStyles = `
   .ft-button[data-danger="true"]:hover:not(:disabled) { background: var(--ft-btn-danger-hover-bg); color: var(--ft-btn-danger-hover-text); }
   .ft-button:disabled { opacity: .42; cursor: default; }
   /* The one action that moves the flow forward in the current state. */
-  .ft-button[data-emphasis="true"], .ft-button[aria-pressed="true"] { background: var(--ft-segment-active-bg); color: #1f1b16; }
+  .ft-button[data-emphasis="true"], .ft-button[aria-pressed="true"] { background: var(--ft-segment-active-bg); color: ${palette.onAccent}; }
   .ft-primary {
     height: 38px; flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     padding: 0 16px; border: 2px solid var(--ft-border); border-radius: 999px; background: var(--ft-segment-active-bg);
-    color: #1f1b16; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: filter .15s;
+    color: ${palette.onAccent}; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: filter .15s;
   }
   .ft-primary:hover:not(:disabled) { filter: brightness(.95); }
   .ft-primary[data-quiet] { background: transparent; color: var(--ft-btn-text); }
@@ -196,7 +198,7 @@ export const recordingToolbarStyles = `
     min-height: 36px; padding: 0 12px; border: 2px solid var(--ft-border); border-radius: var(--ft-radius);
     background: var(--ft-surface); color: var(--ft-text); font-weight: 700; cursor: pointer;
   }
-  .ft-confirm button[data-danger="true"] { background: var(--ft-recording); color: #fff; }
+  .ft-confirm button[data-danger="true"] { background: var(--ft-recording); color: ${palette.recordingText}; }
   .ft-confirm button:disabled { opacity: .5; cursor: wait; }
   .ft-success { width: 18px; height: 18px; color: var(--ft-link); }
   .ft-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }

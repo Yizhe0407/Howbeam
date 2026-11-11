@@ -1,6 +1,7 @@
 import type { ImageEdit, ImageEditColor, ShapeFill, TextLook } from '@/lib/storage/image-edit-model';
 import { fitTextHeight } from './image-edit-item-geometry';
 import type { ImageEditItem } from './image-edit-items';
+import { palette } from '@/lib/shared/design-tokens';
 
 /** How the next thing drawn will look; remembered across the session. */
 export interface ImageEditStyle {
@@ -15,7 +16,7 @@ export interface ImageEditStyle {
 }
 
 export const DEFAULT_IMAGE_EDIT_STYLE: ImageEditStyle = {
-  color: '#ff4747',
+  color: palette.mark,
   strokeWidth: 4,
   fontSize: 24,
   look: 'outline',

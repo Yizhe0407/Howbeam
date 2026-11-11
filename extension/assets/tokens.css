@@ -1,0 +1,56 @@
+/* Generated from lib/shared/design-tokens.ts by `npm run tokens`; do not edit. */
+:root {
+  --radius: 12px;
+  --canvas: #fbf5ea;
+  --surface: #fffdf8;
+  --surface-muted: #f2e9d9;
+  --surface-raised: #f8f1e4;
+  --text: #1f1b16;
+  --text-muted: #6b6156;
+  --line: #1f1b16;
+  --line-soft: rgb(31 27 22 / 0.14);
+  --hover-tint: rgb(31 27 22 / 0.1);
+  --sora: #a8d8ff;
+  --sora-hover: #93ceff;
+  --tamago: #ffe27a;
+  --sakura: #ffb5c5;
+  --matcha: #b8e0a0;
+  --on-accent: #1f1b16;
+  --brand: #a8d8ff;
+  --brand-text: #2b5fc8;
+  --brand-bg-soft: #e4f2ff;
+  --selected: #ffe27a;
+  --recording: #d93a3f;
+  --recording-hover: #c4333a;
+  --recording-text: #ffffff;
+  --focus: #2f6fed;
+  --danger-text: #c8323a;
+  --danger-soft: #ffe6e6;
+  --warning-text: #9a6b00;
+  --warning-soft: #fff4c2;
+  --mark: #ff4747;
+  --mark-fill: rgba(255, 71, 71, 0.055);
+  --mark-preview-fill: rgba(255, 71, 71, 0.09);
+  --mask: #000000;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #1a1714;
+    --surface: #24201b;
+    --surface-muted: #322c25;
+    --surface-raised: #2b261f;
+    --text: #f6eedf;
+    --text-muted: #b5aa99;
+    --line: #d9cdb8;
+    --line-soft: rgb(246 238 223 / 0.16);
+    --hover-tint: rgb(246 238 223 / 0.12);
+    --brand-text: #8ab4ff;
+    --brand-bg-soft: rgb(168 216 255 / 0.16);
+    --focus: #8ab4ff;
+    --danger-text: #ff8a8a;
+    --danger-soft: rgb(217 58 63 / 0.22);
+    --warning-text: #ffe27a;
+    --warning-soft: rgb(255 226 122 / 0.16);
+  }
+}

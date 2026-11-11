@@ -27,6 +27,7 @@
     "test:e2e:browsers": "wxt build && playwright test && wxt build -b firefox && node tests/e2e/firefox-smoke.mjs",
     "test:e2e:docker": "docker build -f Dockerfile.e2e -t howbeam-extension-e2e . && mkdir -p test-results && docker run --rm --init --ipc=host -v \"$PWD/test-results:/work/extension/test-results\" howbeam-extension-e2e",
     "fonts:pdf": "python scripts/pdf-fonts/build.py",
+    "tokens": "UPDATE_TOKENS=1 vitest run tests/unit/design-tokens.test.ts",
     "validate:architecture": "node tests/build/validate-module-boundaries.mjs",
     "validate": "tsc --noEmit && eslint . --max-warnings 0 && node tests/build/validate-module-boundaries.mjs && vitest run && wxt build && wxt build -b firefox && node tests/build/validate-browser-artifacts.mjs && node tests/build/validate-firefox-lint.mjs",
     "benchmark:detection": "wxt build && playwright test -c playwright.benchmark.config.ts",
