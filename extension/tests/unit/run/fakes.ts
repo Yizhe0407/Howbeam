@@ -31,6 +31,7 @@ export function fakePorts() {
       get: vi.fn<RunPorts['tabs']['get']>(async (tabId) => tab({ id: tabId })),
       activeInCurrentWindow: vi.fn<RunPorts['tabs']['activeInCurrentWindow']>(async () => tab()),
       activeInWindow: vi.fn<RunPorts['tabs']['activeInWindow']>(async () => tab()),
+      activeInFocusedWindow: vi.fn<RunPorts['tabs']['activeInFocusedWindow']>(async () => tab()),
       focus: vi.fn<RunPorts['tabs']['focus']>(async () => {}),
       send: vi.fn<RunPorts['tabs']['send']>(async () => true),
     },
@@ -107,8 +108,10 @@ export async function wiredRun(stored: RecordingState = makeRecordingState()) {
     discardUndo: undo.discard,
     isRecaptureStarting: () => false,
     resolveContinuationTab: async () => ({ ok: false, error: 'background.continuationSourceMissing' }),
-    continueAfterTabClosed: async () => 'nowhere',
+    continueAfterTabClosed: (...args) => navigation.continueAfterTabClosed(...args),
   });
+  const { createNavigation } = await import('@/lib/recording/run/navigation');
+  const navigation = createNavigation({ actor, ports, lifecycle });
   capture = createCapture({ actor, ports, gate, lifecycle, discardUndo: undo.discard });
   const { createSnapshotControls } = await import('@/lib/recording/run/snapshot');
   const snapshot = createSnapshotControls({ actor, ports, lifecycle, capture, discardUndo: undo.discard });
@@ -122,5 +125,5 @@ export async function wiredRun(stored: RecordingState = makeRecordingState()) {
       });
     });
   }
-  return { lifecycle, capture, undo, snapshot, recorderReports, ports, steps, actor, saved, gate, state: () => toRecordingState(actor.state()) };
+  return { lifecycle, capture, undo, snapshot, navigation, recorderReports, ports, steps, actor, saved, gate, state: () => toRecordingState(actor.state()) };
 }

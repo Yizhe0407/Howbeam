@@ -25,6 +25,8 @@ export interface RunPorts {
     /** The active tab of the window the user is in. */
     activeInCurrentWindow(): Promise<Browser.tabs.Tab | undefined>;
     activeInWindow(windowId: number): Promise<Browser.tabs.Tab | undefined>;
+    /** The active tab of the window that last had focus: where the user is. */
+    activeInFocusedWindow(): Promise<Browser.tabs.Tab | undefined>;
     focus(tabId: number, windowId?: number): Promise<void>;
     /** Sends to the tab's top frame; failures are the caller's to judge. */
     send(tabId: number, message: unknown): Promise<unknown>;
