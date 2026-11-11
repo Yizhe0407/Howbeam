@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   storageSet: vi.fn(),
   createProject: vi.fn(),
   getProject: vi.fn(),
-  discardPristineProject: vi.fn(),
   getProjectSummaries: vi.fn(),
 }));
 
@@ -31,12 +30,10 @@ vi.mock('wxt/browser', async () => {
 vi.mock('@/lib/storage/project-repository', () => ({
   createProject: mocks.createProject,
   getProject: mocks.getProject,
-  discardPristineProject: mocks.discardPristineProject,
   getProjectSummaries: mocks.getProjectSummaries,
 }));
 
 import RecordControls from '@/components/popup/RecordControls';
-import { RECORDING_STATE_KEY } from '@/lib/storage/recording-state';
 import { ACTIVE_PROJECT_ID_KEY } from '@/lib/storage/storage';
 import { makeRecordingState } from '../setup/recording-state';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -69,7 +66,6 @@ beforeEach(() => {
   mocks.storageSet.mockResolvedValue(undefined);
   mocks.getProject.mockResolvedValue(undefined);
   mocks.createProject.mockResolvedValue({ id: 'project-new' });
-  mocks.discardPristineProject.mockResolvedValue(true);
   mocks.sendMessage.mockResolvedValue({ ok: true, sessionId: 'project-new', runId: 'run-1' });
 });
 
@@ -79,7 +75,7 @@ afterEach(() => {
 });
 
 describe('popup start always records into a fresh project', () => {
-  it('creates a new project even when a project with content is already selected', async () => {
+  it('asks the background for a Project of its own even when one with content is selected', async () => {
     selectProjectInStorage(SELECTED_PROJECT_WITH_CONTENT);
     const onStarted = vi.fn();
     render(<RecordControls recording={IDLE_RECORDING} onStarted={onStarted} />);
@@ -88,18 +84,13 @@ describe('popup start always records into a fresh project', () => {
     fireEvent.click(screen.getByRole('button', { name: '開始錄製' }));
 
     await waitFor(() => expect(onStarted).toHaveBeenCalledOnce());
-    expect(mocks.createProject).toHaveBeenCalledOnce();
-    expect(mocks.sendMessage).toHaveBeenCalledWith({
-      type: 'START_RECORDING',
-      sessionId: 'project-new',
-      mode: 'steps',
-      autoCreatedProject: true,
-    });
-    expect(mocks.storageSet).toHaveBeenCalledWith({ [ACTIVE_PROJECT_ID_KEY]: 'project-new' });
-    expect(mocks.discardPristineProject).not.toHaveBeenCalled();
+    expect(mocks.sendMessage).toHaveBeenCalledWith({ type: 'START_RECORDING', target: { kind: 'new' }, mode: 'steps' });
+    // The background creates the Project with the first capture; the popup creates and selects nothing.
+    expect(mocks.createProject).not.toHaveBeenCalled();
+    expect(mocks.storageSet).not.toHaveBeenCalledWith(expect.objectContaining({ [ACTIVE_PROJECT_ID_KEY]: expect.anything() }));
   });
 
-  it('rolls back the fresh project and restores the previous selection when start fails', async () => {
+  it('shows why the start was refused, with nothing to roll back', async () => {
     silenceIntentionalErrorLogs();
     selectProjectInStorage(SELECTED_PROJECT_WITH_CONTENT);
     mocks.sendMessage.mockResolvedValue({ ok: false, error: 'background.cannotStartHere' });
@@ -110,35 +101,8 @@ describe('popup start always records into a fresh project', () => {
     fireEvent.click(screen.getByRole('button', { name: '開始錄製' }));
 
     expect((await screen.findByRole('alert')).textContent).toContain(t().background.cannotStartHere);
-    expect(mocks.discardPristineProject).toHaveBeenCalledExactlyOnceWith('project-new');
-    // The pre-start selection is put back so the aborted attempt is invisible.
-    expect(mocks.storageSet).toHaveBeenLastCalledWith({ [ACTIVE_PROJECT_ID_KEY]: 'project-old' });
+    expect(mocks.createProject).not.toHaveBeenCalled();
     expect(onStarted).not.toHaveBeenCalled();
-  });
-
-  it('keeps the fresh project when the run actually started but the response was lost', async () => {
-    silenceIntentionalErrorLogs();
-    // A malformed transport response with a genuinely live run: rolling the
-    // project back would strand the recording, so the probe must veto it.
-    mocks.sendMessage.mockResolvedValue(undefined);
-    mocks.storageGet.mockResolvedValue({
-      [RECORDING_STATE_KEY]: {
-        ...IDLE_RECORDING,
-        operation: 'recording',
-        isRecording: true,
-        phase: 'recording',
-        sessionId: 'project-new',
-        tabId: 7,
-        runId: 'run-1',
-      },
-    });
-    render(<RecordControls recording={IDLE_RECORDING} />);
-    await waitFor(() => expect(mocks.query).toHaveBeenCalled());
-
-    fireEvent.click(screen.getByRole('button', { name: '開始錄製' }));
-
-    await screen.findByRole('alert');
-    expect(mocks.discardPristineProject).not.toHaveBeenCalled();
   });
 
   // The idle form no longer reads the selected project just to narrate the new-project-per-recording model.
@@ -205,7 +169,7 @@ describe('popup record target picker', () => {
     expect((await screen.findByRole('combobox', { name: '錄到哪裡' })).textContent).toContain('新專案');
     fireEvent.click(screen.getByRole('button', { name: '開始錄製' }));
 
-    await waitFor(() => expect(mocks.createProject).toHaveBeenCalledOnce());
+    await waitFor(() => expect(mocks.sendMessage).toHaveBeenCalledWith(expect.objectContaining({ target: { kind: 'new' } })));
   });
 
   it('appends to the chosen project without creating one', async () => {
@@ -222,7 +186,7 @@ describe('popup record target picker', () => {
     expect(mocks.createProject).not.toHaveBeenCalled();
     expect(mocks.sendMessage).toHaveBeenCalledExactlyOnceWith({
       type: 'START_RECORDING',
-      sessionId: 'project-old',
+      target: { kind: 'project', projectId: 'project-old' },
       mode: 'steps',
     });
   });

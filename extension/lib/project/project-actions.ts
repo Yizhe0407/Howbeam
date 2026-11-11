@@ -1,12 +1,7 @@
 import { sendToBackground } from '../runtime/background-client';
-import { createProject, discardPristineProject, getProject } from '../storage/project-repository';
+import { createProject, getProject } from '../storage/project-repository';
 import { type Project } from '../storage/models';
-import {
-  clearActiveProjectId,
-  getActiveProjectId,
-  getRecordingState,
-  setActiveProjectId,
-} from '../storage/storage';
+import { clearActiveProjectId, getActiveProjectId, setActiveProjectId } from '../storage/storage';
 import type { RecordingMode } from '../storage/recording-state';
 import { t } from '@/lib/shared/i18n';
 import { copyText } from '@/lib/shared/i18n/copy';
@@ -34,14 +29,6 @@ export function selectProject(projectId: string): Promise<Project> {
   return queueSelectionAction(() => selectExistingProject(projectId));
 }
 
-export function createAndSelectProject(title?: string): Promise<Project> {
-  return queueSelectionAction(async () => {
-    const project = await createProject({ title });
-    await setActiveProjectId(project.id);
-    return project;
-  });
-}
-
 /** Reads the currently selected Project, or null when nothing valid is
  * selected. Read-only; a stale selection is reported as null, not cleared. */
 export async function getSelectedProject(): Promise<Project | null> {
@@ -51,108 +38,18 @@ export async function getSelectedProject(): Promise<Project | null> {
 }
 
 /**
- * UI-flow wrapper over the storage-side discardPristineProject: reclaims a Project
- * that was auto-created for a recording run which never produced anything.
- * The pristine guard and compare-and-clear of the selection live in
- * lib/storage; this wrapper only adds selection-queue ordering and the
- * restorePreviousProjectId behavior, which re-selects the pre-start selection
- * after a failed start so the aborted attempt is invisible. Callers must only
- * pass ids they themselves auto-created — an explicitly created 專案庫 project
- * shares the same empty shape and must never reach this. Returns whether it
- * deleted.
+ * The popup's start. By default a run records into a Project of its own,
+ * which the background creates when the first capture is stored; passing
+ * `targetProjectId` appends to an existing Project instead. The background
+ * owns the whole start, so there is nothing to roll back here.
  */
-export function discardUntouchedProject(
-  projectId: string,
-  restorePreviousProjectId: string | null = null,
-): Promise<boolean> {
-  return queueSelectionAction(async () => {
-    const deleted = await discardPristineProject(projectId);
-    if (!deleted) return false;
-    if (restorePreviousProjectId && restorePreviousProjectId !== projectId) {
-      const previous = await getProject(restorePreviousProjectId);
-      if (previous) await setActiveProjectId(previous.id);
-    }
-    return true;
-  });
-}
-
-/** The Project a run records into, claimed before START_RECORDING is sent. */
-export interface RecordingProjectClaim {
-  project: Project;
-  /** True when the claim created the Project, so an empty run may reclaim it. */
-  autoCreated: boolean;
-  /** Undoes the claim after a start that never produced a live run: reclaims
-   * an auto-created shell, or puts the pre-claim selection back. */
-  release: () => Promise<void>;
-}
-
-function restoreSelection(previousProjectId: string | null, claimedProjectId: string): Promise<void> {
-  return queueSelectionAction(async () => {
-    if (previousProjectId === claimedProjectId) return;
-    const previous = previousProjectId ? await getProject(previousProjectId) : undefined;
-    if (previous) await setActiveProjectId(previous.id);
-    else await clearActiveProjectId(claimedProjectId);
-  });
-}
-
-/**
- * Picks the Project a popup-initiated run records into and makes it the UI
- * selection. `null` creates a brand-new Project; an id appends to that existing
- * one (the same append the editor's 接續錄製 performs). Shared by the popup
- * and the background's permission-resumed start so both resolve a target the
- * same way.
- */
-export async function claimRecordingProject(targetProjectId: string | null): Promise<RecordingProjectClaim> {
-  // The pre-claim selection is remembered so a failed start is invisible.
-  const previousProjectId = (await getSelectedProject())?.id ?? null;
-  if (targetProjectId === null) {
-    const project = await createAndSelectProject();
-    return {
-      project,
-      autoCreated: true,
-      release: async () => {
-        await discardUntouchedProject(project.id, previousProjectId);
-      },
-    };
-  }
-  const project = await selectProject(targetProjectId);
-  return { project, autoCreated: false, release: () => restoreSelection(previousProjectId, project.id) };
-}
-
-/**
- * The popup's start transaction. By default every start records into a
- * brand-new Project (Scribe/Tango convention); passing `targetProjectId` is the
- * explicit opt-in to append to an existing one. Claims the Project, asks the
- * background to start recording into it, and on failure rolls the world back
- * to exactly how it was. Returns the Project the live run records into.
- */
-export async function startRecordingIntoProject(
-  mode: RecordingMode,
-  targetProjectId: string | null = null,
-): Promise<Project> {
-  const claim = await claimRecordingProject(targetProjectId);
-  const { project } = claim;
-  try {
-    const result = await sendToBackground({
-      type: 'START_RECORDING',
-      sessionId: project.id,
-      mode,
-      ...(claim.autoCreated ? { autoCreatedProject: true } : {}),
-    }, t().runtime.recordingServiceUnavailable);
-    if (!result.ok) throw new Error(copyText(result.error));
-    return project;
-  } catch (startError) {
-    // Best-effort rollback of the claim above. The recording-state probe
-    // covers the odd case where the run actually started but the response was
-    // lost — releasing a live run's Project would strand it.
-    try {
-      const live = await getRecordingState();
-      if (!(live.isRecording && live.sessionId === project.id)) await claim.release();
-    } catch (rollbackError) {
-      console.error('[howbeam] failed to roll back the recording project claim', rollbackError);
-    }
-    throw startError;
-  }
+export async function startRecording(mode: RecordingMode, targetProjectId: string | null = null): Promise<void> {
+  const result = await sendToBackground({
+    type: 'START_RECORDING',
+    target: targetProjectId ? { kind: 'project', projectId: targetProjectId } : { kind: 'new' },
+    mode,
+  }, t().runtime.recordingServiceUnavailable);
+  if (!result.ok) throw new Error(copyText(result.error));
 }
 
 /** Explicit UI-flow helper for editor navigation with no valid selection

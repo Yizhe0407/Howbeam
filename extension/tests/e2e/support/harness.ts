@@ -531,7 +531,7 @@ export async function startRecording(appPage: Page, popup: Page, mode: Recording
       }
       const result = await chrome.runtime.sendMessage({
         type: 'START_RECORDING',
-        sessionId,
+        target: { kind: 'project', projectId: sessionId },
         mode,
       }) as { ok: true } | { ok: false; error?: string } | undefined;
 

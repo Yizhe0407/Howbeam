@@ -156,7 +156,7 @@ describe('background runtime boundary', () => {
   ])('rejects START_RECORDING from an untrusted $name', async ({ sender }) => {
     const result = await mocks.messageListener?.({
       type: 'START_RECORDING',
-      sessionId: 'project-a',
+      target: { kind: 'project', projectId: 'project-a' },
       mode: 'steps',
     }, sender);
 
@@ -214,7 +214,7 @@ describe('continuation recording start', () => {
   it('refuses a continuation whose editor does not own the named Project', async () => {
     const result = await send<StartRecordingResult>({
       type: 'START_RECORDING',
-      sessionId: 'project-b',
+      target: { kind: 'project', projectId: 'project-b' },
       mode: 'steps',
       continuation: {},
     }, editorSender('project-a'));
@@ -230,7 +230,7 @@ describe('continuation recording start', () => {
 
     const result = await send<StartRecordingResult>({
       type: 'START_RECORDING',
-      sessionId: 'project-a',
+      target: { kind: 'project', projectId: 'project-a' },
       mode: 'steps',
       continuation: {},
     });
@@ -257,7 +257,7 @@ describe('continuation recording start', () => {
 
     await send<StartRecordingResult>({
       type: 'START_RECORDING',
-      sessionId: 'project-a',
+      target: { kind: 'project', projectId: 'project-a' },
       mode: 'steps',
       continuation: {},
     });
@@ -287,7 +287,7 @@ describe('continuation from a source page that no longer loads', () => {
 
     const result = await send<StartRecordingResult>({
       type: 'START_RECORDING',
-      sessionId: 'project-a',
+      target: { kind: 'project', projectId: 'project-a' },
       mode: 'steps',
       continuation: {},
     });
@@ -310,7 +310,7 @@ describe('continuation from a source page that no longer loads', () => {
 
     const result = await send<StartRecordingResult>({
       type: 'START_RECORDING',
-      sessionId: 'project-a',
+      target: { kind: 'project', projectId: 'project-a' },
       mode: 'steps',
       continuation: {},
     });

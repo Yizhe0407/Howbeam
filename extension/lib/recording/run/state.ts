@@ -53,8 +53,8 @@ export interface Recording {
   runItemCount: number;
   lastCommittedCaptureId: string | null;
   anchor: SnapshotAnchor | null;
-  /** The popup created this Project for the run: discard it if the run ends empty. */
-  autoCreated: boolean;
+  /** The run records into a Project of its own, created with its first stored capture. */
+  newProject: boolean;
   /** Existing Project the run appends to, shown in the toolbar; null for a new one. */
   targetProjectTitle: string | null;
   insertAfterStepId: string | null;
@@ -124,7 +124,7 @@ const NO_RUN = {
   runId: null,
   lastCommittedCaptureId: null,
   groupAnchorId: null,
-  autoCreatedProjectId: null,
+  newProject: false,
   targetProjectTitle: null,
   insertAfterStepId: null,
   snapshotViewport: null,
@@ -148,7 +148,7 @@ export function toRecordingState(state: RunState): RecordingState {
       lastCommittedCaptureId: operation.lastCommittedCaptureId,
       groupAnchorId: operation.anchor?.id ?? null,
       runId: operation.runId,
-      autoCreatedProjectId: operation.autoCreated ? operation.sessionId : null,
+      newProject: operation.newProject,
       targetProjectTitle: operation.targetProjectTitle,
       insertAfterStepId: operation.insertAfterStepId,
       snapshotViewport: operation.anchor?.viewport ?? null,
@@ -229,7 +229,7 @@ export function fromRecordingState(stored: RecordingState): RunState {
         runItemCount: stored.runItemCount,
         lastCommittedCaptureId: stored.lastCommittedCaptureId,
         anchor,
-        autoCreated: stored.autoCreatedProjectId === stored.sessionId,
+        newProject: stored.newProject,
         targetProjectTitle: stored.targetProjectTitle,
         insertAfterStepId: stored.insertAfterStepId,
         wait,

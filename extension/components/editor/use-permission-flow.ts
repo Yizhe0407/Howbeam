@@ -199,7 +199,7 @@ export function usePermissionFlow({
       if (prepared.action.kind === 'continuation') {
         await startRecordingOrThrow({
           type: 'START_RECORDING',
-          sessionId,
+          target: { kind: 'project', projectId: sessionId },
           mode: continuationMode,
           continuation: {},
           insertAfterEntryId,
@@ -290,7 +290,7 @@ export function usePermissionFlow({
 
       await startRecordingOrThrow({
         type: 'START_RECORDING',
-        sessionId: sessionId!,
+        target: { kind: 'project', projectId: sessionId! },
         mode: continuationMode,
         insertAfterEntryId,
       });

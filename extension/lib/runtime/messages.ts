@@ -29,12 +29,13 @@ export interface ClickCapture {
   timestamp: number;
 }
 
+/** Where a run records: a new Project (created when the first capture is stored), or an existing one. */
+export type RecordTarget = { kind: 'new' } | { kind: 'project'; projectId: string };
+
 export interface StartRecordingMessage {
   type: 'START_RECORDING';
-  sessionId: string;
+  target: RecordTarget;
   mode: RecordingMode;
-  /** 未擷取內容時，允許 background 回收該流程建立的 Project。 */
-  autoCreatedProject?: boolean;
   /** 從持久化來源接續；一律不信任呼叫端提供的來源 URL。 */
   continuation?: { preferredTabId?: number };
   /** Editor runs only: insert the captured steps after this entry instead of appending. */

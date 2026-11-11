@@ -22,7 +22,7 @@ const run = startingRun({
   sessionId: 'project-1',
   tabId: 4,
   mode: 'snapshot',
-  autoCreated: true,
+  newProject: true,
   targetProjectTitle: null,
   insertAfterStepId: null,
 });
@@ -65,7 +65,7 @@ describe('run transitions', () => {
       itemCount: 2,
       error: 'runtime.recordingTabClosed',
       recoverableError: { code: 'RECORDED_TAB_CLOSED' },
-      autoCreatedProjectId: null,
+      newProject: false,
     });
   });
 

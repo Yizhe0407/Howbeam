@@ -61,7 +61,9 @@ export function fakePorts() {
     },
     projects: {
       get: vi.fn<RunPorts['projects']['get']>(async (projectId) => project({ id: projectId })),
-      discardIfPristine: vi.fn<RunPorts['projects']['discardIfPristine']>(async () => true),
+      ensure: vi.fn<RunPorts['projects']['ensure']>(async () => {}),
+      select: vi.fn<RunPorts['projects']['select']>(async () => {}),
+      delete: vi.fn<RunPorts['projects']['delete']>(async () => {}),
       continuationAnchor: vi.fn<RunPorts['projects']['continuationAnchor']>(async () => null),
     },
     editor: { open: vi.fn<RunPorts['editor']['open']>(async () => ({ ok: true })) },
@@ -70,6 +72,7 @@ export function fakePorts() {
       read: vi.fn<RunPorts['undo']['read']>(async () => null),
       clear: vi.fn<RunPorts['undo']['clear']>(async () => {}),
     },
+    pendingStart: { discard: vi.fn<RunPorts['pendingStart']['discard']>(async () => {}) },
     permissions: { hasAllSites: vi.fn<RunPorts['permissions']['hasAllSites']>(async () => true) },
     newId: vi.fn(() => `id-${++id}`),
     now: vi.fn(() => 1_000),

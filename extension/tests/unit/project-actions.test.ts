@@ -27,12 +27,11 @@ vi.mock('@/lib/storage/storage', () => ({
 
 import {
   clearSelectedProject,
-  discardUntouchedProject,
   ensureSelectedProject,
   getSelectedProject,
   openSelectedProjectInEditor,
   selectProject,
-  startRecordingIntoProject,
+  startRecording,
 } from '@/lib/project/project-actions';
 
 function project(id: string) {
@@ -134,131 +133,23 @@ describe('Project UI selection', () => {
 });
 
 // The pristine guard itself lives in lib/storage (see tests/integration/db-pristine-project.test.ts); this suite covers only the UI-flow wrapper: delegation and restoring the prior selection.
-describe('auto-created Project reclamation', () => {
-  it('delegates deletion to storage and restores the previous selection', async () => {
-    mocks.discardPristineProject.mockResolvedValue(true);
-    mocks.getProject.mockImplementation(async (id: string) => project(id));
-
-    await expect(discardUntouchedProject('project-fresh', 'project-old')).resolves.toBe(true);
-
-    expect(mocks.discardPristineProject).toHaveBeenCalledExactlyOnceWith('project-fresh');
-    expect(mocks.setActiveProjectId).toHaveBeenCalledWith('project-old');
-  });
-
-  it('does not restore anything when storage declined to delete', async () => {
-    mocks.discardPristineProject.mockResolvedValue(false);
-
-    await expect(discardUntouchedProject('project-touched', 'project-old')).resolves.toBe(false);
-
-    expect(mocks.setActiveProjectId).not.toHaveBeenCalled();
-  });
-
-  it('skips restoring a previous selection that no longer exists', async () => {
-    mocks.discardPristineProject.mockResolvedValue(true);
-    mocks.getProject.mockResolvedValue(undefined);
-
-    await expect(discardUntouchedProject('project-fresh', 'project-gone')).resolves.toBe(true);
-
-    expect(mocks.setActiveProjectId).not.toHaveBeenCalled();
-  });
-
-  it('never re-selects the project it just discarded', async () => {
-    mocks.discardPristineProject.mockResolvedValue(true);
-    mocks.getProject.mockImplementation(async (id: string) => project(id));
-
-    await expect(discardUntouchedProject('project-fresh', 'project-fresh')).resolves.toBe(true);
-
-    expect(mocks.setActiveProjectId).not.toHaveBeenCalled();
-  });
-});
-
-describe('popup start transaction (startRecordingIntoProject)', () => {
-  beforeEach(() => {
-    mocks.getActiveProjectId.mockResolvedValue('project-old');
-    mocks.getProject.mockImplementation(async (id: string) => project(id));
-    mocks.createProject.mockResolvedValue(project('project-new'));
-    mocks.getRecordingState.mockResolvedValue({ isRecording: false, sessionId: null });
-  });
-
-  it('creates, selects, and starts recording into a fresh project', async () => {
+describe('popup start (startRecording)', () => {
+  it('asks the background to record into a Project of its own', async () => {
     mocks.sendMessage.mockResolvedValue({ ok: true, sessionId: 'project-new', runId: 'run-1' });
-
-    await expect(startRecordingIntoProject('steps')).resolves.toMatchObject({ id: 'project-new' });
-
-    expect(mocks.sendMessage).toHaveBeenCalledWith({
-      type: 'START_RECORDING',
-      sessionId: 'project-new',
-      mode: 'steps',
-      autoCreatedProject: true,
-    });
-    expect(mocks.discardPristineProject).not.toHaveBeenCalled();
+    await startRecording('snapshot');
+    expect(mocks.sendMessage).toHaveBeenCalledWith({ type: 'START_RECORDING', target: { kind: 'new' }, mode: 'snapshot' });
+    // The background owns the whole start: nothing is created or selected here.
+    expect(mocks.setActiveProjectId).not.toHaveBeenCalled();
   });
 
-  it('rolls back the fresh project and restores the previous selection on failure', async () => {
+  it('appends to an existing Project when one is picked', async () => {
+    mocks.sendMessage.mockResolvedValue({ ok: true, sessionId: 'project-a', runId: 'run-1' });
+    await startRecording('steps', 'project-a');
+    expect(mocks.sendMessage).toHaveBeenCalledWith({ type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-a' }, mode: 'steps' });
+  });
+
+  it('reports why the background refused, in the reader\'s language', async () => {
     mocks.sendMessage.mockResolvedValue({ ok: false, error: 'background.cannotStartHere' });
-    mocks.discardPristineProject.mockResolvedValue(true);
-
-    await expect(startRecordingIntoProject('steps')).rejects.toThrow(t().background.cannotStartHere);
-
-    expect(mocks.discardPristineProject).toHaveBeenCalledExactlyOnceWith('project-new');
-    expect(mocks.setActiveProjectId).toHaveBeenLastCalledWith('project-old');
-  });
-
-  it('keeps the fresh project when the run actually started but the response was lost', async () => {
-    mocks.sendMessage.mockResolvedValue(undefined);
-    mocks.getRecordingState.mockResolvedValue({ isRecording: true, sessionId: 'project-new' });
-
-    await expect(startRecordingIntoProject('steps')).rejects.toThrow('無法連接錄製功能');
-
-    expect(mocks.discardPristineProject).not.toHaveBeenCalled();
-  });
-});
-
-describe('popup start transaction into an existing project', () => {
-  beforeEach(() => {
-    mocks.getActiveProjectId.mockResolvedValue('project-old');
-    mocks.getProject.mockImplementation(async (id: string) => project(id));
-    mocks.getRecordingState.mockResolvedValue({ isRecording: false, sessionId: null });
-  });
-
-  it('selects the target and starts without creating a project or marking it reclaimable', async () => {
-    mocks.sendMessage.mockResolvedValue({ ok: true, sessionId: 'project-target', runId: 'run-1' });
-
-    await expect(startRecordingIntoProject('steps', 'project-target')).resolves.toMatchObject({ id: 'project-target' });
-
-    expect(mocks.createProject).not.toHaveBeenCalled();
-    expect(mocks.setActiveProjectId).toHaveBeenCalledWith('project-target');
-    // No autoCreatedProject: the background must never reclaim an existing project.
-    expect(mocks.sendMessage).toHaveBeenCalledExactlyOnceWith({
-      type: 'START_RECORDING',
-      sessionId: 'project-target',
-      mode: 'steps',
-    });
-  });
-
-  it('restores the previous selection and never deletes the project when start fails', async () => {
-    mocks.sendMessage.mockResolvedValue({ ok: false, error: 'background.cannotStartHere' });
-
-    await expect(startRecordingIntoProject('steps', 'project-target')).rejects.toThrow(t().background.cannotStartHere);
-
-    expect(mocks.discardPristineProject).not.toHaveBeenCalled();
-    expect(mocks.setActiveProjectId).toHaveBeenLastCalledWith('project-old');
-  });
-
-  it('keeps the selection when the run actually started but the response was lost', async () => {
-    mocks.sendMessage.mockResolvedValue(undefined);
-    mocks.getRecordingState.mockResolvedValue({ isRecording: true, sessionId: 'project-target' });
-
-    await expect(startRecordingIntoProject('steps', 'project-target')).rejects.toThrow('無法連接錄製功能');
-
-    expect(mocks.setActiveProjectId).toHaveBeenCalledExactlyOnceWith('project-target');
-  });
-
-  it('fails without starting when the target project no longer exists', async () => {
-    mocks.getProject.mockImplementation(async (id: string) => (id === 'project-old' ? project(id) : undefined));
-
-    await expect(startRecordingIntoProject('steps', 'project-gone')).rejects.toThrow('找不到這個專案');
-
-    expect(mocks.sendMessage).not.toHaveBeenCalled();
+    await expect(startRecording('steps')).rejects.toThrow(t().background.cannotStartHere);
   });
 });

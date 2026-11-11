@@ -110,9 +110,9 @@ test.describe('popup workflows', () => {
     await expect.poll(async () => (await readRecordingState(statePage)).isRecording).toBe(false);
     await expect.poll(() => appPage.locator('[data-howbeam-snapshot-shield]').count()).toBe(0);
 
-    // The run captured nothing, so the auto-created Project is reclaimed: only the seeded Project survives and the selection is cleared.
+    // The run captured nothing, so its Project was never created: only the seeded Project exists and the selection is untouched.
     await expect.poll(() => readProjectIds(statePage)).toEqual([seededProjectId]);
-    await expect.poll(() => readActiveProjectId(statePage)).toBeNull();
+    await expect.poll(() => readActiveProjectId(statePage)).toBe(seededProjectId);
   });
 
   test('keeps data actions out of the idle popup and disabled in an empty editor', async ({

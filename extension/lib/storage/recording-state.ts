@@ -99,10 +99,10 @@ export interface RecordingState {
   /** Changes on every START and is cleared by STOP, invalidating messages and
    * async work left behind by an older content-script instance. */
   runId: string | null;
-  /** Set when this run's Project was auto-created just for it (popup start).
-   * Read by the stop/discard paths to reclaim a still-untouched empty shell;
-   * null for library-created projects and editor continuations. */
-  autoCreatedProjectId: string | null;
+  /** The run records into a Project of its own, created when its first
+   * capture is stored: a run that captures nothing leaves nothing behind, and
+   * discarding the run deletes the Project with it. */
+  newProject: boolean;
   /** Title of the existing Project this run appends to, shown in the in-page
    * toolbar so the user always knows where steps are going. null for a run
    * that created its own new Project. */
@@ -138,7 +138,7 @@ const DEFAULT_STATE: RecordingState = {
   lastCommittedCaptureId: null,
   groupAnchorId: null,
   runId: null,
-  autoCreatedProjectId: null,
+  newProject: false,
   targetProjectTitle: null,
   insertAfterStepId: null,
   snapshotViewport: null,

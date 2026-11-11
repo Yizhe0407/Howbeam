@@ -30,7 +30,6 @@ vi.mock('@/lib/storage/step-repository', async (importOriginal) =>
 vi.mock('@/lib/storage/project-repository', async (importOriginal) =>
   (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal, {
     createProject: extra.createProject,
-    discardPristineProject: mocks.discardPristineProject,
   }));
 vi.mock('@/lib/storage/storage', async (importOriginal) =>
   (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal));
@@ -72,7 +71,6 @@ beforeEach(() => {
   mocks.permissionsContains.mockResolvedValue(true);
   mocks.getSteps.mockResolvedValue([]);
   mocks.getProject.mockImplementation(async (id: string) => PROJECT_ROW(id));
-  mocks.discardPristineProject.mockResolvedValue(true);
   extra.createProject.mockResolvedValue(PROJECT_ROW('project-new'));
   mocks.tabsGet.mockResolvedValue(PENDING_TAB);
   mocks.tabsQuery.mockResolvedValue([PENDING_TAB]);
@@ -99,21 +97,20 @@ describe('start resumed after the cross-tab permission grant', () => {
 
     expect(extra.createProject).not.toHaveBeenCalled();
     expect(startedRunState()).toMatchObject({ sessionId: 'project-old', tabId: 7, mode: 'steps' });
-    // An existing project must never be flagged reclaimable by the run's end.
-    expect(startedRunState()?.autoCreatedProjectId).toBeNull();
+    expect(startedRunState()?.newProject).toBe(false);
     expect(extra.local.get(ACTIVE_PROJECT_ID_KEY)).toBe('project-old');
     expect(extra.local.has(PENDING_START_KEY)).toBe(false);
   });
 
-  it('records into a fresh reclaimable project when none was chosen', async () => {
+  it('records into a Project of its own, created only with the first capture, when none was chosen', async () => {
     parkPending(null, 'snapshot');
     await importBackground();
 
     await grantAllUrls();
 
-    expect(extra.createProject).toHaveBeenCalledOnce();
-    expect(startedRunState()).toMatchObject({ sessionId: 'project-new', mode: 'snapshot', autoCreatedProjectId: 'project-new' });
-    expect(extra.local.get(ACTIVE_PROJECT_ID_KEY)).toBe('project-new');
+    expect(extra.createProject).not.toHaveBeenCalled();
+    expect(startedRunState()).toMatchObject({ mode: 'snapshot', newProject: true });
+    expect(extra.local.get(ACTIVE_PROJECT_ID_KEY)).toBe('project-previous');
   });
 
   it('restores the previous selection and keeps the project when the resumed start fails', async () => {
@@ -125,11 +122,10 @@ describe('start resumed after the cross-tab permission grant', () => {
     await grantAllUrls();
 
     expect(startedRunState()).toBeUndefined();
-    expect(mocks.discardPristineProject).not.toHaveBeenCalled();
     expect(extra.local.get(ACTIVE_PROJECT_ID_KEY)).toBe('project-previous');
   });
 
-  it('reclaims the fresh project when a start without a chosen project fails', async () => {
+  it('leaves nothing behind when a start without a chosen project fails', async () => {
     parkPending(null);
     mocks.tabsGet.mockResolvedValue({ ...PENDING_TAB, url: 'chrome://extensions' });
     vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -137,14 +133,14 @@ describe('start resumed after the cross-tab permission grant', () => {
 
     await grantAllUrls();
 
-    expect(mocks.discardPristineProject).toHaveBeenCalledExactlyOnceWith('project-new');
+    expect(extra.createProject).not.toHaveBeenCalled();
     expect(extra.local.get(ACTIVE_PROJECT_ID_KEY)).toBe('project-previous');
   });
 
   it('does not start when the parked project was deleted meanwhile', async () => {
     parkPending('project-gone');
     mocks.getProject.mockResolvedValue(undefined);
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await importBackground();
 
     await grantAllUrls();
@@ -152,10 +148,7 @@ describe('start resumed after the cross-tab permission grant', () => {
     expect(startedRunState()).toBeUndefined();
     expect(extra.createProject).not.toHaveBeenCalled();
     expect(extra.local.get(ACTIVE_PROJECT_ID_KEY)).toBe('project-previous');
-    expect(error).toHaveBeenCalledWith(
-      '[howbeam] failed to resume the start after the permission grant',
-      expect.any(Error),
-    );
+    expect(warn).toHaveBeenCalledWith('[howbeam] resumed start failed', 'background.recordTargetMissing');
   });
 
   it('stays idle when nothing was parked', async () => {

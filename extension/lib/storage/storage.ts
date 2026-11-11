@@ -219,13 +219,8 @@ export function normalizeRecordingState(stored: Partial<RecordingState> | undefi
         ? normalizeNullableString(raw.groupAnchorId, MAX_STATE_ID_LENGTH)
         : null,
     runId: operation === 'recording' ? runId : null,
-    // Meaningful only while its run is alive: once the run ends (including
-    // error stops, whose recovery flow must keep the project), the reclaim
-    // window is over and the flag must not leak into a later run.
-    autoCreatedProjectId:
-      operation === 'recording'
-        ? normalizeNullableString(raw.autoCreatedProjectId, MAX_STATE_ID_LENGTH)
-        : null,
+    // Meaningful only while its run is alive.
+    newProject: operation === 'recording' && raw.newProject === true,
     targetProjectTitle:
       operation === 'recording' ? normalizeNullableString(raw.targetProjectTitle, MAX_STATE_VALUE_LENGTH) : null,
     insertAfterStepId:

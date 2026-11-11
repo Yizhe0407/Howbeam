@@ -106,6 +106,12 @@ function isTarget(value: unknown): value is StepRecaptureTarget {
   );
 }
 
+function isRecordTarget(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (value.kind === 'new') return Object.keys(value).length === 1;
+  return value.kind === 'project' && isString(value.projectId) && Object.keys(value).length === 2;
+}
+
 function isContinuation(value: unknown): value is { preferredTabId?: number } | undefined {
   if (value === undefined) return true;
   if (!isRecord(value)) return false;
@@ -168,9 +174,8 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
   START_RECORDING: {
     senders: 'extension-pages',
     isRequest: (value) => (
-      isString(value.sessionId) &&
+      isRecordTarget(value.target) &&
       (value.mode === 'steps' || value.mode === 'snapshot') &&
-      (value.autoCreatedProject === undefined || typeof value.autoCreatedProject === 'boolean') &&
       isContinuation(value.continuation) &&
       (value.insertAfterEntryId === undefined || typeof value.insertAfterEntryId === 'string')
     ),

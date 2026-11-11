@@ -5,7 +5,9 @@ import {
   withCapturePresentation,
 } from '../../capture/capture-presentation';
 import { focusTab } from '../../runtime/navigation';
-import { discardPristineProject, getProject } from '../../storage/project-repository';
+import { deleteProjectPermanently, ensureProject, getProject } from '../../storage/project-repository';
+import { setActiveProjectId } from '../../storage/storage';
+import { discardPendingStart } from '../../runtime/pending-start';
 import {
   addStepsAfter,
   deleteStep,
@@ -83,11 +85,16 @@ export function createBrowserPorts(deps: {
     },
     projects: {
       get: getProject,
-      discardIfPristine: discardPristineProject,
+      ensure: async (id) => {
+        await ensureProject(id);
+      },
+      select: setActiveProjectId,
+      delete: deleteProjectPermanently,
       continuationAnchor: resolveProjectContinuationAnchor,
     },
     editor: { open: deps.openEditor },
     undo: { save: savePendingUndoRecord, read: readPendingUndoRecord, clear: clearPendingUndoRecord },
+    pendingStart: { discard: discardPendingStart },
     permissions: { hasAllSites: () => browser.permissions.contains({ origins: ['<all_urls>'] }) },
     newId: () => crypto.randomUUID(),
     now: () => Date.now(),

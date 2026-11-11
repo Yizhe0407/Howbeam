@@ -139,7 +139,7 @@ describe('recording state normalization', () => {
     expect(normalized.snapshotDevicePixelRatio).toBe(ratio === 1 ? 1 : null);
   });
 
-  it('keeps autoCreatedProjectId only while its run is alive', () => {
+  it('keeps newProject only while its run is alive', () => {
     const liveRun = {
       operation: 'recording',
       isRecording: true,
@@ -147,18 +147,12 @@ describe('recording state normalization', () => {
       sessionId: 'session-1',
       tabId: 2,
       runId: 'run-1',
-      autoCreatedProjectId: 'session-1',
+      newProject: true,
     } as const;
 
-    expect(normalizeRecordingState(liveRun).autoCreatedProjectId).toBe('session-1');
-    // Once the run has ended (including error stops, whose recovery flow must
-    // keep the project), the reclaim window is over.
-    expect(
-      normalizeRecordingState({ ...liveRun, operation: null, isRecording: false }).autoCreatedProjectId,
-    ).toBeNull();
-    expect(
-      normalizeRecordingState({ ...liveRun, autoCreatedProjectId: {} as never }).autoCreatedProjectId,
-    ).toBeNull();
+    expect(normalizeRecordingState(liveRun).newProject).toBe(true);
+    expect(normalizeRecordingState({ ...liveRun, operation: null, isRecording: false }).newProject).toBe(false);
+    expect(normalizeRecordingState({ ...liveRun, newProject: 'yes' as never }).newProject).toBe(false);
   });
 
   it('clears stale snapshot-only fields when the persisted mode is steps', () => {

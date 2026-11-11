@@ -7,7 +7,6 @@ const mocks = vi.hoisted(() => ({
   sendMessage: vi.fn(),
   createProject: vi.fn(),
   getProject: vi.fn(),
-  discardPristineProject: vi.fn(),
   getProjectSummaries: vi.fn(),
   permissionsContains: vi.fn(),
   permissionsRequest: vi.fn(),
@@ -34,7 +33,6 @@ vi.mock('wxt/browser', async () => {
 vi.mock('@/lib/storage/project-repository', () => ({
   createProject: mocks.createProject,
   getProject: mocks.getProject,
-  discardPristineProject: mocks.discardPristineProject,
   getProjectSummaries: mocks.getProjectSummaries,
 }));
 
@@ -42,7 +40,6 @@ import RecordControls from '@/components/popup/RecordControls';
 import { CROSS_TAB_DECLINE_STORAGE_KEY } from '@/lib/runtime/cross-tab-recording';
 import { makeRecordingState } from '../setup/recording-state';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { itemAt } from '../setup/item-at';
 
 // The mode picker uses the shadcn Tooltip, which requires a TooltipProvider
 // ancestor — wrap every render() the same way the app roots do.
@@ -72,7 +69,6 @@ beforeEach(() => {
   mocks.query.mockResolvedValue([{ id: 7, url: 'https://example.com' }]);
   mocks.createProject.mockResolvedValue({ id: 'project-a' });
   mocks.getProject.mockResolvedValue(undefined);
-  mocks.discardPristineProject.mockResolvedValue(true);
   mocks.sendMessage.mockResolvedValue({ ok: true, sessionId: 'project-a', runId: 'run-1' });
   mocks.permissionsContains.mockResolvedValue(false);
   mocks.permissionsRequest.mockResolvedValue(true);
@@ -88,20 +84,21 @@ afterEach(() => {
 });
 
 describe('cross-tab permission ask at recording start', () => {
-  it('asks for the grant on the first steps start, before touching the active tab', async () => {
-    await renderIdleControls();
-    // Only the ordering of the start-click work matters, not the mount probe.
-    mocks.query.mockClear();
+  it('asks for the grant on the first steps start and leaves the start to the background', async () => {
+    const onStarted = vi.fn();
+    render(<RecordControls recording={IDLE_RECORDING} onStarted={onStarted} />);
+    await waitFor(() => expect(mocks.permissionsContains).toHaveBeenCalled());
 
-    await clickStartAndWaitForSend(1);
+    fireEvent.click(screen.getByRole('button', { name: '開始錄製' }));
+    await waitFor(() => expect(onStarted).toHaveBeenCalledOnce());
 
     expect(mocks.permissionsRequest).toHaveBeenCalledExactlyOnceWith(ALL_URLS);
-    expect(mocks.query).toHaveBeenCalled();
-    // Firefox invariant: permissions.request must be the first await of the
-    // click handler, ahead of the tabs.query pre-flight.
-    expect(mocks.permissionsRequest.mock.invocationCallOrder[0]).toBeLessThan(
-      itemAt(mocks.query.mock.invocationCallOrder, 0),
-    );
+    // The grant wakes the background, which starts the parked run; in Chromium
+    // this popup is closed by the dialog, so it never sends the start itself.
+    expect(mocks.storageSet).toHaveBeenCalledWith({
+      'howbeam:pending-start:v1': expect.objectContaining({ mode: 'steps', tabId: 7, projectId: null }),
+    });
+    expect(mocks.sendMessage).not.toHaveBeenCalled();
   });
 
   it('remembers a decline, keeps recording single-tab, and never asks again', async () => {

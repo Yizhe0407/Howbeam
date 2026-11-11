@@ -5,10 +5,10 @@ import type { StartRecordingMessage } from '@/lib/runtime/messages';
 import { makeRecordingState } from '../../setup/recording-state';
 import { EXTENSION_ORIGIN, fakeActor, fakePorts, flush, tab } from './fakes';
 
-const START: StartRecordingMessage = { type: 'START_RECORDING', sessionId: 'project-1', mode: 'steps' };
+const START: StartRecordingMessage = { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps' };
 const liveRun = makeRecordingState({
   operation: 'recording', isRecording: true, phase: 'recording', sessionId: 'project-1', tabId: 4, runId: 'run-1',
-  itemCount: 1, runItemCount: 1, autoCreatedProjectId: 'project-1',
+  itemCount: 1, runItemCount: 1, newProject: true,
 });
 
 function setup(stored = makeRecordingState()) {
@@ -51,6 +51,15 @@ describe('starting a recording', () => {
     await lifecycle.startRecording({ ...START, mode: 'snapshot' }, {});
     expect(deps.captureAnchor).toHaveBeenCalledOnce();
     expect(state()).toMatchObject({ phase: 'recording', groupAnchorId: 'anchor-1', snapshotDevicePixelRatio: 1 });
+  });
+
+  it('records into a Project of its own without creating it yet', async () => {
+    const { lifecycle, ports, state } = setup();
+    await expect(lifecycle.startRecording({ type: 'START_RECORDING', target: { kind: 'new' }, mode: 'steps' }, {}))
+      .resolves.toEqual({ ok: true, sessionId: 'id-1', runId: 'id-2' });
+    expect(state()).toMatchObject({ sessionId: 'id-1', newProject: true, targetProjectTitle: null });
+    expect(ports.projects.ensure).not.toHaveBeenCalled();
+    expect(ports.pendingStart.discard).toHaveBeenCalled();
   });
 
   it('refuses while another operation runs, or for a Project that is gone', async () => {
@@ -119,7 +128,8 @@ describe('controls of a live run', () => {
     expect(state()).toMatchObject({ isRecording: false, phase: 'idle', sessionId: 'project-1', error: null });
     expect(ports.recorder.stop).toHaveBeenCalledWith(4);
     expect(ports.editor.open).toHaveBeenCalledWith({ sessionId: 'project-1', entryId: 's1' });
-    expect(ports.projects.discardIfPristine).not.toHaveBeenCalled();
+    // The editor opens the run's own Project even when nothing was captured, so it is created here at the latest.
+    expect(ports.projects.ensure).toHaveBeenCalledWith('project-1');
   });
 
   it('offers editor recovery when the editor cannot open after a finish', async () => {
@@ -130,16 +140,23 @@ describe('controls of a live run', () => {
     expect(state()).toMatchObject({ phase: 'error', recoverableError: { code: 'EDITOR_OPEN_FAILED' } });
   });
 
-  it('discards the run\'s steps and the empty Project it created', async () => {
+  it('discards a run together with the Project of its own', async () => {
     const { lifecycle, ports, state } = setup(liveRun);
     await expect(lifecycle.discard('run-1')).resolves.toEqual({ ok: true });
-    expect(ports.steps.deleteForRun).toHaveBeenCalledWith('project-1', 'run-1');
-    expect(ports.projects.discardIfPristine).toHaveBeenCalledWith('project-1');
+    expect(ports.projects.delete).toHaveBeenCalledWith('project-1');
+    expect(ports.steps.deleteForRun).not.toHaveBeenCalled();
     expect(state()).toMatchObject({ isRecording: false, phase: 'idle' });
   });
 
+  it('discards only the run\'s steps from an existing Project', async () => {
+    const { lifecycle, ports } = setup({ ...liveRun, newProject: false });
+    await expect(lifecycle.discard('run-1')).resolves.toEqual({ ok: true });
+    expect(ports.steps.deleteForRun).toHaveBeenCalledWith('project-1', 'run-1');
+    expect(ports.projects.delete).not.toHaveBeenCalled();
+  });
+
   it('keeps the run with a notice when its steps cannot be deleted', async () => {
-    const { lifecycle, ports, state } = setup(liveRun);
+    const { lifecycle, ports, state } = setup({ ...liveRun, newProject: false });
     vi.spyOn(console, 'error').mockImplementation(() => {});
     ports.steps.deleteForRun.mockRejectedValue(new Error('idb'));
     await expect(lifecycle.discard('run-1')).resolves.toEqual({ ok: false, error: 'background.discardFailed' });

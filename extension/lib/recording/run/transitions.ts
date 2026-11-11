@@ -12,7 +12,7 @@ export interface NewRun {
   sessionId: string;
   tabId: number;
   mode: RecordingMode;
-  autoCreated: boolean;
+  newProject: boolean;
   targetProjectTitle: string | null;
   insertAfterStepId: string | null;
 }

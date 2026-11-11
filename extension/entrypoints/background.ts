@@ -3,7 +3,6 @@ import { openWelcomePage, opensWelcomeOnInstall } from '@/lib/runtime/welcome';
 import { syncActionIconWithRecordingState } from '@/lib/recording/background/action-icon';
 import { claimPendingStart } from '@/lib/runtime/pending-start';
 import { clearCrossTabRecordingDecline } from '@/lib/runtime/cross-tab-recording';
-import { claimRecordingProject } from '@/lib/project/project-actions';
 import { isTrustedExtensionPageSender, isTrustedKeepAliveSender } from '@/lib/runtime/background-message-validation';
 import { contractFor, isBackgroundMessage, isExtensionPageOnlyMessage } from '@/lib/runtime/message-contract';
 import { createRecorderRuntime } from '@/lib/recording/background/recorder-runtime';
@@ -291,26 +290,21 @@ export default defineBackground(() => {
       console.error('[howbeam] failed to resume the recording after the permission grant', error);
     });
     void (async () => {
+      // The popup parked its start behind the permission dialog, which closed it.
       const pending = await claimPendingStart();
       if (!pending) return;
       await clearCrossTabRecordingDecline();
       const tab = await browser.tabs.get(pending.tabId);
-      const claim = await claimRecordingProject(pending.projectId);
       const result = await run.lifecycle.startRecording(
         {
           type: 'START_RECORDING',
-          sessionId: claim.project.id,
+          target: pending.projectId ? { kind: 'project', projectId: pending.projectId } : { kind: 'new' },
           mode: pending.mode,
-          ...(claim.autoCreated ? { autoCreatedProject: true } : {}),
         },
         {},
         tab,
       );
-      if (!result.ok) {
-        console.warn('[howbeam] resumed start failed', result.error);
-        const live = run.actor.state().operation;
-        if (!(live.kind === 'recording' && live.sessionId === claim.project.id)) await claim.release();
-      }
+      if (!result.ok) console.warn('[howbeam] resumed start failed', result.error);
     })().catch((error) => {
       console.error('[howbeam] failed to resume the start after the permission grant', error);
     });

@@ -72,7 +72,7 @@ describe('recording mode switch controls', () => {
 describe('background runtime message validation', () => {
   it.each<unknown>([
     validClick,
-    { type: 'START_RECORDING', sessionId: 'project-1', mode: 'steps' },
+    { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps' },
     { type: 'OPEN_EDITOR', sessionId: 'project-1', entryId: 'step-1' },
     { type: 'PAUSE_RECORDING', runId: 'run-1' },
     {
@@ -92,10 +92,10 @@ describe('background runtime message validation', () => {
       target: { kind: 'snapshot-singleton', anchorId: 'anchor-1', annotationId: 'annotation-1' },
       preferredTabId: 7,
     },
-    { type: 'START_RECORDING', sessionId: 'project-1', mode: 'steps', continuation: {} },
-    { type: 'START_RECORDING', sessionId: 'project-1', mode: 'steps', continuation: { preferredTabId: 4 } },
-    { type: 'START_RECORDING', sessionId: 'project-1', mode: 'steps', autoCreatedProject: true },
-    { type: 'START_RECORDING', sessionId: 'project-1', mode: 'snapshot', autoCreatedProject: false },
+    { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps', continuation: {} },
+    { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps', continuation: { preferredTabId: 4 } },
+    { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps' },
+    { type: 'START_RECORDING', target: { kind: 'new' }, mode: 'snapshot' },
     { type: 'PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION', sessionId: 'project-1' },
     { type: 'OPEN_LIBRARY' },
     { type: 'REGISTER_EXTENSION_PAGE' },
@@ -117,7 +117,7 @@ describe('background runtime message validation', () => {
     { ...validClick, url: 'javascript:alert(1)' },
     { ...validClick, url: 'https://user:secret@example.com/' },
     { ...validClick, timestamp: 1.5 },
-    { type: 'START_RECORDING', sessionId: '', mode: 'steps' },
+    { type: 'START_RECORDING', target: { kind: 'project', projectId: '' }, mode: 'steps' },
     { type: 'OPEN_EDITOR', sessionId: 'x'.repeat(257) },
     { type: 'SNAPSHOT_RECORDER_FAILED', runId: 'run-1', reason: 'other' },
     { type: 'SNAPSHOT_RECORDER_FAILED', runId: '', reason: 'shield-channel' },
@@ -132,11 +132,12 @@ describe('background runtime message validation', () => {
       sessionId: 'project-1',
       target: { kind: 'snapshot-singleton', anchorId: 'same', annotationId: 'same' },
     },
-    { type: 'START_RECORDING', sessionId: 'project-1', mode: 'steps', continuation: { preferredTabId: -1 } },
-    { type: 'START_RECORDING', sessionId: 'project-1', mode: 'steps', continuation: null },
-    { type: 'START_RECORDING', sessionId: 'project-1', mode: 'steps', autoCreatedProject: 'yes' },
+    { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps', continuation: { preferredTabId: -1 } },
+    { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps', continuation: null },
+    { type: 'START_RECORDING', target: { kind: 'project' }, mode: 'steps' },
+    { type: 'START_RECORDING', target: { kind: 'new', projectId: 'project-1' }, mode: 'steps' },
     // A caller-supplied source URL must never reach the permission prompt.
-    { type: 'START_RECORDING', sessionId: 'project-1', mode: 'steps', continuation: { sourceUrl: 'https://attacker.example/' } },
+    { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps', continuation: { sourceUrl: 'https://attacker.example/' } },
     { type: 'PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION', sessionId: '' },
   ])('rejects malformed or resource-unbounded input %#', (message) => {
     expect(isBackgroundMessage(message)).toBe(false);
@@ -321,7 +322,7 @@ describe('background sender authorization', () => {
 
   it('classifies lifecycle, toolbar controls, and recorder events separately', () => {
     const extensionOnly: BackgroundMessage[] = [
-      { type: 'START_RECORDING', sessionId: 'project-1', mode: 'steps' },
+      { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps' },
       { type: 'STOP_RECORDING' },
       { type: 'OPEN_EDITOR' },
       { type: 'OPEN_LIBRARY' },

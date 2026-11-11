@@ -73,13 +73,20 @@ export function createLifecycle(deps: LifecycleDeps) {
     }
   }
 
-  async function reclaimIfAutoCreated(recording: Recording): Promise<void> {
-    if (!recording.autoCreated) return;
-    try {
-      await ports.projects.discardIfPristine(recording.sessionId);
-    } catch (error) {
-      console.error('[howbeam] failed to reclaim the abandoned auto-created project', error);
-    }
+  /** Runs whose new Project this worker already made sure of. */
+  const projectsEnsured = new Set<string>();
+
+  /**
+   * Creates a run's own Project before its first capture is stored (and makes
+   * it the UI's selection), so a run that captures nothing leaves nothing behind.
+   */
+  async function ensureRunProject(recording: Recording): Promise<void> {
+    if (!recording.newProject || projectsEnsured.has(recording.runId)) return;
+    await ports.projects.ensure(recording.sessionId);
+    projectsEnsured.add(recording.runId);
+    await ports.projects.select(recording.sessionId).catch((error: unknown) => {
+      console.warn('[howbeam] failed to select the new project', error);
+    });
   }
 
   /** Ends the run inside an operation that owns it. */
@@ -117,7 +124,10 @@ export function createLifecycle(deps: LifecycleDeps) {
     if (actor.state().operation.kind !== 'idle' || deps.isRecaptureStarting()) {
       return { ok: false, error: 'recaptureFlow.activeOperation' };
     }
-    if (!(await ports.projects.get(message.sessionId))) return { ok: false, error: 'background.recordTargetMissing' };
+    const { target } = message;
+    if (target.kind === 'project' && !(await ports.projects.get(target.projectId))) {
+      return { ok: false, error: 'background.recordTargetMissing' };
+    }
 
     let tab = targetTab;
     if (message.continuation) {
@@ -127,11 +137,14 @@ export function createLifecycle(deps: LifecycleDeps) {
     }
 
     claim();
+    // A start parked behind a permission dialog is superseded by any start.
+    await ports.pendingStart.discard().catch(() => {});
+    const sessionId = target.kind === 'project' ? target.projectId : ports.newId();
     try {
-      return await actor.run((ctx) => runStart(ctx, message, tab));
+      return await actor.run((ctx) => runStart(ctx, message, sessionId, tab));
     } catch (error) {
       if (!isSuperseded(error)) throw error;
-      return startReply(actor.state(), message.sessionId, null);
+      return startReply(actor.state(), sessionId, null);
     }
   }
 
@@ -147,17 +160,18 @@ export function createLifecycle(deps: LifecycleDeps) {
   async function runStart(
     ctx: OperationContext,
     message: StartRecordingMessage,
+    sessionId: string,
     continuationTab: Browser.tabs.Tab | null,
   ): Promise<StartRecordingResult> {
     const { mode } = message;
     const tab = continuationTab ?? await ctx.until(ports.tabs.activeInCurrentWindow());
     if (tab?.id == null) {
       await startFailure(ctx, mode, 'NO_ACTIVE_TAB', 'background.noActiveTab');
-      return startReply(ctx.state(), message.sessionId, null);
+      return startReply(ctx.state(), sessionId, null);
     }
     if (!isRecordableTabUrl(tab.url)) {
       await startFailure(ctx, mode, 'RESTRICTED_PAGE', 'background.restrictedBrowserPage');
-      return startReply(ctx.state(), message.sessionId, null);
+      return startReply(ctx.state(), sessionId, null);
     }
     const tabId = tab.id;
     // Captures read the visible viewport, so a continuation's tab is brought forward before injecting.
@@ -168,26 +182,27 @@ export function createLifecycle(deps: LifecycleDeps) {
         if (isSuperseded(error)) throw error;
         console.error('[howbeam] failed to focus the continuation source tab', error);
         await startFailure(ctx, mode, 'SOURCE_TAB_FAILED', 'background.sourceTabSwitchFailed');
-        return startReply(ctx.state(), message.sessionId, null);
+        return startReply(ctx.state(), sessionId, null);
       }
     }
 
-    const autoCreated = message.autoCreatedProject === true;
-    const project = autoCreated ? undefined : await ctx.until(ports.projects.get(message.sessionId));
+    const newProject = message.target.kind === 'new';
+    const project = newProject ? undefined : await ctx.until(ports.projects.get(sessionId));
     const insertAfterStepId = message.insertAfterEntryId === undefined
       ? null
-      : (await ctx.until(ports.projects.continuationAnchor(message.sessionId, message.insertAfterEntryId)))?.afterStepId ?? null;
+      : (await ctx.until(ports.projects.continuationAnchor(sessionId, message.insertAfterEntryId)))?.afterStepId ?? null;
     const runId = ports.newId();
     const starting = startingRun({
       runId,
-      sessionId: message.sessionId,
+      sessionId,
       tabId,
       mode,
-      autoCreated,
+      newProject,
       targetProjectTitle: project ? projectDisplayTitle(project.title) : null,
       insertAfterStepId,
     });
     await ctx.commit((state) => withRecording(state, starting));
+    if (!newProject) await ports.projects.select(sessionId).catch(() => {});
 
     try {
       const ready = await ctx.until(injectAndAwaitReady(runId, tabId));
@@ -198,7 +213,7 @@ export function createLifecycle(deps: LifecycleDeps) {
         anchor = await deps.captureAnchor(ctx, starting, { id: tabId, windowId: tab.windowId }, ready.snapshotContext);
       }
       const current = liveRecording(ctx.state(), runId);
-      if (!current) return startReply(ctx.state(), message.sessionId, runId);
+      if (!current) return startReply(ctx.state(), sessionId, runId);
       await ctx.commit((state) => withRecording(state, recordingLive(current, anchor)));
     } catch (error) {
       if (isSuperseded(error)) throw error;
@@ -206,7 +221,7 @@ export function createLifecycle(deps: LifecycleDeps) {
       const current = liveRecording(ctx.state(), runId);
       if (current) await endWithError(ctx, current, notice('RECORDING_STOPPED', 'background.injectFailed'));
     }
-    return startReply(ctx.state(), message.sessionId, runId);
+    return startReply(ctx.state(), sessionId, runId);
   }
 
   /** Injects the recorder and waits for it to report ready; throws when it never does. */
@@ -232,8 +247,6 @@ export function createLifecycle(deps: LifecycleDeps) {
       if (recording.kind !== 'recording') return;
       await ctx.commit((state) => stopped(state, recording));
       await afterRunEnded(recording);
-      // After the anchor cleanup, so a snapshot run with no annotation counts as empty.
-      await reclaimIfAutoCreated(recording);
     });
   }
 
@@ -283,8 +296,9 @@ export function createLifecycle(deps: LifecycleDeps) {
         return failure(recording.phase === 'finishing' ? 'background.finishing' : 'background.alreadyEnded');
       }
       await ctx.commit((state) => withRecording(state, finishing(recording)));
+      // Even with nothing recorded the editor opens the run's Project, so it must exist.
+      await ensureRunProject(recording);
       const result = await lastRunEntry(recording);
-      // No reclaim even with nothing recorded: the editor opens this very Project.
       await ctx.commit((state) => ended(state, recording));
       await afterRunEnded(recording);
       try {
@@ -309,7 +323,9 @@ export function createLifecycle(deps: LifecycleDeps) {
         const recording = liveRecording(ctx.state(), runId);
         if (!recording) return failure('background.stateChangedRetry');
         try {
-          await ports.steps.deleteForRun(recording.sessionId, runId);
+          // A run that recorded into its own Project takes the Project with it.
+          if (recording.newProject) await ports.projects.delete(recording.sessionId);
+          else await ports.steps.deleteForRun(recording.sessionId, runId);
         } catch (error) {
           console.error('[howbeam] failed to discard current recording', error);
           await ctx.commit((state) => withRecording(state, withNotice(recording, notice('DISCARD_FAILED', 'background.discardFailed'))));
@@ -317,8 +333,6 @@ export function createLifecycle(deps: LifecycleDeps) {
         }
         await ctx.commit((state) => ended(state, recording));
         await afterRunEnded(recording);
-        // The run's steps are gone, so a popup-created Project is an empty shell again.
-        await reclaimIfAutoCreated(recording);
         return { ok: true };
       });
     } catch (error) {
@@ -369,6 +383,7 @@ export function createLifecycle(deps: LifecycleDeps) {
     afterRunEnded,
     discardEmptyAnchor,
     injectAndAwaitReady,
+    ensureRunProject,
   };
 }
 

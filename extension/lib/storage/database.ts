@@ -109,22 +109,6 @@ export function newProject(
   });
 }
 
-/**
- * True while a (sanitized) Project is still exactly the empty shell newProject
- * leaves behind with no initial metadata: nothing recorded, and no
- * user-entered title, description, or sections. An unnamed project's title
- * is empty (see sanitizeProject).
- */
-export function isPristineProject(project: Project): boolean {
-  return (
-    project.stepCount === 0 &&
-    project.entryCount === 0 &&
-    project.title === '' &&
-    project.description === '' &&
-    project.sections.length === 0
-  );
-}
-
 /** The Project row is gone (usually deleted from the Library in another tab).
  * Typed so an editor can tell "deleted" apart from an ordinary write failure. */
 export class ProjectNotFoundError extends Error {

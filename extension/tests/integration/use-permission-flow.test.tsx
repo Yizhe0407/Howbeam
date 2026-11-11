@@ -144,7 +144,7 @@ describe('continuation recording mode', () => {
 
     expect(mocks.sendMessage).toHaveBeenLastCalledWith({
       type: 'START_RECORDING',
-      sessionId: 'g1',
+      target: { kind: 'project', projectId: 'g1' },
       mode: picked,
       continuation: {},
     });

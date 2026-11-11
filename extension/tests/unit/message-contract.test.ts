@@ -22,7 +22,7 @@ describe('background message contracts', () => {
   });
 
   it('gates lifecycle messages to extension pages and leaves run-bound ones to their handlers', () => {
-    expect(isExtensionPageOnlyMessage({ type: 'START_RECORDING', sessionId: 'p', mode: 'steps' })).toBe(true);
+    expect(isExtensionPageOnlyMessage({ type: 'START_RECORDING', target: { kind: 'project', projectId: 'p' }, mode: 'steps' })).toBe(true);
     expect(isExtensionPageOnlyMessage({ type: 'OPEN_LIBRARY' })).toBe(true);
     expect(isExtensionPageOnlyMessage({ type: 'FINISH_RECORDING', runId: 'r' })).toBe(false);
     expect(isExtensionPageOnlyMessage({ type: 'CANCEL_STEP_RECAPTURE', runId: 'r' })).toBe(false);
@@ -32,7 +32,7 @@ describe('background message contracts', () => {
 describe('sendToBackground', () => {
   it('returns a reply that matches the message contract', async () => {
     runtime.sendMessage.mockResolvedValueOnce({ ok: false, code: 'SOURCE_PAGE_UNREACHABLE', error: 'background.continuationSourceUnreachable' });
-    await expect(sendToBackground({ type: 'START_RECORDING', sessionId: 'p', mode: 'steps' }))
+    await expect(sendToBackground({ type: 'START_RECORDING', target: { kind: 'project', projectId: 'p' }, mode: 'steps' }))
       .resolves.toEqual({ ok: false, code: 'SOURCE_PAGE_UNREACHABLE', error: 'background.continuationSourceUnreachable' });
   });
 

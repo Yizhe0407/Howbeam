@@ -12,7 +12,6 @@ import {
   type StepEntry,
 } from './models';
 import {
-  isPristineProject,
   ProjectNotFoundError,
   newProject,
   requireProject,
@@ -22,7 +21,6 @@ import {
   type ProjectWriteTransaction,
 } from './database';
 import { commitEntries, readEntries } from './entry-store';
-import { clearActiveProjectId } from './storage';
 import { assertStorableScreenshots } from './screenshot-rules';
 import { notifyProjectsChanged } from './change-notifier';
 import { t } from '../shared/i18n';
@@ -190,33 +188,6 @@ export async function duplicateProject(sourceId: string, title?: string): Promis
     }, { sections: source.sections });
     return storePreparedProject(tx, prepared);
   });
-}
-
-/**
- * Reclaims a Project that was auto-created for a run which never produced
- * anything: deletes it and compare-and-clears the matching UI selection, but
- * only while it is still a pristine empty shell (see isPristineProject), so a
- * project the user has meanwhile named or filled is never destroyed. Callers
- * must only pass ids they themselves auto-created — an explicitly created
- * 專案庫 project shares the same empty shape and must never reach this.
- * Returns whether it deleted.
- */
-export async function discardPristineProject(projectId: string): Promise<boolean> {
-  // The check and the delete share one transaction: a capture or rename that
-  // commits in between would otherwise be deleted along with the shell.
-  const deleted = await runProjectWrite(async (tx) => {
-    const rawProject = await tx.objectStore('projects').get(projectId);
-    const pristine =
-      rawProject !== undefined &&
-      isPristineProject(sanitizeProject(rawProject)) &&
-      (await tx.objectStore('entries').index('by-project').count(projectId)) === 0;
-    if (pristine) await deleteProjectContents(tx, projectId);
-    return pristine;
-  }, { notify: false });
-  if (!deleted) return false;
-  notifyProjectsChanged();
-  await clearActiveProjectId(projectId);
-  return true;
 }
 
 async function deleteProjectContents(tx: ProjectWriteTransaction, id: string): Promise<void> {

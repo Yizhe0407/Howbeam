@@ -9,7 +9,7 @@ import RecordTargetPicker from '@/components/popup/RecordTargetPicker';
 import { reportError } from '@/components/shared/report-error';
 import { cn } from '@/lib/shared/utils';
 import type { RecordingMode, RecordingState } from '@/lib/storage/recording-state';
-import { startRecordingIntoProject } from '@/lib/project/project-actions';
+import { startRecording } from '@/lib/project/project-actions';
 import {
   runItemCountLabel,
   recordingModeCopy,
@@ -22,7 +22,7 @@ import {
   hasDeclinedCrossTabRecording,
   markCrossTabRecordingDeclined,
 } from '@/lib/runtime/cross-tab-recording';
-import { claimPendingStart, discardPendingStart, parkPendingStart } from '@/lib/runtime/pending-start';
+import { discardPendingStart, parkPendingStart } from '@/lib/runtime/pending-start';
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -176,7 +176,9 @@ export default function RecordControls({
         const { granted, parked } = await requestCrossTabPermission(
           activeTabId != null ? { mode, tabId: activeTabId, projectId: targetProjectId } : undefined,
         );
-        if (granted && parked && !(await claimPendingStart())) {
+        // A grant reaches the background, which starts the parked run itself
+        // (in Chromium this popup is already gone by then).
+        if (granted && parked) {
           onStarted?.();
           return;
         }
@@ -187,7 +189,7 @@ export default function RecordControls({
         setRestrictedPage(true);
         throw new Error(t().popup.restrictedPageError);
       }
-      await startRecordingIntoProject(mode, targetProjectId);
+      await startRecording(mode, targetProjectId);
       onStarted?.();
     } catch (error) {
       setControlError(reportError('[howbeam] failed to start recording', error, t().popup.startFailed));

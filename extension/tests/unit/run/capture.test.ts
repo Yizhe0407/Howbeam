@@ -30,6 +30,15 @@ describe('a click in a steps run', () => {
     expect(run.state()).toMatchObject({ itemCount: 1, runItemCount: 1, lastCommittedCaptureId: message.captureId });
   });
 
+  it('creates and selects the run\'s own Project when its first step is stored, once', async () => {
+    const run = await wiredRun({ ...stepsRun, newProject: true });
+    await run.capture.handleClick(click(), sender);
+    await run.capture.handleClick(click(), sender);
+    expect(run.ports.projects.ensure).toHaveBeenCalledExactlyOnceWith('project-1');
+    expect(run.ports.projects.select).toHaveBeenCalledWith('project-1');
+    expect(run.ports.projects.ensure.mock.invocationCallOrder[0]).toBeLessThan(run.ports.steps.add.mock.invocationCallOrder[0]!);
+  });
+
   it.each([
     ['another tab is in front', tab({ id: 9 }), 'background.stepSkippedInactiveTab'],
     ['the page changed', tab({ url: 'https://site.example/other' }), 'background.stepSkippedPageChanged'],

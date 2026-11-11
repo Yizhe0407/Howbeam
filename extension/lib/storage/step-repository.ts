@@ -57,7 +57,6 @@ export async function addStepsAfter(steps: readonly NewStep[], afterStepId: stri
   const { sessionId, runId } = first;
   let latestTimestamp = first.timestamp;
   await runProjectWrite(async (tx) => {
-    const project = await requireProject(tx, sessionId);
     const previous = await readEntries(tx, sessionId);
     const next = [...previous];
     const lastOfRun = runId ? next.findLastIndex((entry) => entryHasRun(entry, runId)) : -1;
@@ -99,7 +98,12 @@ export async function addStepsAfter(steps: readonly NewStep[], afterStepId: stri
       }
       structureChanged = true;
     }
-    if (structureChanged) await commitEntries(tx, project, previous, next, { timestamp: latestTimestamp });
+    // A snapshot's base image alone does not need its Project yet: a run creates
+    // its Project when the first step or annotation is stored.
+    if (structureChanged) {
+      const project = await requireProject(tx, sessionId);
+      await commitEntries(tx, project, previous, next, { timestamp: latestTimestamp });
+    }
   });
 }
 

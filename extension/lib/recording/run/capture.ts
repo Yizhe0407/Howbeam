@@ -147,6 +147,8 @@ export function createCapture(deps: CaptureDeps) {
       throw new StaleCaptureError('The recording changed while saving the step.');
     }
     assertCaptureNotCancelled(message.captureId);
+    await lifecycle.ensureRunProject(recording);
+    assertCaptureNotCancelled(message.captureId);
     // No await between the commit marker and the write: a later cancellation must not half-cancel it.
     markCaptureCommitting(message.captureId);
     await ports.steps.add([{
@@ -178,6 +180,7 @@ export function createCapture(deps: CaptureDeps) {
       throw new SnapshotAnchorMissingError('The snapshot base image or its screenshot is gone.');
     }
     if (stored.url !== message.url) throw new UserFacingError('background.annotationSkippedPageChanged');
+    await lifecycle.ensureRunProject(recording);
     markCaptureCommitting(message.captureId);
     await ports.steps.add([{
       id: ports.newId(),

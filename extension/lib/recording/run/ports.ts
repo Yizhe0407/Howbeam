@@ -52,8 +52,11 @@ export interface RunPorts {
   };
   projects: {
     get(id: string): Promise<Project | undefined>;
-    /** Deletes the Project only while it is still the empty shell a popup start created. */
-    discardIfPristine(id: string): Promise<boolean>;
+    /** Creates the Project with this id unless it exists. */
+    ensure(id: string): Promise<void>;
+    /** Makes the Project the UI's current one. */
+    select(id: string): Promise<void>;
+    delete(id: string): Promise<void>;
     /** The step a continuation inserts after, from an entry id. */
     continuationAnchor(sessionId: string, afterEntryId: string): Promise<{ afterStepId: string | null } | null>;
   };
@@ -64,6 +67,10 @@ export interface RunPorts {
     save(record: PendingUndoRecord): Promise<void>;
     read(): Promise<PendingUndoRecord | null>;
     clear(): Promise<void>;
+  };
+  /** A start the popup parked behind the permission dialog, which closes the popup. */
+  pendingStart: {
+    discard(): Promise<void>;
   };
   permissions: {
     /** Whether the run may follow the user across sites. */

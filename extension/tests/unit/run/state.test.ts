@@ -18,7 +18,7 @@ const recording = makeRecordingState({
   groupAnchorId: 'anchor-1',
   snapshotViewport: { width: 1280, height: 720, scrollX: 0, scrollY: 40 },
   snapshotDevicePixelRatio: 2,
-  autoCreatedProjectId: 'project-1',
+  newProject: true,
   targetProjectTitle: null,
   insertAfterStepId: 'step-3',
 });
@@ -32,7 +32,7 @@ describe('run state <-> persisted recording state', () => {
   it.each<[string, RecordingState]>([
     ['idle', makeRecordingState()],
     ['a live snapshot run', recording],
-    ['a paused steps run in a continuation', { ...recording, mode: 'steps', phase: 'paused', groupAnchorId: null, snapshotViewport: null, snapshotDevicePixelRatio: null, autoCreatedProjectId: null, targetProjectTitle: '既有專案' }],
+    ['a paused steps run in a continuation', { ...recording, mode: 'steps', phase: 'paused', groupAnchorId: null, snapshotViewport: null, snapshotDevicePixelRatio: null, newProject: false, targetProjectTitle: '既有專案' }],
     ['a run on hold in a browser page', {
       ...recording,
       mode: 'steps',

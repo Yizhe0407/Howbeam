@@ -497,7 +497,7 @@ describe('Editor continuation on another page (改在其他頁面接續)', () =>
 
     await waitFor(() => expect(browserApi.sendMessage).toHaveBeenCalledWith({
       type: 'START_RECORDING',
-      sessionId: 'project-1',
+      target: { kind: 'project', projectId: 'project-1' },
       mode: 'steps',
     }));
     const startCall = browserApi.sendMessage.mock.calls
@@ -570,7 +570,7 @@ describe('Editor continuation on another page (改在其他頁面接續)', () =>
 
     await waitFor(() => expect(browserApi.sendMessage).toHaveBeenCalledWith({
       type: 'START_RECORDING',
-      sessionId: 'project-1',
+      target: { kind: 'project', projectId: 'project-1' },
       mode: 'steps',
     }));
     expect(browserApi.requestPermission).not.toHaveBeenCalled();

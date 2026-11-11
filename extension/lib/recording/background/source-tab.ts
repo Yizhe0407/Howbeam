@@ -199,10 +199,12 @@ export async function resolveContinuationTab(
   message: StartRecordingMessage,
   sender: Browser.runtime.MessageSender,
 ): Promise<{ ok: true; tab: Browser.tabs.Tab } | Extract<StartRecordingResult, { ok: false }>> {
-  if (!isEditorSenderForSession(sender, message.sessionId)) {
+  // A continuation records more into an existing Project, from the editor showing it.
+  const { target } = message;
+  if (target.kind !== 'project' || !isEditorSenderForSession(sender, target.projectId)) {
     return { ok: false, error: 'background.editorOnlyContinuation' };
   }
-  const anchor = await resolveProjectContinuationAnchor(message.sessionId, message.insertAfterEntryId);
+  const anchor = await resolveProjectContinuationAnchor(target.projectId, message.insertAfterEntryId);
   const sourceUrl = anchor?.sourceUrl;
   if (!sourceUrl) {
     return { ok: false, error: 'background.continuationSourceMissing' };
