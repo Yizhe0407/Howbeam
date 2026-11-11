@@ -368,6 +368,7 @@ export function createLifecycle(deps: LifecycleDeps) {
     claim,
     afterRunEnded,
     discardEmptyAnchor,
+    injectAndAwaitReady,
   };
 }
 

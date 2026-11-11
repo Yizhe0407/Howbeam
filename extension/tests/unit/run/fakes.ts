@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 import type { Browser } from 'wxt/browser';
 import { createRunActor } from '@/lib/recording/run/actor';
 import type { RunPorts } from '@/lib/recording/run/ports';
-import { createRecorderGate } from '@/lib/recording/run/recorder-gate';
+import { createRecorderGate, type SnapshotContext } from '@/lib/recording/run/recorder-gate';
 import type { Project, Step } from '@/lib/storage/models';
 import type { RecordingState } from '@/lib/storage/recording-state';
 import { makeRecordingState } from '../../setup/recording-state';
@@ -110,6 +110,17 @@ export async function wiredRun(stored: RecordingState = makeRecordingState()) {
     continueAfterTabClosed: async () => 'nowhere',
   });
   capture = createCapture({ actor, ports, gate, lifecycle, discardUndo: undo.discard });
+  const { createSnapshotControls } = await import('@/lib/recording/run/snapshot');
+  const snapshot = createSnapshotControls({ actor, ports, lifecycle, capture, discardUndo: undo.discard });
   await actor.ready();
-  return { lifecycle, capture, undo, ports, steps, actor, saved, gate, state: () => toRecordingState(actor.state()) };
+  /** Every injection reports ready (with this snapshot context), as a content script would. */
+  function recorderReports(snapshotContext?: SnapshotContext): void {
+    ports.recorder.inject.mockImplementation(async (tabId) => {
+      queueMicrotask(() => {
+        const op = actor.state().operation;
+        if (op.kind === 'recording') gate.signal(op.runId, tabId, snapshotContext ? { snapshotContext } : {});
+      });
+    });
+  }
+  return { lifecycle, capture, undo, snapshot, recorderReports, ports, steps, actor, saved, gate, state: () => toRecordingState(actor.state()) };
 }
