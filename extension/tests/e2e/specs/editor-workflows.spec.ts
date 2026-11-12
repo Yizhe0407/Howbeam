@@ -35,11 +35,7 @@ async function recordStepTargets(appPage: Page, popupPage: Page, selectors: stri
   await stopRecording(popupPage);
 }
 
-async function recordSnapshotTargets(
-  appPage: Page,
-  popupPage: Page,
-  selectors: string[],
-): Promise<void> {
+async function recordSnapshotTargets(appPage: Page, popupPage: Page, selectors: string[]): Promise<void> {
   const initialCount = (await readSteps(popupPage)).length;
   await startRecording(appPage, popupPage, 'snapshot');
   await expect.poll(async () => (await readSteps(popupPage)).length).toBe(initialCount + 1);
@@ -122,17 +118,19 @@ async function copyAndReadPng(page: Page, button: Locator): ReturnType<typeof re
   await page.evaluate(() => navigator.clipboard.writeText(''));
   await button.click();
   let png: Awaited<ReturnType<typeof readClipboardPng>> | undefined;
-  await expect.poll(
-    async () => {
-      try {
-        png = await readClipboardPng(page);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    { timeout: 10_000 },
-  ).toBe(true);
+  await expect
+    .poll(
+      async () => {
+        try {
+          png = await readClipboardPng(page);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(true);
   return png!;
 }
 
@@ -160,9 +158,9 @@ test.describe('editor workflows', () => {
     await expect(editor.locator('aside').getByText('標註 · 2', { exact: true })).toBeVisible();
     const annotations = editor.getByPlaceholder('輸入標註說明…');
     await annotations.nth(0).fill('更新後的快照標註');
-    await expect.poll(async () => (await readSteps(popupPage)).some(
-      (step) => step.description === '更新後的快照標註',
-    )).toBe(true);
+    await expect
+      .poll(async () => (await readSteps(popupPage)).some((step) => step.description === '更新後的快照標註'))
+      .toBe(true);
 
     // Markers are always numbered; there is no switch to turn that off.
     await expect(editor.getByRole('switch')).toHaveCount(0);
@@ -222,7 +220,10 @@ test.describe('editor workflows', () => {
             for (const entry of all.result.filter((candidate) => candidate.kind === 'group')) {
               store.put({
                 ...entry,
-                annotations: entry.annotations.map((step: object, index: number) => ({ ...step, bounds: bounds[index] })),
+                annotations: entry.annotations.map((step: object, index: number) => ({
+                  ...step,
+                  bounds: bounds[index],
+                })),
               });
             }
           };
@@ -262,13 +263,24 @@ test.describe('editor workflows', () => {
     await recordSnapshotTargets(appPage, popupPage, ['#action-button', '#disabled-button', '#fixture-canvas']);
     const storedBeforeReorder = await readSteps(popupPage);
     expect(storedBeforeReorder).toHaveLength(6);
-    const ordinarySteps = storedBeforeReorder.filter((step) => step.groupId === undefined).sort((a, b) => a.order - b.order);
-    const groupedSteps = storedBeforeReorder.filter((step) => step.groupId !== undefined).sort((a, b) => a.order - b.order);
+    const ordinarySteps = storedBeforeReorder
+      .filter((step) => step.groupId === undefined)
+      .sort((a, b) => a.order - b.order);
+    const groupedSteps = storedBeforeReorder
+      .filter((step) => step.groupId !== undefined)
+      .sort((a, b) => a.order - b.order);
     const snapshotAnchor = groupedSteps.find((step) => step.id === step.groupId);
     const annotations = groupedSteps.filter((step) => step.id !== step.groupId);
     const [firstTimelineStep, secondTimelineStep] = ordinarySteps;
     const [firstAnnotation, secondAnnotation, thirdAnnotation] = annotations;
-    if (!firstTimelineStep || !secondTimelineStep || !snapshotAnchor || !firstAnnotation || !secondAnnotation || !thirdAnnotation) {
+    if (
+      !firstTimelineStep ||
+      !secondTimelineStep ||
+      !snapshotAnchor ||
+      !firstAnnotation ||
+      !secondAnnotation ||
+      !thirdAnnotation
+    ) {
       throw new Error('Expected two ordinary steps and one three-annotation snapshot group.');
     }
     const snapshotGroupId = snapshotAnchor.id;
@@ -279,14 +291,16 @@ test.describe('editor workflows', () => {
     const railHandles = editor.locator('nav').getByRole('button', { name: '拖曳排序' });
     await expect(railHandles).toHaveCount(3);
     await dragBetween(editor, railHandles.nth(0), railHandles.nth(2));
-    await expect.poll(async () => (await readSteps(popupPage)).map(({ id, groupId }) => ({ id, groupId }))).toEqual([
-      { id: secondTimelineStep.id, groupId: undefined },
-      { id: snapshotAnchor.id, groupId: snapshotGroupId },
-      { id: firstAnnotation.id, groupId: snapshotGroupId },
-      { id: secondAnnotation.id, groupId: snapshotGroupId },
-      { id: thirdAnnotation.id, groupId: snapshotGroupId },
-      { id: firstTimelineStep.id, groupId: undefined },
-    ]);
+    await expect
+      .poll(async () => (await readSteps(popupPage)).map(({ id, groupId }) => ({ id, groupId })))
+      .toEqual([
+        { id: secondTimelineStep.id, groupId: undefined },
+        { id: snapshotAnchor.id, groupId: snapshotGroupId },
+        { id: firstAnnotation.id, groupId: snapshotGroupId },
+        { id: secondAnnotation.id, groupId: snapshotGroupId },
+        { id: thirdAnnotation.id, groupId: snapshotGroupId },
+        { id: firstTimelineStep.id, groupId: undefined },
+      ]);
 
     await editor.reload();
     await expect(editor.getByText('步驟 · 3', { exact: true })).toBeVisible();
@@ -296,14 +310,16 @@ test.describe('editor workflows', () => {
     const annotationHandles = annotationPanel.getByRole('button', { name: '拖曳排序' });
     await expect(annotationHandles).toHaveCount(3);
     await dragBetween(editor, annotationHandles.nth(0), annotationHandles.nth(2));
-    await expect.poll(async () => (await readSteps(popupPage)).map(({ id, groupId }) => ({ id, groupId }))).toEqual([
-      { id: secondTimelineStep.id, groupId: undefined },
-      { id: snapshotAnchor.id, groupId: snapshotGroupId },
-      { id: secondAnnotation.id, groupId: snapshotGroupId },
-      { id: thirdAnnotation.id, groupId: snapshotGroupId },
-      { id: firstAnnotation.id, groupId: snapshotGroupId },
-      { id: firstTimelineStep.id, groupId: undefined },
-    ]);
+    await expect
+      .poll(async () => (await readSteps(popupPage)).map(({ id, groupId }) => ({ id, groupId })))
+      .toEqual([
+        { id: secondTimelineStep.id, groupId: undefined },
+        { id: snapshotAnchor.id, groupId: snapshotGroupId },
+        { id: secondAnnotation.id, groupId: snapshotGroupId },
+        { id: thirdAnnotation.id, groupId: snapshotGroupId },
+        { id: firstAnnotation.id, groupId: snapshotGroupId },
+        { id: firstTimelineStep.id, groupId: undefined },
+      ]);
     await expect(annotationPanel.getByPlaceholder('輸入標註說明…')).toHaveCount(3);
   });
 
@@ -434,7 +450,9 @@ test.describe('editor workflows', () => {
     await editor.getByRole('region', { name: '章節：標註重點' }).getByRole('button', { name: '章節操作' }).click();
     await editor.getByRole('button', { name: '重新命名' }).click();
     await expect(nameField).toBeFocused();
-    expect(await nameField.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd])).toEqual([0, 4]);
+    expect(await nameField.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd])).toEqual([
+      0, 4,
+    ]);
     await editor.keyboard.type('畫面重點');
     await editor.keyboard.press('Enter');
     await expect(editor.getByRole('heading', { name: '畫面重點', level: 2 })).toBeVisible();
@@ -590,7 +608,8 @@ test.describe('editor workflows', () => {
     await expect(restore).toBeVisible();
     const box = (await restore.boundingBox())!;
     const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-    const noticeOnTop = () => editor.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[role="status"]') != null, center);
+    const noticeOnTop = () =>
+      editor.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[role="status"]') != null, center);
     expect(await noticeOnTop()).toBe(true);
 
     await editor.getByRole('button', { name: '放大圖片' }).click();

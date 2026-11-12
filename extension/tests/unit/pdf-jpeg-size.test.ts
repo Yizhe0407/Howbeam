@@ -9,7 +9,26 @@ describe('readJpegSize', () => {
   });
 
   it('skips segments that come before the frame, such as JFIF and Exif', () => {
-    const app0 = Uint8Array.of(0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00);
+    const app0 = Uint8Array.of(
+      0xff,
+      0xe0,
+      0x00,
+      0x10,
+      0x4a,
+      0x46,
+      0x49,
+      0x46,
+      0x00,
+      0x01,
+      0x01,
+      0x00,
+      0x00,
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+    );
     const comment = Uint8Array.of(0xff, 0xfe, 0x00, 0x06, 0x61, 0x62, 0x63, 0x64);
     // A DHT marker (0xC4) sits in the start-of-frame range but is not a frame.
     const huffman = Uint8Array.of(0xff, 0xc4, 0x00, 0x04, 0x00, 0x00);
@@ -31,7 +50,9 @@ describe('readJpegSize', () => {
   });
 
   it('rejects a JPEG without a readable frame header', () => {
-    expect(() => readJpegSize(Uint8Array.of(0xff, 0xd8, 0xff, 0xd9, 0x00, 0x00))).toThrow(/frame header|dimensions|invalid/i);
+    expect(() => readJpegSize(Uint8Array.of(0xff, 0xd8, 0xff, 0xd9, 0x00, 0x00))).toThrow(
+      /frame header|dimensions|invalid/i,
+    );
     expect(() => readJpegSize(jpegOfSize(0, 0))).toThrow(/frame header|dimensions|invalid/i);
   });
 });

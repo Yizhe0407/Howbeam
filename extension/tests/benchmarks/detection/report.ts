@@ -66,7 +66,9 @@ export function renderMarkdown(report: DetectionBenchmarkReport): string {
   } else {
     lines.push('| Case | Mode | Category | Status | Best IoU |', '| --- | --- | --- | --- | ---: |');
     for (const result of accuracyFailures) {
-      lines.push(`| ${result.id} | ${result.mode} | ${result.category} | ${result.status} | ${result.bestIoU.toFixed(3)} |`);
+      lines.push(
+        `| ${result.id} | ${result.mode} | ${result.category} | ${result.status} | ${result.bestIoU.toFixed(3)} |`,
+      );
     }
     lines.push('');
   }
@@ -77,7 +79,9 @@ export function renderMarkdown(report: DetectionBenchmarkReport): string {
   } else {
     lines.push('| Case | Observed | Bounds IoU | Forbidden events |', '| --- | ---: | ---: | --- |');
     for (const result of replayFailures) {
-      lines.push(`| ${result.id} | ${result.observedCount} | ${result.boundsIoU.toFixed(3)} | \`${JSON.stringify(result.forbiddenCounts)}\` |`);
+      lines.push(
+        `| ${result.id} | ${result.observedCount} | ${result.boundsIoU.toFixed(3)} | \`${JSON.stringify(result.forbiddenCounts)}\` |`,
+      );
     }
     lines.push('');
   }

@@ -134,9 +134,9 @@ describe('createFrameProbeRateLimiter', () => {
   });
 
   it('rejects invalid limits', () => {
-    expect(() =>
-      createFrameProbeRateLimiter({ maxConcurrent: 0, maxRequestsPerWindow: 1, windowMs: 1 }),
-    ).toThrow(TypeError);
+    expect(() => createFrameProbeRateLimiter({ maxConcurrent: 0, maxRequestsPerWindow: 1, windowMs: 1 })).toThrow(
+      TypeError,
+    );
   });
 });
 
@@ -174,11 +174,17 @@ describe('createLatestAsyncRequestRunner', () => {
     const seen: number[] = [];
     let release!: () => void;
     const errors: unknown[] = [];
-    const runner = createLatestAsyncRequestRunner<number>(async (value) => {
-      seen.push(value);
-      if (value === 1) await new Promise<void>((resolve) => { release = resolve; });
-      else throw new Error('probe failed');
-    }, (error) => errors.push(error));
+    const runner = createLatestAsyncRequestRunner<number>(
+      async (value) => {
+        seen.push(value);
+        if (value === 1)
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+        else throw new Error('probe failed');
+      },
+      (error) => errors.push(error),
+    );
 
     runner.submit(1);
     runner.submit(2);

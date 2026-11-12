@@ -116,7 +116,9 @@ function renderHtmlEntry(entry: RenderedEntryContent, imageSrc: string): string 
 }
 
 function renderHtmlAnnotations(entry: RenderedEntryContent): string {
-  const texts = entry.annotations.map((annotation) => textOrDefault(annotation.description, t().export.missingDescription));
+  const texts = entry.annotations.map((annotation) =>
+    textOrDefault(annotation.description, t().export.missingDescription),
+  );
   const { listAttributes, spans } = annotationColumns(texts);
   const items = texts.map((text, index) => `<li${spans[index] ? ' data-span' : ''}>${htmlText(text)}</li>`).join('\n');
   return `<ol class="annotations"${listAttributes}>
@@ -145,7 +147,8 @@ const LIST = Object.freeze({
   itemGap: 0.25,
 });
 
-const WIDE_CHARACTER = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\u3000-\u303f\uff01-\uff60\uffe0-\uffe6]/u;
+const WIDE_CHARACTER =
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\u3000-\u303f\uff01-\uff60\uffe0-\uffe6]/u;
 const PICTOGRAPH = /\p{Extended_Pictographic}/u;
 
 /** Typical advance of each character in em for the document's sans-serif stack. */
@@ -186,7 +189,10 @@ function annotationColumns(texts: readonly string[]): { listAttributes: string; 
     if (keepsLines(middle)) wide = middle;
     else narrow = middle;
   }
-  return { listAttributes: ` data-columns style="columns: ${Math.ceil((wide + LIST.marker) * 10) / 10}em ${columns}"`, spans };
+  return {
+    listAttributes: ` data-columns style="columns: ${Math.ceil((wide + LIST.marker) * 10) / 10}em ${columns}"`,
+    spans,
+  };
 }
 
 function htmlText(value: string): string {

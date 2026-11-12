@@ -6,7 +6,14 @@ import { BADGE_RADIUS, HIGHLIGHT_COLOR } from '@/lib/media/annotation-contract';
 import type { AnnotationScene } from '@/lib/media/annotation-scene';
 import { canvasOps, maskRects, setImageSize } from '../setup/canvas';
 
-const EMPTY: AnnotationScene = { highlight: null, annotations: [], badges: true, imageEdits: [], redactions: [], privacyBlock: false };
+const EMPTY: AnnotationScene = {
+  highlight: null,
+  annotations: [],
+  badges: true,
+  imageEdits: [],
+  redactions: [],
+  privacyBlock: false,
+};
 
 /** Gives the canvas a laid-out box, as a browser would. */
 function layOut(canvas: HTMLCanvasElement, box: { left?: number; top?: number; width: number; height: number }) {
@@ -21,13 +28,16 @@ function layOut(canvas: HTMLCanvasElement, box: { left?: number; top?: number; w
 let resize: (() => void) | null = null;
 
 async function renderLaidOut(ui: React.ReactElement, box: { width: number; height: number }) {
-  vi.stubGlobal('ResizeObserver', class {
-    constructor(callback: () => void) {
-      resize = callback;
-    }
-    observe() {}
-    disconnect() {}
-  });
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(callback: () => void) {
+        resize = callback;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
   const view = render(ui);
   await act(async () => undefined);
   const canvas = view.container.querySelector('canvas')!;
@@ -73,7 +83,10 @@ describe('AnnotatedImage', () => {
   it('draws a cover thumbnail at its on-screen size and keeps the numbers readable there', async () => {
     const blob = new Blob(['shot']);
     setImageSize(blob, 2000, 1000);
-    const scene: AnnotationScene = { ...EMPTY, annotations: [{ bounds: { x: 900, y: 400, width: 100, height: 100 }, order: 1 }] };
+    const scene: AnnotationScene = {
+      ...EMPTY,
+      annotations: [{ bounds: { x: 900, y: 400, width: 100, height: 100 }, order: 1 }],
+    };
     const { canvas } = await renderLaidOut(
       <AnnotatedImage blob={blob} scene={scene} screenshotScale={1} alt="" fit="cover" />,
       { width: 100, height: 100 },
@@ -81,7 +94,9 @@ describe('AnnotatedImage', () => {
 
     // Cover scales the 2000×1000 image by 0.1 to fill 100×100: 200×100 pixels are enough.
     expect([canvas.width, canvas.height]).toEqual([200, 100]);
-    const badge = canvasOps(canvas).find((entry) => entry.op === 'arc' && entry.args[2] !== undefined && (entry.args[2] as number) > BADGE_RADIUS);
+    const badge = canvasOps(canvas).find(
+      (entry) => entry.op === 'arc' && entry.args[2] !== undefined && (entry.args[2] as number) > BADGE_RADIUS,
+    );
     // 7 on-screen pixels at 0.1 on-screen pixels per screenshot pixel.
     expect(badge?.args[2]).toBe(70);
     expect(canvas.getAttribute('aria-hidden')).toBe('true');
@@ -91,7 +106,14 @@ describe('AnnotatedImage', () => {
     const blob = new Blob(['shot']);
     setImageSize(blob, 1000, 500);
     const { view } = await renderLaidOut(
-      <AnnotatedImage blob={blob} scene={EMPTY} screenshotScale={1} alt="x" fit="contain" overlay={<span>hint</span>} />,
+      <AnnotatedImage
+        blob={blob}
+        scene={EMPTY}
+        screenshotScale={1}
+        alt="x"
+        fit="contain"
+        overlay={<span>hint</span>}
+      />,
       { width: 400, height: 400 },
     );
 
@@ -103,7 +125,13 @@ describe('AnnotatedImage', () => {
     const blob = new Blob(['shot']);
     setImageSize(blob, 100, 50);
     const { canvas } = await renderLaidOut(
-      <AnnotatedImage blob={blob} scene={{ ...EMPTY, privacyBlock: true, highlight: { x: 1, y: 1, width: 20, height: 20 } }} screenshotScale={1} alt="x" fit="contain" />,
+      <AnnotatedImage
+        blob={blob}
+        scene={{ ...EMPTY, privacyBlock: true, highlight: { x: 1, y: 1, width: 20, height: 20 } }}
+        screenshotScale={1}
+        alt="x"
+        fit="contain"
+      />,
       { width: 100, height: 50 },
     );
 

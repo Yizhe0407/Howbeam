@@ -33,11 +33,7 @@ export function isTrustedRecorderControlSender(
   sender: RuntimeMessageSenderLike,
   recordedTabId: number | null,
 ): boolean {
-  return (
-    recordedTabId !== null &&
-    sender.frameId === 0 &&
-    sender.tab?.id === recordedTabId
-  );
+  return recordedTabId !== null && sender.frameId === 0 && sender.tab?.id === recordedTabId;
 }
 
 /** Keeps MV3 alive only for the top frame that owns the active capture job,

@@ -31,8 +31,15 @@ function entry(overrides: Partial<ScreenshotStep> = {}): StepEntry {
   return {
     kind: 'single',
     step: {
-      id: 's', sessionId: 'p', order: 0, bounds: { x: 150, y: 90, width: 30, height: 40 }, devicePixelRatio: 1,
-      description: '', url: 'https://x.test', timestamp: 0, screenshotBlob: original,
+      id: 's',
+      sessionId: 'p',
+      order: 0,
+      bounds: { x: 150, y: 90, width: 30, height: 40 },
+      devicePixelRatio: 1,
+      description: '',
+      url: 'https://x.test',
+      timestamp: 0,
+      screenshotBlob: original,
       redactions: [{ id: 'm', kind: 'solid', bounds: { x: 120, y: 70, width: 10, height: 10 } }],
       ...overrides,
     },
@@ -49,7 +56,11 @@ afterEach(cleanup);
 describe('EntryThumbnail with a crop', () => {
   it('shows nothing, never the uncropped image, until the first cut is ready, then the cut with shifted coordinates', async () => {
     let finish: (value: unknown) => void = () => undefined;
-    mocks.getCroppedImage.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    mocks.getCroppedImage.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
 
     const view = render(<EntryThumbnail entry={entry({ crop })} alt="x" />);
     expect(view.queryByTestId('thumb')).toBeNull();

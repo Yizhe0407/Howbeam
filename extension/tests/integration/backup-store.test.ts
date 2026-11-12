@@ -21,7 +21,13 @@ describe('backup store', () => {
   it('keeps the chosen folder and the per-project manifest', async () => {
     expect(await getBackupConfig()).toBeNull();
     await saveBackupConfig(config);
-    await putBackupManifestEntry('p1', { contentRevision: 5, stepEditRevision: 0, metadataRevision: 0, filename: 'a.howbeam', backedUpAt: 6 });
+    await putBackupManifestEntry('p1', {
+      contentRevision: 5,
+      stepEditRevision: 0,
+      metadataRevision: 0,
+      filename: 'a.howbeam',
+      backedUpAt: 6,
+    });
     await saveBackupLastRun({ at: 7, written: 1, failed: 0, error: null });
 
     expect((await getBackupConfig())?.folderName).toBe('Backups');
@@ -36,7 +42,13 @@ describe('backup store', () => {
   });
 
   it('forgets everything when backup is turned off', async () => {
-    await putBackupManifestEntry('p2', { contentRevision: 1, stepEditRevision: 0, metadataRevision: 0, filename: 'b.howbeam', backedUpAt: 2 });
+    await putBackupManifestEntry('p2', {
+      contentRevision: 1,
+      stepEditRevision: 0,
+      metadataRevision: 0,
+      filename: 'b.howbeam',
+      backedUpAt: 2,
+    });
     await clearBackupConfig();
     expect(await getBackupConfig()).toBeNull();
     expect((await getBackupManifest()).size).toBe(0);

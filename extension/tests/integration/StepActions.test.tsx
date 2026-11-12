@@ -40,9 +40,12 @@ beforeEach(() => {
   composite.compositeStepEntry.mockResolvedValue(new Blob(['png'], { type: 'image/png' }));
   clipboardWrite.mockResolvedValue(undefined);
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { write: clipboardWrite } });
-  vi.stubGlobal('ClipboardItem', class {
-    constructor(readonly items: Record<string, Blob>) {}
-  });
+  vi.stubGlobal(
+    'ClipboardItem',
+    class {
+      constructor(readonly items: Record<string, Blob>) {}
+    },
+  );
 });
 
 afterEach(() => {
@@ -96,7 +99,9 @@ describe('StepActions', () => {
     fireEvent.click(screen.getByLabelText(t().editor.actions.recapture));
     await waitFor(() => expect(onRecapture).toHaveBeenCalledTimes(1));
 
-    rerender(<StepActions entry={entry()} onDelete={vi.fn()} onRecapture={onRecapture} recaptureDisabledReason="busy" />);
+    rerender(
+      <StepActions entry={entry()} onDelete={vi.fn()} onRecapture={onRecapture} recaptureDisabledReason="busy" />,
+    );
     expect((screen.getByLabelText(t().editor.actions.recapture) as HTMLButtonElement).disabled).toBe(true);
   });
 

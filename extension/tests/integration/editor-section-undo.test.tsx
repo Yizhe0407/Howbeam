@@ -14,7 +14,9 @@ function render(ui: Parameters<typeof rtlRender>[0], options?: Parameters<typeof
 
 const database = await vi.hoisted(async () => (await import('../setup/editor-app-mocks')).makeEditorDatabaseMocks());
 
-const recordingSession = await vi.hoisted(async () => (await import('../setup/editor-app-mocks')).makeRecordingSessionMocks());
+const recordingSession = await vi.hoisted(async () =>
+  (await import('../setup/editor-app-mocks')).makeRecordingSessionMocks(),
+);
 
 vi.mock('wxt/browser', async () => {
   const { makeExtensionPageRuntimeMock } = await import('../setup/browser-mocks');
@@ -176,7 +178,7 @@ describe('section delete undo', () => {
     // structural mutation.
     expect(await screen.findByText('已刪除章節「準備」')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', {  name: '還原'  }));
+    fireEvent.click(screen.getByRole('button', { name: '還原' }));
 
     await waitFor(() => expect(database.addProjectSectionAtomically).toHaveBeenCalledOnce());
     // Restore re-creates the section against the post-delete revision, bound
@@ -208,7 +210,7 @@ describe('section delete undo', () => {
 
     // Another writer moves the Project forward before the user clicks 還原.
     snapshotRevision = 12;
-    fireEvent.click(screen.getByRole('button', {  name: '還原'  }));
+    fireEvent.click(screen.getByRole('button', { name: '還原' }));
 
     await waitFor(() => expect(screen.queryByText('已刪除章節「準備」')).toBeNull());
     expect(database.addProjectSectionAtomically).not.toHaveBeenCalled();
@@ -249,12 +251,16 @@ describe('section dialog', () => {
     expect(screen.getByText('從第 2 步開始新章節')).toBeTruthy();
 
     await nameSection('操作', '建立');
-    await waitFor(() => expect(database.addProjectSectionAtomically).toHaveBeenCalledWith('project-1', 'entry-2', '操作', 7));
+    await waitFor(() =>
+      expect(database.addProjectSectionAtomically).toHaveBeenCalledWith('project-1', 'entry-2', '操作', 7),
+    );
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(await screen.findByText('已新增章節「操作」')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '還原' }));
-    await waitFor(() => expect(database.deleteProjectSectionAtomically).toHaveBeenCalledWith('project-1', 'section-2', 8));
+    await waitFor(() =>
+      expect(database.deleteProjectSectionAtomically).toHaveBeenCalledWith('project-1', 'section-2', 8),
+    );
   });
 
   it('keeps the dialog open with the reason when adding fails', async () => {
@@ -295,7 +301,9 @@ describe('section dialog', () => {
     expect((screen.getByRole('textbox', { name: '章節名稱' }) as HTMLInputElement).value).toBe('準備');
 
     await nameSection('前置作業', '儲存');
-    await waitFor(() => expect(database.renameProjectSectionAtomically).toHaveBeenCalledWith('project-1', 'section-1', '前置作業', 7));
+    await waitFor(() =>
+      expect(database.renameProjectSectionAtomically).toHaveBeenCalledWith('project-1', 'section-1', '前置作業', 7),
+    );
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });

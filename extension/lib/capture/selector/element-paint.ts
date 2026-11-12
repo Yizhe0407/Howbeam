@@ -1,4 +1,10 @@
-import { SELF_PAINTING_TAGS, composedElementChildren, getComposedParent, hasComputedVisibilityUnavailable, hasOwnSubtreeVisualUnavailableState } from './element-availability';
+import {
+  SELF_PAINTING_TAGS,
+  composedElementChildren,
+  getComposedParent,
+  hasComputedVisibilityUnavailable,
+  hasOwnSubtreeVisualUnavailableState,
+} from './element-availability';
 import { interactionKind } from './interactive-element';
 import { type AnalyzedElement } from './analyzed-element';
 import { type Bounds } from '../../storage/models';
@@ -45,11 +51,7 @@ function hasNoOwnVisualPaint(el: Element, style: CSSStyleDeclaration): boolean {
   if (role && role !== 'none' && role !== 'presentation' && role !== 'generic') return false;
   if (Number(style.opacity) === 0) return true;
   if (!cssColorIsTransparent(style.backgroundColor) || !cssPaintIsAbsent(style.backgroundImage)) return false;
-  if (
-    !cssPaintIsAbsent(style.boxShadow) ||
-    !cssPaintIsAbsent(style.outlineStyle) ||
-    !cssPaintIsAbsent(style.filter)
-  ) {
+  if (!cssPaintIsAbsent(style.boxShadow) || !cssPaintIsAbsent(style.outlineStyle) || !cssPaintIsAbsent(style.filter)) {
     return false;
   }
 
@@ -120,9 +122,7 @@ function elementHasBoxAtPoint(el: Element, clientX: number, clientY: number): bo
 
 function browserSupportsPseudoComputedStyle(): boolean {
   try {
-    return (
-      CSS.supports('selector(::before)')
-    );
+    return CSS.supports('selector(::before)');
   } catch {
     return false;
   }
@@ -139,11 +139,7 @@ function generatedContentPaints(style: CSSStyleDeclaration): boolean {
   if (hasVisibleTextContent) return true;
 
   if (!cssColorIsTransparent(style.backgroundColor) || !cssPaintIsAbsent(style.backgroundImage)) return true;
-  if (
-    !cssPaintIsAbsent(style.boxShadow) ||
-    !cssPaintIsAbsent(style.outlineStyle) ||
-    !cssPaintIsAbsent(style.filter)
-  ) {
+  if (!cssPaintIsAbsent(style.boxShadow) || !cssPaintIsAbsent(style.outlineStyle) || !cssPaintIsAbsent(style.filter)) {
     return true;
   }
 
@@ -426,7 +422,5 @@ export function hasOnlyBlankExclusiveOccluders(
   // upper branch owns without inspecting unrelated siblings or the app root.
   const branchRoot = exclusiveEntries.at(-1)?.element;
   const analyzedStyles = new Map(exclusiveEntries.map((entry) => [entry.element, entry.style]));
-  return branchRoot
-    ? !branchOwnsPaintAtPoint(branchRoot, clientX, clientY, viewport, analyzedStyles)
-    : true;
+  return branchRoot ? !branchOwnsPaintAtPoint(branchRoot, clientX, clientY, viewport, analyzedStyles) : true;
 }

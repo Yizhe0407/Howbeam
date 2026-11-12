@@ -44,7 +44,10 @@ export const initialHistory = (items: ImageEditItem[]): History => ({ past: [], 
  * tab saved meanwhile). Carries those stored items: the session refuses its own
  * write, shows them instead, and reports the conflict so the person can redo. */
 export class ImageEditSessionConflict extends Error {
-  constructor(public readonly storedItems: ImageEditItem[], options?: { cause?: unknown }) {
+  constructor(
+    public readonly storedItems: ImageEditItem[],
+    options?: { cause?: unknown },
+  ) {
     super('The image edits were changed elsewhere.', options);
     this.name = 'ImageEditSessionConflict';
   }
@@ -93,42 +96,45 @@ export function useImageEditSession({ initialItems, persist, debounceMs = 600 }:
 
   /** `force` writes once even when nothing changed, for a save that carries
    * more than the items (confirming the masks). */
-  const flush = useCallback((options: { force?: boolean } = {}): Promise<void> => {
-    clearTimeout(timer.current);
-    if (inflight.current) {
-      const running = inflight.current;
-      return options.force ? running.then(() => flush(options)) : running;
-    }
-    const run: Promise<void> = Promise.resolve().then(async () => {
-      try {
-        let forced = options.force === true;
-        // Loops until caught up, so edits made while a write was running are written too.
-        while (forced || latest.current !== persisted.current) {
-          forced = false;
-          const target = latest.current;
-          setSaving(true);
-          await persistRef.current(target);
-          persisted.current = target;
-        }
-        setSaveFailed(false);
-        setConflicted(false);
-      } catch (error) {
-        if (error instanceof ImageEditSessionConflict) {
-          adopt(error.storedItems);
-          setSaveFailed(false);
-          setConflicted(true);
-        } else {
-          setSaveFailed(true);
-        }
-        throw error;
-      } finally {
-        setSaving(false);
-        if (inflight.current === run) inflight.current = null;
+  const flush = useCallback(
+    (options: { force?: boolean } = {}): Promise<void> => {
+      clearTimeout(timer.current);
+      if (inflight.current) {
+        const running = inflight.current;
+        return options.force ? running.then(() => flush(options)) : running;
       }
-    });
-    inflight.current = run;
-    return run;
-  }, [adopt]);
+      const run: Promise<void> = Promise.resolve().then(async () => {
+        try {
+          let forced = options.force === true;
+          // Loops until caught up, so edits made while a write was running are written too.
+          while (forced || latest.current !== persisted.current) {
+            forced = false;
+            const target = latest.current;
+            setSaving(true);
+            await persistRef.current(target);
+            persisted.current = target;
+          }
+          setSaveFailed(false);
+          setConflicted(false);
+        } catch (error) {
+          if (error instanceof ImageEditSessionConflict) {
+            adopt(error.storedItems);
+            setSaveFailed(false);
+            setConflicted(true);
+          } else {
+            setSaveFailed(true);
+          }
+          throw error;
+        } finally {
+          setSaving(false);
+          if (inflight.current === run) inflight.current = null;
+        }
+      });
+      inflight.current = run;
+      return run;
+    },
+    [adopt],
+  );
 
   useEffect(() => {
     if (history.present === persisted.current) return undefined;
@@ -151,11 +157,14 @@ export function useImageEditSession({ initialItems, persist, debounceMs = 600 }:
   /** Takes items another tab stored, but only while nothing here is waiting to be
    * saved: unsaved local edits are instead checked against storage when they are
    * written, and a conflict is reported then. Returns whether they were taken. */
-  const adoptIfSettled = useCallback((items: ImageEditItem[]): boolean => {
-    if (inflight.current || latest.current !== persisted.current) return false;
-    adopt(items);
-    return true;
-  }, [adopt]);
+  const adoptIfSettled = useCallback(
+    (items: ImageEditItem[]): boolean => {
+      if (inflight.current || latest.current !== persisted.current) return false;
+      adopt(items);
+      return true;
+    },
+    [adopt],
+  );
 
   const commit = useCallback((items: ImageEditItem[]) => dispatch({ type: 'commit', items }), []);
   const undo = useCallback(() => dispatch({ type: 'undo' }), []);

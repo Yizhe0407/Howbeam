@@ -7,16 +7,19 @@ import { itemAt } from '../setup/item-at';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
 
-vi.mock('wxt/browser', async () =>
-  (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
+vi.mock('wxt/browser', async () => (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
 vi.mock('@/lib/storage/step-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/project-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/storage', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal),
+);
 vi.mock('@/lib/recording/background/pending-undo-store', async () =>
-  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks));
+  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks),
+);
 
 function recordingState(overrides: Partial<RecordingState> = {}): RecordingState {
   return makeRecordingState({
@@ -157,7 +160,9 @@ describe('service-worker startup recovery for recording runs', () => {
 
     await vi.waitFor(() => expect(stored.tabId).toBe(9));
     expect(stored).toMatchObject({ isRecording: true, runId: 'run-1', phase: 'recording' });
-    expect(mocks.executeScript).toHaveBeenCalledWith(expect.objectContaining({ target: { tabId: 9, allFrames: true } }));
+    expect(mocks.executeScript).toHaveBeenCalledWith(
+      expect.objectContaining({ target: { tabId: 9, allFrames: true } }),
+    );
   });
 
   it('keeps a run whose recorded tab is still intact', async () => {
@@ -172,9 +177,7 @@ describe('service-worker startup recovery for recording runs', () => {
   });
 
   it('settles a snapshot run whose tab no longer shows the anchor document', async () => {
-    mocks.getRecordingState.mockResolvedValue(
-      recordingState({ mode: 'snapshot', groupAnchorId: 'anchor-1' }),
-    );
+    mocks.getRecordingState.mockResolvedValue(recordingState({ mode: 'snapshot', groupAnchorId: 'anchor-1' }));
     mocks.getStep.mockResolvedValue(step({ id: 'anchor-1', groupId: 'anchor-1', url: 'https://a.example/page' }));
     mocks.getSteps.mockResolvedValue([
       step({ id: 'anchor-1', groupId: 'anchor-1', url: 'https://a.example/page' }),
@@ -267,11 +270,14 @@ describe('recapture source tab leak cleanup', () => {
     });
 
     await importBackground();
-    const result = await mocks.messageListener?.({
-      type: 'START_STEP_RECAPTURE',
-      sessionId: 'project-a',
-      target: { kind: 'single', stepId: 'step-1' },
-    }, editorSender);
+    const result = await mocks.messageListener?.(
+      {
+        type: 'START_STEP_RECAPTURE',
+        sessionId: 'project-a',
+        target: { kind: 'single', stepId: 'step-1' },
+      },
+      editorSender,
+    );
 
     expect(result).toMatchObject({ ok: false, code: 'SOURCE_TAB_FAILED' });
     expect(mocks.tabsRemove).toHaveBeenCalledWith(42);
@@ -285,10 +291,10 @@ describe('undo window persistence across worker restarts', () => {
     mocks.getSteps.mockResolvedValue([step({ runId: 'run-1' })]);
 
     await importBackground();
-    const result = await mocks.messageListener?.(
+    const result = (await mocks.messageListener?.(
       { type: 'UNDO_LAST_CAPTURE', runId: 'run-1' },
       { frameId: 0, url: 'chrome-extension://extension-id/popup.html' },
-    ) as { ok: boolean; undoToken?: string };
+    )) as { ok: boolean; undoToken?: string };
 
     expect(result).toMatchObject({ ok: true });
     expect(mocks.savePendingUndoRecord).toHaveBeenCalledWith(

@@ -2,7 +2,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { deepElementFromPoint, isElementVisuallyUnavailable } from '@/lib/capture/selector/element-availability';
 import { isInteractiveElement } from '@/lib/capture/selector/interactive-element';
-import { ACTIVATION_TARGETING_POLICY, findVisualTargetCandidatesAtPoint, resolveVisualTargetAtPoint, selectVisualTargetCandidate } from '@/lib/capture/selector/visual-target';
+import {
+  ACTIVATION_TARGETING_POLICY,
+  findVisualTargetCandidatesAtPoint,
+  resolveVisualTargetAtPoint,
+  selectVisualTargetCandidate,
+} from '@/lib/capture/selector/visual-target';
 import { makeVisible, resetSelectorDom } from '../setup/selector-dom';
 import { itemAt } from '../setup/item-at';
 
@@ -302,12 +307,7 @@ describe('shadow and occlusion aware hit testing', () => {
       value: () => [hitSurface, overlay, button, shared, document.body],
     });
 
-    const targets = findVisualTargetCandidatesAtPoint(
-      hitSurface,
-      30,
-      30,
-      { width: 1024, height: 768 },
-    );
+    const targets = findVisualTargetCandidatesAtPoint(hitSurface, 30, 30, { width: 1024, height: 768 });
 
     expect(targets.candidates.some((candidate) => candidate.element === button)).toBe(false);
     expect(itemAt(targets.candidates, 0).element).toBe(hitSurface);
@@ -334,12 +334,7 @@ describe('shadow and occlusion aware hit testing', () => {
       value: () => [overlay, button, document.body],
     });
 
-    const targets = findVisualTargetCandidatesAtPoint(
-      overlay,
-      30,
-      30,
-      { width: 1024, height: 768 },
-    );
+    const targets = findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 });
 
     expect(targets.candidates.some((candidate) => candidate.element === button)).toBe(false);
     expect(itemAt(targets.candidates, 0).element).toBe(overlay);
@@ -369,12 +364,7 @@ describe('shadow and occlusion aware hit testing', () => {
       return originalGetComputedStyle(element);
     });
 
-    const targets = findVisualTargetCandidatesAtPoint(
-      overlay,
-      30,
-      30,
-      { width: 1024, height: 768 },
-    );
+    const targets = findVisualTargetCandidatesAtPoint(overlay, 30, 30, { width: 1024, height: 768 });
 
     expect(targets.candidates.some((candidate) => candidate.element === button)).toBe(false);
     expect(itemAt(targets.candidates, 0).element).toBe(overlay);
@@ -412,12 +402,7 @@ describe('shadow and occlusion aware hit testing', () => {
       return originalGetComputedStyle(element);
     });
 
-    const targets = findVisualTargetCandidatesAtPoint(
-      overlay,
-      220,
-      220,
-      { width: 1024, height: 768 },
-    );
+    const targets = findVisualTargetCandidatesAtPoint(overlay, 220, 220, { width: 1024, height: 768 });
 
     expect(targets.candidates.some((candidate) => candidate.element === button)).toBe(false);
     expect(itemAt(targets.candidates, 0).element).toBe(overlay);
@@ -453,12 +438,7 @@ describe('shadow and occlusion aware hit testing', () => {
       return originalGetComputedStyle(element);
     });
 
-    const targets = findVisualTargetCandidatesAtPoint(
-      overlay,
-      220,
-      220,
-      { width: 1024, height: 768 },
-    );
+    const targets = findVisualTargetCandidatesAtPoint(overlay, 220, 220, { width: 1024, height: 768 });
 
     expect(itemAt(targets.candidates, 0).element).toBe(button);
   });
@@ -482,12 +462,7 @@ describe('shadow and occlusion aware hit testing', () => {
       value: () => [hitSurface, overlay, button, shared, document.body],
     });
 
-    const targets = findVisualTargetCandidatesAtPoint(
-      hitSurface,
-      30,
-      30,
-      { width: 1024, height: 768 },
-    );
+    const targets = findVisualTargetCandidatesAtPoint(hitSurface, 30, 30, { width: 1024, height: 768 });
 
     expect(itemAt(targets.candidates, 0).element).toBe(button);
   });
@@ -507,12 +482,7 @@ describe('shadow and occlusion aware hit testing', () => {
       value: () => [shim, backdrop, button, document.body],
     });
 
-    const targets = findVisualTargetCandidatesAtPoint(
-      shim,
-      30,
-      30,
-      { width: 1024, height: 768 },
-    );
+    const targets = findVisualTargetCandidatesAtPoint(shim, 30, 30, { width: 1024, height: 768 });
 
     expect(targets.candidates.some((candidate) => candidate.element === button)).toBe(false);
     expect(itemAt(targets.candidates, 0).element).toBe(shim);
@@ -534,13 +504,7 @@ describe('shadow and occlusion aware hit testing', () => {
     const viewport = { width: 1024, height: 768 };
 
     const annotationTargets = findVisualTargetCandidatesAtPoint(overlay, 30, 30, viewport);
-    const activationTargets = findVisualTargetCandidatesAtPoint(
-      overlay,
-      30,
-      30,
-      viewport,
-      ACTIVATION_TARGETING_POLICY,
-    );
+    const activationTargets = findVisualTargetCandidatesAtPoint(overlay, 30, 30, viewport, ACTIVATION_TARGETING_POLICY);
 
     expect(itemAt(annotationTargets.candidates, 0).element).toBe(button);
     expect(itemAt(activationTargets.candidates, 0).element).toBe(overlay);

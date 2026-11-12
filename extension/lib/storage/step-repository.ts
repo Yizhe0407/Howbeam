@@ -60,9 +60,12 @@ export async function addStepsAfter(steps: readonly NewStep[], afterStepId: stri
     const previous = await readEntries(tx, sessionId);
     const next = [...previous];
     const lastOfRun = runId ? next.findLastIndex((entry) => entryHasRun(entry, runId)) : -1;
-    const after = lastOfRun !== -1
-      ? lastOfRun
-      : afterStepId === null ? -1 : next.findIndex((entry) => entryHolds(entry, afterStepId));
+    const after =
+      lastOfRun !== -1
+        ? lastOfRun
+        : afterStepId === null
+          ? -1
+          : next.findIndex((entry) => entryHolds(entry, afterStepId));
     let insertAt = after === -1 ? next.length : after + 1;
     let structureChanged = false;
 
@@ -79,7 +82,7 @@ export async function addStepsAfter(steps: readonly NewStep[], afterStepId: stri
       }
       if (role === 'anchor') {
         if (!step.screenshotBlob) throw new Error('A snapshot base image needs its screenshot.');
-        if (await findEntryRecord(tx, step.id) || await tx.objectStore('pendingAnchors').get(step.id)) {
+        if ((await findEntryRecord(tx, step.id)) || (await tx.objectStore('pendingAnchors').get(step.id))) {
           throw new Error(`Step ${step.id} already exists.`);
         }
         await tx.objectStore('pendingAnchors').add({ id: step.id, projectId: sessionId, step });
@@ -125,8 +128,9 @@ async function readStep(tx: ProjectTransaction, id: string): Promise<Step | unde
  * questions about the timeline's shape (its last entry, a run's steps, a
  * step's URL) that need no image bytes. */
 export async function getStepOutlines(sessionId: string): Promise<Step[]> {
-  return runProjectRead(async (tx) => (await readEntryRecords(tx, sessionId))
-    .flatMap((record) => [record.owner, ...record.annotations]));
+  return runProjectRead(async (tx) =>
+    (await readEntryRecords(tx, sessionId)).flatMap((record) => [record.owner, ...record.annotations]),
+  );
 }
 
 /** One step by id, including a snapshot base image that is still pending. */
@@ -150,10 +154,7 @@ export type { StepRecaptureTarget } from './recording-state';
 
 export class StepRecaptureError extends Error {
   constructor(
-    public readonly code:
-      | 'TARGET_NOT_FOUND'
-      | 'TARGET_CHANGED'
-      | 'UNSUPPORTED_SNAPSHOT_GROUP',
+    public readonly code: 'TARGET_NOT_FOUND' | 'TARGET_CHANGED' | 'UNSUPPORTED_SNAPSHOT_GROUP',
     message: string,
   ) {
     super(message);
@@ -162,7 +163,9 @@ export class StepRecaptureError extends Error {
 }
 
 /** The fields an image edit writes in place. */
-export type StepImageEditChanges = Partial<Pick<Step, 'redactions' | 'imageEdits' | 'crop' | 'redactionReviewRequired' | 'manualBounds' | 'highlightRemoved'>>;
+export type StepImageEditChanges = Partial<
+  Pick<Step, 'redactions' | 'imageEdits' | 'crop' | 'redactionReviewRequired' | 'manualBounds' | 'highlightRemoved'>
+>;
 
 export interface StepUpdate {
   id: string;
@@ -239,16 +242,22 @@ function withoutBoxEdits({ manualBounds: _manualBounds, highlightRemoved: _highl
 /** Whether a recaptured image must have its masks re-checked: the old masks
  * were placed over the old pixels, so the new picture may show what they hid. */
 function hadPrivacyMasks(step: Step): boolean {
-  return step.redactionReviewRequired === true
-    || (Array.isArray(step.redactions) ? step.redactions.length > 0 : step.redactions !== undefined);
+  return (
+    step.redactionReviewRequired === true ||
+    (Array.isArray(step.redactions) ? step.redactions.length > 0 : step.redactions !== undefined)
+  );
 }
 
 function replaceInEntry(entry: StepEntry, step: Step): StepEntry {
-  if (entry.kind === 'single') return { kind: 'single', step: { ...step, screenshotBlob: entry.step.screenshotBlob } as ScreenshotStep };
+  if (entry.kind === 'single')
+    return { kind: 'single', step: { ...step, screenshotBlob: entry.step.screenshotBlob } as ScreenshotStep };
   if (entry.anchor.id === step.id) {
     return { ...entry, anchor: { ...step, screenshotBlob: entry.anchor.screenshotBlob } as ScreenshotStep };
   }
-  return { ...entry, annotations: entry.annotations.map((annotation) => (annotation.id === step.id ? step : annotation)) };
+  return {
+    ...entry,
+    annotations: entry.annotations.map((annotation) => (annotation.id === step.id ? step : annotation)),
+  };
 }
 
 /** Reads a step and the entry holding it inside a write. */
@@ -278,11 +287,7 @@ export async function updateStepsAtomically(sessionId: string, updates: StepUpda
         update.expectedCaptureRevision !== undefined &&
         (existing.captureRevision ?? 0) !== update.expectedCaptureRevision
       ) {
-        throw new StepUpdateConflictError(
-          update.id,
-          update.expectedCaptureRevision,
-          existing.captureRevision ?? 0,
-        );
+        throw new StepUpdateConflictError(update.id, update.expectedCaptureRevision, existing.captureRevision ?? 0);
       }
       if (
         update.expectedImageEditRevision !== undefined &&
@@ -294,12 +299,15 @@ export async function updateStepsAtomically(sessionId: string, updates: StepUpda
           existing.imageEditRevision ?? 0,
         );
       }
-      await putEntryInPlace(tx, member.record, replaceInEntry(member.entry, applyStepChanges(existing, update.changes)));
+      await putEntryInPlace(
+        tx,
+        member.record,
+        replaceInEntry(member.entry, applyStepChanges(existing, update.changes)),
+      );
     }
     await recordStepEdit(tx, project);
   });
 }
-
 
 export async function replaceStepCaptureAtomically(
   sessionId: string,
@@ -336,7 +344,9 @@ export async function replaceStepCaptureAtomically(
       return { entryId: step.id, captureRevision };
     }
 
-    const index = previous.findIndex((entry) => entryHolds(entry, target.anchorId) || entryHolds(entry, target.annotationId));
+    const index = previous.findIndex(
+      (entry) => entryHolds(entry, target.anchorId) || entryHolds(entry, target.annotationId),
+    );
     const entry = previous[index];
     if (!entry || !entryHolds(entry, target.annotationId)) {
       throw new StepRecaptureError('TARGET_NOT_FOUND', 'The snapshot no longer exists.');
@@ -428,7 +438,9 @@ export async function deleteStep(id: string): Promise<void> {
         next = previous.with(index, { ...entry, annotations });
       } else {
         next = previous.toSpliced(index, 1);
-        await tx.objectStore('pendingAnchors').put({ id: entry.anchor.id, projectId: record.projectId, step: entry.anchor });
+        await tx
+          .objectStore('pendingAnchors')
+          .put({ id: entry.anchor.id, projectId: record.projectId, step: entry.anchor });
       }
     }
     await commitEntries(tx, project, previous, next);
@@ -459,19 +471,25 @@ export async function deleteStepsForRun(sessionId: string, runId: string): Promi
  * except `keep` (the one a live recording is annotating). Only a recording
  * that ended without finishing (the browser closed mid-snapshot) leaves one. */
 export async function discardPendingAnchors(keep: string | null): Promise<number> {
-  return runProjectWrite(async (tx) => {
-    const ids = (await tx.objectStore('pendingAnchors').getAllKeys()).filter((id) => id !== keep);
-    for (const id of ids) await tx.objectStore('pendingAnchors').delete(id);
-    return ids.length;
-  }, { notify: false });
+  return runProjectWrite(
+    async (tx) => {
+      const ids = (await tx.objectStore('pendingAnchors').getAllKeys()).filter((id) => id !== keep);
+      for (const id of ids) await tx.objectStore('pendingAnchors').delete(id);
+      return ids.length;
+    },
+    { notify: false },
+  );
 }
 
 /** Discards a snapshot base image that never got an annotation. One that did
  * is an entry of its Project by now and is left alone. */
 export async function discardPendingAnchor(id: string): Promise<boolean> {
-  return runProjectWrite(async (tx) => {
-    if (!await tx.objectStore('pendingAnchors').get(id)) return false;
-    await tx.objectStore('pendingAnchors').delete(id);
-    return true;
-  }, { notify: false });
+  return runProjectWrite(
+    async (tx) => {
+      if (!(await tx.objectStore('pendingAnchors').get(id))) return false;
+      await tx.objectStore('pendingAnchors').delete(id);
+      return true;
+    },
+    { notify: false },
+  );
 }

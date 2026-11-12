@@ -1,14 +1,39 @@
 import 'fake-indexeddb/auto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import { addStepsAfter, deleteStep, deleteStepsForRun, getSteps, replaceStepCaptureAtomically, saveStepDescription, StepNotFoundError, updateStepsAtomically } from '@/lib/storage/step-repository';
-import { buildStepEntries, getEffectiveBounds, getOrderedAnnotations, STEP_STORAGE_LIMITS, StepStorageValidationError, type Step } from '@/lib/storage/models';
+import {
+  addStepsAfter,
+  deleteStep,
+  deleteStepsForRun,
+  getSteps,
+  replaceStepCaptureAtomically,
+  saveStepDescription,
+  StepNotFoundError,
+  updateStepsAtomically,
+} from '@/lib/storage/step-repository';
+import {
+  buildStepEntries,
+  getEffectiveBounds,
+  getOrderedAnnotations,
+  STEP_STORAGE_LIMITS,
+  StepStorageValidationError,
+  type Step,
+} from '@/lib/storage/models';
 import { closeDatabase, ProjectNotFoundError } from '@/lib/storage/database';
 import { summarizeEntries } from '@/lib/storage/entry-store';
 import { getProjectStructureSnapshot } from '@/lib/storage/project-structure';
 import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
 import { jpegBlob, pngBlob } from '../setup/raster-fixtures';
 import { seedSteps } from '../setup/step-fixtures';
-import { createProject, createProjectFromSteps, deleteProjectPermanently, duplicateProject, ensureProject, getProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
+import {
+  createProject,
+  createProjectFromSteps,
+  deleteProjectPermanently,
+  duplicateProject,
+  ensureProject,
+  getProject,
+  getProjectSummaries,
+  updateProject,
+} from '@/lib/storage/project-repository';
 import { itemAt } from '../setup/item-at';
 
 function makeStep(overrides: Partial<Step> = {}): Step {
@@ -130,11 +155,13 @@ describe('step storage boundaries', () => {
     const step = makeStep({
       bounds: { x: STEP_STORAGE_LIMITS.maxCoordinateMagnitude, y: 0, width: 2, height: 2 },
       manualBounds: { x: 0, y: 0, width: STEP_STORAGE_LIMITS.maxBoundsDimension + 1, height: 2 },
-      redactions: [{
-        id: 'mask',
-        kind: 'solid',
-        bounds: { x: 0, y: 0, width: 2, height: STEP_STORAGE_LIMITS.maxBoundsDimension + 1 },
-      }],
+      redactions: [
+        {
+          id: 'mask',
+          kind: 'solid',
+          bounds: { x: 0, y: 0, width: 2, height: STEP_STORAGE_LIMITS.maxBoundsDimension + 1 },
+        },
+      ],
     });
     await addStep(step);
 
@@ -148,40 +175,54 @@ describe('step storage boundaries', () => {
   });
 
   it('rejects descriptions that cannot be represented in project backups', async () => {
-    await expect(captureStep(makeStep({
-      description: 'x'.repeat(STEP_STORAGE_LIMITS.maxStepDescriptionLength + 1),
-    }))).rejects.toBeInstanceOf(StepStorageValidationError);
+    await expect(
+      captureStep(
+        makeStep({
+          description: 'x'.repeat(STEP_STORAGE_LIMITS.maxStepDescriptionLength + 1),
+        }),
+      ),
+    ).rejects.toBeInstanceOf(StepStorageValidationError);
   });
 
   it('holds an annotation description to the shorter annotation limit', async () => {
     const description = 'x'.repeat(STEP_STORAGE_LIMITS.maxAnnotationDescriptionLength + 1);
-    await expect(captureStep(makeStep({ groupId: 'anchor-1', screenshotBlob: undefined, description })))
-      .rejects.toBeInstanceOf(StepStorageValidationError);
+    await expect(
+      captureStep(makeStep({ groupId: 'anchor-1', screenshotBlob: undefined, description })),
+    ).rejects.toBeInstanceOf(StepStorageValidationError);
     await expect(captureStep(makeStep({ description }))).resolves.toBeUndefined();
   });
 
-  it.each(['javascript:alert(1)', 'https://user:secret@example.com/private', 'x'.repeat(STEP_STORAGE_LIMITS.maxUrlLength + 1)])(
-    'rejects unsafe or oversized persisted URLs',
-    async (url) => {
-      await expect(captureStep(makeStep({ url }))).rejects.toBeInstanceOf(StepStorageValidationError);
-    },
-  );
+  it.each([
+    'javascript:alert(1)',
+    'https://user:secret@example.com/private',
+    'x'.repeat(STEP_STORAGE_LIMITS.maxUrlLength + 1),
+  ])('rejects unsafe or oversized persisted URLs', async (url) => {
+    await expect(captureStep(makeStep({ url }))).rejects.toBeInstanceOf(StepStorageValidationError);
+  });
 
   it('rejects a screenshot above the per-image storage budget', async () => {
-    await expect(captureStep(makeStep({
-      screenshotBlob: pngBlob(2, 2, STEP_STORAGE_LIMITS.maxScreenshotBytes + 1 - 24),
-    }))).rejects.toBeInstanceOf(StepStorageValidationError);
+    await expect(
+      captureStep(
+        makeStep({
+          screenshotBlob: pngBlob(2, 2, STEP_STORAGE_LIMITS.maxScreenshotBytes + 1 - 24),
+        }),
+      ),
+    ).rejects.toBeInstanceOf(StepStorageValidationError);
   });
 
   it('rejects excessive redactions and privacy-gates duplicate identifiers', async () => {
     const bounds = { x: 1, y: 1, width: 2, height: 2 };
-    await expect(captureStep(makeStep({
-      redactions: Array.from({ length: STEP_STORAGE_LIMITS.maxRedactionsPerStep + 1 }, (_, index) => ({
-        id: `mask-${index}`,
-        kind: 'solid' as const,
-        bounds,
-      })),
-    }))).rejects.toBeInstanceOf(StepStorageValidationError);
+    await expect(
+      captureStep(
+        makeStep({
+          redactions: Array.from({ length: STEP_STORAGE_LIMITS.maxRedactionsPerStep + 1 }, (_, index) => ({
+            id: `mask-${index}`,
+            kind: 'solid' as const,
+            bounds,
+          })),
+        }),
+      ),
+    ).rejects.toBeInstanceOf(StepStorageValidationError);
 
     const duplicate = makeStep({
       redactions: [
@@ -199,29 +240,38 @@ describe('step storage boundaries', () => {
   it('rejects projects above the durable step and aggregate screenshot budgets', async () => {
     const sessionId = crypto.randomUUID();
     const tinyBlob = pngBlob();
-    const tooMany = Array.from({ length: STEP_STORAGE_LIMITS.maxStepsPerProject + 1 }, (_, order) => makeStep({
-      id: `step-${order}`,
-      sessionId,
-      order,
-      screenshotBlob: tinyBlob,
-    }));
+    const tooMany = Array.from({ length: STEP_STORAGE_LIMITS.maxStepsPerProject + 1 }, (_, order) =>
+      makeStep({
+        id: `step-${order}`,
+        sessionId,
+        order,
+        screenshotBlob: tinyBlob,
+      }),
+    );
     await expect(createProjectFromSteps(tooMany)).rejects.toBeInstanceOf(StepStorageValidationError);
 
     const largeBlob = pngBlob(2, 2, STEP_STORAGE_LIMITS.maxScreenshotBytes - 24);
-    const tooLarge = Array.from({ length: 5 }, (_, order) => makeStep({
-      id: `large-${order}`,
-      sessionId: crypto.randomUUID(),
-      order,
-      screenshotBlob: largeBlob,
-    }));
+    const tooLarge = Array.from({ length: 5 }, (_, order) =>
+      makeStep({
+        id: `large-${order}`,
+        sessionId: crypto.randomUUID(),
+        order,
+        screenshotBlob: largeBlob,
+      }),
+    );
     await expect(createProjectFromSteps(tooLarge)).rejects.toBeInstanceOf(StepStorageValidationError);
   });
 
   it('rejects oversized mutation vectors before opening a transaction', async () => {
-    await expect(updateStepsAtomically(
-      'missing-project',
-      Array.from({ length: STEP_STORAGE_LIMITS.maxMutationItems + 1 }, (_, index) => ({ id: `step-${index}`, changes: {} })),
-    )).rejects.toBeInstanceOf(StepStorageValidationError);
+    await expect(
+      updateStepsAtomically(
+        'missing-project',
+        Array.from({ length: STEP_STORAGE_LIMITS.maxMutationItems + 1 }, (_, index) => ({
+          id: `step-${index}`,
+          changes: {},
+        })),
+      ),
+    ).rejects.toBeInstanceOf(StepStorageValidationError);
   });
 });
 
@@ -239,15 +289,21 @@ describe('step persistence', () => {
     };
     const groupId = `${sessionId}-snap`;
 
-    await addStepsAfter([
-      makeStep({ id: `${sessionId}-a`, sessionId, runId: 'run-1' }),
-      makeStep({ id: `${sessionId}-b`, sessionId, runId: 'run-1', screenshotBlob: pngBlob() }),
-    ], null);
+    await addStepsAfter(
+      [
+        makeStep({ id: `${sessionId}-a`, sessionId, runId: 'run-1' }),
+        makeStep({ id: `${sessionId}-b`, sessionId, runId: 'run-1', screenshotBlob: pngBlob() }),
+      ],
+      null,
+    );
     await recount();
-    await addStepsAfter([
-      makeStep({ id: groupId, sessionId, runId: 'run-2', groupId, bounds: null }),
-      makeStep({ id: `${sessionId}-mark`, sessionId, runId: 'run-2', groupId, screenshotBlob: undefined }),
-    ], `${sessionId}-a`);
+    await addStepsAfter(
+      [
+        makeStep({ id: groupId, sessionId, runId: 'run-2', groupId, bounds: null }),
+        makeStep({ id: `${sessionId}-mark`, sessionId, runId: 'run-2', groupId, screenshotBlob: undefined }),
+      ],
+      `${sessionId}-a`,
+    );
     await recount();
     await replaceStepCaptureAtomically(
       sessionId,
@@ -315,10 +371,7 @@ describe('step persistence', () => {
     const sessionId = crypto.randomUUID();
     await ensureProject(sessionId);
     // Gapped order, as an older build could leave it.
-    await seedSteps([
-      makeStep({ id: 'gap-0', sessionId, order: 0 }),
-      makeStep({ id: 'gap-1', sessionId, order: 4 }),
-    ]);
+    await seedSteps([makeStep({ id: 'gap-0', sessionId, order: 0 }), makeStep({ id: 'gap-1', sessionId, order: 4 })]);
 
     await addStepsAfter([makeStep({ id: 'gap-a', sessionId, runId: 'run-1', order: 0 })], null);
     await addStepsAfter([makeStep({ id: 'gap-b', sessionId, runId: 'run-1', order: 0 })], null);
@@ -375,7 +428,10 @@ describe('step persistence', () => {
       updateStepsAtomically(step.sessionId, [{ id: step.id, changes: { crop: { x: 0, y: 0, width: 1, height: 1 } } }]),
     ]);
 
-    expect((await getSteps(step.sessionId))[0]).toMatchObject({ description: 'updated', crop: { x: 0, y: 0, width: 1, height: 1 } });
+    expect((await getSteps(step.sessionId))[0]).toMatchObject({
+      description: 'updated',
+      crop: { x: 0, y: 0, width: 1, height: 1 },
+    });
   });
 
   it('discards only the selected recording run and closes remaining order gaps', async () => {
@@ -411,8 +467,7 @@ describe('step persistence', () => {
   it('reports a missing row with a typed error instead of a silent no-op', async () => {
     // An autosave that treats a resolved update as committed would otherwise
     // clear its local draft even though nothing was written.
-    await expect(saveStepDescription(crypto.randomUUID(), '孤兒寫入'))
-      .rejects.toBeInstanceOf(StepNotFoundError);
+    await expect(saveStepDescription(crypto.randomUUID(), '孤兒寫入')).rejects.toBeInstanceOf(StepNotFoundError);
   });
 
   it('sanitizes malformed manual bounds and redaction records before storage', async () => {
@@ -427,16 +482,14 @@ describe('step persistence', () => {
 
     await addStep(step);
 
-    const stored = itemAt((await getSteps(step.sessionId)), 0);
+    const stored = itemAt(await getSteps(step.sessionId), 0);
     expect(stored).not.toHaveProperty('manualBounds');
     expect(stored.redactions).toEqual([
       { id: 'valid-mask', kind: 'solid', bounds: { x: 3, y: 4, width: 5, height: 6 } },
     ]);
     expect(stored.redactionReviewRequired).toBe(true);
   });
-
 });
-
 
 describe('atomic visual edits and recapture', () => {
   it('stores redactions only on the screenshot owner and preserves concurrent metadata', async () => {
@@ -449,8 +502,14 @@ describe('atomic visual edits and recapture', () => {
     await Promise.all([
       saveStepDescription(annotation.id, 'new description'),
       updateStepsAtomically(sessionId, [
-        { id: annotation.id, changes: { redactions: [{ id: 'wrong-owner', kind: 'solid', bounds: { x: 1, y: 1, width: 2, height: 2 } }] } },
-        { id: anchor.id, changes: { redactions: [{ id: 'mask', kind: 'solid', bounds: { x: 8, y: 9, width: 10, height: 11 } }] } },
+        {
+          id: annotation.id,
+          changes: { redactions: [{ id: 'wrong-owner', kind: 'solid', bounds: { x: 1, y: 1, width: 2, height: 2 } }] },
+        },
+        {
+          id: anchor.id,
+          changes: { redactions: [{ id: 'mask', kind: 'solid', bounds: { x: 8, y: 9, width: 10, height: 11 } }] },
+        },
       ]),
     ]);
 
@@ -461,20 +520,32 @@ describe('atomic visual edits and recapture', () => {
   });
 
   it('recaptures an ordinary step without changing its identity, order, description or provenance', async () => {
-    const step = makeStep({ order: 7, description: 'keep', runId: 'original-run', manualBounds: { x: 9, y: 9, width: 9, height: 9 }, highlightRemoved: true, redactions: [{ id: 'old-mask', kind: 'solid', bounds: { x: 1, y: 1, width: 2, height: 2 } }] });
+    const step = makeStep({
+      order: 7,
+      description: 'keep',
+      runId: 'original-run',
+      manualBounds: { x: 9, y: 9, width: 9, height: 9 },
+      highlightRemoved: true,
+      redactions: [{ id: 'old-mask', kind: 'solid', bounds: { x: 1, y: 1, width: 2, height: 2 } }],
+    });
     await addStep(step);
     const screenshotBlob = jpegBlob(4, 4);
 
-    await replaceStepCaptureAtomically(step.sessionId, { kind: 'single', stepId: step.id }, {
-      screenshotBlob,
-      bounds: { x: 20, y: 30, width: 40, height: 50 },
-      devicePixelRatio: 2,
-      screenshotScale: 1.5,
-      url: 'https://example.com/recaptured',
-      timestamp: 123,
-    }, 'recapture-run');
+    await replaceStepCaptureAtomically(
+      step.sessionId,
+      { kind: 'single', stepId: step.id },
+      {
+        screenshotBlob,
+        bounds: { x: 20, y: 30, width: 40, height: 50 },
+        devicePixelRatio: 2,
+        screenshotScale: 1.5,
+        url: 'https://example.com/recaptured',
+        timestamp: 123,
+      },
+      'recapture-run',
+    );
 
-    const stored = itemAt((await getSteps(step.sessionId)), 0);
+    const stored = itemAt(await getSteps(step.sessionId), 0);
     expect(stored).toMatchObject({
       id: step.id,
       sessionId: step.sessionId,
@@ -488,9 +559,10 @@ describe('atomic visual edits and recapture', () => {
     });
     expect(stored).not.toHaveProperty('manualBounds');
     expect(stored).not.toHaveProperty('highlightRemoved');
-    expect(new Uint8Array(await stored.screenshotBlob!.arrayBuffer())).toEqual(new Uint8Array(await screenshotBlob.arrayBuffer()));
+    expect(new Uint8Array(await stored.screenshotBlob!.arrayBuffer())).toEqual(
+      new Uint8Array(await screenshotBlob.arrayBuffer()),
+    );
   });
-
 
   it('rejects a stale capture-revision update after ordinary recapture and keeps the masks cleared pending review', async () => {
     const step = makeStep({
@@ -522,7 +594,7 @@ describe('atomic visual edits and recapture', () => {
       ]),
     ).rejects.toMatchObject({ name: 'StepUpdateConflictError' });
 
-    const stored = itemAt((await getSteps(step.sessionId)), 0);
+    const stored = itemAt(await getSteps(step.sessionId), 0);
     expect(stored.captureRevision).toBe(1);
     expect(stored).not.toHaveProperty('manualBounds');
     expect(stored.crop).toBeUndefined();
@@ -587,20 +659,26 @@ describe('atomic visual edits and recapture', () => {
     const second = makeStep({ sessionId, groupId: anchorId, screenshotBlob: undefined, order: 2 });
     await Promise.all([anchor, first, second].map(addStep));
 
-    await expect(replaceStepCaptureAtomically(sessionId, { kind: 'snapshot-singleton', anchorId, annotationId: first.id }, {
-      screenshotBlob: jpegBlob(4, 4),
-      bounds: { x: 10, y: 10, width: 10, height: 10 },
-      devicePixelRatio: 1,
-      screenshotScale: 1,
-      url: anchor.url,
-      timestamp: 999,
-    }, 'recapture-run')).rejects.toMatchObject({ code: 'UNSUPPORTED_SNAPSHOT_GROUP' });
+    await expect(
+      replaceStepCaptureAtomically(
+        sessionId,
+        { kind: 'snapshot-singleton', anchorId, annotationId: first.id },
+        {
+          screenshotBlob: jpegBlob(4, 4),
+          bounds: { x: 10, y: 10, width: 10, height: 10 },
+          devicePixelRatio: 1,
+          screenshotScale: 1,
+          url: anchor.url,
+          timestamp: 999,
+        },
+        'recapture-run',
+      ),
+    ).rejects.toMatchObject({ code: 'UNSUPPORTED_SNAPSHOT_GROUP' });
 
     const kept = (await getSteps(sessionId)).find((step) => step.id === anchorId)!.screenshotBlob!;
     expect(new Uint8Array(await kept.arrayBuffer())).toEqual(new Uint8Array(await jpegBlob().arrayBuffer()));
   });
 });
-
 
 describe('project transaction safety', () => {
   it('allows capture writes to an existing project', async () => {
@@ -627,7 +705,9 @@ describe('project transaction safety', () => {
     const groupId = crypto.randomUUID();
     await ensureProject(sessionId);
     await seedSteps([makeStep({ sessionId, order: 0, screenshotBlob: pngBlob(2, 2, 5) })]);
-    await seedSteps([makeStep({ id: groupId, sessionId, groupId, bounds: null, order: 1, screenshotBlob: pngBlob(2, 2, 6) })]);
+    await seedSteps([
+      makeStep({ id: groupId, sessionId, groupId, bounds: null, order: 1, screenshotBlob: pngBlob(2, 2, 6) }),
+    ]);
     await seedSteps([makeStep({ sessionId, groupId, order: 2, screenshotBlob: undefined })]);
 
     const nativeGetAll = IDBIndex.prototype.getAll;
@@ -653,7 +733,8 @@ describe('project transaction safety', () => {
     const destinationId = crypto.randomUUID();
     const duplicateStepId = crypto.randomUUID();
     const source = [makeStep({ id: 'source-a', order: 0 }), makeStep({ id: 'source-b', order: 1 })];
-    const uuidSpy = vi.spyOn(crypto, 'randomUUID')
+    const uuidSpy = vi
+      .spyOn(crypto, 'randomUUID')
       .mockReturnValueOnce(destinationId)
       .mockReturnValueOnce(duplicateStepId)
       .mockReturnValueOnce(duplicateStepId);
@@ -671,7 +752,8 @@ describe('project transaction safety', () => {
     await ensureProject(sourceStep.sessionId);
     await seedSteps([sourceStep]);
     const destinationId = crypto.randomUUID();
-    const uuidSpy = vi.spyOn(crypto, 'randomUUID')
+    const uuidSpy = vi
+      .spyOn(crypto, 'randomUUID')
       .mockReturnValueOnce(destinationId)
       .mockReturnValueOnce(sourceStep.id as ReturnType<Crypto['randomUUID']>);
     try {
@@ -688,7 +770,7 @@ describe('stored text and screenshots match the archive rules', () => {
   it('stores C1 controls the way export accepts, and returns the stored description', async () => {
     const step = makeStep({ description: 'a\u0085b\u0007c\vd' });
     await addStep(step);
-    expect(itemAt((await getSteps(step.sessionId)), 0).description).toBe('abcd');
+    expect(itemAt(await getSteps(step.sessionId), 0).description).toBe('abcd');
 
     await expect(saveStepDescription(step.id, 'x\u009fy\fz')).resolves.toBe('xyz');
     // The returned value is the CAS baseline: saving against it succeeds.
@@ -697,9 +779,11 @@ describe('stored text and screenshots match the archive rules', () => {
     await updateProject(step.sessionId, { title: '標題\u0085', description: '說明\u0080' });
     const project = (await getProject(step.sessionId))!;
     expect(project).toMatchObject({ title: '標題', description: '說明' });
-    await expect(exportProjectArchive(await getSteps(step.sessionId), {
-      metadata: { title: project.title, description: project.description },
-    })).resolves.toEqual(expect.any(Blob));
+    await expect(
+      exportProjectArchive(await getSteps(step.sessionId), {
+        metadata: { title: project.title, description: project.description },
+      }),
+    ).resolves.toEqual(expect.any(Blob));
   });
 
   it.each([
@@ -711,10 +795,11 @@ describe('stored text and screenshots match the archive rules', () => {
     const step = makeStep({ screenshotBlob });
     await ensureProject(step.sessionId);
     await expect(addStepsAfter([step], null)).rejects.toBeInstanceOf(StepStorageValidationError);
-    await expect(createProjectFromSteps([makeStep({ screenshotBlob })])).rejects.toBeInstanceOf(StepStorageValidationError);
+    await expect(createProjectFromSteps([makeStep({ screenshotBlob })])).rejects.toBeInstanceOf(
+      StepStorageValidationError,
+    );
     expect(await getSteps(step.sessionId)).toEqual([]);
   });
-
 });
 
 describe('project metadata', () => {

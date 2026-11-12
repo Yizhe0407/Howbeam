@@ -5,7 +5,7 @@ const LOCALE_PREFERENCE_KEY = 'howbeam:localePreference';
 
 function normalizePreference(value: unknown): LocalePreference {
   return value === 'auto' || (SUPPORTED_LOCALES as readonly unknown[]).includes(value)
-    ? value as LocalePreference
+    ? (value as LocalePreference)
     : 'auto';
 }
 

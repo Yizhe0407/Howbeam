@@ -105,9 +105,7 @@ export interface EditorHandoffMessage {
   entryId?: string;
 }
 
-export type EditorHandoffResult =
-  | { ok: true; ready: boolean }
-  | { ok: false; error: CopyKey };
+export type EditorHandoffResult = { ok: true; ready: boolean } | { ok: false; error: CopyKey };
 
 export type OpenEditorResult = { ok: true } | { ok: false; error: CopyKey };
 
@@ -220,9 +218,7 @@ export interface StepFrameRelayBeginMessage {
   interactive: boolean;
 }
 
-export type StepFrameRelayBeginResult =
-  | { ok: true; relayToken: string }
-  | { ok: false };
+export type StepFrameRelayBeginResult = { ok: true; relayToken: string } | { ok: false };
 
 /** The top-frame content script consumes the page-visible token exactly once. */
 export interface StepFrameRelayClaimMessage {
@@ -309,8 +305,7 @@ export const RECAPTURE_PREFLIGHT_ERROR_CODES = [
   'RESTRICTED_SOURCE',
 ] as const;
 
-export type PreflightStepRecaptureSourcePermissionErrorCode =
-  (typeof RECAPTURE_PREFLIGHT_ERROR_CODES)[number];
+export type PreflightStepRecaptureSourcePermissionErrorCode = (typeof RECAPTURE_PREFLIGHT_ERROR_CODES)[number];
 
 export type PreflightStepRecaptureSourcePermissionResult =
   | SourcePermissionPreflightSuccess
@@ -323,14 +318,9 @@ export interface PreflightProjectContinuationSourcePermissionMessage {
   afterEntryId?: string;
 }
 
-export const CONTINUATION_PREFLIGHT_ERROR_CODES = [
-  'INVALID_EDITOR',
-  'SOURCE_NOT_FOUND',
-  'RESTRICTED_SOURCE',
-] as const;
+export const CONTINUATION_PREFLIGHT_ERROR_CODES = ['INVALID_EDITOR', 'SOURCE_NOT_FOUND', 'RESTRICTED_SOURCE'] as const;
 
-export type PreflightProjectContinuationSourcePermissionErrorCode =
-  (typeof CONTINUATION_PREFLIGHT_ERROR_CODES)[number];
+export type PreflightProjectContinuationSourcePermissionErrorCode = (typeof CONTINUATION_PREFLIGHT_ERROR_CODES)[number];
 
 export type PreflightProjectContinuationSourcePermissionResult =
   | SourcePermissionPreflightSuccess
@@ -400,9 +390,7 @@ export interface FocusStepRecaptureSourceMessage {
   runId: string;
 }
 
-export type FocusStepRecaptureSourceResult =
-  | { ok: true }
-  | { ok: false; error: CopyKey };
+export type FocusStepRecaptureSourceResult = { ok: true } | { ok: false; error: CopyKey };
 
 type RecordingControlContracts = {
   [K in RecordingControlMessage['type']]: {

@@ -87,7 +87,9 @@ describe('popup start always records into a fresh project', () => {
     expect(mocks.sendMessage).toHaveBeenCalledWith({ type: 'START_RECORDING', target: { kind: 'new' }, mode: 'steps' });
     // The background creates the Project with the first capture; the popup creates and selects nothing.
     expect(mocks.createProject).not.toHaveBeenCalled();
-    expect(mocks.storageSet).not.toHaveBeenCalledWith(expect.objectContaining({ [ACTIVE_PROJECT_ID_KEY]: expect.anything() }));
+    expect(mocks.storageSet).not.toHaveBeenCalledWith(
+      expect.objectContaining({ [ACTIVE_PROJECT_ID_KEY]: expect.anything() }),
+    );
   });
 
   it('shows why the start was refused, with nothing to roll back', async () => {
@@ -169,7 +171,9 @@ describe('popup record target picker', () => {
     expect((await screen.findByRole('combobox', { name: '錄到哪裡' })).textContent).toContain('新專案');
     fireEvent.click(screen.getByRole('button', { name: '開始錄製' }));
 
-    await waitFor(() => expect(mocks.sendMessage).toHaveBeenCalledWith(expect.objectContaining({ target: { kind: 'new' } })));
+    await waitFor(() =>
+      expect(mocks.sendMessage).toHaveBeenCalledWith(expect.objectContaining({ target: { kind: 'new' } })),
+    );
   });
 
   it('appends to the chosen project without creating one', async () => {

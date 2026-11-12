@@ -4,16 +4,10 @@ import { resolveSnapshotTargetAtPoint } from './snapshot-targeting';
 import { installRecorderLifecycle } from './recorder-lifecycle';
 import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from '../capture/overlay-layers';
 import { createStepPreview } from '../capture/step-preview';
-import {
-  isInScrollbarGutter,
-  isPointInAnyScrollGutter,
-} from './recording-guards';
+import { isInScrollbarGutter, isPointInAnyScrollGutter } from './recording-guards';
 import { getRecordingState, onRecordingStateChange } from '../storage/storage';
 import { createLatestAsyncRequestRunner } from '../capture/frame-probe';
-import type {
-  HowbeamRecaptureTargetMessage,
-  HowbeamStopMessage,
-} from '../runtime/messages';
+import type { HowbeamRecaptureTargetMessage, HowbeamStopMessage } from '../runtime/messages';
 import type { StepRecaptureContext } from '../storage/recording-state';
 import { STEP_FOLLOWUP_EVENTS } from './content-script-constants';
 import { t } from '@/lib/shared/i18n';
@@ -247,11 +241,14 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
 
   let ready = false;
   try {
-    ready = await sendToBackground({
-      type: 'HOWBEAM_RECAPTURE_READY',
-      runId,
-      url: location.href,
-    }, t().runtime.recaptureResponseInvalid);
+    ready = await sendToBackground(
+      {
+        type: 'HOWBEAM_RECAPTURE_READY',
+        runId,
+        url: location.href,
+      },
+      t().runtime.recaptureResponseInvalid,
+    );
   } catch (error) {
     console.error('[howbeam] recapture readiness check failed', error);
   }
@@ -263,7 +260,10 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
   // Storage subscription is authoritative; this read closes the tiny gap when
   // the change event fired before the listener was installed.
   const latest = await getRecordingState();
-  active = latest.operation === 'recapture' && latest.recapture?.runId === runId && latest.recapture.phase === 'awaiting-target';
+  active =
+    latest.operation === 'recapture' &&
+    latest.recapture?.runId === runId &&
+    latest.recapture.phase === 'awaiting-target';
   if (latest.operation === 'recapture' && latest.recapture?.runId === runId) {
     lastObservedPhase = latest.recapture.phase;
   }

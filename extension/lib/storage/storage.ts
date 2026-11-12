@@ -154,7 +154,7 @@ function normalizeRecaptureResult(value: unknown): StepRecaptureResult | null {
 }
 
 export function normalizeRecordingState(stored: Partial<RecordingState> | undefined): RecordingState {
-  const raw = stored && typeof stored === 'object' ? stored as Record<string, unknown> : {};
+  const raw = stored && typeof stored === 'object' ? (stored as Record<string, unknown>) : {};
   const mode = raw.mode === 'steps' || raw.mode === 'snapshot' ? raw.mode : DEFAULT_STATE.mode;
   const requestedRecording = raw.operation === 'recording';
   const requestedRecapture = raw.operation === 'recapture';
@@ -164,7 +164,8 @@ export function normalizeRecordingState(stored: Partial<RecordingState> | undefi
   const runId = normalizeNullableString(raw.runId, MAX_STATE_ID_LENGTH);
   const hasValidItemCount =
     raw.itemCount == null ||
-    (Number.isSafeInteger(raw.itemCount) && (raw.itemCount as number) >= 0 &&
+    (Number.isSafeInteger(raw.itemCount) &&
+      (raw.itemCount as number) >= 0 &&
       (raw.itemCount as number) <= PERSISTED_STEP_LIMITS.maxStepsPerProject);
   const hasCompleteRecordingIdentity =
     raw.isRecording === true && sessionId !== null && tabId !== null && runId !== null && hasValidItemCount;
@@ -177,7 +178,7 @@ export function normalizeRecordingState(stored: Partial<RecordingState> | undefi
       : null;
   const isRecording = operation === 'recording' && raw.isRecording === true;
   const candidatePhase = VALID_RECORDING_PHASES.has(raw.phase)
-    ? raw.phase as RecordingState['phase']
+    ? (raw.phase as RecordingState['phase'])
     : isRecording
       ? 'recording'
       : 'idle';
@@ -204,13 +205,13 @@ export function normalizeRecordingState(stored: Partial<RecordingState> | undefi
       Number.isSafeInteger(raw.itemCount) &&
       (raw.itemCount as number) >= 0 &&
       (raw.itemCount as number) <= PERSISTED_STEP_LIMITS.maxStepsPerProject
-        ? raw.itemCount as number
+        ? (raw.itemCount as number)
         : 0,
     runItemCount:
       Number.isSafeInteger(raw.runItemCount) &&
       (raw.runItemCount as number) >= 0 &&
       (raw.runItemCount as number) <= PERSISTED_STEP_LIMITS.maxStepsPerProject
-        ? raw.runItemCount as number
+        ? (raw.runItemCount as number)
         : 0,
     lastCommittedCaptureId:
       operation === 'recording' ? normalizeNullableString(raw.lastCommittedCaptureId, MAX_STATE_ID_LENGTH) : null,
@@ -247,7 +248,10 @@ let activeProjectMutation: Promise<void> = Promise.resolve();
 
 function queueActiveProjectMutation<T>(mutation: () => Promise<T>): Promise<T> {
   const result = activeProjectMutation.then(mutation, mutation);
-  activeProjectMutation = result.then(() => undefined, () => undefined);
+  activeProjectMutation = result.then(
+    () => undefined,
+    () => undefined,
+  );
   return result;
 }
 

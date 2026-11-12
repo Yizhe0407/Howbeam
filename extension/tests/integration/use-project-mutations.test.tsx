@@ -40,7 +40,10 @@ import { itemAt } from '../setup/item-at';
 const singleEntry = (id: string) => ({ kind: 'single', step: { id } }) as never;
 const entries = [singleEntry('s1'), singleEntry('s2')];
 const reordered = [entries[1], entries[0]];
-const reorderedRows = [{ kind: 'entry', id: 's2' }, { kind: 'entry', id: 's1' }] as const;
+const reorderedRows = [
+  { kind: 'entry', id: 's2' },
+  { kind: 'entry', id: 's1' },
+] as const;
 const project = { id: 'g1', contentRevision: 1, sections: [] } as never;
 
 function renderMutations(overrides: Record<string, unknown> = {}) {
@@ -73,7 +76,12 @@ function renderMutations(overrides: Record<string, unknown> = {}) {
   return { result, options };
 }
 
-const committed = { project: { contentRevision: 2 }, entries: reordered, entryIds: ['s2', 's1'], previousEntryIds: ['s1', 's2'] };
+const committed = {
+  project: { contentRevision: 2 },
+  entries: reordered,
+  entryIds: ['s2', 's1'],
+  previousEntryIds: ['s1', 's2'],
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -220,8 +228,13 @@ describe('a pending undo when another mutation runs (single-level undo)', () => 
   });
 
   it('announces the earlier undo as final when the new mutation offers none', async () => {
-    const renameProjectSectionAtomically = (await import('@/lib/storage/project-structure')).renameProjectSectionAtomically as ReturnType<typeof vi.fn>;
-    renameProjectSectionAtomically.mockResolvedValue({ project: { contentRevision: 2 }, entries, entryIds: ['s1', 's2'] });
+    const renameProjectSectionAtomically = (await import('@/lib/storage/project-structure'))
+      .renameProjectSectionAtomically as ReturnType<typeof vi.fn>;
+    renameProjectSectionAtomically.mockResolvedValue({
+      project: { contentRevision: 2 },
+      entries,
+      entryIds: ['s1', 's2'],
+    });
     const { result, options } = renderMutations({ takeUndo: vi.fn(() => earlier) });
 
     await act(() => result.current.renameSection('section-1', '新名稱'));

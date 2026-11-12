@@ -19,12 +19,7 @@ export interface ProjectSectionHeadingProps {
 }
 
 /** A one-line section label; renaming and deleting live in its menu. The owner reports failures. */
-function ProjectSectionHeading({
-  section,
-  disabled = false,
-  onRename,
-  onDelete,
-}: ProjectSectionHeadingProps) {
+function ProjectSectionHeading({ section, disabled = false, onRename, onDelete }: ProjectSectionHeadingProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const deleteInFlight = useRef(false);
@@ -62,7 +57,7 @@ function ProjectSectionHeading({
             type="button"
             disabled={controlsDisabled}
             aria-label={t().editor.sections.actionsLabel}
-            className="relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-transparent text-muted-foreground outline-none transition-colors focus-ring hover:border-border hover:bg-card hover:text-foreground disabled:pointer-events-none disabled:opacity-40 data-[state=open]:border-border data-[state=open]:bg-card data-[state=open]:text-foreground"
+            className="relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-transparent text-muted-foreground focus-ring transition-colors outline-none hover:border-border hover:bg-card hover:text-foreground disabled:pointer-events-none disabled:opacity-40 data-[state=open]:border-border data-[state=open]:bg-card data-[state=open]:text-foreground"
           >
             <Ellipsis className="size-3.5" aria-hidden="true" />
           </button>
@@ -84,16 +79,18 @@ function ProjectSectionHeading({
               setMenuOpen(false);
               onRename(section.id);
             }}
-            className="flex h-8 items-center gap-2 rounded-sm px-2 text-[13px] text-foreground outline-none transition-colors focus-ring hover:bg-secondary"
+            className="flex h-8 items-center gap-2 rounded-sm px-2 text-[13px] text-foreground focus-ring transition-colors outline-none hover:bg-secondary"
           >
-            <Pencil className="size-3.5" aria-hidden="true" />{t().common.rename}
+            <Pencil className="size-3.5" aria-hidden="true" />
+            {t().common.rename}
           </button>
           <button
             type="button"
             onClick={() => void handleDelete()}
-            className="flex h-8 items-center gap-2 rounded-sm px-2 text-[13px] text-danger outline-none transition-colors focus-ring hover:bg-danger-soft"
+            className="flex h-8 items-center gap-2 rounded-sm px-2 text-[13px] text-danger focus-ring transition-colors outline-none hover:bg-danger-soft"
           >
-            <Trash2 className="size-3.5" aria-hidden="true" />{t().editor.sections.delete}
+            <Trash2 className="size-3.5" aria-hidden="true" />
+            {t().editor.sections.delete}
           </button>
         </PopoverContent>
       </Popover>

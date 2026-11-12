@@ -10,9 +10,7 @@ import { t } from '@/lib/shared/i18n';
 export function useRecordingSession(explicitSessionId?: string | null) {
   const [recordingState, setRecordingState] = useState(createDefaultRecordingState);
   const [dataError, setDataError] = useState<string | null>(null);
-  const sessionId = explicitSessionId === undefined
-    ? recordingState.sessionId
-    : explicitSessionId || null;
+  const sessionId = explicitSessionId === undefined ? recordingState.sessionId : explicitSessionId || null;
 
   useEffect(() => {
     let disposed = false;

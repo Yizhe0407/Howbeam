@@ -24,17 +24,22 @@ vi.mock('wxt/browser', async () =>
       for (const [key, value] of Object.entries(items)) extra.local.set(key, value);
     }),
     localRemove: vi.fn(async (key: string) => void extra.local.delete(key)),
-  }));
+  }),
+);
 vi.mock('@/lib/storage/step-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/project-repository', async (importOriginal) =>
   (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal, {
     createProject: extra.createProject,
-  }));
+  }),
+);
 vi.mock('@/lib/storage/storage', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal),
+);
 vi.mock('@/lib/recording/background/pending-undo-store', async () =>
-  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks));
+  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks),
+);
 
 const ALL_URLS_GRANT = { origins: ['<all_urls>'] };
 const PENDING_TAB = { id: 7, windowId: 1, active: true, url: 'https://example.com/start' };

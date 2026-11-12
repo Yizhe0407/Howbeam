@@ -1,6 +1,11 @@
 import { browser } from 'wxt/browser';
 import { getEffectiveBounds, stepRole } from '../../storage/models';
-import { getStep, getStepOutlines, type StepRecaptureError, type StepRecaptureTarget } from '../../storage/step-repository';
+import {
+  getStep,
+  getStepOutlines,
+  type StepRecaptureError,
+  type StepRecaptureTarget,
+} from '../../storage/step-repository';
 import type {
   PreflightStepRecaptureSourcePermissionErrorCode,
   StartStepRecaptureMessage,
@@ -33,10 +38,7 @@ export class StepRecaptureStartError extends Error {
 
 /** The copy for a replacement the repository refused; its own messages
  * are English diagnostics for the console. */
-export function recaptureTargetErrorCopy(
-  code: StepRecaptureError['code'],
-  kind: StepRecaptureTarget['kind'],
-): CopyKey {
+export function recaptureTargetErrorCopy(code: StepRecaptureError['code'], kind: StepRecaptureTarget['kind']): CopyKey {
   const single = kind === 'single';
   if (code === 'TARGET_NOT_FOUND') return single ? 'recaptureFlow.stepNotFound' : 'recaptureFlow.snapshotNotFound';
   if (code === 'TARGET_CHANGED') return single ? 'recaptureFlow.stepChanged' : 'recaptureFlow.snapshotChanged';
@@ -81,10 +83,7 @@ export async function validateRecaptureTarget(
   );
   const [only, ...others] = annotations;
   if (!only || others.length > 0 || only.id !== annotation.id) {
-    throw new StepRecaptureStartError(
-      'UNSUPPORTED_SNAPSHOT_GROUP',
-      'recaptureFlow.multiAnnotation',
-    );
+    throw new StepRecaptureStartError('UNSUPPORTED_SNAPSHOT_GROUP', 'recaptureFlow.multiAnnotation');
   }
   return { target, entryId: anchor.id, sourceUrl: anchor.url };
 }
@@ -96,9 +95,7 @@ export async function wasRecaptureCommitted(context: NonNullable<RecordingState[
   return owner?.sessionId === context.sessionId && owner.lastCaptureRunId === context.runId;
 }
 
-export async function isRecaptureSourceTabIntact(
-  context: NonNullable<RecordingState['recapture']>,
-): Promise<boolean> {
+export async function isRecaptureSourceTabIntact(context: NonNullable<RecordingState['recapture']>): Promise<boolean> {
   try {
     const tab = await browser.tabs.get(context.sourceTabId);
     // Recapture required a host permission grant for the source origin, so the

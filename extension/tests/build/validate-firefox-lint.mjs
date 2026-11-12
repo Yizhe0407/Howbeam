@@ -14,7 +14,7 @@ async function collectSourceFiles(directory) {
   const files = [];
   for (const entry of entries) {
     const absolute = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...await collectSourceFiles(absolute));
+    if (entry.isDirectory()) files.push(...(await collectSourceFiles(absolute)));
     else if (entry.isFile() && sourceExtensions.has(path.extname(entry.name))) files.push(absolute);
   }
   return files;
@@ -43,11 +43,7 @@ function findUnsafeHtmlOperations(file, source) {
     findings.push(`${path.relative(sourceRoot, file)}:${position.line + 1}:${position.character + 1} ${operation}`);
   };
   const visit = (node) => {
-    if (
-      ts.isJsxAttribute(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === 'dangerouslySetInnerHTML'
-    ) {
+    if (ts.isJsxAttribute(node) && ts.isIdentifier(node.name) && node.name.text === 'dangerouslySetInnerHTML') {
       report(node, 'uses dangerouslySetInnerHTML');
     }
     if (ts.isBinaryExpression(node) && isAssignmentOperator(node.operatorToken.kind)) {
@@ -73,9 +69,9 @@ function findUnsafeHtmlOperations(file, source) {
 }
 
 async function assertFirstPartyHtmlSafety() {
-  const files = (await Promise.all(
-    firstPartyRoots.map((directory) => collectSourceFiles(path.join(sourceRoot, directory))),
-  )).flat();
+  const files = (
+    await Promise.all(firstPartyRoots.map((directory) => collectSourceFiles(path.join(sourceRoot, directory))))
+  ).flat();
   const findings = [];
   for (const file of files) findings.push(...findUnsafeHtmlOperations(file, await readFile(file, 'utf8')));
   if (findings.length > 0) {
@@ -93,21 +89,15 @@ function isVerifiedReactRendererWarning(warning, generatedSource) {
     warning.message !== 'Unsafe assignment to innerHTML' ||
     !Number.isSafeInteger(warning.line) ||
     !Number.isSafeInteger(warning.column) ||
-    !(
-      /^chunks\/[A-Za-z0-9_.-]+\.js$/u.test(warning.file) ||
-      warning.file === 'content-scripts/content.js'
-    )
-  ) return false;
+    !(/^chunks\/[A-Za-z0-9_.-]+\.js$/u.test(warning.file) || warning.file === 'content-scripts/content.js')
+  )
+    return false;
 
   const line = generatedSource.split(/\r?\n/u)[warning.line - 1];
   if (!line) return false;
   const index = Math.max(0, warning.column - 1);
   const context = line.slice(Math.max(0, index - 320), index + 160);
-  return (
-    context.includes('dangerouslySetInnerHTML') &&
-    context.includes('__html') &&
-    context.includes('.innerHTML=')
-  );
+  return context.includes('dangerouslySetInnerHTML') && context.includes('__html') && context.includes('.innerHTML=');
 }
 
 async function runFirefoxLint() {
@@ -116,19 +106,22 @@ async function runFirefoxLint() {
   const originalLog = console.log;
   console.log = () => undefined;
   try {
-    return await cmd.lint({
-      artifactsDir: path.join(sourceRoot, 'web-ext-artifacts'),
-      boring: true,
-      ignoreFiles: [],
-      metadata: false,
-      output: 'json',
-      pretty: false,
-      privileged: false,
-      selfHosted: false,
-      sourceDir: firefoxOutput,
-      verbose: false,
-      warningsAsErrors: false,
-    }, { shouldExitProgram: false });
+    return await cmd.lint(
+      {
+        artifactsDir: path.join(sourceRoot, 'web-ext-artifacts'),
+        boring: true,
+        ignoreFiles: [],
+        metadata: false,
+        output: 'json',
+        pretty: false,
+        privileged: false,
+        selfHosted: false,
+        sourceDir: firefoxOutput,
+        verbose: false,
+        warningsAsErrors: false,
+      },
+      { shouldExitProgram: false },
+    );
   } finally {
     console.log = originalLog;
   }
@@ -162,5 +155,5 @@ if (unexpected.length > 0) {
 
 console.log(
   `Firefox add-on lint passed: 0 errors, 0 actionable warnings` +
-  ` (${acknowledged.length} verified React renderer false positives isolated).`,
+    ` (${acknowledged.length} verified React renderer false positives isolated).`,
 );

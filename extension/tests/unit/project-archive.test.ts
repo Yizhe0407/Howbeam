@@ -30,11 +30,36 @@ function pngBlob(width = 2, height = 2): Blob {
 }
 
 function jpegBlob(width = 2, height = 2): Blob {
-  return new Blob([new Uint8Array([
-    0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08,
-    (height >>> 8) & 255, height & 255, (width >>> 8) & 255, width & 255,
-    0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00, 0xff, 0xd9,
-  ])], { type: 'image/jpeg' });
+  return new Blob(
+    [
+      new Uint8Array([
+        0xff,
+        0xd8,
+        0xff,
+        0xc0,
+        0x00,
+        0x11,
+        0x08,
+        (height >>> 8) & 255,
+        height & 255,
+        (width >>> 8) & 255,
+        width & 255,
+        0x03,
+        0x01,
+        0x11,
+        0x00,
+        0x02,
+        0x11,
+        0x00,
+        0x03,
+        0x11,
+        0x00,
+        0xff,
+        0xd9,
+      ]),
+    ],
+    { type: 'image/jpeg' },
+  );
 }
 
 function makeStep(overrides: Partial<Step> = {}): Step {
@@ -88,9 +113,7 @@ describe('project archive', () => {
       id: 'ordinary',
       runId: 'run-1',
       manualBounds: { x: 10, y: 11, width: 90, height: 45 },
-      redactions: [
-        { id: 'mask-1', kind: 'solid', bounds: { x: 2, y: 3, width: 20, height: 10 } },
-      ],
+      redactions: [{ id: 'mask-1', kind: 'solid', bounds: { x: 2, y: 3, width: 20, height: 10 } }],
       redactionReviewRequired: false,
       screenshotScale: 1.5,
       description: '<img src=x onerror="globalThis.executed=true"> & editable text',
@@ -125,7 +148,9 @@ describe('project archive', () => {
     );
     // Screenshots are stored as their original bytes, not re-encoded.
     const [pngShot] = manifest.screenshots;
-    expect(Array.from(valueAt(files, archiveScreenshotPath(pngShot.id, pngShot.mediaType)))).toEqual(await blobBytes(ordinary.screenshotBlob));
+    expect(Array.from(valueAt(files, archiveScreenshotPath(pngShot.id, pngShot.mediaType)))).toEqual(
+      await blobBytes(ordinary.screenshotBlob),
+    );
 
     const { steps: restored } = await importProjectArchive(archive);
     const expected = [ordinary, anchor, annotation];
@@ -142,9 +167,12 @@ describe('project archive', () => {
         url: itemAt(expected, index).url,
         timestamp: itemAt(expected, index).timestamp,
       });
-      expect(await blobBytes(itemAt(restored, index).screenshotBlob)).toEqual(await blobBytes(itemAt(expected, index).screenshotBlob));
+      expect(await blobBytes(itemAt(restored, index).screenshotBlob)).toEqual(
+        await blobBytes(itemAt(expected, index).screenshotBlob),
+      );
       expect(itemAt(restored, index).screenshotBlob?.type).toBe(itemAt(expected, index).screenshotBlob?.type);
-      if (itemAt(expected, index).screenshotBlob) expect(itemAt(restored, index).screenshotBlob).not.toBe(itemAt(expected, index).screenshotBlob);
+      if (itemAt(expected, index).screenshotBlob)
+        expect(itemAt(restored, index).screenshotBlob).not.toBe(itemAt(expected, index).screenshotBlob);
     }
     expect(itemAt(restored, 0).description).toContain('onerror=');
     expect((globalThis as { executed?: boolean }).executed).toBeUndefined();
@@ -178,7 +206,16 @@ describe('project archive', () => {
       manualBounds: { x: 1, y: 2, width: 3, height: 4 },
       redactions: [{ id: 'mask-1', kind: 'solid', bounds: { x: 2, y: 3, width: 4, height: 5 } }],
       redactionReviewRequired: false,
-      imageEdits: [{ id: 'edit-1', kind: 'rect', bounds: { x: 1, y: 1, width: 5, height: 5 }, width: 2, fill: 'none' as const, color: '#ff4747' }],
+      imageEdits: [
+        {
+          id: 'edit-1',
+          kind: 'rect',
+          bounds: { x: 1, y: 1, width: 5, height: 5 },
+          width: 2,
+          fill: 'none' as const,
+          color: '#ff4747',
+        },
+      ],
       crop: { x: 1, y: 2, width: 30, height: 20 },
       screenshotScale: 1.5,
       captureRevision: 3,
@@ -204,8 +241,14 @@ describe('project archive', () => {
     expect([...serializedKeys].sort()).toEqual([...STEP_KEYS].sort());
   });
 
-  it('never archives this browser\'s bookkeeping, and refuses an archive that carries it', async () => {
-    const step = makeStep({ id: 'edited', runId: 'run-1', captureRevision: 2, imageEditRevision: 7, lastCaptureRunId: 'r' });
+  it("never archives this browser's bookkeeping, and refuses an archive that carries it", async () => {
+    const step = makeStep({
+      id: 'edited',
+      runId: 'run-1',
+      captureRevision: 2,
+      imageEditRevision: 7,
+      lastCaptureRunId: 'r',
+    });
     const archived = await archiveObject([step]);
     for (const key of LOCAL_STEP_KEYS) expect(archived.manifest.steps[0]).not.toHaveProperty(key);
     const { steps } = await importProjectArchive(await exportProjectArchive([step]));
@@ -310,16 +353,16 @@ describe('project archive', () => {
     unknownSection.manifest.metadata.sections[0].style = 'display:none';
     await expect(importProjectArchive(pack(unknownSection))).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' });
 
-    await expect(exportProjectArchive([makeStep()], {
-      metadata: { title: 'x'.repeat(PROJECT_ARCHIVE_LIMITS.maxTitleLength + 1) },
-    })).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' });
+    await expect(
+      exportProjectArchive([makeStep()], {
+        metadata: { title: 'x'.repeat(PROJECT_ARCHIVE_LIMITS.maxTitleLength + 1) },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' });
 
     const oversizedSection = await archiveObject([makeStep()], {
       sections: [{ id: 'section', title: 'Section', startEntryId: 'step-1' }],
     });
-    oversizedSection.manifest.metadata.sections[0].title = 'x'.repeat(
-      PROJECT_ARCHIVE_LIMITS.maxSectionTitleLength + 1,
-    );
+    oversizedSection.manifest.metadata.sections[0].title = 'x'.repeat(PROJECT_ARCHIVE_LIMITS.maxSectionTitleLength + 1);
     await expect(importProjectArchive(pack(oversizedSection))).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' });
 
     const tooManySections = Array.from({ length: PROJECT_ARCHIVE_LIMITS.maxSections + 1 }, (_, index) => ({
@@ -327,9 +370,11 @@ describe('project archive', () => {
       title: `Section ${index}`,
       startEntryId: 'step-1',
     }));
-    await expect(exportProjectArchive([makeStep()], {
-      metadata: { sections: tooManySections },
-    })).rejects.toMatchObject({ code: 'LIMIT_EXCEEDED' });
+    await expect(
+      exportProjectArchive([makeStep()], {
+        metadata: { sections: tooManySections },
+      }),
+    ).rejects.toMatchObject({ code: 'LIMIT_EXCEEDED' });
   });
 
   it('rejects other versions, files that are not archives, and the old JSON format', async () => {
@@ -350,13 +395,25 @@ describe('project archive', () => {
     expect((globalThis as { executed?: boolean }).executed).toBeUndefined();
 
     const noManifest = await archiveObject();
-    await expect(importProjectArchive(new Blob([zipSync(
-      Object.fromEntries(Object.entries(noManifest.files).map(([path, bytes]) => [path, [bytes, { level: 0 }]])),
-    )]))).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' });
+    await expect(
+      importProjectArchive(
+        new Blob([
+          zipSync(
+            Object.fromEntries(Object.entries(noManifest.files).map(([path, bytes]) => [path, [bytes, { level: 0 }]])),
+          ),
+        ]),
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' });
 
-    await expect(importProjectArchive(new Blob([zipSync({
-      [ARCHIVE_MANIFEST_PATH]: [strToU8('{not json'), { level: 0 }],
-    })]))).rejects.toMatchObject({ code: 'INVALID_JSON' });
+    await expect(
+      importProjectArchive(
+        new Blob([
+          zipSync({
+            [ARCHIVE_MANIFEST_PATH]: [strToU8('{not json'), { level: 0 }],
+          }),
+        ]),
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_JSON' });
   });
 
   it('rejects duplicate step, screenshot, and redaction ids', async () => {
@@ -390,9 +447,7 @@ describe('project archive', () => {
 
   it('rejects malformed redactions and invalid bounds', async () => {
     const badKind = await archiveObject();
-    badKind.manifest.steps[0].redactions = [
-      { id: 'mask', kind: 'blur', bounds: { x: 0, y: 0, width: 1, height: 1 } },
-    ];
+    badKind.manifest.steps[0].redactions = [{ id: 'mask', kind: 'blur', bounds: { x: 0, y: 0, width: 1, height: 1 } }];
     await expect(importProjectArchive(pack(badKind))).rejects.toMatchObject({ code: 'INVALID_REDACTION' });
 
     const zeroWidth = await archiveObject();
@@ -441,11 +496,13 @@ describe('project archive', () => {
     await expect(importProjectArchive(pack(unused))).rejects.toMatchObject({ code: 'INVALID_BLOB' });
 
     await expect(
-      exportProjectArchive([makeStep({ screenshotBlob: new Blob([await pngBlob().arrayBuffer()], { type: 'image/jpeg' }) })]),
+      exportProjectArchive([
+        makeStep({ screenshotBlob: new Blob([await pngBlob().arrayBuffer()], { type: 'image/jpeg' }) }),
+      ]),
     ).rejects.toMatchObject({ code: 'INVALID_BLOB' });
-    await expect(
-      exportProjectArchive([makeStep({ screenshotBlob: pngBlob(16_384, 16_384) })]),
-    ).rejects.toMatchObject({ code: 'INVALID_BLOB' });
+    await expect(exportProjectArchive([makeStep({ screenshotBlob: pngBlob(16_384, 16_384) })])).rejects.toMatchObject({
+      code: 'INVALID_BLOB',
+    });
   });
 
   it('rejects files the manifest does not list and compressed entries', async () => {
@@ -464,9 +521,7 @@ describe('project archive', () => {
     await expect(exportProjectArchive(tooMany)).rejects.toMatchObject({ code: 'LIMIT_EXCEEDED' });
 
     await expect(
-      exportProjectArchive([
-        makeStep({ description: 'x'.repeat(PERSISTED_STEP_LIMITS.maxStepDescriptionLength + 1) }),
-      ]),
+      exportProjectArchive([makeStep({ description: 'x'.repeat(PERSISTED_STEP_LIMITS.maxStepDescriptionLength + 1) })]),
     ).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' });
     await expect(exportProjectArchive([makeStep({ description: 'bad\u0000text' })])).rejects.toMatchObject({
       code: 'INVALID_ARCHIVE',
@@ -496,9 +551,10 @@ describe('project archive', () => {
       }
     }
     await expect(
-      exportProjectArchive([
-        makeStep({ screenshotBlob: new AbortingBlob([await pngBlob().arrayBuffer()], { type: 'image/png' }) }),
-      ], { signal: duringRead.signal }),
+      exportProjectArchive(
+        [makeStep({ screenshotBlob: new AbortingBlob([await pngBlob().arrayBuffer()], { type: 'image/png' }) })],
+        { signal: duringRead.signal },
+      ),
     ).rejects.toMatchObject({ name: 'AbortError' });
 
     const importAbort = new AbortController();
@@ -516,10 +572,32 @@ describe('project archive', () => {
 
   describe('image edits', () => {
     const edits = [
-      { id: 'text-1', kind: 'text' as const, bounds: { x: 10, y: 20, width: 200, height: 31.2 }, text: '點這裡\nClick here', fontSize: 24, look: 'plain' as const, color: '#2f6fed' },
+      {
+        id: 'text-1',
+        kind: 'text' as const,
+        bounds: { x: 10, y: 20, width: 200, height: 31.2 },
+        text: '點這裡\nClick here',
+        fontSize: 24,
+        look: 'plain' as const,
+        color: '#2f6fed',
+      },
       { id: 'arrow-1', kind: 'arrow' as const, from: { x: 5, y: 6 }, to: { x: 80, y: 90 }, width: 4, color: '#ff4747' },
-      { id: 'rect-1', kind: 'rect' as const, bounds: { x: 1, y: 2, width: 30, height: 40 }, width: 2, fill: 'none' as const, color: '#ffc800' },
-      { id: 'ellipse-1', kind: 'ellipse' as const, bounds: { x: 3, y: 4, width: 30, height: 20 }, width: 4, fill: 'tint' as const, color: '#22a559' },
+      {
+        id: 'rect-1',
+        kind: 'rect' as const,
+        bounds: { x: 1, y: 2, width: 30, height: 40 },
+        width: 2,
+        fill: 'none' as const,
+        color: '#ffc800',
+      },
+      {
+        id: 'ellipse-1',
+        kind: 'ellipse' as const,
+        bounds: { x: 3, y: 4, width: 30, height: 20 },
+        width: 4,
+        fill: 'tint' as const,
+        color: '#22a559',
+      },
       { id: 'step-1', kind: 'step' as const, center: { x: 12, y: 14 }, radius: 16, number: 3, color: '#a1b2c3' },
     ];
 
@@ -531,7 +609,9 @@ describe('project archive', () => {
 
     it('round-trips a crop and rejects a malformed one', async () => {
       const crop = { x: 5, y: 6, width: 70, height: 40 };
-      const { steps } = await importProjectArchive(await exportProjectArchive([makeStep({ id: 'cropped', screenshotBlob: pngBlob(4, 4), crop })]));
+      const { steps } = await importProjectArchive(
+        await exportProjectArchive([makeStep({ id: 'cropped', screenshotBlob: pngBlob(4, 4), crop })]),
+      );
       expect(itemAt(steps, 0).crop).toEqual(crop);
 
       const archive = await archiveObject([makeStep({ id: 'cropped', screenshotBlob: pngBlob(4, 4), crop })]);
@@ -548,13 +628,17 @@ describe('project archive', () => {
       ['a non-finite arrow point', { ...edits[1], to: { x: 'far', y: 1 } }],
       ['an arrow with bounds fields', { ...edits[1], bounds: { x: 0, y: 0, width: 1, height: 1 } }],
     ])('rejects %s', async (_name, bad) => {
-      const archive = await archiveObject([makeStep({ id: 'drawn', screenshotBlob: pngBlob(4, 4), imageEdits: [itemAt(edits, 2)] })]);
+      const archive = await archiveObject([
+        makeStep({ id: 'drawn', screenshotBlob: pngBlob(4, 4), imageEdits: [itemAt(edits, 2)] }),
+      ]);
       archive.manifest.steps[0].imageEdits = [bad];
       await expect(importProjectArchive(pack(archive))).rejects.toBeInstanceOf(ProjectArchiveError);
     });
 
     it('rejects duplicate ids and too many edits', async () => {
-      const archive = await archiveObject([makeStep({ id: 'drawn', screenshotBlob: pngBlob(4, 4), imageEdits: [itemAt(edits, 2)] })]);
+      const archive = await archiveObject([
+        makeStep({ id: 'drawn', screenshotBlob: pngBlob(4, 4), imageEdits: [itemAt(edits, 2)] }),
+      ]);
       archive.manifest.steps[0].imageEdits = [edits[2], edits[2]];
       await expect(importProjectArchive(pack(archive))).rejects.toMatchObject({ code: 'DUPLICATE_ID' });
 

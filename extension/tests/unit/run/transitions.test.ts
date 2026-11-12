@@ -33,17 +33,30 @@ const state: RunState = { ...idleState(), operation: live };
 describe('run transitions', () => {
   it('counts captures and clears a notice once one succeeds', () => {
     const failed = withNotice(live, notice('CAPTURE_FAILED', 'background.captureFailed'));
-    expect(captureCommitted(failed, 'c3')).toMatchObject({ itemCount: 3, runItemCount: 3, lastCommittedCaptureId: 'c3', notice: null });
+    expect(captureCommitted(failed, 'c3')).toMatchObject({
+      itemCount: 3,
+      runItemCount: 3,
+      lastCommittedCaptureId: 'c3',
+      notice: null,
+    });
     expect(captureUndone(captureUndone(captureUndone(live)))).toMatchObject({ itemCount: 0, runItemCount: 0 });
   });
 
   it('numbers a new snapshot from one but keeps the run total', () => {
-    expect(preparingNextSnapshot(live)).toMatchObject({ phase: 'preparing-next', itemCount: 0, runItemCount: 2, anchor: null });
+    expect(preparingNextSnapshot(live)).toMatchObject({
+      phase: 'preparing-next',
+      itemCount: 0,
+      runItemCount: 2,
+      anchor: null,
+    });
     expect(switchedToSnapshot({ ...live, mode: 'steps' })).toMatchObject({ mode: 'snapshot', phase: 'preparing-next' });
   });
 
   it('keeps a paused run paused while it waits', () => {
-    expect(waiting({ ...live, phase: 'paused' }, 'restricted-page')).toMatchObject({ phase: 'paused', wait: 'restricted-page' });
+    expect(waiting({ ...live, phase: 'paused' }, 'restricted-page')).toMatchObject({
+      phase: 'paused',
+      wait: 'restricted-page',
+    });
   });
 
   it('ends a run back to idle, keeping its Project, mode and last committed capture', () => {
@@ -57,7 +70,11 @@ describe('run transitions', () => {
 
   it('keeps the notice on STOP, and the Project and counters on an error stop', () => {
     const shown = notice('CAPTURE_FAILED', 'background.captureFailed');
-    expect(stopped(state, withNotice(live, shown)).operation).toMatchObject({ kind: 'idle', notice: shown, failed: false });
+    expect(stopped(state, withNotice(live, shown)).operation).toMatchObject({
+      kind: 'idle',
+      notice: shown,
+      failed: false,
+    });
     const tabClosed = notice('RECORDED_TAB_CLOSED', 'runtime.recordingTabClosed');
     expect(toRecordingState(endedWithError(state, live, tabClosed))).toMatchObject({
       phase: 'error',
@@ -70,8 +87,9 @@ describe('run transitions', () => {
   });
 
   it('marks a failed start, and a failed editor open after a finish', () => {
-    expect(toRecordingState(startFailed(idleState(), null, 'snapshot', notice('NO_ACTIVE_TAB', 'background.noActiveTab'))))
-      .toMatchObject({ phase: 'error', mode: 'snapshot', recoverableError: { code: 'NO_ACTIVE_TAB' } });
+    expect(
+      toRecordingState(startFailed(idleState(), null, 'snapshot', notice('NO_ACTIVE_TAB', 'background.noActiveTab'))),
+    ).toMatchObject({ phase: 'error', mode: 'snapshot', recoverableError: { code: 'NO_ACTIVE_TAB' } });
     expect(toRecordingState(editorOpenFailed(ended(state, live)))).toMatchObject({
       phase: 'error',
       recoverableError: { code: 'EDITOR_OPEN_FAILED' },

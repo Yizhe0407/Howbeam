@@ -9,7 +9,11 @@ import { liveRecording, notice, waiting, withRecording } from './transitions';
 type Assessment =
   | { kind: 'intact' }
   | { kind: 'tab-missing' }
-  | { kind: 'ended'; code: string; copy: 'runtime.recordingTabClosed' | 'background.snapshotAnchorLost' | 'background.injectFailed' }
+  | {
+      kind: 'ended';
+      code: string;
+      copy: 'runtime.recordingTabClosed' | 'background.snapshotAnchorLost' | 'background.injectFailed';
+    }
   | { kind: 'unrecordable'; reason: Exclude<Recording['wait'], null> };
 
 /**
@@ -30,7 +34,8 @@ export function createRecovery(deps: {
 
   async function assess(recording: Recording): Promise<Assessment> {
     // Startup was cut off: no operation is left to finish it.
-    if (recording.phase === 'starting') return { kind: 'ended', code: 'RECORDING_STOPPED', copy: 'background.injectFailed' };
+    if (recording.phase === 'starting')
+      return { kind: 'ended', code: 'RECORDING_STOPPED', copy: 'background.injectFailed' };
     let url: string | undefined;
     try {
       url = (await ports.tabs.get(recording.tabId)).url;
@@ -45,7 +50,11 @@ export function createRecovery(deps: {
     const tabGone = { kind: 'ended', code: 'RECORDED_TAB_CLOSED', copy: 'runtime.recordingTabClosed' } as const;
     if (!isRecordableTabUrl(url)) return tabGone;
     const annotating = recording.phase === 'recording' || recording.phase === 'finishing';
-    const anchorMissing = { kind: 'ended', code: 'SNAPSHOT_ANCHOR_MISSING', copy: 'background.snapshotAnchorLost' } as const;
+    const anchorMissing = {
+      kind: 'ended',
+      code: 'SNAPSHOT_ANCHOR_MISSING',
+      copy: 'background.snapshotAnchorLost',
+    } as const;
     if (annotating && !recording.anchor) return anchorMissing;
     if (recording.anchor) {
       const anchor = await ports.steps.get(recording.anchor.id);
@@ -60,7 +69,7 @@ export function createRecovery(deps: {
     await actor.ready();
     const op = actor.state().operation;
     // Only the live run's snapshot may still be waiting for its first annotation.
-    await deps.discardPendingAnchorsExcept(op.kind === 'recording' ? op.anchor?.id ?? null : null).catch((error) => {
+    await deps.discardPendingAnchorsExcept(op.kind === 'recording' ? (op.anchor?.id ?? null) : null).catch((error) => {
       console.error('[howbeam] failed to discard leftover snapshot images:', error);
     });
     if (op.kind !== 'recording') return;
@@ -71,17 +80,19 @@ export function createRecovery(deps: {
       void lifecycle.recordedTabGone(op.tabId);
       return;
     }
-    await actor.run(async (ctx) => {
-      const recording = liveRecording(ctx.state(), op.runId);
-      if (!recording) return;
-      if (assessment.kind === 'unrecordable') {
-        await ctx.commit((state) => withRecording(state, waiting(recording, assessment.reason)));
-        return;
-      }
-      await lifecycle.endWithError(ctx, recording, notice(assessment.code, assessment.copy));
-    }).catch((error) => {
-      if (!isSuperseded(error)) throw error;
-    });
+    await actor
+      .run(async (ctx) => {
+        const recording = liveRecording(ctx.state(), op.runId);
+        if (!recording) return;
+        if (assessment.kind === 'unrecordable') {
+          await ctx.commit((state) => withRecording(state, waiting(recording, assessment.reason)));
+          return;
+        }
+        await lifecycle.endWithError(ctx, recording, notice(assessment.code, assessment.copy));
+      })
+      .catch((error) => {
+        if (!isSuperseded(error)) throw error;
+      });
   }
 
   return { recoverInterruptedRecording };

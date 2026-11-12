@@ -3,7 +3,12 @@ import toast from 'react-hot-toast';
 import { AlertCircle, Library } from 'lucide-react';
 import { useRecordingSession } from '@/lib/recording/use-recording-session';
 import { useEditorProjectData } from '@/lib/editor/use-editor-project-data';
-import { EditingBlockedError, EMPTY_SECTIONS, EMPTY_STEP_ENTRIES, type OptimisticChange } from '@/lib/editor/editor-app-model';
+import {
+  EditingBlockedError,
+  EMPTY_SECTIONS,
+  EMPTY_STEP_ENTRIES,
+  type OptimisticChange,
+} from '@/lib/editor/editor-app-model';
 import { useSerialOperations } from '@/lib/editor/use-serial-operations';
 import { entryId, projectDisplayTitle, type StepEntry } from '@/lib/storage/models';
 import { sectionOfEntry } from '@/lib/storage/project-sections';
@@ -43,10 +48,7 @@ import {
   focusStepRecaptureSource,
   openLibrary,
 } from '@/lib/runtime/actions';
-import type {
-  CancelStepRecaptureResult,
-  FocusStepRecaptureSourceResult,
-} from '@/lib/runtime/messages';
+import type { CancelStepRecaptureResult, FocusStepRecaptureSourceResult } from '@/lib/runtime/messages';
 import { reportError } from '@/lib/runtime/report-error';
 import { copyText } from '@/lib/shared/i18n/copy';
 import { UserMessageError } from '@/lib/shared/user-message-error';
@@ -77,7 +79,8 @@ function EditorApp() {
   const operationBelongsToViewedProject = Boolean(sessionId && recording.sessionId === sessionId);
   const operationActive = operationBelongsToViewedProject && recording.operation !== null;
   const ordinaryRecordingActive = operationBelongsToViewedProject && recording.operation === 'recording';
-  const recaptureActive = operationBelongsToViewedProject && recording.operation === 'recapture' && recording.recapture !== null;
+  const recaptureActive =
+    operationBelongsToViewedProject && recording.operation === 'recapture' && recording.recapture !== null;
   const { flushAll } = useEditorSaveRegistry();
   const editorLock = useEditorLock(sessionId);
   const editingElsewhere = editorLock.state !== 'held';
@@ -95,7 +98,8 @@ function EditorApp() {
     return () => setOptimisticChanges((current) => current.filter((change) => change.id !== id));
   }, []);
   const { entries, sections } = useMemo(
-    () => optimisticChanges.reduce((shown, change) => change.apply(shown), { entries: dbEntries, sections: dbSections }),
+    () =>
+      optimisticChanges.reduce((shown, change) => change.apply(shown), { entries: dbEntries, sections: dbSections }),
     [dbEntries, dbSections, optimisticChanges],
   );
   const errors = useEditorErrors();
@@ -132,33 +136,27 @@ function EditorApp() {
     requireSelectedEntry,
     setOperationError: reportPermissionError,
     entryMode: (afterEntryId) => {
-      const followed = afterEntryId === undefined ? entries.at(-1) : entries.find((entry) => entryId(entry) === afterEntryId);
+      const followed =
+        afterEntryId === undefined ? entries.at(-1) : entries.find((entry) => entryId(entry) === afterEntryId);
       return followed?.kind === 'group' ? 'snapshot' : 'steps';
     },
   });
 
   /** The section being named; the rail seam, the stage and a heading's menu all open the same dialog. */
   const [sectionDialog, setSectionDialog] = useState<SectionDialogRequest | null>(null);
-  const {
-    selectedEntry,
-    selectedEntryId,
-    selectedIndex,
-    setSelectedEntryId,
-    setZoomOpen,
-    selectEntry,
-    zoomOpen,
-  } = useEditorEntryWorkspace({
-    entries,
-    flushDescriptions,
-    isSelectionBlocked: () => permissionPending || continueElsewherePending,
-    onSelectionInteraction: () => {
-      if (isPermissionFlowLocked()) clearPreparedPermission();
-    },
-    onSelectionSaved: () => {
-      reportFlowError('save', null);
-      reportFlowError('selection', null);
-    },
-  });
+  const { selectedEntry, selectedEntryId, selectedIndex, setSelectedEntryId, setZoomOpen, selectEntry, zoomOpen } =
+    useEditorEntryWorkspace({
+      entries,
+      flushDescriptions,
+      isSelectionBlocked: () => permissionPending || continueElsewherePending,
+      onSelectionInteraction: () => {
+        if (isPermissionFlowLocked()) clearPreparedPermission();
+      },
+      onSelectionSaved: () => {
+        reportFlowError('save', null);
+        reportFlowError('selection', null);
+      },
+    });
 
   useEffect(() => {
     syncWithSelection(selectedEntryId, sessionId);
@@ -189,7 +187,10 @@ function EditorApp() {
     // The replaced image reaches the screen through the change broadcast like any other write.
     setSelectedEntryId(result.entryId);
     setZoomOpen(false);
-    reportFlowError('recapture', result.status === 'failed' ? (result.copy ? copyText(result.copy) : t().editor.recaptureFailed) : null);
+    reportFlowError(
+      'recapture',
+      result.status === 'failed' ? (result.copy ? copyText(result.copy) : t().editor.recaptureFailed) : null,
+    );
     if (result.status === 'replaced') {
       toast.success(t().editor.recaptureReplaced);
     } else if (result.status === 'cancelled') {
@@ -295,7 +296,11 @@ function EditorApp() {
   }
 
   const focusRecaptureSource = () =>
-    runRecaptureControl('[howbeam] failed to focus the recapture tab', focusStepRecaptureSource, t().editor.recaptureTabMissing);
+    runRecaptureControl(
+      '[howbeam] failed to focus the recapture tab',
+      focusStepRecaptureSource,
+      t().editor.recaptureTabMissing,
+    );
 
   const cancelRecapture = () =>
     runRecaptureControl('[howbeam] failed to cancel recapture', cancelStepRecapture, t().editor.recaptureCancelFailed);
@@ -375,7 +380,9 @@ function EditorApp() {
   return (
     // The editor's layout numbers, read by the stage, the step rail and the notices alike: the content gutter,
     // the step strip fixed along the bottom below lg, and the room the stage keeps clear for notices.
-    <div className={`flex h-screen flex-col [--content-gutter:1rem] sm:[--content-gutter:1.5rem] lg:[--content-gutter:2.5rem] [--step-rail-height:8rem] [--notice-lane:5rem] ${entries.length > 0 ? 'max-lg:[--bottom-bar-height:var(--step-rail-height)]' : ''}`}>
+    <div
+      className={`flex h-screen flex-col [--content-gutter:1rem] [--notice-lane:5rem] [--step-rail-height:8rem] sm:[--content-gutter:1.5rem] lg:[--content-gutter:2.5rem] ${entries.length > 0 ? 'max-lg:[--bottom-bar-height:var(--step-rail-height)]' : ''}`}
+    >
       <AppToaster />
       <EditorHeader
         operationActive={operationActive}
@@ -385,7 +392,9 @@ function EditorApp() {
         projectTitle={project?.title ?? null}
         projectActionsAvailable={projectLoadState !== 'missing' && !projectDeleted && !editingElsewhere}
         beforeNavigate={leaveEditor}
-        onShowRecording={ordinaryRecordingActive && recording.tabId != null ? () => void showRecordedTab(recording.tabId!) : undefined}
+        onShowRecording={
+          ordinaryRecordingActive && recording.tabId != null ? () => void showRecordedTab(recording.tabId!) : undefined
+        }
         publish={{
           runExport,
           getProjectEntries: publicationEntries,
@@ -408,12 +417,14 @@ function EditorApp() {
       <SourcePermissionDialog
         open={preparedPermission !== null}
         sourceOrigin={preparedPermission?.source.kind === 'origin' ? preparedPermission.source.sourceOrigin : ''}
-        actionLabel={preparedPermission?.action.kind === 'continuation' ? t().editor.continuationAction : t().editor.recaptureAction}
+        actionLabel={
+          preparedPermission?.action.kind === 'continuation'
+            ? t().editor.continuationAction
+            : t().editor.recaptureAction
+        }
         pending={permissionPending}
         onContinueElsewhere={
-          preparedPermission?.action.kind === 'continuation'
-            ? () => void openContinueElsewhere()
-            : undefined
+          preparedPermission?.action.kind === 'continuation' ? () => void openContinueElsewhere() : undefined
         }
         continueElsewherePending={continueElsewherePending}
         continueElsewhereError={continueElsewhereError}
@@ -425,7 +436,9 @@ function EditorApp() {
           preparedPermission?.source.kind === 'unavailable' ? preparedPermission.source.reason : null
         }
         insertAfterStep={
-          insertAfterEntryId === undefined ? undefined : entries.findIndex((entry) => entryId(entry) === insertAfterEntryId) + 1 || undefined
+          insertAfterEntryId === undefined
+            ? undefined
+            : entries.findIndex((entry) => entryId(entry) === insertAfterEntryId) + 1 || undefined
         }
         continuationMode={preparedPermission?.action.kind === 'continuation' ? continuationMode : undefined}
         onContinuationModeChange={setContinuationMode}
@@ -439,7 +452,8 @@ function EditorApp() {
             <AlertDescription>
               <span>{t().editor.projectDeleted}</span>
               <Button variant="outline" size="sm" className="mt-2 w-fit" onClick={() => void openLibrary()}>
-                <Library />{t().common.backToLibrary}
+                <Library />
+                {t().common.backToLibrary}
               </Button>
             </AlertDescription>
           </Alert>
@@ -449,14 +463,17 @@ function EditorApp() {
         <div className="border-b-2 border-border bg-card px-3 py-3 sm:px-7">
           <Alert variant="destructive">
             <AlertCircle />
-            <AlertDescription>{error ? copyText(error) : dataError ?? bannerError}</AlertDescription>
+            <AlertDescription>{error ? copyText(error) : (dataError ?? bannerError)}</AlertDescription>
           </Alert>
         </div>
       )}
       <div className="flex min-h-0 flex-1 pb-[var(--step-rail-height,8rem)] lg:pb-0">
         {projectLoadState === 'loading' || editorLock.state === 'pending' ? (
           // A quick first read shows nothing here rather than a message that is gone at once.
-          <main role={loadingShown ? 'status' : undefined} className="flex min-w-0 flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+          <main
+            role={loadingShown ? 'status' : undefined}
+            className="flex min-w-0 flex-1 items-center justify-center p-8 text-sm text-muted-foreground"
+          >
             {loadingShown && t().editor.loading}
           </main>
         ) : editorLock.state === 'elsewhere' ? (
@@ -476,12 +493,11 @@ function EditorApp() {
               <Mascot className="mb-4 size-16" />
               <h2 className="text-lg font-bold text-foreground">{t().editor.missingTitle}</h2>
               <p className="mt-2 text-sm leading-relaxed">
-                {viewedSessionId
-                  ? t().editor.missingDeleted
-                  : t().editor.missingId}
+                {viewedSessionId ? t().editor.missingDeleted : t().editor.missingId}
               </p>
               <Button variant="outline" className="mt-5" onClick={() => void openLibrary()}>
-                <Library />{t().common.backToLibrary}
+                <Library />
+                {t().common.backToLibrary}
               </Button>
             </div>
           </main>
@@ -492,9 +508,7 @@ function EditorApp() {
                 <AlertCircle className="size-6 text-foreground" aria-hidden="true" />
               </span>
               <h2 className="text-lg font-bold text-foreground">{t().editor.invalidTitle}</h2>
-              <p className="mt-2 text-sm leading-relaxed">
-                {t().editor.invalidBody}
-              </p>
+              <p className="mt-2 text-sm leading-relaxed">{t().editor.invalidBody}</p>
             </div>
           </main>
         ) : entries.length === 0 ? (
@@ -511,11 +525,13 @@ function EditorApp() {
                 if (section) setSectionDialog({ kind: 'rename', sectionId, title: section.title });
               }}
               onDeleteSection={deleteSection}
-              onStartSection={(startEntryId) => setSectionDialog({
-                kind: 'add',
-                startEntryId,
-                step: entries.findIndex((entry) => entryId(entry) === startEntryId) + 1,
-              })}
+              onStartSection={(startEntryId) =>
+                setSectionDialog({
+                  kind: 'add',
+                  startEntryId,
+                  step: entries.findIndex((entry) => entryId(entry) === startEntryId) + 1,
+                })
+              }
               onReorder={handleReorderEntries}
               onContinueRecording={(afterEntryId) => void handleContinueRecording(afterEntryId)}
               reorderDisabled={operationActive || editingLocked}
@@ -529,7 +545,8 @@ function EditorApp() {
                 onStartSection={
                   sections.some((section) => section.startEntryId === entryId(selectedEntry))
                     ? undefined
-                    : () => setSectionDialog({ kind: 'add', startEntryId: entryId(selectedEntry), step: selectedIndex + 1 })
+                    : () =>
+                        setSectionDialog({ kind: 'add', startEntryId: entryId(selectedEntry), step: selectedIndex + 1 })
                 }
                 projectTitle={project?.title}
                 onTitleChange={(title) => updateProjectMetadata({ title })}

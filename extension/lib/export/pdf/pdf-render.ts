@@ -50,7 +50,10 @@ export class PdfWriter {
     private readonly ended: Promise<void>,
     private readonly options: PdfWriterOptions,
   ) {
-    this.metrics = { regular: readTypographicMetrics(options.fonts.regular), bold: readTypographicMetrics(options.fonts.bold) };
+    this.metrics = {
+      regular: readTypographicMetrics(options.fonts.regular),
+      bold: readTypographicMetrics(options.fonts.bold),
+    };
     document.on('data', (chunk: Uint8Array) => {
       this.bytes += chunk.byteLength;
       if (this.bytes > options.maxBytes) this.overLimit = true;
@@ -121,7 +124,8 @@ export class PdfWriter {
     switch (block.kind) {
       case 'heading':
         this.structure.add(this.tagged(`H${block.level}`, () => block.lines.forEach((line) => this.drawText(line))));
-        if (block.outline && block.lines[0]) this.addBookmark(block.outline, block.lines[0].top * k, page.size.widthPoints);
+        if (block.outline && block.lines[0])
+          this.addBookmark(block.outline, block.lines[0].top * k, page.size.widthPoints);
         return;
       case 'paragraph':
         this.structure.add(this.tagged('P', () => block.lines.forEach((line) => this.drawText(line))));
@@ -147,7 +151,10 @@ export class PdfWriter {
         return;
       }
       case 'artifact':
-        this.document.markContent('Artifact', block.role === 'pagination' ? { type: 'Pagination', attached: ['Bottom'] } : { type: 'Layout' });
+        this.document.markContent(
+          'Artifact',
+          block.role === 'pagination' ? { type: 'Pagination', attached: ['Bottom'] } : { type: 'Layout' },
+        );
         for (const rule of block.rules) this.drawRule(rule);
         for (const text of block.texts) this.drawText(text);
         this.document.endMarkedContent();
@@ -156,7 +163,8 @@ export class PdfWriter {
 
   /** A viewer's outline entry that jumps to the top of the heading it names. */
   private addBookmark({ level, title }: PdfOutlineEntry, top: number, pageWidth: number): void {
-    const parent = level === 2 && this.bookmarkParent ? this.bookmarkParent : (this.document.outline as unknown as OutlineItem);
+    const parent =
+      level === 2 && this.bookmarkParent ? this.bookmarkParent : (this.document.outline as unknown as OutlineItem);
     // pdfkit measures a destination from the page's right edge, so the page width puts it at the left.
     const item = parent.addItem(title, { expanded: true, top, left: pageWidth });
     if (level === 1) this.bookmarkParent = item;
@@ -187,7 +195,13 @@ export class PdfWriter {
     this.document
       .lineWidth(border * k)
       .strokeColor(PDF_COLORS.imageBorder)
-      .roundedRect((x - border / 2) * k, (y - border / 2) * k, (width + border) * k, (height + border) * k, (PDF_SPEC.imageRadius + border / 2) * k)
+      .roundedRect(
+        (x - border / 2) * k,
+        (y - border / 2) * k,
+        (width + border) * k,
+        (height + border) * k,
+        (PDF_SPEC.imageRadius + border / 2) * k,
+      )
       .stroke();
   }
 }

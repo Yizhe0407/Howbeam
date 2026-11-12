@@ -41,9 +41,14 @@ export function useCroppedImage(blob: Blob, crop: Bounds | null, screenshotScale
 
   if (!crop) return { blob, origin: NO_CROP_ORIGIN };
   const settled = peekCroppedImage(blob, crop, dpr);
-  if (settled) return settled.value ? { blob: settled.value.blob, origin: settled.value.origin } : { blob, origin: NO_CROP_ORIGIN };
+  if (settled)
+    return settled.value
+      ? { blob: settled.value.blob, origin: settled.value.origin }
+      : { blob, origin: NO_CROP_ORIGIN };
   if (resolved && resolved.source === blob) {
-    return resolved.image ? { blob: resolved.image.blob, origin: resolved.image.origin } : { blob, origin: NO_CROP_ORIGIN };
+    return resolved.image
+      ? { blob: resolved.image.blob, origin: resolved.image.origin }
+      : { blob, origin: NO_CROP_ORIGIN };
   }
   return null;
 }

@@ -78,9 +78,7 @@ afterEach(() => document.body.replaceChildren());
 
 describe('parseImageMapCoordinates', () => {
   it('accepts mixed commas, semicolons, and ASCII whitespace delimiters', () => {
-    expect(parseImageMapCoordinates('10, 20\t30\n40\f50\r60;70')).toEqual([
-      10, 20, 30, 40, 50, 60, 70,
-    ]);
+    expect(parseImageMapCoordinates('10, 20\t30\n40\f50\r60;70')).toEqual([10, 20, 30, 40, 50, 60, 70]);
   });
 
   it('follows HTML number-list recovery for garbage and non-finite values', () => {
@@ -132,8 +130,7 @@ describe('image map association', () => {
     secondImage.setAttribute('usemap', '#diagram');
     defineMetric(secondImage, 'offsetWidth', 200);
     defineMetric(secondImage, 'offsetHeight', 100);
-    secondImage.getBoundingClientRect = () =>
-      ({ left: 400, top: 50, width: 200, height: 100 } as DOMRect);
+    secondImage.getBoundingClientRect = () => ({ left: 400, top: 50, width: 200, height: 100 }) as DOMRect;
     document.body.insertBefore(secondImage, map);
 
     expect(findImageForArea(area)).toBe(firstImage);

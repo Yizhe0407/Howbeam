@@ -44,15 +44,13 @@ describe('startKeepAlive', () => {
     silenceIntentionalErrorLogs();
     vi.useFakeTimers();
     const first = port();
-    const connect = vi.fn()
+    const connect = vi
+      .fn()
       .mockImplementationOnce(() => {
         throw new Error('extension reloading');
       })
       .mockImplementationOnce(() => first);
-    const handle = startKeepAlive(
-      { connect },
-      { name: 'test', intervalMs: 100, initialReconnectDelayMs: 10 },
-    );
+    const handle = startKeepAlive({ connect }, { name: 'test', intervalMs: 100, initialReconnectDelayMs: 10 });
 
     expect(connect).toHaveBeenCalledOnce();
     vi.advanceTimersByTime(9);
@@ -67,10 +65,7 @@ describe('startKeepAlive', () => {
     const first = port();
     const second = port();
     const connect = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
-    const handle = startKeepAlive(
-      { connect },
-      { name: 'test', intervalMs: 100, initialReconnectDelayMs: 20 },
-    );
+    const handle = startKeepAlive({ connect }, { name: 'test', intervalMs: 100, initialReconnectDelayMs: 20 });
 
     first.emitDisconnect();
     vi.advanceTimersByTime(19);
@@ -89,15 +84,13 @@ describe('startKeepAlive', () => {
     const second = port();
     const third = port();
     const fourth = port();
-    const connect = vi.fn()
+    const connect = vi
+      .fn()
       .mockReturnValueOnce(first)
       .mockReturnValueOnce(second)
       .mockReturnValueOnce(third)
       .mockReturnValueOnce(fourth);
-    const handle = startKeepAlive(
-      { connect },
-      { name: 'test', intervalMs: 100, initialReconnectDelayMs: 10 },
-    );
+    const handle = startKeepAlive({ connect }, { name: 'test', intervalMs: 100, initialReconnectDelayMs: 10 });
 
     first.emitDisconnect();
     vi.advanceTimersByTime(10);
@@ -127,10 +120,7 @@ describe('startKeepAlive', () => {
     });
     const second = port();
     const connect = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
-    const handle = startKeepAlive(
-      { connect },
-      { name: 'test', intervalMs: 10, initialReconnectDelayMs: 5 },
-    );
+    const handle = startKeepAlive({ connect }, { name: 'test', intervalMs: 10, initialReconnectDelayMs: 5 });
 
     vi.advanceTimersByTime(10);
     expect(first.disconnect).toHaveBeenCalledOnce();
@@ -144,10 +134,7 @@ describe('startKeepAlive', () => {
     const first = port();
     const connect = vi.fn().mockReturnValue(first);
     const onRejected = vi.fn();
-    startKeepAlive(
-      { connect },
-      { name: 'test', intervalMs: 100, initialReconnectDelayMs: 10, onRejected },
-    );
+    startKeepAlive({ connect }, { name: 'test', intervalMs: 100, initialReconnectDelayMs: 10, onRejected });
 
     first.emitMessage({ type: 'unrelated' });
     expect(onRejected).not.toHaveBeenCalled();
@@ -169,10 +156,7 @@ describe('startKeepAlive', () => {
     const first = port();
     const second = port();
     const third = port();
-    const connect = vi.fn()
-      .mockReturnValueOnce(first)
-      .mockReturnValueOnce(second)
-      .mockReturnValueOnce(third);
+    const connect = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second).mockReturnValueOnce(third);
     const onRejected = vi.fn();
     startKeepAlive(
       { connect },
@@ -203,10 +187,7 @@ describe('startKeepAlive', () => {
     vi.useFakeTimers();
     const first = port();
     const connect = vi.fn().mockReturnValue(first);
-    const handle = startKeepAlive(
-      { connect },
-      { name: 'test', intervalMs: 100, initialReconnectDelayMs: 10 },
-    );
+    const handle = startKeepAlive({ connect }, { name: 'test', intervalMs: 100, initialReconnectDelayMs: 10 });
 
     handle.suspend();
     expect(first.disconnect).toHaveBeenCalledOnce();
@@ -249,10 +230,7 @@ describe('startKeepAlive', () => {
     vi.useFakeTimers();
     const first = port();
     const connect = vi.fn().mockReturnValue(first);
-    const handle = startKeepAlive(
-      { connect },
-      { name: 'test', intervalMs: 100, initialReconnectDelayMs: 10 },
-    );
+    const handle = startKeepAlive({ connect }, { name: 'test', intervalMs: 100, initialReconnectDelayMs: 10 });
 
     handle.stop();
     expect(first.disconnect).toHaveBeenCalledOnce();
@@ -292,10 +270,12 @@ describe('createKeepAlivePortHandler', () => {
     };
   }
 
-  function makeHandler(options: {
-    trusted?: boolean;
-    stateError?: Error;
-  } = {}) {
+  function makeHandler(
+    options: {
+      trusted?: boolean;
+      stateError?: Error;
+    } = {},
+  ) {
     const acknowledgeDisconnect = vi.fn();
     const handler = createKeepAlivePortHandler<{ tabId?: number }, { live: boolean }>({
       getRecordingState: options.stateError

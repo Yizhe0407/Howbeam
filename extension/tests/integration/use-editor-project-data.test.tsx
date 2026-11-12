@@ -25,11 +25,22 @@ import type { Project, StepEntry } from '@/lib/storage/models';
 import type { ProjectStructureMutationResult } from '@/lib/storage/project-structure';
 
 const loaded = {
-  id: 'p1', title: '原標題', description: '', sections: [],
-  createdAt: 1, updatedAt: 1, contentRevision: 5, stepEditRevision: 0, metadataRevision: 2, stepCount: 0, entryCount: 0, storageBytes: 0,
+  id: 'p1',
+  title: '原標題',
+  description: '',
+  sections: [],
+  createdAt: 1,
+  updatedAt: 1,
+  contentRevision: 5,
+  stepEditRevision: 0,
+  metadataRevision: 2,
+  stepCount: 0,
+  entryCount: 0,
+  storageBytes: 0,
 } satisfies Project;
 
-const entry = (id: string) => ({ kind: 'single', step: { id, screenshotBlob: new Blob(['x']) } }) as unknown as StepEntry;
+const entry = (id: string) =>
+  ({ kind: 'single', step: { id, screenshotBlob: new Blob(['x']) } }) as unknown as StepEntry;
 const snapshotOf = (project: Project, ids: string[]) => ({ project, entries: ids.map(entry), entryIds: ids });
 
 function deferred<T>() {
@@ -126,7 +137,10 @@ describe('useEditorProjectData', () => {
     await somethingWrote();
     await waitFor(() => expect(mocks.getProjectStructureSnapshot).toHaveBeenCalledTimes(2));
 
-    const committed = { ...snapshotOf({ ...loaded, contentRevision: 7 }, ['b']), affectedEntryIds: [] } as ProjectStructureMutationResult;
+    const committed = {
+      ...snapshotOf({ ...loaded, contentRevision: 7 }, ['b']),
+      affectedEntryIds: [],
+    } as ProjectStructureMutationResult;
     act(() => result.current.adoptCommitted(committed));
     expect(result.current.canonicalSnapshot?.entryIds).toEqual(['b']);
 
@@ -145,7 +159,9 @@ describe('useEditorProjectData', () => {
 
     expect(result.current.project).toMatchObject({ title: '新標題', metadataRevision: 3, contentRevision: 5 });
     mocks.getProject.mockResolvedValue({ ...loaded, title: '新標題', metadataRevision: 3, contentRevision: 9 });
-    mocks.getProjectStructureSnapshot.mockResolvedValue(snapshotOf({ ...loaded, title: '新標題', metadataRevision: 3, contentRevision: 9 }, ['a', 'c']));
+    mocks.getProjectStructureSnapshot.mockResolvedValue(
+      snapshotOf({ ...loaded, title: '新標題', metadataRevision: 3, contentRevision: 9 }, ['a', 'c']),
+    );
     await somethingWrote();
     await waitFor(() => expect(result.current.canonicalSnapshot?.entryIds).toEqual(['a', 'c']));
   });

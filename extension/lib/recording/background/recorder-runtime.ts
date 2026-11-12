@@ -29,7 +29,8 @@ export function createRecorderRuntime({
         await beforeEveryCapture();
         return await captureVisibleTab(windowId);
       } catch (error) {
-        const isQuotaError = error instanceof Error && error.message.includes('MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND');
+        const isQuotaError =
+          error instanceof Error && error.message.includes('MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND');
         if (!isQuotaError || attempt >= maxRetries) throw error;
         console.warn('[howbeam] captureVisibleTab quota hit, retrying', attempt + 1);
         await sleep(MIN_CAPTURE_INTERVAL_MS * (attempt + 1));
@@ -41,7 +42,11 @@ export function createRecorderRuntime({
     return (await fetch(dataUrl)).blob();
   }
 
-  async function getScreenshotScale(screenshot: Blob, viewport: ClickCapture['viewport'], fallback: number): Promise<number> {
+  async function getScreenshotScale(
+    screenshot: Blob,
+    viewport: ClickCapture['viewport'],
+    fallback: number,
+  ): Promise<number> {
     if (viewport.width <= 0 || viewport.height <= 0) return fallback || 1;
     const bitmap = await createImageBitmap(screenshot);
     const horizontalScale = bitmap.width / viewport.width;

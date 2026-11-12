@@ -13,11 +13,7 @@ import { DEFAULT_PDF_EXPORT_SETTINGS, type PdfExportSettings } from '@/lib/expor
 import { type StepEntry } from '@/lib/storage/models';
 import { EditingBlockedError } from '@/lib/editor/editor-app-model';
 import { downloadBlobViaBrowser } from '@/lib/export/download-utils';
-import {
-  DownloadFailedError,
-  RedactionReviewRequiredError,
-  StepImageError,
-} from '@/lib/export/export-errors';
+import { DownloadFailedError, RedactionReviewRequiredError, StepImageError } from '@/lib/export/export-errors';
 import { t } from '@/lib/shared/i18n';
 import { isAbortError, throwIfAborted } from '@/lib/shared/abort';
 import { useAutoHideScrollbar } from '@/lib/editor/use-auto-hide-scrollbar';
@@ -30,10 +26,7 @@ type ProjectEntriesSnapshot = {
 
 type ProjectEntriesProvider = (
   signal: AbortSignal,
-) =>
-  | readonly StepEntry[]
-  | ProjectEntriesSnapshot
-  | Promise<readonly StepEntry[] | ProjectEntriesSnapshot>;
+) => readonly StepEntry[] | ProjectEntriesSnapshot | Promise<readonly StepEntry[] | ProjectEntriesSnapshot>;
 
 export type ExportPopoverProps = {
   /** The control that opens the panel; the header owns its look and when it is disabled. */
@@ -147,10 +140,7 @@ export default function ExportPopover(props: ExportPopoverProps) {
     return snapshot;
   }
 
-  async function runAction(
-    action: PublicationAction,
-    task: (signal: AbortSignal) => Promise<'nothing' | void>,
-  ) {
+  async function runAction(action: PublicationAction, task: (signal: AbortSignal) => Promise<'nothing' | void>) {
     if (activeController.current) return;
 
     const controller = new AbortController();
@@ -176,55 +166,43 @@ export default function ExportPopover(props: ExportPopoverProps) {
   }
 
   function downloadProject(action: DownloadPublicationAction) {
-    void runAction(
-      action,
-      async (signal) => {
-        const snapshot = await resolveProjectEntries(signal);
-        switch (action) {
-          // downloadBlobViaBrowser resolves only once the browser has queued the transfer,
-          // which survives this page closing, so the success notice below is always accurate.
-          case 'markdown': {
-            const archive = await generateProjectMarkdownArchive(snapshot.entries, snapshot.metadata, { signal });
-            throwIfAborted(signal);
-            await downloadBlobViaBrowser(
-              archive.blob,
-              projectExportFilename(snapshot.metadata, 'markdown-archive'),
-              { signal },
-            );
-            return;
-          }
-
-          case 'html': {
-            const html = await generateProjectHtml(snapshot.entries, snapshot.metadata, { signal });
-            throwIfAborted(signal);
-            await downloadBlobViaBrowser(
-              html,
-              projectExportFilename(snapshot.metadata, 'html'),
-              { signal },
-            );
-            return;
-          }
-
-          case 'pdf': {
-            const pdf = await generateProjectPdf(snapshot.entries, snapshot.metadata, { signal, settings: pdfSettings });
-            throwIfAborted(signal);
-            await downloadBlobViaBrowser(pdf, projectExportFilename(snapshot.metadata, 'pdf'), { signal });
-            return;
-          }
+    void runAction(action, async (signal) => {
+      const snapshot = await resolveProjectEntries(signal);
+      switch (action) {
+        // downloadBlobViaBrowser resolves only once the browser has queued the transfer,
+        // which survives this page closing, so the success notice below is always accurate.
+        case 'markdown': {
+          const archive = await generateProjectMarkdownArchive(snapshot.entries, snapshot.metadata, { signal });
+          throwIfAborted(signal);
+          await downloadBlobViaBrowser(archive.blob, projectExportFilename(snapshot.metadata, 'markdown-archive'), {
+            signal,
+          });
+          return;
         }
-      },
-    );
+
+        case 'html': {
+          const html = await generateProjectHtml(snapshot.entries, snapshot.metadata, { signal });
+          throwIfAborted(signal);
+          await downloadBlobViaBrowser(html, projectExportFilename(snapshot.metadata, 'html'), { signal });
+          return;
+        }
+
+        case 'pdf': {
+          const pdf = await generateProjectPdf(snapshot.entries, snapshot.metadata, { signal, settings: pdfSettings });
+          throwIfAborted(signal);
+          await downloadBlobViaBrowser(pdf, projectExportFilename(snapshot.metadata, 'pdf'), { signal });
+          return;
+        }
+      }
+    });
   }
 
   function exportImages() {
     if (!onExportImages) return;
-    void runAction(
-      'images',
-      async (signal) => {
-        // exportImagesAsZip resolves null when no image could be exported.
-        return (await onExportImages(signal)) === null ? 'nothing' : undefined;
-      },
-    );
+    void runAction('images', async (signal) => {
+      // exportImagesAsZip resolves null when no image could be exported.
+      return (await onExportImages(signal)) === null ? 'nothing' : undefined;
+    });
   }
 
   function download() {
@@ -243,7 +221,9 @@ export default function ExportPopover(props: ExportPopoverProps) {
       }}
     >
       <PopoverAnchor virtualRef={anchor} />
-      <PopoverTrigger ref={triggerRef} asChild>{trigger}</PopoverTrigger>
+      <PopoverTrigger ref={triggerRef} asChild>
+        {trigger}
+      </PopoverTrigger>
       <PopoverContent
         align="end"
         sideOffset={PANEL_GAP}
@@ -279,14 +259,19 @@ export default function ExportPopover(props: ExportPopoverProps) {
             ))}
           </RadioGroup>
 
-          {format === 'pdf' && <PdfExportOptions settings={pdfSettings} onChange={setPdfSettings} disabled={busyShown} />}
+          {format === 'pdf' && (
+            <PdfExportOptions settings={pdfSettings} onChange={setPdfSettings} disabled={busyShown} />
+          )}
         </div>
 
         <div className="shrink-0 border-t-2 border-border p-4">
-          <div aria-live="polite" aria-atomic="true" className="empty:hidden mb-3">
+          <div aria-live="polite" aria-atomic="true" className="mb-3 empty:hidden">
             {error && <InlineAlert>{error}</InlineAlert>}
             {!error && notice && (
-              <p role="status" className="rounded-md border-2 border-border bg-brand-bg-soft px-3.5 py-2.5 text-xs font-bold text-foreground">
+              <p
+                role="status"
+                className="rounded-md border-2 border-border bg-brand-bg-soft px-3.5 py-2.5 text-xs font-bold text-foreground"
+              >
                 {notice}
               </p>
             )}

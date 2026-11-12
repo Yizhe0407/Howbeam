@@ -1,5 +1,38 @@
 import { browser } from 'wxt/browser';
-import { buildShieldTokenStorageKey, isSnapshotShieldPortMessage, SNAPSHOT_SHIELD_CANDIDATES, SNAPSHOT_SHIELD_CAPTURE_COMPLETE, SNAPSHOT_SHIELD_COMMIT, SNAPSHOT_SHIELD_CONTROL, SNAPSHOT_SHIELD_CONTROL_RESULT, SNAPSHOT_SHIELD_INIT, SNAPSHOT_SHIELD_POINTER_DOWN, SNAPSHOT_SHIELD_POINTER_MOVE, SNAPSHOT_SHIELD_PREVIEW, SNAPSHOT_SHIELD_READY, SNAPSHOT_SHIELD_REGION_CAPTURE, SNAPSHOT_SHIELD_TOKEN_STORAGE_PREFIX, SNAPSHOT_SHIELD_TOKEN_TTL_MS, SNAPSHOT_SHIELD_TOOLBAR_STATE, SNAPSHOT_SHIELD_UNDO, snapshotRectKey, type SnapshotShieldControlMessage, type SnapshotShieldFrameMessage, type SnapshotShieldInitMessage, type ToolbarTheme, type SnapshotShieldPointerDownMessage, type SnapshotShieldPointerMoveMessage, type SnapshotShieldRegionCaptureMessage, type SnapshotShieldKeyboardAnchor, type SnapshotShieldPreviewResult, type SnapshotShieldDuplicate, type SnapshotShieldSelection, type SnapshotShieldTokenRecord, type SnapshotShieldToolbarStateMessage, type WithoutToken } from './snapshot-shield-protocol';
+import {
+  buildShieldTokenStorageKey,
+  isSnapshotShieldPortMessage,
+  SNAPSHOT_SHIELD_CANDIDATES,
+  SNAPSHOT_SHIELD_CAPTURE_COMPLETE,
+  SNAPSHOT_SHIELD_COMMIT,
+  SNAPSHOT_SHIELD_CONTROL,
+  SNAPSHOT_SHIELD_CONTROL_RESULT,
+  SNAPSHOT_SHIELD_INIT,
+  SNAPSHOT_SHIELD_POINTER_DOWN,
+  SNAPSHOT_SHIELD_POINTER_MOVE,
+  SNAPSHOT_SHIELD_PREVIEW,
+  SNAPSHOT_SHIELD_READY,
+  SNAPSHOT_SHIELD_REGION_CAPTURE,
+  SNAPSHOT_SHIELD_TOKEN_STORAGE_PREFIX,
+  SNAPSHOT_SHIELD_TOKEN_TTL_MS,
+  SNAPSHOT_SHIELD_TOOLBAR_STATE,
+  SNAPSHOT_SHIELD_UNDO,
+  snapshotRectKey,
+  type SnapshotShieldControlMessage,
+  type SnapshotShieldFrameMessage,
+  type SnapshotShieldInitMessage,
+  type ToolbarTheme,
+  type SnapshotShieldPointerDownMessage,
+  type SnapshotShieldPointerMoveMessage,
+  type SnapshotShieldRegionCaptureMessage,
+  type SnapshotShieldKeyboardAnchor,
+  type SnapshotShieldPreviewResult,
+  type SnapshotShieldDuplicate,
+  type SnapshotShieldSelection,
+  type SnapshotShieldTokenRecord,
+  type SnapshotShieldToolbarStateMessage,
+  type WithoutToken,
+} from './snapshot-shield-protocol';
 import { deepElementFromPoint } from '../capture/selector/element-availability';
 import { createViewportOverlayHost, setImportantStyle } from '../capture/viewport-overlay-host';
 import { REAPPEAR_TRANSITION } from '../capture/capture-presentation';
@@ -78,9 +111,7 @@ function getDeepActiveElement(): Element | null {
 
 function installBackdropStyles(shadowRoot: ShadowRoot): void {
   try {
-    if (
-      'adoptedStyleSheets' in shadowRoot
-    ) {
+    if ('adoptedStyleSheets' in shadowRoot) {
       const sheet = new CSSStyleSheet();
       sheet.replaceSync(SHIELD_BACKDROP_CSS);
       shadowRoot.adoptedStyleSheets = [...shadowRoot.adoptedStyleSheets, sheet];
@@ -250,8 +281,14 @@ export function createSnapshotShield(
     }
 
     if (!isStale(generation)) {
-      const matched = duplicateOf && committedSelections.find(({ rect }) => snapshotRectKey(rect) === snapshotRectKey(duplicateOf));
-      post({ type: SNAPSHOT_SHIELD_CAPTURE_COMPLETE, captureId, selection: committed, ...(matched && { duplicateOf: matched.id }) });
+      const matched =
+        duplicateOf && committedSelections.find(({ rect }) => snapshotRectKey(rect) === snapshotRectKey(duplicateOf));
+      post({
+        type: SNAPSHOT_SHIELD_CAPTURE_COMPLETE,
+        captureId,
+        selection: committed,
+        ...(matched && { duplicateOf: matched.id }),
+      });
     } else if (committed) {
       post({ type: SNAPSHOT_SHIELD_COMMIT, selection: committed });
     }
@@ -379,9 +416,11 @@ export function createSnapshotShield(
       } catch {
         // A closed popover throws in some browser versions.
       }
-      const moveBefore = (parent as HTMLElement & {
-        moveBefore?: (node: Node, child: Node | null) => void;
-      }).moveBefore;
+      const moveBefore = (
+        parent as HTMLElement & {
+          moveBefore?: (node: Node, child: Node | null) => void;
+        }
+      ).moveBefore;
       if (host.isConnected && typeof moveBefore === 'function') moveBefore.call(parent, host, null);
       else parent.append(host);
     }
@@ -452,70 +491,67 @@ export function createSnapshotShield(
   })();
   void sweepStaleShieldTokens(tokenStorageKey).catch(() => undefined);
 
-  frame.addEventListener(
-    'load',
-    () => {
-      // The frame mounts before token provisioning assigns src, so the
-      // initial about:blank document (page origin) can fire load first;
-      // posting the init there would neuter the transferred port.
-      if (removed || !frame.contentWindow || !frame.src) return;
-      const generation = ++channelGeneration;
-      port?.close();
-      const channel = new MessageChannel();
-      port = channel.port1;
-      port.onmessage = (event) => {
-        if (isStale(generation)) return;
-        if (!isSnapshotShieldPortMessage(event.data, token)) return;
-        if (event.data.type === SNAPSHOT_SHIELD_READY) {
-          if (!ready) {
-            ready = true;
-            clearTimeout(readyTimeout);
-            resolveReady();
-          }
-          frame.focus({ preventScroll: true });
-          for (const selection of committedSelections) {
-            post({ type: SNAPSHOT_SHIELD_COMMIT, selection });
-          }
-          if (toolbarState) {
-            post({ type: SNAPSHOT_SHIELD_TOOLBAR_STATE, state: toolbarState });
-          }
-          if (keyboardAnchors) {
-            post({ type: SNAPSHOT_SHIELD_CANDIDATES, anchors: keyboardAnchors });
-          }
-          return;
+  frame.addEventListener('load', () => {
+    // The frame mounts before token provisioning assigns src, so the
+    // initial about:blank document (page origin) can fire load first;
+    // posting the init there would neuter the transferred port.
+    if (removed || !frame.contentWindow || !frame.src) return;
+    const generation = ++channelGeneration;
+    port?.close();
+    const channel = new MessageChannel();
+    port = channel.port1;
+    port.onmessage = (event) => {
+      if (isStale(generation)) return;
+      if (!isSnapshotShieldPortMessage(event.data, token)) return;
+      if (event.data.type === SNAPSHOT_SHIELD_READY) {
+        if (!ready) {
+          ready = true;
+          clearTimeout(readyTimeout);
+          resolveReady();
         }
-        if (event.data.type === SNAPSHOT_SHIELD_POINTER_MOVE) {
-          void handleHover(event.data, generation);
-          return;
+        frame.focus({ preventScroll: true });
+        for (const selection of committedSelections) {
+          post({ type: SNAPSHOT_SHIELD_COMMIT, selection });
         }
-        if (event.data.type === SNAPSHOT_SHIELD_POINTER_DOWN) {
-          void handlePoint(event.data, generation);
-          return;
+        if (toolbarState) {
+          post({ type: SNAPSHOT_SHIELD_TOOLBAR_STATE, state: toolbarState });
         }
-        if (event.data.type === SNAPSHOT_SHIELD_REGION_CAPTURE) {
-          void handleRegion(event.data, generation);
-          return;
+        if (keyboardAnchors) {
+          post({ type: SNAPSHOT_SHIELD_CANDIDATES, anchors: keyboardAnchors });
         }
-        if (event.data.type === SNAPSHOT_SHIELD_CONTROL) {
-          void handleControl(event.data, generation);
-        }
-      };
-      port.onmessageerror = () => {
-        if (generation === channelGeneration) {
-          reportFailure('snapshot input shield message channel failed');
-        }
-      };
-      port.start();
-
-      const theme: ToolbarTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      const message: SnapshotShieldInitMessage = { type: SNAPSHOT_SHIELD_INIT, token, theme };
-      try {
-        frame.contentWindow.postMessage(message, frameUrl.origin, [channel.port2]);
-      } catch (error) {
-        reportFailure('snapshot input shield channel initialization failed', error);
+        return;
       }
-    },
-  );
+      if (event.data.type === SNAPSHOT_SHIELD_POINTER_MOVE) {
+        void handleHover(event.data, generation);
+        return;
+      }
+      if (event.data.type === SNAPSHOT_SHIELD_POINTER_DOWN) {
+        void handlePoint(event.data, generation);
+        return;
+      }
+      if (event.data.type === SNAPSHOT_SHIELD_REGION_CAPTURE) {
+        void handleRegion(event.data, generation);
+        return;
+      }
+      if (event.data.type === SNAPSHOT_SHIELD_CONTROL) {
+        void handleControl(event.data, generation);
+      }
+    };
+    port.onmessageerror = () => {
+      if (generation === channelGeneration) {
+        reportFailure('snapshot input shield message channel failed');
+      }
+    };
+    port.start();
+
+    const theme: ToolbarTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const message: SnapshotShieldInitMessage = { type: SNAPSHOT_SHIELD_INIT, token, theme };
+    try {
+      frame.contentWindow.postMessage(message, frameUrl.origin, [channel.port2]);
+    } catch (error) {
+      reportFailure('snapshot input shield channel initialization failed', error);
+    }
+  });
 
   frame.addEventListener('error', () => reportFailure('snapshot input shield page failed to load'), { once: true });
   mountHost();

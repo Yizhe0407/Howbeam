@@ -2,7 +2,13 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Resvg } from '@resvg/resvg-js';
 import { defineWxtModule } from 'wxt/modules';
-import { ACTION_ICON_SIZES, BRAND_ICONS, brandIconFile, type BrandArt, type BrandIconSpec } from '../lib/shared/brand-icons';
+import {
+  ACTION_ICON_SIZES,
+  BRAND_ICONS,
+  brandIconFile,
+  type BrandArt,
+  type BrandIconSpec,
+} from '../lib/shared/brand-icons';
 
 /** Every brand SVG shares this square viewBox, so layers stack without scaling. */
 const ART_VIEWBOX = 40;
@@ -14,7 +20,8 @@ export interface BrandArtwork {
 
 function innerMarkup(svg: string, name: string): string {
   const inner = /<svg\b[^>]*\bviewBox="0 0 40 40"[^>]*>([\s\S]*)<\/svg>\s*$/.exec(svg.trim())?.[1];
-  if (inner === undefined) throw new Error(`[brand-icons] ${name} must be a single <svg> with viewBox="0 0 ${ART_VIEWBOX} ${ART_VIEWBOX}"`);
+  if (inner === undefined)
+    throw new Error(`[brand-icons] ${name} must be a single <svg> with viewBox="0 0 ${ART_VIEWBOX} ${ART_VIEWBOX}"`);
   return inner;
 }
 
@@ -36,7 +43,10 @@ export function composeBrandIcon(spec: BrandIconSpec, artwork: BrandArtwork): st
 export function renderBrandIcon(spec: BrandIconSpec, artwork: BrandArtwork): Uint8Array {
   // The artwork is pure vector: scanning the machine's fonts for each icon only slows the render and
   // would let the installed fonts decide the output.
-  return new Resvg(composeBrandIcon(spec, artwork), { fitTo: { mode: 'width', value: spec.size }, font: { loadSystemFonts: false } })
+  return new Resvg(composeBrandIcon(spec, artwork), {
+    fitTo: { mode: 'width', value: spec.size },
+    font: { loadSystemFonts: false },
+  })
     .render()
     .asPng();
 }
@@ -76,7 +86,9 @@ export default defineWxtModule({
     // so its idle state is the exact set the background restores after a run.
     wxt.hook('build:manifestGenerated', (_wxt, manifest) => {
       const action = manifest.manifest_version === 2 ? (manifest.browser_action ??= {}) : (manifest.action ??= {});
-      action.default_icon = Object.fromEntries(ACTION_ICON_SIZES.map((size) => [String(size), brandIconFile(size, false)]));
+      action.default_icon = Object.fromEntries(
+        ACTION_ICON_SIZES.map((size) => [String(size), brandIconFile(size, false)]),
+      );
     });
   },
 });

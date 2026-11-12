@@ -10,25 +10,15 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
-import {
-  collectKeyboardCandidateAnchors,
-  resolveSnapshotTargetAtPoint,
-} from '@/lib/recording/snapshot-targeting';
+import { collectKeyboardCandidateAnchors, resolveSnapshotTargetAtPoint } from '@/lib/recording/snapshot-targeting';
 import { SNAPSHOT_FREEZE_EVENTS } from '@/lib/recording/content-script-constants';
 import { describeElement, replayElementClick } from '@/lib/capture/element-description';
-import {
-  isOutOfViewport,
-  readRegionScrollSnapshot,
-  readScrollSnapshot,
-} from '@/lib/capture/scroll-snapshot';
+import { isOutOfViewport, readRegionScrollSnapshot, readScrollSnapshot } from '@/lib/capture/scroll-snapshot';
 import { snapshotRectKey } from '@/lib/recording/snapshot-shield-protocol';
 import { itemAt } from '../setup/item-at';
 
 /** jsdom performs no layout, so scroll geometry is stubbed per element. */
-function makeScrollable(
-  element: HTMLElement,
-  { scrollTop = 0, scrollLeft = 0, axis = 'y' as 'x' | 'y' } = {},
-): void {
+function makeScrollable(element: HTMLElement, { scrollTop = 0, scrollLeft = 0, axis = 'y' as 'x' | 'y' } = {}): void {
   // jsdom does not expand the overflow shorthand into computed longhands.
   element.style.overflowX = axis === 'x' ? 'auto' : 'visible';
   element.style.overflowY = axis === 'y' ? 'auto' : 'visible';
@@ -65,7 +55,6 @@ afterEach(() => {
   document.body.replaceChildren();
   vi.restoreAllMocks();
 });
-
 
 describe('resolveSnapshotTargetAtPoint', () => {
   it('resolves each point independently to the box under it', async () => {

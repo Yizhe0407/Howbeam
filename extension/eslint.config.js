@@ -5,7 +5,16 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['.output/', '.wxt/', 'node_modules/', 'test-results/', 'dist/', 'playwright-report/', 'blob-report/', 'coverage/'],
+    ignores: [
+      '.output/',
+      '.wxt/',
+      'node_modules/',
+      'test-results/',
+      'dist/',
+      'playwright-report/',
+      'blob-report/',
+      'coverage/',
+    ],
   },
   js.configs.recommended,
   // Non-type-checked: keeps `pnpm lint` fast. `tsc --noEmit` already covers the

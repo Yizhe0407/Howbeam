@@ -88,9 +88,10 @@ describe('snapshot shield frame controls', () => {
 
     window.dispatchEvent(new MouseEvent('pointermove', { clientX: 20, clientY: 30 }));
     await vi.advanceTimersByTimeAsync(16);
-    const pointerMoves = () => port.postMessage.mock.calls
-      .map(([message]) => message)
-      .filter((message) => message.type === SNAPSHOT_SHIELD_POINTER_MOVE);
+    const pointerMoves = () =>
+      port.postMessage.mock.calls
+        .map(([message]) => message)
+        .filter((message) => message.type === SNAPSHOT_SHIELD_POINTER_MOVE);
     expect(pointerMoves()).toHaveLength(1);
 
     port.onmessage?.({
@@ -137,9 +138,9 @@ describe('snapshot shield frame controls', () => {
     });
     Object.defineProperty(secondPointerDown, 'isPrimary', { value: true });
     document.body.dispatchEvent(secondPointerDown);
-    expect(port.postMessage.mock.calls.filter(
-      ([message]) => message.type === SNAPSHOT_SHIELD_POINTER_DOWN,
-    )).toHaveLength(2);
+    expect(
+      port.postMessage.mock.calls.filter(([message]) => message.type === SNAPSHOT_SHIELD_POINTER_DOWN),
+    ).toHaveLength(2);
 
     const timedOut = toolbar.props.onCommand('PAUSE_RECORDING');
     await vi.advanceTimersByTimeAsync(15_000);

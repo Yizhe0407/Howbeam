@@ -103,20 +103,22 @@ export function escapeProjectHtml(value: string): string {
  * headings, HTML, or image syntax to the generated project.
  */
 export function escapeProjectMarkdown(value: string): string {
-  return value
-    .replace(/\\/g, '\\\\')
-    .replace(/[[\]()<>`*_#!+\-|{}~=]/g, '\\$&')
-    // GFM turns `http://…`, `www.…` and `user@host` into links, and the
-    // backslashes above would end up inside the link target. Break the
-    // trigger itself so the text stays plain text with no stray backslash in a URL.
-    .replace(/:(?=\/\/)/g, '\\:')
-    .replace(/\bwww\./gi, (match) => `${match.slice(0, 3)}\\.`)
-    .replace(/@/g, '\\@')
-    .replace(/\r\n?/g, '\n')
-    // `1.` at a line start (up to three spaces of indent) would begin a real
-    // ordered list - CommonMark even lets it interrupt a paragraph.
-    .replace(/^( {0,3}\d+)\./gm, '$1\\.')
-    .replace(/\n/g, '  \n');
+  return (
+    value
+      .replace(/\\/g, '\\\\')
+      .replace(/[[\]()<>`*_#!+\-|{}~=]/g, '\\$&')
+      // GFM turns `http://…`, `www.…` and `user@host` into links, and the
+      // backslashes above would end up inside the link target. Break the
+      // trigger itself so the text stays plain text with no stray backslash in a URL.
+      .replace(/:(?=\/\/)/g, '\\:')
+      .replace(/\bwww\./gi, (match) => `${match.slice(0, 3)}\\.`)
+      .replace(/@/g, '\\@')
+      .replace(/\r\n?/g, '\n')
+      // `1.` at a line start (up to three spaces of indent) would begin a real
+      // ordered list - CommonMark even lets it interrupt a paragraph.
+      .replace(/^( {0,3}\d+)\./gm, '$1\\.')
+      .replace(/\n/g, '  \n')
+  );
 }
 
 /** Longest stem in UTF-8 bytes. File systems cap a name at 255 bytes (not
@@ -175,7 +177,6 @@ export function textOrDefault(value: unknown, fallback: string): string {
   const text = textValue(value).trim();
   return text || fallback;
 }
-
 
 export function sectionsByStartEntry(value: unknown, entries: readonly StepEntry[]): Map<string, ProjectSection> {
   return new Map(repairProjectSections(value, entries).map((section) => [section.startEntryId, section]));

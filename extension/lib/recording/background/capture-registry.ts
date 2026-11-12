@@ -22,7 +22,8 @@ export function cancelCapture(captureId: string): void {
 }
 
 export function assertCaptureNotCancelled(captureId: string): void {
-  if (cancelledCaptureIds.has(captureId)) throw new StaleCaptureError('Capture was cancelled before it could be saved.');
+  if (cancelledCaptureIds.has(captureId))
+    throw new StaleCaptureError('Capture was cancelled before it could be saved.');
 }
 
 export function isCaptureCommitting(captureId: string): boolean {

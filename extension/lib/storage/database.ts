@@ -137,11 +137,13 @@ export async function requireProject(tx: ProjectTransaction, id: string): Promis
 /** After a step was edited in place. Such an edit never touches what the
  * summary counts (entries, steps, screenshots), so nothing is recomputed. */
 export async function recordStepEdit(tx: ProjectWriteTransaction, project: Project): Promise<void> {
-  await tx.objectStore('projects').put(sanitizeProject({
-    ...project,
-    updatedAt: Math.max(project.updatedAt, Date.now()),
-    stepEditRevision: project.stepEditRevision + 1,
-  }));
+  await tx.objectStore('projects').put(
+    sanitizeProject({
+      ...project,
+      updatedAt: Math.max(project.updatedAt, Date.now()),
+      stepEditRevision: project.stepEditRevision + 1,
+    }),
+  );
 }
 
 async function abortTransaction(tx: ProjectWriteTransaction, error: unknown): Promise<never> {
@@ -178,7 +180,9 @@ function getDatabase(): Promise<IDBPDatabase<HowbeamDB>> {
       db.createObjectStore('backupManifest');
     },
     blocked(currentVersion, blockedVersion) {
-      console.warn(`Howbeam database upgrade to ${blockedVersion ?? 'unknown'} is blocked by version ${currentVersion}.`);
+      console.warn(
+        `Howbeam database upgrade to ${blockedVersion ?? 'unknown'} is blocked by version ${currentVersion}.`,
+      );
     },
     blocking(currentVersion, blockedVersion) {
       // A versionchange must never remain blocked by this long-lived extension
@@ -192,13 +196,15 @@ function getDatabase(): Promise<IDBPDatabase<HowbeamDB>> {
       databaseConnection = undefined;
       databasePromise = undefined;
     },
-  }).then((db) => {
-    databaseConnection = db;
-    return db;
-  }).catch((error) => {
-    databasePromise = undefined;
-    throw error;
-  });
+  })
+    .then((db) => {
+      databaseConnection = db;
+      return db;
+    })
+    .catch((error) => {
+      databasePromise = undefined;
+      throw error;
+    });
   return databasePromise;
 }
 
@@ -212,9 +218,7 @@ function isClosedConnectionError(error: unknown): boolean {
  * throw InvalidStateError before any work commits. Because nothing was
  * committed, retrying once against a freshly opened connection is safe and
  * transparently recovers autosaves and other in-flight callers. */
-export async function runWithDatabase<T>(
-  operation: (db: IDBPDatabase<HowbeamDB>) => Promise<T>,
-): Promise<T> {
+export async function runWithDatabase<T>(operation: (db: IDBPDatabase<HowbeamDB>) => Promise<T>): Promise<T> {
   const db = await getDatabase();
   try {
     return await operation(db);

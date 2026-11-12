@@ -12,8 +12,7 @@ import { type Step } from '@/lib/storage/models';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
 
-vi.mock('wxt/browser', async () =>
-  (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
+vi.mock('wxt/browser', async () => (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
 // This suite keeps step persistence real: only the read APIs are stubbed, so an unexpected write during a preflight path fails loudly instead of being silently absorbed by a mock.
 vi.mock('@/lib/storage/step-repository', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/storage/step-repository')>();
@@ -31,7 +30,8 @@ vi.mock('@/lib/storage/project-repository', async (importOriginal) => ({
 }));
 
 vi.mock('@/lib/storage/storage', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal),
+);
 
 const idleState = makeRecordingState();
 
@@ -67,7 +67,7 @@ function ordinaryStep(overrides: Partial<Step> = {}): Step {
 
 async function send<T>(message: BackgroundMessage, sender: unknown = editorSender('project-a')): Promise<T> {
   if (!mocks.messageListener) throw new Error('Background message listener was not registered.');
-  return await mocks.messageListener(message, sender) as T;
+  return (await mocks.messageListener(message, sender)) as T;
 }
 
 function expectNoPermissionOrOperationSideEffects(): void {
@@ -120,8 +120,6 @@ beforeEach(async () => {
   resetMocks();
 });
 
-
-
 describe('background runtime boundary', () => {
   it.each<unknown>([
     null,
@@ -154,11 +152,14 @@ describe('background runtime boundary', () => {
       },
     },
   ])('rejects START_RECORDING from an untrusted $name', async ({ sender }) => {
-    const result = await mocks.messageListener?.({
-      type: 'START_RECORDING',
-      target: { kind: 'project', projectId: 'project-a' },
-      mode: 'steps',
-    }, sender);
+    const result = await mocks.messageListener?.(
+      {
+        type: 'START_RECORDING',
+        target: { kind: 'project', projectId: 'project-a' },
+        mode: 'steps',
+      },
+      sender,
+    );
 
     expect(result).toBeUndefined();
     expectNoPermissionOrOperationSideEffects();
@@ -183,9 +184,7 @@ describe('background runtime boundary', () => {
     );
 
     expect(result).toEqual({ ok: true });
-    expect(mocks.setRecordingState).toHaveBeenCalledWith(
-      expect.objectContaining({ runId: 'run-1', phase: 'paused' }),
-    );
+    expect(mocks.setRecordingState).toHaveBeenCalledWith(expect.objectContaining({ runId: 'run-1', phase: 'paused' }));
   });
 
   it('rejects toolbar controls from a different tab before mutation', async () => {
@@ -212,12 +211,15 @@ describe('background runtime boundary', () => {
 
 describe('continuation recording start', () => {
   it('refuses a continuation whose editor does not own the named Project', async () => {
-    const result = await send<StartRecordingResult>({
-      type: 'START_RECORDING',
-      target: { kind: 'project', projectId: 'project-b' },
-      mode: 'steps',
-      continuation: {},
-    }, editorSender('project-a'));
+    const result = await send<StartRecordingResult>(
+      {
+        type: 'START_RECORDING',
+        target: { kind: 'project', projectId: 'project-b' },
+        mode: 'steps',
+        continuation: {},
+      },
+      editorSender('project-a'),
+    );
 
     expect(result).toMatchObject({ ok: false });
     expect(mocks.permissionsContains).not.toHaveBeenCalled();
@@ -242,7 +244,7 @@ describe('continuation recording start', () => {
     expect(mocks.setRecordingState).not.toHaveBeenCalled();
   });
 
-  it('records into the Project\'s own source page rather than the active tab', async () => {
+  it("records into the Project's own source page rather than the active tab", async () => {
     const sourceTab = {
       id: 11,
       windowId: 5,
@@ -323,11 +325,14 @@ describe('continuation from a source page that no longer loads', () => {
 
 describe('background source-permission preflight', () => {
   it('rejects a forged editor/session before reading a recapture target', async () => {
-    const result = await send<PreflightStepRecaptureSourcePermissionResult>({
-      type: 'PREFLIGHT_STEP_RECAPTURE_SOURCE_PERMISSION',
-      sessionId: 'project-b',
-      target: { kind: 'single', stepId: 'step-1' },
-    }, editorSender('project-a'));
+    const result = await send<PreflightStepRecaptureSourcePermissionResult>(
+      {
+        type: 'PREFLIGHT_STEP_RECAPTURE_SOURCE_PERMISSION',
+        sessionId: 'project-b',
+        target: { kind: 'single', stepId: 'step-1' },
+      },
+      editorSender('project-a'),
+    );
 
     expect(result).toMatchObject({ ok: false, code: 'INVALID_EDITOR' });
     expect(mocks.getStep).not.toHaveBeenCalled();
@@ -366,7 +371,7 @@ describe('background source-permission preflight', () => {
     expectNoPermissionOrOperationSideEffects();
   });
 
-  it('resolves continuation authority from the Project\'s last persisted step', async () => {
+  it("resolves continuation authority from the Project's last persisted step", async () => {
     mocks.getSteps.mockResolvedValue([
       ordinaryStep({ id: 'step-1', order: 0, url: 'https://first.example/start' }),
       ordinaryStep({ id: 'step-2', order: 1, url: 'https://persisted.example/path?fresh=1#target' }),
@@ -388,10 +393,13 @@ describe('background source-permission preflight', () => {
   });
 
   it('rejects continuation for a forged editor, an empty Project, or a restricted source', async () => {
-    const forged = await send<PreflightProjectContinuationSourcePermissionResult>({
-      type: 'PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION',
-      sessionId: 'project-b',
-    }, editorSender('project-a'));
+    const forged = await send<PreflightProjectContinuationSourcePermissionResult>(
+      {
+        type: 'PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION',
+        sessionId: 'project-b',
+      },
+      editorSender('project-a'),
+    );
 
     mocks.getSteps.mockResolvedValueOnce([]);
     const empty = await send<PreflightProjectContinuationSourcePermissionResult>({

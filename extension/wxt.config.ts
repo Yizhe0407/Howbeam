@@ -62,7 +62,9 @@ export default defineConfig({
     // Runtime content scripts make WXT infer a required host permission. The
     // recorder only needs it after an explicit Start action, so keep it optional.
     'build:manifestGenerated': (wxt, manifest) => {
-      manifest.host_permissions = manifest.host_permissions?.filter((permission: string) => permission !== '<all_urls>');
+      manifest.host_permissions = manifest.host_permissions?.filter(
+        (permission: string) => permission !== '<all_urls>',
+      );
       if (manifest.host_permissions?.length === 0) delete manifest.host_permissions;
       if (manifest.manifest_version === 2) {
         manifest.optional_permissions ??= [];

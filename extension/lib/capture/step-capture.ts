@@ -30,7 +30,11 @@ export interface LateClickSuppressor<T> {
    * duplicate and must be swallowed. Consuming a click disarms the suppressor,
    * so at most one trusted click is ever eaten per replay.
    */
-  shouldSuppress(eventTarget: unknown, isTrusted: boolean, matches: (armed: T, eventTarget: unknown) => boolean): boolean;
+  shouldSuppress(
+    eventTarget: unknown,
+    isTrusted: boolean,
+    matches: (armed: T, eventTarget: unknown) => boolean,
+  ): boolean;
 }
 
 export function createLateClickSuppressor<T>(windowMs: number, now: () => number = Date.now): LateClickSuppressor<T> {

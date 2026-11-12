@@ -54,16 +54,24 @@ export default function ConfirmationDialog({
       >
         <DialogHeader className="pr-10">
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="leading-6 text-muted-foreground">
-            {description}
-          </DialogDescription>
+          <DialogDescription className="leading-6 text-muted-foreground">{description}</DialogDescription>
         </DialogHeader>
         {error && <InlineAlert className="mt-4">{error}</InlineAlert>}
         <DialogFooter className="mt-6">
-          <Button type="button" variant="outline" disabled={pendingShown} onClick={() => !pending && onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pendingShown}
+            onClick={() => !pending && onOpenChange(false)}
+          >
             {t().common.cancel}
           </Button>
-          <Button type="button" variant={confirmVariant} disabled={pendingShown} onClick={() => !pending && void onConfirm()}>
+          <Button
+            type="button"
+            variant={confirmVariant}
+            disabled={pendingShown}
+            onClick={() => !pending && void onConfirm()}
+          >
             {pendingShown && <Loader2 className="animate-spin" />}
             {pendingShown ? pendingLabel : confirmLabel}
           </Button>

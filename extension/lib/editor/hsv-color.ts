@@ -27,7 +27,7 @@ export function hexToHsv(hex: string): Hsv {
     else if (max === g) h = (b - r) / delta + 2;
     else h = (r - g) / delta + 4;
   }
-  return { h: ((h * 60) + 360) % 360, s: max === 0 ? 0 : delta / max, v: max };
+  return { h: (h * 60 + 360) % 360, s: max === 0 ? 0 : delta / max, v: max };
 }
 
 export function hsvToHex({ h, s, v }: Hsv): string {
@@ -36,7 +36,9 @@ export function hsvToHex({ h, s, v }: Hsv): string {
   const channel = (n: number) => {
     const k = (n + h / 60) % 6;
     const level = value - value * saturation * Math.max(0, Math.min(k, 4 - k, 1));
-    return Math.round(level * 255).toString(16).padStart(2, '0');
+    return Math.round(level * 255)
+      .toString(16)
+      .padStart(2, '0');
   };
   return `#${channel(5)}${channel(3)}${channel(1)}`;
 }

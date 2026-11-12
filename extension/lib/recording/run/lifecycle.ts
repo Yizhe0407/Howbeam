@@ -1,7 +1,11 @@
 import type { Browser } from 'wxt/browser';
 import type { CopyKey } from '../../shared/i18n/copy';
 import type { RecordingControlResult, StartRecordingMessage, StartRecordingResult } from '../../runtime/messages';
-import { isTrustedExtensionPageSender, isTrustedRecorderControlSender, type RuntimeMessageSenderLike } from '../../runtime/background-message-validation';
+import {
+  isTrustedExtensionPageSender,
+  isTrustedRecorderControlSender,
+  type RuntimeMessageSenderLike,
+} from '../../runtime/background-message-validation';
 import { isRecordableTabUrl } from '../../shared/restricted-urls';
 import { projectDisplayTitle } from '../../storage/models';
 import { isSuperseded, type OperationContext, type RunActor } from './actor';
@@ -31,7 +35,12 @@ export interface LifecycleDeps {
   gate: RecorderGate;
   extensionOrigin: string;
   /** Captures, stores and activates a snapshot's base image (snapshot.ts). */
-  captureAnchor(ctx: OperationContext, recording: Recording, tab: { id: number; windowId: number }, context: SnapshotContext): Promise<SnapshotAnchor>;
+  captureAnchor(
+    ctx: OperationContext,
+    recording: Recording,
+    tab: { id: number; windowId: number },
+    context: SnapshotContext,
+  ): Promise<SnapshotAnchor>;
   /** Ends the run's undo window (undo.ts). */
   discardUndo(): void;
   /** A recapture start that has not published its state yet also owns the recorder. */
@@ -150,7 +159,12 @@ export function createLifecycle(deps: LifecycleDeps) {
 
   function startReply(state: RunState, sessionId: string, runId: string | null): StartRecordingResult {
     const op = state.operation;
-    if (op.kind === 'recording' && op.sessionId === sessionId && (runId === null || op.runId === runId) && op.phase !== 'starting') {
+    if (
+      op.kind === 'recording' &&
+      op.sessionId === sessionId &&
+      (runId === null || op.runId === runId) &&
+      op.phase !== 'starting'
+    ) {
       return { ok: true, sessionId, runId: op.runId };
     }
     const shown = op.kind === 'idle' ? op.notice : null;
@@ -164,7 +178,7 @@ export function createLifecycle(deps: LifecycleDeps) {
     continuationTab: Browser.tabs.Tab | null,
   ): Promise<StartRecordingResult> {
     const { mode } = message;
-    const tab = continuationTab ?? await ctx.until(ports.tabs.activeInCurrentWindow());
+    const tab = continuationTab ?? (await ctx.until(ports.tabs.activeInCurrentWindow()));
     if (tab?.id == null) {
       await startFailure(ctx, mode, 'NO_ACTIVE_TAB', 'background.noActiveTab');
       return startReply(ctx.state(), sessionId, null);
@@ -188,9 +202,11 @@ export function createLifecycle(deps: LifecycleDeps) {
 
     const newProject = message.target.kind === 'new';
     const project = newProject ? undefined : await ctx.until(ports.projects.get(sessionId));
-    const insertAfterStepId = message.insertAfterEntryId === undefined
-      ? null
-      : (await ctx.until(ports.projects.continuationAnchor(sessionId, message.insertAfterEntryId)))?.afterStepId ?? null;
+    const insertAfterStepId =
+      message.insertAfterEntryId === undefined
+        ? null
+        : ((await ctx.until(ports.projects.continuationAnchor(sessionId, message.insertAfterEntryId)))?.afterStepId ??
+          null);
     const runId = ports.newId();
     const starting = startingRun({
       runId,
@@ -328,7 +344,9 @@ export function createLifecycle(deps: LifecycleDeps) {
           else await ports.steps.deleteForRun(recording.sessionId, runId);
         } catch (error) {
           console.error('[howbeam] failed to discard current recording', error);
-          await ctx.commit((state) => withRecording(state, withNotice(recording, notice('DISCARD_FAILED', 'background.discardFailed'))));
+          await ctx.commit((state) =>
+            withRecording(state, withNotice(recording, notice('DISCARD_FAILED', 'background.discardFailed'))),
+          );
           return failure('background.discardFailed');
         }
         await ctx.commit((state) => ended(state, recording));
@@ -347,15 +365,17 @@ export function createLifecycle(deps: LifecycleDeps) {
    * recorded.
    */
   function recordedTabGone(tabId: number): Promise<void> {
-    return actor.run(async (ctx) => {
-      const recording = ctx.state().operation;
-      if (recording.kind !== 'recording' || recording.tabId !== tabId) return;
-      if ((await deps.continueAfterTabClosed(ctx, recording)) === 'moved') return;
-      const current = liveRecording(ctx.state(), recording.runId);
-      if (current) await endWithError(ctx, current, notice('RECORDED_TAB_CLOSED', 'runtime.recordingTabClosed'));
-    }).catch((error) => {
-      if (!isSuperseded(error)) throw error;
-    });
+    return actor
+      .run(async (ctx) => {
+        const recording = ctx.state().operation;
+        if (recording.kind !== 'recording' || recording.tabId !== tabId) return;
+        if ((await deps.continueAfterTabClosed(ctx, recording)) === 'moved') return;
+        const current = liveRecording(ctx.state(), recording.runId);
+        if (current) await endWithError(ctx, current, notice('RECORDED_TAB_CLOSED', 'runtime.recordingTabClosed'));
+      })
+      .catch((error) => {
+        if (!isSuperseded(error)) throw error;
+      });
   }
 
   /**

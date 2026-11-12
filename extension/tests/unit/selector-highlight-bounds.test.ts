@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getHighlightBounds, getVisibleHighlightBounds } from '@/lib/capture/selector/highlight-bounds';
-import { ACTIVATION_TARGETING_POLICY, findVisualTargetCandidatesAtPoint, selectVisualTargetCandidate } from '@/lib/capture/selector/visual-target';
+import {
+  ACTIVATION_TARGETING_POLICY,
+  findVisualTargetCandidatesAtPoint,
+  selectVisualTargetCandidate,
+} from '@/lib/capture/selector/visual-target';
 import { makeVisible, resetSelectorDom } from '../setup/selector-dom';
 
 afterEach(resetSelectorDom);
@@ -96,7 +100,6 @@ describe('getVisibleHighlightBounds', () => {
     });
   });
 
-
   it('uses an image-map area region and the associated image paint ancestry', () => {
     const imageClip = document.createElement('div');
     imageClip.style.overflowX = 'hidden';
@@ -140,13 +143,7 @@ describe('getVisibleHighlightBounds', () => {
     });
 
     const selected = selectVisualTargetCandidate(
-      findVisualTargetCandidatesAtPoint(
-        area,
-        130,
-        70,
-        { width: 400, height: 300 },
-        ACTIVATION_TARGETING_POLICY,
-      ),
+      findVisualTargetCandidatesAtPoint(area, 130, 70, { width: 400, height: 300 }, ACTIVATION_TARGETING_POLICY),
     );
     expect(selected).toMatchObject({
       element: area,

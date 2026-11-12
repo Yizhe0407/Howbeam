@@ -1,15 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import InlineAlert from "@/components/shared/InlineAlert";
-import { Button } from "@/components/ui/button";
-import { getEntryImageOwner, type StepEntry } from "@/lib/storage/models";
-import type { TextEdit } from "@/lib/storage/image-edit-model";
-import { normalizeStoredText } from "@/lib/storage/stored-text";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import InlineAlert from '@/components/shared/InlineAlert';
+import { Button } from '@/components/ui/button';
+import { getEntryImageOwner, type StepEntry } from '@/lib/storage/models';
+import type { TextEdit } from '@/lib/storage/image-edit-model';
+import { normalizeStoredText } from '@/lib/storage/stored-text';
 import {
   appendItem,
   CROP_ITEM_ID,
@@ -20,12 +15,8 @@ import {
   roomForKind,
   splitItems,
   type ImageEditItem,
-} from "@/lib/editor/image-edit-items";
-import {
-  isCopyable,
-  PASTE_OFFSET,
-  pasteItems,
-} from "@/lib/editor/image-edit-clipboard";
+} from '@/lib/editor/image-edit-items';
+import { isCopyable, PASTE_OFFSET, pasteItems } from '@/lib/editor/image-edit-clipboard';
 import {
   applyStylePatch,
   DEFAULT_IMAGE_EDIT_STYLE,
@@ -34,26 +25,19 @@ import {
   styleOfItem,
   type ImageEditStyle,
   type StylePatch,
-} from "@/lib/editor/image-edit-style";
-import { snapCrop } from "@/lib/editor/image-edit-crop";
-import { fitTextHeight } from "@/lib/editor/image-edit-item-geometry";
-import {
-  imageEditTool,
-  toolForShortcut,
-  type ImageEditToolId,
-} from "@/lib/editor/image-edit-tools";
-import { useImageCssSize } from "@/lib/editor/use-image-css-size";
-import { useImageEditViewport } from "@/lib/editor/use-image-edit-viewport";
-import { useStoredImageEdits } from "@/lib/editor/use-stored-image-edits";
-import { MIN_ZOOM, nativeZoom } from "@/lib/editor/image-edit-viewport";
-import { t } from "@/lib/shared/i18n";
-import EntryThumbnail from "./EntryThumbnail";
-import ImageEditLayer from "./ImageEditLayer";
-import ImageEditStylePanel, {
-  ImageEditCropPanel,
-  ImageEditItemActions,
-} from "./ImageEditStylePanel";
-import ImageEditToolbar, { ImageEditHeaderActions } from "./ImageEditToolbar";
+} from '@/lib/editor/image-edit-style';
+import { snapCrop } from '@/lib/editor/image-edit-crop';
+import { fitTextHeight } from '@/lib/editor/image-edit-item-geometry';
+import { imageEditTool, toolForShortcut, type ImageEditToolId } from '@/lib/editor/image-edit-tools';
+import { useImageCssSize } from '@/lib/editor/use-image-css-size';
+import { useImageEditViewport } from '@/lib/editor/use-image-edit-viewport';
+import { useStoredImageEdits } from '@/lib/editor/use-stored-image-edits';
+import { MIN_ZOOM, nativeZoom } from '@/lib/editor/image-edit-viewport';
+import { t } from '@/lib/shared/i18n';
+import EntryThumbnail from './EntryThumbnail';
+import ImageEditLayer from './ImageEditLayer';
+import ImageEditStylePanel, { ImageEditCropPanel, ImageEditItemActions } from './ImageEditStylePanel';
+import ImageEditToolbar, { ImageEditHeaderActions } from './ImageEditToolbar';
 
 interface Props {
   entry: StepEntry;
@@ -67,12 +51,8 @@ interface Props {
  * Full-window image editor: the tools, the selection and the text being typed
  * over a zoomable viewport, editing a draft that is saved behind it.
  */
-export default function ImageEditWorkspace({
-  entry: openedEntry,
-  number,
-  onClose,
-}: Props) {
-  const [tool, setTool] = useState<ImageEditToolId>("select");
+export default function ImageEditWorkspace({ entry: openedEntry, number, onClose }: Props) {
+  const [tool, setTool] = useState<ImageEditToolId>('select');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const [style, setStyle] = useState<ImageEditStyle>(DEFAULT_IMAGE_EDIT_STYLE);
@@ -84,13 +64,11 @@ export default function ImageEditWorkspace({
     isNew: boolean;
   } | null>(null);
 
-  const { entry, session, commit, saveAll, reviewRequired, updatedElsewhere } =
-    useStoredImageEdits(openedEntry, () => setSelectedId(null));
-  const owner = getEntryImageOwner(entry);
-  const imageSize = useImageCssSize(
-    owner.screenshotBlob,
-    owner.screenshotScale ?? owner.devicePixelRatio,
+  const { entry, session, commit, saveAll, reviewRequired, updatedElsewhere } = useStoredImageEdits(openedEntry, () =>
+    setSelectedId(null),
   );
+  const owner = getEntryImageOwner(entry);
+  const imageSize = useImageCssSize(owner.screenshotBlob, owner.screenshotScale ?? owner.devicePixelRatio);
   const viewport = useImageEditViewport(imageSize);
   const { fit, zoom, maxZoom, scroller } = viewport;
 
@@ -104,8 +82,7 @@ export default function ImageEditWorkspace({
   /** What is on screen: the saved items, with the live gesture applied and the text being typed left to the editor. */
   const displayItems = useMemo(() => {
     let list: readonly ImageEditItem[] = items;
-    if (editing && !editing.isNew)
-      list = list.filter((item) => item.id !== editing.item.id);
+    if (editing && !editing.isNew) list = list.filter((item) => item.id !== editing.item.id);
     if (preview) {
       list = list.some((item) => item.id === preview.id)
         ? list.map((item) => (item.id === preview.id ? preview : item))
@@ -129,7 +106,7 @@ export default function ImageEditWorkspace({
 
   /** A crop is snapped to whole device pixels as it is stored, and disappears if it would cover the whole image. */
   const settle = (item: ImageEditItem): ImageEditItem | null => {
-    if (item.kind !== "crop" || !imageSize) return item;
+    if (item.kind !== 'crop' || !imageSize) return item;
     const bounds = snapCrop(item.bounds, imageSize, screenshotScale);
     return bounds ? { ...item, bounds } : null;
   };
@@ -143,9 +120,9 @@ export default function ImageEditWorkspace({
   };
   /** A snapshot keeps at least one annotation: its last box goes with the whole step instead. */
   const canDelete = (item: ImageEditItem): boolean =>
-    item.kind !== "highlight" ||
-    entry.kind === "single" ||
-    items.filter((candidate) => candidate.kind === "highlight").length > 1;
+    item.kind !== 'highlight' ||
+    entry.kind === 'single' ||
+    items.filter((candidate) => candidate.kind === 'highlight').length > 1;
   const deleteItem = (id: string) => {
     const item = items.find((candidate) => candidate.id === id);
     if (!item || !canDelete(item)) return;
@@ -154,18 +131,18 @@ export default function ImageEditWorkspace({
   };
   const createItem = (item: ImageEditItem) => {
     if (!hasRoomFor(items, [item])) return;
-    if (item.kind === "text") {
+    if (item.kind === 'text') {
       setEditing({ item, isNew: true });
       return;
     }
     const settled = settle(item);
     if (!settled) return;
-    setSelectedId(settled.kind === "crop" ? null : settled.id);
+    setSelectedId(settled.kind === 'crop' ? null : settled.id);
     commit(appendItem(items, settled));
   };
   const startTextEdit = (id: string) => {
     const item = items.find((candidate) => candidate.id === id);
-    if (item?.kind !== "text") return;
+    if (item?.kind !== 'text') return;
     setSelectedId(id);
     setEditing({ item, isNew: false });
   };
@@ -176,44 +153,30 @@ export default function ImageEditWorkspace({
     if (text === null) return;
     // Trailing blank space is never wanted; an emptied text box is removed.
     // Stored text follows the one rule storage and export share.
-    const value = normalizeStoredText(text).replace(/\s+$/u, "");
-    if (value === "") {
+    const value = normalizeStoredText(text).replace(/\s+$/u, '');
+    if (value === '') {
       if (!isNew) deleteItem(item.id);
       return;
     }
     const next = fitTextHeight({ ...item, text: value });
     if (isNew && !hasRoomFor(items, [next])) return;
     setSelectedId(next.id);
-    commit(
-      isNew
-        ? appendItem(items, next)
-        : items.map((candidate) =>
-            candidate.id === next.id ? next : candidate,
-          ),
-    );
+    commit(isNew ? appendItem(items, next) : items.map((candidate) => (candidate.id === next.id ? next : candidate)));
   };
 
   /** Changes what is selected (or being typed) and what is drawn next. The marker number belongs to one marker, so it is not remembered. */
   const applyStyle = (patch: StylePatch) => {
     const { number: _number, ...remembered } = patch;
     setStyle((current) => ({ ...current, ...remembered }));
-    if (editing)
-      setEditing({ ...editing, item: applyStylePatch(editing.item, patch) });
-    else if (selectedItem && isStyledItem(selectedItem))
-      replaceItem(applyStylePatch(selectedItem, patch));
+    if (editing) setEditing({ ...editing, item: applyStylePatch(editing.item, patch) });
+    else if (selectedItem && isStyledItem(selectedItem)) replaceItem(applyStylePatch(selectedItem, patch));
   };
 
   /** Style controls follow the selection, or the active tool when nothing is selected. */
-  const styleSource =
-    editing?.item ??
-    (selectedItem && isStyledItem(selectedItem) ? selectedItem : null);
-  const styleFields = styleSource
-    ? STYLE_FIELDS[styleSource.kind]
-    : activeTool.styleFields;
-  const shownStyle: ImageEditStyle = styleSource
-    ? styleOfItem(styleSource, style)
-    : style;
-  const cropItem = items.find((item) => item.kind === "crop") ?? null;
+  const styleSource = editing?.item ?? (selectedItem && isStyledItem(selectedItem) ? selectedItem : null);
+  const styleFields = styleSource ? STYLE_FIELDS[styleSource.kind] : activeTool.styleFields;
+  const shownStyle: ImageEditStyle = styleSource ? styleOfItem(styleSource, style) : style;
+  const cropItem = items.find((item) => item.kind === 'crop') ?? null;
   const cropPixels = cropItem
     ? {
         width: Math.round(cropItem.bounds.width * screenshotScale),
@@ -236,27 +199,21 @@ export default function ImageEditWorkspace({
     if (!imageSize || clipboard.items.length === 0) return;
     if (!hasRoomFor(items, clipboard.items)) return;
     clipboard.pastes += 1;
-    const { items: next, pasted } = pasteItems(
-      items,
-      clipboard.items,
-      PASTE_OFFSET * clipboard.pastes,
-      imageSize,
-    );
+    const { items: next, pasted } = pasteItems(items, clipboard.items, PASTE_OFFSET * clipboard.pastes, imageSize);
     const last = pasted.at(-1);
     if (!last) return;
     commit(next);
     setSelectedId(last.id);
-    if (tool !== "select") setTool("select");
+    if (tool !== 'select') setTool('select');
   };
   const duplicateSelection = () => {
     if (copySelection()) pasteClipboard();
   };
-  const reorderSelection = (to: "front" | "back") => {
-    if (selectedItem && isCopyable(selectedItem))
-      commit(reorderItem(items, selectedItem.id, to));
+  const reorderSelection = (to: 'front' | 'back') => {
+    if (selectedItem && isCopyable(selectedItem)) commit(reorderItem(items, selectedItem.id, to));
   };
   const canCopySelection = selectedItem !== null && isCopyable(selectedItem);
-  const canDeleteSelection = selectedItem !== null && selectedItem.kind !== "crop" && canDelete(selectedItem);
+  const canDeleteSelection = selectedItem !== null && selectedItem.kind !== 'crop' && canDelete(selectedItem);
 
   /** Done (`confirm`) also confirms masks awaiting review; Escape only closes, leaving the review pending. */
   const requestClose = async (confirm = false) => {
@@ -281,43 +238,38 @@ export default function ImageEditWorkspace({
       return;
     const modifier = event.metaKey || event.ctrlKey;
     const key = event.key.toLowerCase();
-    if (modifier && key === "c") {
+    if (modifier && key === 'c') {
       if (copySelection()) event.preventDefault();
-    } else if (modifier && key === "v") {
+    } else if (modifier && key === 'v') {
       event.preventDefault();
       pasteClipboard();
-    } else if (modifier && key === "d") {
+    } else if (modifier && key === 'd') {
       event.preventDefault();
       duplicateSelection();
-    } else if (
-      !modifier &&
-      !event.altKey &&
-      (event.key === "[" || event.key === "]")
-    ) {
-      reorderSelection(event.key === "]" ? "front" : "back");
+    } else if (!modifier && !event.altKey && (event.key === '[' || event.key === ']')) {
+      reorderSelection(event.key === ']' ? 'front' : 'back');
     } else if (!modifier && !event.altKey && toolForShortcut(event.key)) {
       changeTool(toolForShortcut(event.key)!.id);
-    } else if (modifier && key === "z") {
+    } else if (modifier && key === 'z') {
       event.preventDefault();
       if (event.shiftKey) session.redo();
       else session.undo();
-    } else if (modifier && key === "y") {
+    } else if (modifier && key === 'y') {
       event.preventDefault();
       session.redo();
-    } else if (!modifier && (event.key === "+" || event.key === "=")) {
+    } else if (!modifier && (event.key === '+' || event.key === '=')) {
       viewport.zoomIn();
-    } else if (!modifier && event.key === "-") {
+    } else if (!modifier && event.key === '-') {
       viewport.zoomOut();
-    } else if (!modifier && event.key === "0") {
+    } else if (!modifier && event.key === '0') {
       viewport.zoomFit();
     }
   };
 
   // A tool that cannot add anything more gives way to the pointer, which can still select and delete.
-  const toolIsFull =
-    activeTool.creates !== null && !roomForKind(activeTool.creates, room);
+  const toolIsFull = activeTool.creates !== null && !roomForKind(activeTool.creates, room);
   useEffect(() => {
-    if (toolIsFull) setTool("select");
+    if (toolIsFull) setTool('select');
   }, [toolIsFull]);
 
   const copy = t().editor.imageEdit;
@@ -342,9 +294,7 @@ export default function ImageEditWorkspace({
         className="fixed inset-0 z-50 flex max-h-none max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-none bg-background p-0 focus:outline-none"
       >
         <DialogTitle className="sr-only">{copy.title(number)}</DialogTitle>
-        <DialogDescription className="sr-only">
-          {copy.hints.navigate}
-        </DialogDescription>
+        <DialogDescription className="sr-only">{copy.hints.navigate}</DialogDescription>
 
         <header className="flex shrink-0 flex-col gap-2 border-b-2 border-border-soft px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
@@ -366,22 +316,15 @@ export default function ImageEditWorkspace({
               doneLabel={reviewRequired ? copy.confirmReview : undefined}
               doneDisabled={closing}
             >
-              {tool === "crop" ? (
-                <ImageEditCropPanel
-                  size={cropPixels}
-                  onClear={() => deleteItem(CROP_ITEM_ID)}
-                />
+              {tool === 'crop' ? (
+                <ImageEditCropPanel size={cropPixels} onClear={() => deleteItem(CROP_ITEM_ID)} />
               ) : (
                 <>
                   {styleFields.length > 0 && (
                     <ImageEditStylePanel
                       fields={styleFields}
                       style={shownStyle}
-                      number={
-                        styleSource?.kind === "step"
-                          ? styleSource.number
-                          : undefined
-                      }
+                      number={styleSource?.kind === 'step' ? styleSource.number : undefined}
                       onChange={applyStyle}
                     />
                   )}
@@ -418,11 +361,7 @@ export default function ImageEditWorkspace({
             <InlineAlert>
               <span className="flex flex-wrap items-center gap-3">
                 {copy.saveFailed}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void session.flush().catch(() => undefined)}
-                >
+                <Button size="sm" variant="outline" onClick={() => void session.flush().catch(() => undefined)}>
                   {copy.retry}
                 </Button>
               </span>
@@ -432,26 +371,18 @@ export default function ImageEditWorkspace({
 
         <div className="flex min-h-0 flex-1">
           <div className="shrink-0 p-3">
-            <ImageEditToolbar
-              tool={tool}
-              onToolChange={changeTool}
-              room={room}
-            />
+            <ImageEditToolbar tool={tool} onToolChange={changeTool} room={room} />
           </div>
           <div ref={viewport.setFrame} className="relative min-h-0 min-w-0 flex-1">
             <div
               ref={viewport.setScroller}
               data-howbeam-edit-scroller=""
-              className={`app-scrollbar absolute inset-0 overflow-auto outline-none ${viewport.panning ? "cursor-grabbing" : viewport.spaceHeld ? "cursor-grab" : ""}`}
+              className={`app-scrollbar absolute inset-0 overflow-auto outline-none ${viewport.panning ? 'cursor-grabbing' : viewport.spaceHeld ? 'cursor-grab' : ''}`}
               tabIndex={-1}
               {...viewport.scrollerHandlers}
             >
               <div className="flex min-h-full min-w-full">
-                <div
-                  ref={viewport.canvasRef}
-                  className="relative m-auto shrink-0"
-                  style={canvasStyle}
-                >
+                <div ref={viewport.canvasRef} className="relative m-auto shrink-0" style={canvasStyle}>
                   {canvasStyle && (
                     <EntryThumbnail
                       entry={entry}
@@ -487,15 +418,12 @@ export default function ImageEditWorkspace({
                     />
                   )}
                   {(viewport.spaceHeld || viewport.panning) && (
-                    <div
-                      className="absolute inset-0 z-30 cursor-[inherit]"
-                      aria-hidden="true"
-                    />
+                    <div className="absolute inset-0 z-30 cursor-[inherit]" aria-hidden="true" />
                   )}
                 </div>
               </div>
             </div>
-            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

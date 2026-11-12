@@ -1,8 +1,4 @@
-import {
-  PROJECT_SECTION_LIMITS,
-  sanitizeProjectSectionTitle,
-  type ProjectSection,
-} from './project-section-model';
+import { PROJECT_SECTION_LIMITS, sanitizeProjectSectionTitle, type ProjectSection } from './project-section-model';
 import { isIdentifier, isRecord } from '../shared/validation';
 import { isPersistedRect, PERSISTED_PROJECT_LIMITS, PERSISTED_STEP_LIMITS } from './persistence-limits';
 import { normalizeStoredText } from './stored-text';
@@ -162,11 +158,7 @@ function sanitizePixelRatio(value: unknown, field: string): number {
   return value as number;
 }
 
-export function assertMutationItems(
-  values: readonly unknown[],
-  field: string,
-  identifiers = false,
-): void {
+export function assertMutationItems(values: readonly unknown[], field: string, identifiers = false): void {
   if (values.length > STEP_STORAGE_LIMITS.maxMutationItems) {
     storageError(`${field} exceeds the mutation item limit.`);
   }
@@ -176,9 +168,7 @@ export function assertMutationItems(
 }
 
 function sanitizeProjectText(value: unknown, maximum: number): string {
-  return typeof value === 'string'
-    ? normalizeStoredText(value).trim().slice(0, maximum)
-    : '';
+  return typeof value === 'string' ? normalizeStoredText(value).trim().slice(0, maximum) : '';
 }
 
 /** An unnamed project stores an empty title; this is what to show for one. */
@@ -187,7 +177,7 @@ export function projectDisplayTitle(title: string): string {
 }
 
 function nonNegativeInteger(value: unknown): number {
-  return Number.isSafeInteger(value) && (value as number) >= 0 ? value as number : 0;
+  return Number.isSafeInteger(value) && (value as number) >= 0 ? (value as number) : 0;
 }
 
 function sanitizeProjectSectionsShape(value: unknown): ProjectSection[] {
@@ -201,7 +191,8 @@ function sanitizeProjectSectionsShape(value: unknown): ProjectSection[] {
     const id = typeof candidate.id === 'string' ? candidate.id : '';
     const startEntryId = typeof candidate.startEntryId === 'string' ? candidate.startEntryId : '';
     const title = sanitizeProjectSectionTitle(candidate.title);
-    if (!isIdentifier(id) || !isIdentifier(startEntryId) || !title || seenIds.has(id) || seenStarts.has(startEntryId)) continue;
+    if (!isIdentifier(id) || !isIdentifier(startEntryId) || !title || seenIds.has(id) || seenStarts.has(startEntryId))
+      continue;
     seenIds.add(id);
     seenStarts.add(startEntryId);
     sections.push({ id, title, startEntryId });
@@ -326,9 +317,7 @@ export function getEntryCrop(entry: StepEntry): Bounds | null {
 export function sanitizeStepForStorage(step: Step): Step {
   const id = requireStorageIdentifier(step.id, 'Step id');
   const sessionId = requireStorageIdentifier(step.sessionId, 'Step session id');
-  const groupId = step.groupId === undefined
-    ? undefined
-    : requireStorageIdentifier(step.groupId, 'Step group id');
+  const groupId = step.groupId === undefined ? undefined : requireStorageIdentifier(step.groupId, 'Step group id');
   const isSnapshotAnnotation = stepRole({ id, groupId }) === 'annotation';
 
   if (step.screenshotBlob !== undefined && !(step.screenshotBlob instanceof Blob)) {
@@ -374,9 +363,8 @@ export function sanitizeStepForStorage(step: Step): Step {
     id,
     sessionId,
     order: sanitizeNonNegativeSafeInteger(step.order, 'Step order'),
-    bounds: step.bounds === null || step.bounds === undefined
-      ? null
-      : isValidBounds(step.bounds) ? { ...step.bounds } : null,
+    bounds:
+      step.bounds === null || step.bounds === undefined ? null : isValidBounds(step.bounds) ? { ...step.bounds } : null,
     devicePixelRatio: sanitizePixelRatio(step.devicePixelRatio, 'Step device pixel ratio'),
     description: sanitizeStepText(step.description, stepDescriptionLimit(step), 'Step description'),
     url: sanitizeStepUrl(step.url),
@@ -406,7 +394,6 @@ export function sanitizeStepForStorage(step: Step): Step {
   if (groupId !== undefined) sanitized.groupId = groupId;
   return sanitized;
 }
-
 
 /** 將已排序 row 分組；群組首次出現處決定其時間軸位置。 */
 export function buildStepEntries(steps: Step[]): StepEntry[] {
@@ -449,7 +436,6 @@ export function buildStepEntries(steps: Step[]): StepEntry[] {
       });
       continue;
     }
-
   }
 
   return entries;
@@ -458,8 +444,6 @@ export function buildStepEntries(steps: Step[]): StepEntry[] {
 export function entryId(entry: StepEntry): string {
   return entry.kind === 'single' ? entry.step.id : entry.anchor.id;
 }
-
-
 
 export class ProjectStructureIntegrityError extends Error {
   constructor(message = 'Project timeline contains incomplete or split entries.') {
@@ -474,10 +458,7 @@ export function orderedSessionSteps(steps: readonly Step[]): Step[] {
 
 /** Groups flat rows (an imported archive's) into entries, strictly: every row
  * must belong to exactly one complete, contiguous entry. */
-export function buildCompleteStepEntries(
-  steps: readonly Step[],
-  expectedSessionId?: string,
-): StepEntry[] {
+export function buildCompleteStepEntries(steps: readonly Step[], expectedSessionId?: string): StepEntry[] {
   const sorted = orderedSessionSteps(steps);
   const entries: StepEntry[] = [];
   const seenGroups = new Set<string>();

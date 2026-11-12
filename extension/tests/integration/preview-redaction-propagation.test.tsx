@@ -25,7 +25,15 @@ vi.mock('@/components/ui/dialog', () => ({
   DialogDescription: ({ children }: { children?: any }) => children,
 }));
 vi.mock('@/components/ui/button', () => ({ Button: () => null }));
-vi.mock('lucide-react', () => ({ Camera: () => null, Check: () => null, ChevronLeft: () => null, ChevronRight: () => null, GripVertical: () => null, Video: () => null, X: () => null }));
+vi.mock('lucide-react', () => ({
+  Camera: () => null,
+  Check: () => null,
+  ChevronLeft: () => null,
+  ChevronRight: () => null,
+  GripVertical: () => null,
+  Video: () => null,
+  X: () => null,
+}));
 vi.mock('@dnd-kit/core', () => ({
   DndContext: ({ children }: { children?: any }) => children,
   closestCenter: () => null,
@@ -110,14 +118,7 @@ describe('timeline preview propagation', () => {
 
   it('StepRail passes manual-effective bounds and screenshot-owner masks for single and group entries', async () => {
     const entries = [singleEntry(), groupEntry()];
-    render(
-      <StepRail
-        entries={entries}
-        selectedEntryId={null}
-        onSelect={() => {}}
-        onReorder={async () => {}}
-      />,
-    );
+    render(<StepRail entries={entries} selectedEntryId={null} onSelect={() => {}} onReorder={async () => {}} />);
 
     // Rail thumbnails mount once they scroll near the viewport.
     await act(async () => undefined);

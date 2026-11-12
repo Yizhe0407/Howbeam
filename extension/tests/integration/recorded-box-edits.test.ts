@@ -10,10 +10,15 @@ import { seedSteps } from '../setup/step-fixtures';
 import { itemAt } from '../setup/item-at';
 
 function jpegBlob(): Blob {
-  return new Blob([new Uint8Array([
-    0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, 0, 2, 0, 2,
-    0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00, 0xff, 0xd9,
-  ])], { type: 'image/jpeg' });
+  return new Blob(
+    [
+      new Uint8Array([
+        0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, 0, 2, 0, 2, 0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11,
+        0x00, 0xff, 0xd9,
+      ]),
+    ],
+    { type: 'image/jpeg' },
+  );
 }
 
 const detected: Bounds = { x: 10, y: 20, width: 30, height: 40 };
@@ -39,13 +44,15 @@ async function seedSnapshot(count: number): Promise<{ sessionId: string; anchorI
   const sessionId = crypto.randomUUID();
   const anchorId = crypto.randomUUID();
   const anchor = makeStep(sessionId, { id: anchorId, groupId: anchorId, bounds: null });
-  const annotations = Array.from({ length: count }, (_, index) => makeStep(sessionId, {
-    groupId: anchorId,
-    order: index + 1,
-    screenshotBlob: undefined,
-    description: `標註 ${index + 1}`,
-    bounds: { x: index * 100, y: 0, width: 20, height: 20 },
-  }));
+  const annotations = Array.from({ length: count }, (_, index) =>
+    makeStep(sessionId, {
+      groupId: anchorId,
+      order: index + 1,
+      screenshotBlob: undefined,
+      description: `標註 ${index + 1}`,
+      bounds: { x: index * 100, y: 0, width: 20, height: 20 },
+    }),
+  );
   await seedSteps([anchor, ...annotations]);
   return { sessionId, anchorId, annotations };
 }
@@ -55,12 +62,15 @@ async function openEntry(sessionId: string): Promise<StepEntry> {
 }
 
 const items = (highlights: Highlight[]) => ({ redactions: [], imageEdits: [], crop: null, highlights });
-const base = (imageEditRevision: number, annotationIds: string[] = [], removed = new Map<string, Step>()) =>
-  ({ imageEditRevision, annotationIds, removed });
+const base = (imageEditRevision: number, annotationIds: string[] = [], removed = new Map<string, Step>()) => ({
+  imageEditRevision,
+  annotationIds,
+  removed,
+});
 
 afterAll(() => closeDatabase());
 
-describe('an ordinary step\'s recorded box', () => {
+describe("an ordinary step's recorded box", () => {
   it('stores a moved box beside the detected one, and nothing extra once it is back where it was detected', async () => {
     const step = makeStep(crypto.randomUUID());
     await seedSteps([step]);
@@ -95,15 +105,18 @@ describe('an ordinary step\'s recorded box', () => {
   });
 });
 
-describe('a snapshot\'s annotation boxes', () => {
-  it('moves one annotation\'s box and leaves the others as detected', async () => {
+describe("a snapshot's annotation boxes", () => {
+  it("moves one annotation's box and leaves the others as detected", async () => {
     const { sessionId, anchorId, annotations } = await seedSnapshot(2);
     const [first, second] = annotations as [Step, Step];
     const entry = await openEntry(sessionId);
 
     await saveEntryImageEdits(
       entry,
-      items([{ id: first.id, bounds: moved }, { id: second.id, bounds: second.bounds! }]),
+      items([
+        { id: first.id, bounds: moved },
+        { id: second.id, bounds: second.bounds! },
+      ]),
       base(0, [first.id, second.id]),
     );
 
@@ -119,15 +132,30 @@ describe('a snapshot\'s annotation boxes', () => {
     const known = new Map(annotations.map((annotation) => [annotation.id, annotation]));
     const boxOf = (step: Step): Highlight => ({ id: step.id, bounds: step.bounds! });
 
-    await saveEntryImageEdits(entry, items([boxOf(first), boxOf(third)]), base(0, [first.id, second.id, third.id], known));
+    await saveEntryImageEdits(
+      entry,
+      items([boxOf(first), boxOf(third)]),
+      base(0, [first.id, second.id, third.id], known),
+    );
     let group = itemAt((await getProjectStructureSnapshot(sessionId)).entries, 0);
-    expect(group.kind === 'group' && group.annotations.map((annotation) => annotation.id)).toEqual([first.id, third.id]);
+    expect(group.kind === 'group' && group.annotations.map((annotation) => annotation.id)).toEqual([
+      first.id,
+      third.id,
+    ]);
     expect(await getStep(second.id)).toBeUndefined();
     expect((await getSteps(sessionId)).map((step) => step.order)).toEqual([0, 1, 2]);
 
-    await saveEntryImageEdits(entry, items([boxOf(first), boxOf(second), boxOf(third)]), base(1, [first.id, third.id], known));
+    await saveEntryImageEdits(
+      entry,
+      items([boxOf(first), boxOf(second), boxOf(third)]),
+      base(1, [first.id, third.id], known),
+    );
     group = itemAt((await getProjectStructureSnapshot(sessionId)).entries, 0);
-    expect(group.kind === 'group' && group.annotations.map((annotation) => annotation.id)).toEqual([first.id, second.id, third.id]);
+    expect(group.kind === 'group' && group.annotations.map((annotation) => annotation.id)).toEqual([
+      first.id,
+      second.id,
+      third.id,
+    ]);
     expect((await getStep(second.id))?.description).toBe('標註 2');
     expect(group.kind === 'group' && group.anchor.id).toBe(anchorId);
   });
@@ -140,11 +168,16 @@ describe('a snapshot\'s annotation boxes', () => {
     const project = (await getProjectStructureSnapshot(sessionId)).project;
     await deleteProjectAnnotationAtomically(sessionId, anchorId, second.id, project.contentRevision);
 
-    await expect(saveEntryImageEdits(
-      entry,
-      items([{ id: first.id, bounds: moved }, { id: second.id, bounds: second.bounds! }]),
-      base(0, [first.id, second.id], known),
-    )).rejects.toBeInstanceOf(StepImageEditConflictError);
+    await expect(
+      saveEntryImageEdits(
+        entry,
+        items([
+          { id: first.id, bounds: moved },
+          { id: second.id, bounds: second.bounds! },
+        ]),
+        base(0, [first.id, second.id], known),
+      ),
+    ).rejects.toBeInstanceOf(StepImageEditConflictError);
     expect(await getStep(second.id)).toBeUndefined();
     expect(await getStep(first.id)).not.toHaveProperty('manualBounds');
   });

@@ -149,11 +149,20 @@ describe('a snapshot click on an iframe', () => {
 
 describe('the child frame’s probe responder', () => {
   function probe(port: MessagePort, overrides: Record<string, unknown> = {}) {
-    window.dispatchEvent(new MessageEvent('message', {
-      data: { type: 'howbeam_snapshot_probe_test-extension', runId, timeoutMs: 100, clientX: 20, clientY: 30, ...overrides },
-      source: window.parent,
-      ports: [port],
-    }));
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: {
+          type: 'howbeam_snapshot_probe_test-extension',
+          runId,
+          timeoutMs: 100,
+          clientX: 20,
+          clientY: 30,
+          ...overrides,
+        },
+        source: window.parent,
+        ports: [port],
+      }),
+    );
   }
 
   it('answers the parent with the target at the asked point', async () => {
@@ -172,7 +181,11 @@ describe('the child frame’s probe responder', () => {
 
     probe(channel.port2);
 
-    expect(await answered).toMatchObject({ rect: { x: 10, y: 20, width: 60, height: 24 }, text: 'Save', tagName: 'button' });
+    expect(await answered).toMatchObject({
+      rect: { x: 10, y: 20, width: 60, height: 24 },
+      text: 'Save',
+      tagName: 'button',
+    });
     runRecorderCleanup();
     channel.port1.close();
   });

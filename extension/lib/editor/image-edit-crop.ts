@@ -1,7 +1,6 @@
 import type { Bounds } from '@/lib/storage/models';
 import { clamp, type Size } from '@/lib/shared/geometry';
 
-
 /**
  * Settles a dragged crop into what is stored: edges snapped to whole device
  * pixels (so the cut is exact and every coordinate stays aligned) and kept

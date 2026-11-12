@@ -22,27 +22,30 @@ async function readActiveProjectId(page: import('@playwright/test').Page): Promi
 }
 
 async function readProjectIds(page: import('@playwright/test').Page): Promise<string[]> {
-  return page.evaluate(async () => new Promise<string[]>((resolve, reject) => {
-    const request = indexedDB.open('howbeam', 4);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      const db = request.result;
-      try {
-        const keysRequest = db.transaction('projects', 'readonly').objectStore('projects').getAllKeys();
-        keysRequest.onsuccess = () => {
-          db.close();
-          resolve((keysRequest.result as string[]).sort());
+  return page.evaluate(
+    async () =>
+      new Promise<string[]>((resolve, reject) => {
+        const request = indexedDB.open('howbeam', 4);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const db = request.result;
+          try {
+            const keysRequest = db.transaction('projects', 'readonly').objectStore('projects').getAllKeys();
+            keysRequest.onsuccess = () => {
+              db.close();
+              resolve((keysRequest.result as string[]).sort());
+            };
+            keysRequest.onerror = () => {
+              db.close();
+              reject(keysRequest.error);
+            };
+          } catch (error) {
+            db.close();
+            reject(error);
+          }
         };
-        keysRequest.onerror = () => {
-          db.close();
-          reject(keysRequest.error);
-        };
-      } catch (error) {
-        db.close();
-        reject(error);
-      }
-    };
-  }));
+      }),
+  );
 }
 
 async function clickPopupCommandWithoutActivatingTab(
@@ -186,10 +189,11 @@ test.describe('popup workflows', () => {
     await library.goto(`chrome-extension://${extensionId}/library.html`);
     await library.getByRole('button', { name: '開啟', exact: true }).click();
     // Finishing the run already opened an editor tab at its newest capture; opening from the library reuses that tab.
-    const editorPage = () => extensionContext.pages().find((page) => {
-      const url = new URL(page.url());
-      return url.pathname === '/editor.html' && url.searchParams.get('entryId') === null;
-    });
+    const editorPage = () =>
+      extensionContext.pages().find((page) => {
+        const url = new URL(page.url());
+        return url.pathname === '/editor.html' && url.searchParams.get('entryId') === null;
+      });
     await expect.poll(() => Boolean(editorPage())).toBe(true);
     const editor = editorPage()!;
 
@@ -210,10 +214,12 @@ test.describe('popup workflows', () => {
     await appPage.close();
 
     await expect.poll(async () => (await readRecordingState(popupPage)).isRecording).toBe(false);
-    await expect.poll(async () => {
-      const error = (await readRecordingState(popupPage)).recoverableError as { code?: string } | undefined;
-      return error?.code;
-    }).toBe('RECORDED_TAB_CLOSED');
+    await expect
+      .poll(async () => {
+        const error = (await readRecordingState(popupPage)).recoverableError as { code?: string } | undefined;
+        return error?.code;
+      })
+      .toBe('RECORDED_TAB_CLOSED');
     await expect(popupPage.getByText('錄製分頁已關閉。已錄內容仍保留，可完成並開啟編輯器。')).toBeVisible();
     await expect(popupPage.getByRole('button', { name: '完成並開啟編輯器' })).toBeVisible();
 

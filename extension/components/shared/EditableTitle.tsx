@@ -121,7 +121,7 @@ export default function EditableTitle({
           event.currentTarget.blur();
         }
       }}
-      className={cn('resize-none bg-transparent outline-none [field-sizing:content]', className)}
+      className={cn('[field-sizing:content] resize-none bg-transparent outline-none', className)}
     />
   );
 }

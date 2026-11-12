@@ -129,8 +129,7 @@
   --shadow-2xl: 0 0 #0000;
 
   --font-sans:
-    'Huninn', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', -apple-system, BlinkMacSystemFont,
-    sans-serif;
+    'Huninn', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* The one focus treatment. Specificity (class + pseudo-class) beats a plain

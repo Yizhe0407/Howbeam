@@ -15,9 +15,11 @@ export function isFolderBackupSupported(): boolean {
 
 /** Opens the folder picker. Must be called from a user gesture. Returns null if the user cancels. */
 export async function pickBackupDirectory(): Promise<BackupDirectory | null> {
-  const picker = (globalThis as unknown as {
-    showDirectoryPicker: (options: { mode: 'readwrite'; id: string }) => Promise<BackupDirectory>;
-  }).showDirectoryPicker;
+  const picker = (
+    globalThis as unknown as {
+      showDirectoryPicker: (options: { mode: 'readwrite'; id: string }) => Promise<BackupDirectory>;
+    }
+  ).showDirectoryPicker;
   try {
     return await picker({ mode: 'readwrite', id: 'howbeam-backup' });
   } catch (error) {

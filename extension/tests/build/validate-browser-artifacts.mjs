@@ -56,11 +56,7 @@ const htmlEntrypoints = [
 ];
 
 for (const build of [chrome, firefox]) {
-  await requireFiles(build, [
-    'background.js',
-    ...htmlEntrypoints,
-    'content-scripts/content.js',
-  ]);
+  await requireFiles(build, ['background.js', ...htmlEntrypoints, 'content-scripts/content.js']);
   for (const entrypoint of htmlEntrypoints) {
     const html = await readFile(path.join(root, '.output', build.directory, entrypoint), 'utf8');
     if (html.includes('rel="modulepreload"')) {

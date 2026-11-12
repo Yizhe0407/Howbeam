@@ -1,12 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { saveStepDescription, StepNotFoundError } from '../storage/step-repository';
 import { type Step } from '../storage/models';
 import { normalizeStoredText } from '../storage/stored-text';
@@ -144,9 +136,12 @@ export function useStepDescriptionAutosave(step: Step, delay = 650): Description
         return;
       }
       // Without a local copy, storage is the only place left: save at once.
-      timer.current = setTimeout(() => {
-        void flush().catch((error) => console.error('[howbeam] description autosave failed', error));
-      }, kept ? delay : 0);
+      timer.current = setTimeout(
+        () => {
+          void flush().catch((error) => console.error('[howbeam] description autosave failed', error));
+        },
+        kept ? delay : 0,
+      );
     },
     [clearTimer, delay, flush],
   );
@@ -176,7 +171,9 @@ export function useStepDescriptionAutosave(step: Step, delay = 650): Description
     return () => {
       mounted.current = false;
       clearTimer();
-      void flush().catch((error) => console.error('[howbeam] saving before unmounting a description field failed', error));
+      void flush().catch((error) =>
+        console.error('[howbeam] saving before unmounting a description field failed', error),
+      );
     };
   }, [clearTimer, delay, flush]);
 

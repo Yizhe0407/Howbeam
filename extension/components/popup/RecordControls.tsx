@@ -10,10 +10,7 @@ import { reportError } from '@/lib/runtime/report-error';
 import { cn } from '@/lib/shared/utils';
 import type { RecordingMode, RecordingState } from '@/lib/storage/recording-state';
 import { startRecording } from '@/lib/project/project-actions';
-import {
-  runItemCountLabel,
-  recordingModeCopy,
-} from '@/lib/recording/recording-mode-copy';
+import { runItemCountLabel, recordingModeCopy } from '@/lib/recording/recording-mode-copy';
 import { needsEditorRecovery } from '@/lib/recording/recording-recovery';
 import { focusTab } from '@/lib/runtime/navigation';
 import { isRecordableTabUrl } from '@/lib/shared/restricted-urls';
@@ -73,7 +70,8 @@ function useStartPreflight(onProbeError: (message: string) => void) {
     // Same check as start() and the background: extension pages (editor,
     // library) genuinely cannot be recorded, so the pre-flight must
     // not enable a start button those layers will reject.
-    void browser.tabs.query({ active: true, currentWindow: true })
+    void browser.tabs
+      .query({ active: true, currentWindow: true })
       .then(([tab]) => {
         if (disposed) return;
         setRestrictedPage(!isRecordableTabUrl(tab?.url));
@@ -123,10 +121,13 @@ export default function RecordControls({
   // null = brand-new project. Never persisted: every popup open starts at 新專案.
   const [localTargetProjectId, setLocalTargetProjectId] = useState<string | null>(null);
   const targetProjectId = controlledTargetProjectId === undefined ? localTargetProjectId : controlledTargetProjectId;
-  const setTargetProjectId = useCallback((projectId: string | null) => {
-    setLocalTargetProjectId(projectId);
-    onTargetProjectChange?.(projectId);
-  }, [onTargetProjectChange]);
+  const setTargetProjectId = useCallback(
+    (projectId: string | null) => {
+      setLocalTargetProjectId(projectId);
+      onTargetProjectChange?.(projectId);
+    },
+    [onTargetProjectChange],
+  );
   const [pending, setPending] = useState(false);
   const pendingShown = useDeferredBusy(pending);
   const [finishing, setFinishing] = useState(false);
@@ -139,19 +140,21 @@ export default function RecordControls({
    * permissions.request there. The decline is persisted so the auto-ask fires
    * once; a later grant clears it so a reconsidered user gets asked again.
    */
-  async function requestCrossTabPermission(
-    resumeStart?: { mode: RecordingMode; tabId: number; projectId: string | null },
-  ): Promise<{ granted: boolean; parked: boolean }> {
+  async function requestCrossTabPermission(resumeStart?: {
+    mode: RecordingMode;
+    tabId: number;
+    projectId: string | null;
+  }): Promise<{ granted: boolean; parked: boolean }> {
     try {
       // Not awaited: Firefox needs permissions.request to run synchronously within the click.
       const parking = resumeStart
-        ? Promise.all([
-            parkPendingStart(resumeStart),
-            markCrossTabRecordingDeclined(),
-          ]).then(() => true, (error) => {
-            console.warn('[howbeam] failed to park the pending recording start', error);
-            return false;
-          })
+        ? Promise.all([parkPendingStart(resumeStart), markCrossTabRecordingDeclined()]).then(
+            () => true,
+            (error) => {
+              console.warn('[howbeam] failed to park the pending recording start', error);
+              return false;
+            },
+          )
         : Promise.resolve(false);
       const granted = await browser.permissions.request({ origins: ['<all_urls>'] });
       const parked = await parking;
@@ -209,7 +212,9 @@ export default function RecordControls({
       await focusTab(recording.tabId, tab.windowId);
       window.close();
     } catch (error) {
-      setControlError(reportError('[howbeam] failed to return to the recording tab', error, t().popup.returnToTabFailed));
+      setControlError(
+        reportError('[howbeam] failed to return to the recording tab', error, t().popup.returnToTabFailed),
+      );
     }
   }
 
@@ -217,7 +222,10 @@ export default function RecordControls({
     if (!recording.runId) return;
     setControlError(null);
     try {
-      const result = await sendToBackground({ type: 'RESUME_RECORDING', runId: recording.runId }, t().runtime.recordingChannelLost);
+      const result = await sendToBackground(
+        { type: 'RESUME_RECORDING', runId: recording.runId },
+        t().runtime.recordingChannelLost,
+      );
       if (!result.ok) setControlError(copyText(result.error));
     } catch (error) {
       setControlError(reportError('[howbeam] failed to resume recording', error, t().toolbar.actionFailed));
@@ -229,7 +237,10 @@ export default function RecordControls({
     setFinishing(true);
     setControlError(null);
     try {
-      const result = await sendToBackground({ type: 'FINISH_RECORDING', runId: recording.runId }, t().runtime.recordingChannelLost);
+      const result = await sendToBackground(
+        { type: 'FINISH_RECORDING', runId: recording.runId },
+        t().runtime.recordingChannelLost,
+      );
       if (!result.ok) {
         setControlError(copyText(result.error));
         return;
@@ -327,7 +338,11 @@ export default function RecordControls({
       <div className="flex flex-col gap-2.5">
         {/* 2px outline + 2px padding puts each option exactly 4px inside, the
             inset the concentric `rounded-sm` radius is drawn for. */}
-        <div role="radiogroup" aria-label={t().common.recordingMode} className="flex gap-0.5 rounded-md border-2 border-border bg-secondary p-0.5">
+        <div
+          role="radiogroup"
+          aria-label={t().common.recordingMode}
+          className="flex gap-0.5 rounded-md border-2 border-border bg-secondary p-0.5"
+        >
           {MODE_ORDER.map((candidate) => {
             const Icon = MODE_ICONS[candidate];
             const copy = recordingModeCopy(candidate);
@@ -344,7 +359,7 @@ export default function RecordControls({
                       onClick={() => setMode(candidate)}
                       disabled={pendingShown}
                       className={cn(
-                        'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-sm border-2 text-sm font-bold outline-none transition-colors focus-ring',
+                        'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-sm border-2 text-sm font-bold focus-ring transition-colors outline-none',
                         // Pastel fill + ink text in both themes, like every selection.
                         mode === candidate
                           ? 'border-border bg-selected text-on-accent'
@@ -362,7 +377,9 @@ export default function RecordControls({
                     {copy.description}
                   </TooltipContent>
                 </Tooltip>
-                <span id={descriptionId} className="sr-only">{copy.description}</span>
+                <span id={descriptionId} className="sr-only">
+                  {copy.description}
+                </span>
               </Fragment>
             );
           })}
@@ -377,7 +394,7 @@ export default function RecordControls({
               type="button"
               onClick={() => !pending && void requestCrossTabPermission()}
               disabled={pendingShown}
-              className="rounded-sm font-bold text-brand-text underline underline-offset-2 outline-none focus-ring disabled:pointer-events-none"
+              className="rounded-sm font-bold text-brand-text underline underline-offset-2 focus-ring outline-none disabled:pointer-events-none"
             >
               {t().popup.enableCrossTab}
             </button>
@@ -388,7 +405,10 @@ export default function RecordControls({
       {/* Says why the button is off and what to do instead, so the disabled
           primary action is never a dead end. */}
       {restrictedPage && (
-        <p role="status" className="flex items-start gap-2 rounded-md border-2 border-border bg-warning-soft px-3 py-2.5 text-xs leading-relaxed text-foreground">
+        <p
+          role="status"
+          className="flex items-start gap-2 rounded-md border-2 border-border bg-warning-soft px-3 py-2.5 text-xs leading-relaxed text-foreground"
+        >
           <TriangleAlert className="mt-px size-4 shrink-0" aria-hidden="true" />
           <span>{t().popup.restrictedPageHint}</span>
         </p>

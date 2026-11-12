@@ -59,9 +59,11 @@ export default function StepStage({
         disabled={editingDisabled || !onTitleChange}
         onCommit={(title) => onTitleChange?.(title)}
         onCommitError={(titleError) => {
-          setStageError(reportError('[howbeam] failed to rename project', titleError, t().editor.stage.titleSaveFailed));
+          setStageError(
+            reportError('[howbeam] failed to rename project', titleError, t().editor.stage.titleSaveFailed),
+          );
         }}
-        className="w-fit min-w-[8ch] max-w-full rounded-md border-2 border-transparent px-2 py-1 text-[22px] leading-tight font-bold text-foreground transition-colors focus-ring hover:border-border-soft focus:border-border focus:bg-card [field-sizing:content]"
+        className="[field-sizing:content] w-fit max-w-full min-w-[8ch] rounded-md border-2 border-transparent px-2 py-1 text-[22px] leading-tight font-bold text-foreground focus-ring transition-colors hover:border-border-soft focus:border-border focus:bg-card"
       />
     </div>
   );
@@ -73,11 +75,13 @@ export default function StepStage({
           <span
             title={t().editor.sections.current(sectionTitle)}
             // No outline: in this UI an ink outline marks something you can press, and this only labels.
-            className="flex min-w-0 max-w-[16rem] items-center gap-1 rounded-full bg-matcha px-3 py-1 text-xs font-bold text-on-accent"
+            className="flex max-w-[16rem] min-w-0 items-center gap-1 rounded-full bg-matcha px-3 py-1 text-xs font-bold text-on-accent"
           >
             <Bookmark className="size-3 shrink-0" aria-hidden="true" />
             <span className="sr-only">{t().editor.sections.current(sectionTitle)}</span>
-            <span aria-hidden="true" className="min-w-0 truncate">{sectionTitle}</span>
+            <span aria-hidden="true" className="min-w-0 truncate">
+              {sectionTitle}
+            </span>
           </span>
         )}
         {/* Sits with the section chip: a section is where this step stands in the document, not an image action. */}
@@ -102,7 +106,7 @@ export default function StepStage({
           type="button"
           onClick={() => setImageEditorOpen(true)}
           disabled={editingDisabled}
-          className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border-2 border-border bg-card px-3 text-xs font-bold text-foreground outline-none transition-colors focus-ring hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-md border-2 border-border bg-card px-3 text-xs font-bold whitespace-nowrap text-foreground focus-ring transition-colors outline-none hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
         >
           <PencilRuler className="size-4" />
           {privacy.reviewRequired ? t().editor.imageEdit.openReview : t().editor.imageEdit.open}
@@ -133,7 +137,10 @@ export default function StepStage({
   const errorNotice = stageError && <InlineAlert>{stageError}</InlineAlert>;
 
   const privacyReviewNotice = privacy.reviewRequired && (
-    <div role="alert" className="rounded-md border-2 border-border bg-warning-soft px-3.5 py-2.5 text-sm text-foreground">
+    <div
+      role="alert"
+      className="rounded-md border-2 border-border bg-warning-soft px-3.5 py-2.5 text-sm text-foreground"
+    >
       {t().editor.privacyReviewRequiredNotice}
     </div>
   );
@@ -144,7 +151,7 @@ export default function StepStage({
         type="button"
         onClick={onZoom}
         aria-label={t().editor.stage.zoomImage}
-        className="group relative flex w-full cursor-zoom-in items-center justify-center rounded-md border-none bg-transparent outline-none focus-ring lg:h-full lg:max-h-full lg:max-w-full"
+        className="group relative flex w-full cursor-zoom-in items-center justify-center rounded-md border-none bg-transparent focus-ring outline-none lg:h-full lg:max-h-full lg:max-w-full"
       >
         <EntryThumbnail
           entry={entry}
@@ -179,11 +186,7 @@ export default function StepStage({
             {imageFrame(t().editor.stage.stepAlt(index + 1))}
           </div>
           <div className="flex-none">
-            <DescriptionField
-              key={entry.step.id}
-              step={entry.step}
-              disabled={editingDisabled}
-            />
+            <DescriptionField key={entry.step.id} step={entry.step} disabled={editingDisabled} />
           </div>
         </div>
         {imageEditor}

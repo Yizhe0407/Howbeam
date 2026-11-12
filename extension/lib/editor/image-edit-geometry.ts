@@ -7,11 +7,8 @@ import { clamp, roundHundredths, type Point, type Size } from '@/lib/shared/geom
 
 export type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
-
 /** Smallest edge a drawn item may have; anything smaller is treated as a stray click. */
 export const MIN_ITEM_SIZE = 4;
-
-
 
 /** Maps a pointer position onto the image, given the on-screen rect of the image content frame. */
 export function clientToImagePoint(
@@ -33,7 +30,12 @@ export function boundsFromPoints(a: Point, b: Point, size: Size): Bounds {
   const top = clamp(Math.min(a.y, b.y), 0, size.height);
   const right = clamp(Math.max(a.x, b.x), 0, size.width);
   const bottom = clamp(Math.max(a.y, b.y), 0, size.height);
-  return { x: roundHundredths(left), y: roundHundredths(top), width: roundHundredths(right - left), height: roundHundredths(bottom - top) };
+  return {
+    x: roundHundredths(left),
+    y: roundHundredths(top),
+    width: roundHundredths(right - left),
+    height: roundHundredths(bottom - top),
+  };
 }
 
 export function isUsableItemBounds(bounds: Bounds): boolean {
@@ -52,13 +54,7 @@ export function moveBounds(bounds: Bounds, dx: number, dy: number, size: Size): 
 
 /** Drags one handle by (dx, dy). The opposite edges stay put and the rect never
  * collapses below MIN_ITEM_SIZE or leaves the image. */
-export function resizeBounds(
-  bounds: Bounds,
-  handle: ResizeHandle,
-  dx: number,
-  dy: number,
-  size: Size,
-): Bounds {
+export function resizeBounds(bounds: Bounds, handle: ResizeHandle, dx: number, dy: number, size: Size): Bounds {
   let left = bounds.x;
   let top = bounds.y;
   let right = bounds.x + bounds.width;
@@ -67,7 +63,12 @@ export function resizeBounds(
   if (handle.includes('e')) right = clamp(right + dx, left + MIN_ITEM_SIZE, size.width);
   if (handle.includes('n')) top = clamp(top + dy, 0, bottom - MIN_ITEM_SIZE);
   if (handle.includes('s')) bottom = clamp(bottom + dy, top + MIN_ITEM_SIZE, size.height);
-  return { x: roundHundredths(left), y: roundHundredths(top), width: roundHundredths(right - left), height: roundHundredths(bottom - top) };
+  return {
+    x: roundHundredths(left),
+    y: roundHundredths(top),
+    width: roundHundredths(right - left),
+    height: roundHundredths(bottom - top),
+  };
 }
 
 /** The farthest a ray from `origin` in direction (ux, uy) can go before leaving the image. */
@@ -123,16 +124,14 @@ export function resizeBoundsKeepRatio(
   // Take whichever axis the pointer moved further along, as a share of the box, and derive the other from the ratio.
   const widthChange = growsRight ? dx : -dx;
   const heightChange = growsDown ? dy : -dy;
-  const scale = Math.abs(widthChange / bounds.width) >= Math.abs(heightChange / bounds.height)
-    ? (bounds.width + widthChange) / bounds.width
-    : (bounds.height + heightChange) / bounds.height;
+  const scale =
+    Math.abs(widthChange / bounds.width) >= Math.abs(heightChange / bounds.height)
+      ? (bounds.width + widthChange) / bounds.width
+      : (bounds.height + heightChange) / bounds.height;
   const width = Math.max(bounds.width * scale, MIN_ITEM_SIZE);
   const fixedX = growsRight ? bounds.x : bounds.x + bounds.width;
   const fixedY = growsDown ? bounds.y : bounds.y + bounds.height;
-  const room = Math.min(
-    growsRight ? size.width - fixedX : fixedX,
-    (growsDown ? size.height - fixedY : fixedY) * ratio,
-  );
+  const room = Math.min(growsRight ? size.width - fixedX : fixedX, (growsDown ? size.height - fixedY : fixedY) * ratio);
   const finalWidth = Math.min(width, Math.max(room, MIN_ITEM_SIZE));
   const finalHeight = finalWidth / ratio;
   return {

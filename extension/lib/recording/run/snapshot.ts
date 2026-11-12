@@ -50,14 +50,19 @@ export function createSnapshotControls(deps: SnapshotDeps) {
     }
   }
 
-  function is(recording: Recording | null, mode: Recording['mode'], phases: readonly RecordingPhase[]): recording is Recording {
+  function is(
+    recording: Recording | null,
+    mode: Recording['mode'],
+    phases: readonly RecordingPhase[],
+  ): recording is Recording {
     return recording !== null && recording.mode === mode && phases.includes(recording.phase);
   }
 
   /** Ends the current snapshot; the recorder shows the controls for taking the next one. */
   async function prepareNext(runId: string): Promise<RecordingControlResult> {
     await actor.ready();
-    if (!is(liveRecording(actor.state(), runId), 'snapshot', ['recording'])) return failure('background.cannotCreateNextSnapshot');
+    if (!is(liveRecording(actor.state(), runId), 'snapshot', ['recording']))
+      return failure('background.cannotCreateNextSnapshot');
     deps.discardUndo();
     return control(async (ctx) => {
       const previous = liveRecording(ctx.state(), runId);
@@ -70,7 +75,10 @@ export function createSnapshotControls(deps: SnapshotDeps) {
       } catch (error) {
         console.error('[howbeam] failed to enter snapshot preparation state', error);
         const live = liveRecording(ctx.state(), runId);
-        if (live) await ctx.commit((state) => withRecording(state, withNotice(live, notice('CAPTURE_FAILED', 'background.nextSnapshotControlsFailed'))));
+        if (live)
+          await ctx.commit((state) =>
+            withRecording(state, withNotice(live, notice('CAPTURE_FAILED', 'background.nextSnapshotControlsFailed'))),
+          );
         return failure('background.nextSnapshotPrepareFailed');
       }
       return { ok: true };
@@ -83,7 +91,8 @@ export function createSnapshotControls(deps: SnapshotDeps) {
    */
   async function createNext(runId: string, from: 'preparing-next' | 'invalidated'): Promise<RecordingControlResult> {
     await actor.ready();
-    if (!is(liveRecording(actor.state(), runId), 'snapshot', [from])) return failure('background.cannotCreateNextSnapshot');
+    if (!is(liveRecording(actor.state(), runId), 'snapshot', [from]))
+      return failure('background.cannotCreateNextSnapshot');
     lifecycle.claim();
     return control(async (ctx) => {
       const previous = liveRecording(ctx.state(), runId);
@@ -96,7 +105,12 @@ export function createSnapshotControls(deps: SnapshotDeps) {
         if (!ready.snapshotContext) throw new Error('Snapshot recorder did not provide its capture context.');
         const starting = liveRecording(ctx.state(), runId);
         if (!starting) return failure('background.cannotCreateNextSnapshot');
-        const anchor = await capture.captureAnchor(ctx, starting, { id: previous.tabId, windowId: tab.windowId }, ready.snapshotContext);
+        const anchor = await capture.captureAnchor(
+          ctx,
+          starting,
+          { id: previous.tabId, windowId: tab.windowId },
+          ready.snapshotContext,
+        );
         const live = liveRecording(ctx.state(), runId);
         if (!live) return failure('background.cannotCreateNextSnapshot');
         await ctx.commit((state) => withRecording(state, recordingLive(live, anchor)));
@@ -108,13 +122,15 @@ export function createSnapshotControls(deps: SnapshotDeps) {
         const copy: CopyKey = rebuilding ? 'background.rebuildSnapshotFailed' : 'background.createSnapshotFailed';
         const live = liveRecording(ctx.state(), runId);
         if (live) {
-          await ctx.commit((state) => withRecording(state, {
-            ...live,
-            phase: from,
-            itemCount: rebuilding ? previous.itemCount : 0,
-            anchor: rebuilding ? previous.anchor : null,
-            notice: notice(rebuilding ? 'REBUILD_SNAPSHOT_FAILED' : 'CREATE_SNAPSHOT_FAILED', copy),
-          }));
+          await ctx.commit((state) =>
+            withRecording(state, {
+              ...live,
+              phase: from,
+              itemCount: rebuilding ? previous.itemCount : 0,
+              anchor: rebuilding ? previous.anchor : null,
+              notice: notice(rebuilding ? 'REBUILD_SNAPSHOT_FAILED' : 'CREATE_SNAPSHOT_FAILED', copy),
+            }),
+          );
           await reinject(previous.tabId, '[howbeam] failed to restore snapshot preparation toolbar');
         }
         return failure(copy);
@@ -124,7 +140,8 @@ export function createSnapshotControls(deps: SnapshotDeps) {
 
   async function switchToSnapshot(runId: string): Promise<RecordingControlResult> {
     await actor.ready();
-    if (!is(liveRecording(actor.state(), runId), 'steps', ['recording', 'paused'])) return failure('background.cannotSwitchToSnapshot');
+    if (!is(liveRecording(actor.state(), runId), 'steps', ['recording', 'paused']))
+      return failure('background.cannotSwitchToSnapshot');
     deps.discardUndo();
     return control(async (ctx) => {
       const previous = liveRecording(ctx.state(), runId);
@@ -145,7 +162,8 @@ export function createSnapshotControls(deps: SnapshotDeps) {
   async function switchToSteps(runId: string): Promise<RecordingControlResult> {
     await actor.ready();
     const switchable = ['recording', 'preparing-next', 'invalidated'] as const;
-    if (!is(liveRecording(actor.state(), runId), 'snapshot', switchable)) return failure('background.cannotSwitchToSteps');
+    if (!is(liveRecording(actor.state(), runId), 'snapshot', switchable))
+      return failure('background.cannotSwitchToSteps');
     lifecycle.claim();
     return control(async (ctx) => {
       const previous = liveRecording(ctx.state(), runId);
@@ -164,12 +182,14 @@ export function createSnapshotControls(deps: SnapshotDeps) {
         console.error('[howbeam] failed to switch to steps mode', error);
         const live = liveRecording(ctx.state(), runId);
         if (live) {
-          await ctx.commit((state) => withRecording(state, {
-            ...live,
-            mode: 'snapshot',
-            phase: 'preparing-next',
-            notice: notice('SWITCH_TO_STEPS_FAILED', 'background.switchToStepsFailed'),
-          }));
+          await ctx.commit((state) =>
+            withRecording(state, {
+              ...live,
+              mode: 'snapshot',
+              phase: 'preparing-next',
+              notice: notice('SWITCH_TO_STEPS_FAILED', 'background.switchToStepsFailed'),
+            }),
+          );
           await reinject(previous.tabId, '[howbeam] failed to restore snapshot preparation toolbar');
         }
         return failure('background.switchToStepsFailed');

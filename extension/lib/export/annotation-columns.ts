@@ -7,10 +7,18 @@ const MAX_LINES_IN_COLUMN = 2;
  * Splits `heights`, in order, into at most `columns` runs, each no taller than
  * `capacity`. Returns how many fit and the index each run starts at.
  */
-export function fillColumns(heights: readonly number[], columns: number, capacity: number): { count: number; starts: number[] } {
+export function fillColumns(
+  heights: readonly number[],
+  columns: number,
+  capacity: number,
+): { count: number; starts: number[] } {
   const starts: number[] = [];
   let index = 0;
-  for (let first = heights[index]; starts.length < columns && first !== undefined && first <= capacity; first = heights[index]) {
+  for (
+    let first = heights[index];
+    starts.length < columns && first !== undefined && first <= capacity;
+    first = heights[index]
+  ) {
     starts.push(index);
     let used = 0;
     for (let next = heights[index]; next !== undefined && used + next <= capacity; next = heights[index]) {
@@ -102,13 +110,21 @@ export function chooseAnnotationColumns<Line>(
   const worthAnotherColumn = 2 * height(1);
   for (let columns = 2; columns <= ANNOTATION_MAX_COLUMNS; columns += 1) {
     const narrow = wrap(columns);
-    const spans = spanningMarkers(narrow.map((item) => item.length), columns);
+    const spans = spanningMarkers(
+      narrow.map((item) => item.length),
+      columns,
+    );
     const lines = narrow.map((item, index) => {
       const wide = fullWidth[index];
       return spans[index] && wide ? wide : item;
     });
-    const listHeight = columnListHeight(lines.map((item) => height(item.length)), spans, columns);
-    if (best.height - listHeight >= worthAnotherColumn) best = { layout: { columns, lines, spans }, height: listHeight };
+    const listHeight = columnListHeight(
+      lines.map((item) => height(item.length)),
+      spans,
+      columns,
+    );
+    if (best.height - listHeight >= worthAnotherColumn)
+      best = { layout: { columns, lines, spans }, height: listHeight };
   }
   return best.layout;
 }

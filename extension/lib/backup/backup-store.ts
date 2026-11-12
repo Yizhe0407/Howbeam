@@ -30,8 +30,8 @@ const CONFIG_KEY = 'backup:config';
 const LAST_RUN_KEY = 'backup:lastRun';
 
 export async function getBackupConfig(): Promise<BackupConfig | null> {
-  const value = await runWithDatabase((db) => db.get('deviceState', CONFIG_KEY)) as Partial<BackupConfig> | undefined;
-  return value && 'directory' in value ? value as BackupConfig : null;
+  const value = (await runWithDatabase((db) => db.get('deviceState', CONFIG_KEY))) as Partial<BackupConfig> | undefined;
+  return value && 'directory' in value ? (value as BackupConfig) : null;
 }
 
 /** Choosing a folder starts a fresh manifest, so every project is written to the new place. */
@@ -63,7 +63,11 @@ export async function clearBackupConfig(): Promise<void> {
 export async function getBackupManifest(): Promise<Map<string, BackupManifestEntry>> {
   return runWithDatabase(async (db) => {
     const manifest = new Map<string, BackupManifestEntry>();
-    for (let cursor = await db.transaction('backupManifest').store.openCursor(); cursor; cursor = await cursor.continue()) {
+    for (
+      let cursor = await db.transaction('backupManifest').store.openCursor();
+      cursor;
+      cursor = await cursor.continue()
+    ) {
       manifest.set(cursor.key, cursor.value as BackupManifestEntry);
     }
     return manifest;
@@ -75,8 +79,10 @@ export async function putBackupManifestEntry(projectId: string, entry: BackupMan
 }
 
 export async function getBackupLastRun(): Promise<BackupLastRun | null> {
-  const value = await runWithDatabase((db) => db.get('deviceState', LAST_RUN_KEY)) as Partial<BackupLastRun> | undefined;
-  return value && 'written' in value ? value as BackupLastRun : null;
+  const value = (await runWithDatabase((db) => db.get('deviceState', LAST_RUN_KEY))) as
+    | Partial<BackupLastRun>
+    | undefined;
+  return value && 'written' in value ? (value as BackupLastRun) : null;
 }
 
 export async function saveBackupLastRun(run: BackupLastRun): Promise<void> {

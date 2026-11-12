@@ -29,16 +29,21 @@ export default function App() {
 
       <main className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-8 sm:px-10">
         <section aria-labelledby="settings-language" className={sectionClass}>
-          <h2 id="settings-language" className="text-base font-bold">{t().language.label}</h2>
+          <h2 id="settings-language" className="text-base font-bold">
+            {t().language.label}
+          </h2>
           <LanguageSwitcher className="h-10 w-full shrink-0 data-[size=default]:h-10 sm:w-56" />
         </section>
 
         <BackupSettingsSection />
 
         <section aria-labelledby="settings-welcome" className={sectionClass}>
-          <h2 id="settings-welcome" className="text-base font-bold">{t().settings.welcomeTitle}</h2>
+          <h2 id="settings-welcome" className="text-base font-bold">
+            {t().settings.welcomeTitle}
+          </h2>
           <Button variant="outline" className="w-full shrink-0 sm:w-56" onClick={() => navigateInPlace('welcome')}>
-            <Sparkles />{t().settings.openWelcome}
+            <Sparkles />
+            {t().settings.openWelcome}
           </Button>
         </section>
       </main>

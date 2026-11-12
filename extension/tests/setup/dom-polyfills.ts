@@ -65,7 +65,12 @@ if (typeof window !== 'undefined') {
       readonly thresholds = [0];
       constructor(private readonly callback: IntersectionObserverCallback) {}
       observe(target: Element) {
-        queueMicrotask(() => this.callback([{ isIntersecting: true, target } as IntersectionObserverEntry], this as unknown as IntersectionObserver));
+        queueMicrotask(() =>
+          this.callback(
+            [{ isIntersecting: true, target } as IntersectionObserverEntry],
+            this as unknown as IntersectionObserver,
+          ),
+        );
       }
       unobserve() {}
       disconnect() {}
@@ -80,7 +85,10 @@ if (typeof window !== 'undefined') {
     window.matchMedia = (query: string) => {
       const min = /\(min-width:\s*(\d+)px\)/.exec(query);
       const max = /\(max-width:\s*(\d+)px\)/.exec(query);
-      const matches = (min ? window.innerWidth >= Number(min[1]) : true) && (max ? window.innerWidth <= Number(max[1]) : true) && Boolean(min || max);
+      const matches =
+        (min ? window.innerWidth >= Number(min[1]) : true) &&
+        (max ? window.innerWidth <= Number(max[1]) : true) &&
+        Boolean(min || max);
       return {
         matches,
         media: query,

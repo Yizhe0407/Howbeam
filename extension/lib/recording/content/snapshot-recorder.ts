@@ -47,8 +47,8 @@ export interface SnapshotRecorderDeps {
  * entrypoint after the cleanup spine exists and published on the session.
  */
 export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
-  const { session, capture, toolbar, freezePage, viewportContract, devicePixelRatioContract,
-    initialToolbarState } = deps;
+  const { session, capture, toolbar, freezePage, viewportContract, devicePixelRatioContract, initialToolbarState } =
+    deps;
   let invalidationSent = deps.invalidatedAtStart;
   let interactionsActive = false;
   let dprQuery: MediaQueryList | null = null;
@@ -67,25 +67,22 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
       // A child-frame scroll shifts pixels without moving the top viewport,
       // so a forced invalidation must not be masked by a matching contract.
       !force &&
-      isMatchingSnapshotViewport(
-        viewportContract,
-        devicePixelRatioContract,
-        viewport,
-        window.devicePixelRatio,
-      )
+      isMatchingSnapshotViewport(viewportContract, devicePixelRatioContract, viewport, window.devicePixelRatio)
     ) {
       return;
     }
     invalidationSent = true;
     interactionsActive = false;
-    void browser.runtime.sendMessage({
-      type: 'SNAPSHOT_INVALIDATED',
-      runId: session.runId,
-      viewport,
-      devicePixelRatio: window.devicePixelRatio,
-    } satisfies SnapshotInvalidatedMessage).catch((error) => {
-      console.error('[howbeam] failed to invalidate changed snapshot viewport', error);
-    });
+    void browser.runtime
+      .sendMessage({
+        type: 'SNAPSHOT_INVALIDATED',
+        runId: session.runId,
+        viewport,
+        devicePixelRatio: window.devicePixelRatio,
+      } satisfies SnapshotInvalidatedMessage)
+      .catch((error) => {
+        console.error('[howbeam] failed to invalidate changed snapshot viewport', error);
+      });
   };
   const onDprChange = () => {
     notifyInvalidated();
@@ -94,9 +91,7 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     dprQuery.addEventListener('change', onDprChange);
   };
 
-  const onHover = async (
-    point: SnapshotShieldPointerMoveMessage,
-  ): Promise<SnapshotShieldPreviewResult> => {
+  const onHover = async (point: SnapshotShieldPointerMoveMessage): Promise<SnapshotShieldPreviewResult> => {
     const shield = session.shield;
     if (!shield || !freezePage || !interactionsActive) return { rect: null };
     const target = await shield.runWithoutShield(() =>
@@ -129,9 +124,7 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     };
   };
 
-  const onRegion = async (
-    message: SnapshotShieldRegionCaptureMessage,
-  ): Promise<SnapshotShieldSelection | null> => {
+  const onRegion = async (message: SnapshotShieldRegionCaptureMessage): Promise<SnapshotShieldSelection | null> => {
     if (!interactionsActive) return null;
     const viewport = { width: window.innerWidth, height: window.innerHeight };
     if (!isRegionRectInsideViewport(message.rect, viewport)) return null;
@@ -153,9 +146,7 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     };
   };
 
-  const onControl = async (
-    message: SnapshotShieldControlMessage,
-  ): Promise<RecordingControlResult> => {
+  const onControl = async (message: SnapshotShieldControlMessage): Promise<RecordingControlResult> => {
     return toolbar.sendCommand(message.action, message.undoToken);
   };
 

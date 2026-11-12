@@ -14,12 +14,7 @@ export function isRecordingToolbarCorner(value: unknown): value is RecordingTool
   return value === 'top-left' || value === 'top-right' || value === 'bottom-left' || value === 'bottom-right';
 }
 
-export function clampToolbarPosition(
-  point: Point,
-  size: Size,
-  viewport: ToolbarViewport,
-  margin: number,
-): Point {
+export function clampToolbarPosition(point: Point, size: Size, viewport: ToolbarViewport, margin: number): Point {
   const maxX = Math.max(margin, viewport.width - size.width - margin);
   const maxY = Math.max(margin, viewport.height - size.height - margin);
   return {
@@ -45,11 +40,7 @@ export function positionForToolbarCorner(
   );
 }
 
-export function snapToolbarCorner(
-  point: Point,
-  size: Size,
-  viewport: ToolbarViewport,
-): RecordingToolbarCorner {
+export function snapToolbarCorner(point: Point, size: Size, viewport: ToolbarViewport): RecordingToolbarCorner {
   const horizontal = point.x + size.width / 2 < viewport.width / 2 ? 'left' : 'right';
   const vertical = point.y + size.height / 2 < viewport.height / 2 ? 'top' : 'bottom';
   return `${vertical}-${horizontal}`;

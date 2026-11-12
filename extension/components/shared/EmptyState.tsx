@@ -31,8 +31,7 @@ export default function EmptyState({ isRecording = false, recordingTabId = null 
       // Prefer the recording tab; otherwise the most recently used recordable
       // tab (http/https only — file: pages can't be recorded).
       const target =
-        tabs.find((tab) => tab.id === recordingTabId) ??
-        tabs.filter(isRecordableTab).sort(byMostRecentlyAccessed)[0];
+        tabs.find((tab) => tab.id === recordingTabId) ?? tabs.filter(isRecordableTab).sort(byMostRecentlyAccessed)[0];
       if (target?.id == null) throw new UserMessageError(t().emptyState.noRecordableTab);
 
       await focusTab(target.id, target.windowId);
@@ -45,7 +44,9 @@ export default function EmptyState({ isRecording = false, recordingTabId = null 
         await actionApi?.openPopup?.();
       }
     } catch (error) {
-      setActionError(reportError('[howbeam] failed to return to the recording page', error, t().emptyState.returnFailed));
+      setActionError(
+        reportError('[howbeam] failed to return to the recording page', error, t().emptyState.returnFailed),
+      );
     } finally {
       setPending(false);
     }
@@ -56,12 +57,14 @@ export default function EmptyState({ isRecording = false, recordingTabId = null 
       <Mascot className="size-16" />
       <div className="flex max-w-[380px] flex-col items-center gap-2">
         <h2 className="text-lg font-bold text-foreground">{t().emptyState.title}</h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {t().emptyState.body}
-        </p>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t().emptyState.body}</p>
         <Button onClick={returnToRecordingPage} disabled={pendingShown} className="mt-2">
           {pendingShown ? <Loader2 className="animate-spin" /> : <ExternalLink />}
-          {pendingShown ? t().emptyState.opening : isRecording ? t().emptyState.returnToRecordingTab : t().emptyState.returnToPage}
+          {pendingShown
+            ? t().emptyState.opening
+            : isRecording
+              ? t().emptyState.returnToRecordingTab
+              : t().emptyState.returnToPage}
         </Button>
         {actionError && <InlineAlert className="text-left">{actionError}</InlineAlert>}
       </div>

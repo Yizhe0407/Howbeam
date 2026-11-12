@@ -2,12 +2,7 @@ import { isAbortError, throwIfAborted } from '../shared/abort';
 import { compositeStepEntry } from './entry-render';
 import { RedactionReviewRequiredError, StepImageError } from './export-errors';
 import { getEntryPrivacyState, type Step, type StepEntry } from '../storage/models';
-import {
-  PROJECT_EXPORT_LIMITS,
-  ProjectExportLimitError,
-  IMAGE_MIME_TYPE,
-  textValue,
-} from './project-export-contract';
+import { PROJECT_EXPORT_LIMITS, ProjectExportLimitError, IMAGE_MIME_TYPE, textValue } from './project-export-contract';
 import { t } from '@/lib/shared/i18n';
 
 export type RenderedEntryContent = {
@@ -73,7 +68,9 @@ export async function* renderEntryImages(
 
   // Refuse up front, for every format alike, naming every step that needs a
   // mask review. Rendering such an entry would only yield a fully black image.
-  const reviewOrdinals = entries.flatMap((entry, index) => (getEntryPrivacyState(entry).reviewRequired ? [index + 1] : []));
+  const reviewOrdinals = entries.flatMap((entry, index) =>
+    getEntryPrivacyState(entry).reviewRequired ? [index + 1] : [],
+  );
   if (reviewOrdinals.length > 0) throw new RedactionReviewRequiredError(reviewOrdinals);
 
   // A corrupt screenshot must say which step it is, not just fail the export.

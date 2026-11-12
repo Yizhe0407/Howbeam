@@ -2,11 +2,11 @@
 
 PDF 匯出把文字嵌成真正的向量文字，字型由 `public/fonts/pdf/` 提供：
 
-| 檔案 | 說明 |
-|---|---|
-| `HowbeamSansTC-Regular.ttf` / `HowbeamSansTC-Bold.ttf` | 由官方 Noto Sans TC 產出的子集 |
-| `OFL.txt` | 上游的 SIL OFL 1.1 授權全文，與字型一起散布 |
-| `manifest.json` | 來源版本、參數與每個檔案的 SHA-256 |
+| 檔案                                                   | 說明                                        |
+| ------------------------------------------------------ | ------------------------------------------- |
+| `HowbeamSansTC-Regular.ttf` / `HowbeamSansTC-Bold.ttf` | 由官方 Noto Sans TC 產出的子集              |
+| `OFL.txt`                                              | 上游的 SIL OFL 1.1 授權全文，與字型一起散布 |
+| `manifest.json`                                        | 來源版本、參數與每個檔案的 SHA-256          |
 
 這些檔案是產物，**不要手動修改**；測試（`tests/unit/pdf-fonts.test.ts`）會比對 `manifest.json` 的雜湊值。
 

@@ -21,7 +21,6 @@ const TEXT_HANDLES: readonly ItemHandle[] = ['w', 'e'];
 const ARROW_HANDLES: readonly ItemHandle[] = ['from', 'to'];
 const NO_HANDLES: readonly ItemHandle[] = [];
 
-
 export function itemHandles(item: ImageEditItem): readonly ItemHandle[] {
   if (item.kind === 'arrow') return ARROW_HANDLES;
   if (item.kind === 'text') return TEXT_HANDLES;
@@ -36,17 +35,32 @@ export function itemBounds(item: ImageEditItem): Bounds {
   if (item.kind === 'arrow') {
     const x = Math.min(item.from.x, item.to.x);
     const y = Math.min(item.from.y, item.to.y);
-    return { x, y, width: Math.max(Math.abs(item.to.x - item.from.x), 1), height: Math.max(Math.abs(item.to.y - item.from.y), 1) };
+    return {
+      x,
+      y,
+      width: Math.max(Math.abs(item.to.x - item.from.x), 1),
+      height: Math.max(Math.abs(item.to.y - item.from.y), 1),
+    };
   }
   if (item.kind === 'step') {
-    return { x: item.center.x - item.radius, y: item.center.y - item.radius, width: item.radius * 2, height: item.radius * 2 };
+    return {
+      x: item.center.x - item.radius,
+      y: item.center.y - item.radius,
+      width: item.radius * 2,
+      height: item.radius * 2,
+    };
   }
   return item.bounds;
 }
 
 /** The text box height that fits its content at the current width and size. */
 export function fitTextHeight<T extends TextEdit>(edit: T, measure: TextMeasure = measureTextWidth): T {
-  const height = roundHundredths(Math.max(measureTextEditHeight({ text: edit.text || ' ', fontSize: edit.fontSize, width: edit.bounds.width }, measure), edit.fontSize));
+  const height = roundHundredths(
+    Math.max(
+      measureTextEditHeight({ text: edit.text || ' ', fontSize: edit.fontSize, width: edit.bounds.width }, measure),
+      edit.fontSize,
+    ),
+  );
   return height === edit.bounds.height ? edit : { ...edit, bounds: { ...edit.bounds, height } };
 }
 
@@ -62,15 +76,25 @@ export function translateItem(item: ImageEditItem, dx: number, dy: number, size:
       to: { x: roundHundredths(item.to.x + moveX), y: roundHundredths(item.to.y + moveY) },
     };
   }
-  if (item.kind === 'step') return { ...item, center: { x: roundHundredths(item.center.x + moveX), y: roundHundredths(item.center.y + moveY) } };
+  if (item.kind === 'step')
+    return {
+      ...item,
+      center: { x: roundHundredths(item.center.x + moveX), y: roundHundredths(item.center.y + moveY) },
+    };
   if (item.kind === 'highlight') {
-    return { ...item, bounds: { ...item.bounds, x: roundHundredths(item.bounds.x + moveX), y: roundHundredths(item.bounds.y + moveY) } };
+    return {
+      ...item,
+      bounds: { ...item.bounds, x: roundHundredths(item.bounds.x + moveX), y: roundHundredths(item.bounds.y + moveY) },
+    };
   }
   return { ...item, bounds: moveBounds(item.bounds, dx, dy, size) };
 }
 
 function movePoint(point: Point, dx: number, dy: number, size: Size): Point {
-  return { x: roundHundredths(clamp(point.x + dx, 0, size.width)), y: roundHundredths(clamp(point.y + dy, 0, size.height)) };
+  return {
+    x: roundHundredths(clamp(point.x + dx, 0, size.width)),
+    y: roundHundredths(clamp(point.y + dy, 0, size.height)),
+  };
 }
 
 function resizeTextWidth(edit: TextEdit, handle: ItemHandle, dx: number, size: Size, measure: TextMeasure): TextEdit {
@@ -78,7 +102,10 @@ function resizeTextWidth(edit: TextEdit, handle: ItemHandle, dx: number, size: S
   let right = edit.bounds.x + edit.bounds.width;
   if (handle === 'w') left = clamp(left + dx, 0, right - MIN_TEXT_WIDTH);
   if (handle === 'e') right = clamp(right + dx, left + MIN_TEXT_WIDTH, size.width);
-  return fitTextHeight({ ...edit, bounds: { ...edit.bounds, x: roundHundredths(left), width: roundHundredths(right - left) } }, measure);
+  return fitTextHeight(
+    { ...edit, bounds: { ...edit.bounds, x: roundHundredths(left), width: roundHundredths(right - left) } },
+    measure,
+  );
 }
 
 export interface ResizeOptions {

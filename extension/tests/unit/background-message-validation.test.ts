@@ -58,10 +58,7 @@ const validStepFrameAbort = {
 } as const;
 
 describe('recording mode switch controls', () => {
-  it.each([
-    'SWITCH_TO_SNAPSHOT_MODE',
-    'SWITCH_TO_STEPS_MODE',
-  ])('accepts %s only with a run id', (type) => {
+  it.each(['SWITCH_TO_SNAPSHOT_MODE', 'SWITCH_TO_STEPS_MODE'])('accepts %s only with a run id', (type) => {
     expect(isBackgroundMessage({ type, runId: 'run-1' })).toBe(true);
     expect(isBackgroundMessage({ type })).toBe(false);
   });
@@ -91,7 +88,12 @@ describe('background runtime message validation', () => {
       preferredTabId: 7,
     },
     { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps', continuation: {} },
-    { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps', continuation: { preferredTabId: 4 } },
+    {
+      type: 'START_RECORDING',
+      target: { kind: 'project', projectId: 'project-1' },
+      mode: 'steps',
+      continuation: { preferredTabId: 4 },
+    },
     { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps' },
     { type: 'START_RECORDING', target: { kind: 'new' }, mode: 'snapshot' },
     { type: 'PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION', sessionId: 'project-1' },
@@ -130,12 +132,22 @@ describe('background runtime message validation', () => {
       sessionId: 'project-1',
       target: { kind: 'snapshot-singleton', anchorId: 'same', annotationId: 'same' },
     },
-    { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps', continuation: { preferredTabId: -1 } },
+    {
+      type: 'START_RECORDING',
+      target: { kind: 'project', projectId: 'project-1' },
+      mode: 'steps',
+      continuation: { preferredTabId: -1 },
+    },
     { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps', continuation: null },
     { type: 'START_RECORDING', target: { kind: 'project' }, mode: 'steps' },
     { type: 'START_RECORDING', target: { kind: 'new', projectId: 'project-1' }, mode: 'steps' },
     // A caller-supplied source URL must never reach the permission prompt.
-    { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps', continuation: { sourceUrl: 'https://attacker.example/' } },
+    {
+      type: 'START_RECORDING',
+      target: { kind: 'project', projectId: 'project-1' },
+      mode: 'steps',
+      continuation: { sourceUrl: 'https://attacker.example/' },
+    },
     { type: 'PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION', sessionId: '' },
   ])('rejects malformed or resource-unbounded input %#', (message) => {
     expect(isBackgroundMessage(message)).toBe(false);
@@ -278,18 +290,17 @@ describe('background sender authorization', () => {
   const extensionRoot = 'chrome-extension://howbeam-id/';
 
   it('accepts popup and top-level pages owned by this extension', () => {
-    expect(isTrustedExtensionPageSender(
-      { url: 'chrome-extension://howbeam-id/popup.html' },
-      extensionRoot,
-    )).toBe(true);
-    expect(isTrustedExtensionPageSender(
-      {
-        frameId: 0,
-        url: 'chrome-extension://howbeam-id/editor.html?session=1',
-        tab: { id: 9, url: 'chrome-extension://howbeam-id/editor.html?session=1' },
-      },
-      extensionRoot,
-    )).toBe(true);
+    expect(isTrustedExtensionPageSender({ url: 'chrome-extension://howbeam-id/popup.html' }, extensionRoot)).toBe(true);
+    expect(
+      isTrustedExtensionPageSender(
+        {
+          frameId: 0,
+          url: 'chrome-extension://howbeam-id/editor.html?session=1',
+          tab: { id: 9, url: 'chrome-extension://howbeam-id/editor.html?session=1' },
+        },
+        extensionRoot,
+      ),
+    ).toBe(true);
   });
 
   it.each([
@@ -336,19 +347,41 @@ describe('background sender authorization', () => {
 
   it('authorizes keep-alive ports only for the top frame owning the active job', () => {
     const sender = { frameId: 0, tab: { id: 7, url: 'https://example.com/' } };
-    expect(isTrustedKeepAliveSender(sender, {
-      operation: 'recording', isRecording: true, tabId: 7, recapture: null,
-    })).toBe(true);
-    expect(isTrustedKeepAliveSender(sender, {
-      operation: 'recapture', isRecording: false, tabId: null,
-      recapture: { sourceTabId: 7 },
-    })).toBe(true);
-    expect(isTrustedKeepAliveSender({ ...sender, frameId: 2 }, {
-      operation: 'recording', isRecording: true, tabId: 7, recapture: null,
-    })).toBe(false);
-    expect(isTrustedKeepAliveSender(sender, {
-      operation: null, isRecording: false, tabId: null, recapture: null,
-    })).toBe(false);
+    expect(
+      isTrustedKeepAliveSender(sender, {
+        operation: 'recording',
+        isRecording: true,
+        tabId: 7,
+        recapture: null,
+      }),
+    ).toBe(true);
+    expect(
+      isTrustedKeepAliveSender(sender, {
+        operation: 'recapture',
+        isRecording: false,
+        tabId: null,
+        recapture: { sourceTabId: 7 },
+      }),
+    ).toBe(true);
+    expect(
+      isTrustedKeepAliveSender(
+        { ...sender, frameId: 2 },
+        {
+          operation: 'recording',
+          isRecording: true,
+          tabId: 7,
+          recapture: null,
+        },
+      ),
+    ).toBe(false);
+    expect(
+      isTrustedKeepAliveSender(sender, {
+        operation: null,
+        isRecording: false,
+        tabId: null,
+        recapture: null,
+      }),
+    ).toBe(false);
   });
 
   it('keeps trusting the tab a recording is moving out of until the move settles', () => {
@@ -360,22 +393,30 @@ describe('background sender authorization', () => {
   });
 
   it('accepts recording controls only from the top frame of the recorded tab', () => {
-    expect(isTrustedRecorderControlSender(
-      { frameId: 0, url: 'https://example.com/', tab: { id: 7, url: 'https://example.com/' } },
-      7,
-    )).toBe(true);
+    expect(
+      isTrustedRecorderControlSender(
+        { frameId: 0, url: 'https://example.com/', tab: { id: 7, url: 'https://example.com/' } },
+        7,
+      ),
+    ).toBe(true);
 
-    expect(isTrustedRecorderControlSender(
-      { frameId: 1, url: 'https://example.com/frame', tab: { id: 7, url: 'https://example.com/' } },
-      7,
-    )).toBe(false);
-    expect(isTrustedRecorderControlSender(
-      { frameId: 0, url: 'https://example.com/', tab: { id: 8, url: 'https://example.com/' } },
-      7,
-    )).toBe(false);
-    expect(isTrustedRecorderControlSender(
-      { frameId: 0, url: 'https://example.com/', tab: { id: 7, url: 'https://example.com/' } },
-      null,
-    )).toBe(false);
+    expect(
+      isTrustedRecorderControlSender(
+        { frameId: 1, url: 'https://example.com/frame', tab: { id: 7, url: 'https://example.com/' } },
+        7,
+      ),
+    ).toBe(false);
+    expect(
+      isTrustedRecorderControlSender(
+        { frameId: 0, url: 'https://example.com/', tab: { id: 8, url: 'https://example.com/' } },
+        7,
+      ),
+    ).toBe(false);
+    expect(
+      isTrustedRecorderControlSender(
+        { frameId: 0, url: 'https://example.com/', tab: { id: 7, url: 'https://example.com/' } },
+        null,
+      ),
+    ).toBe(false);
   });
 });

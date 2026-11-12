@@ -111,13 +111,21 @@ export default function StepActions({
                 onClick={handleCopy}
                 disabled={operationsDisabled || privacyReviewRequired || busyShown}
                 aria-label={t().editor.actions.copyImage}
-                className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+                className="flex size-8 items-center justify-center rounded-sm text-muted-foreground focus-ring transition-colors outline-none hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
               >
-                {copying && busyShown ? <Loader2 className="size-4 animate-spin" /> : copied ? <Check className="size-4 text-brand-text" /> : <ClipboardCopy className="size-4" />}
+                {copying && busyShown ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : copied ? (
+                  <Check className="size-4 text-brand-text" />
+                ) : (
+                  <ClipboardCopy className="size-4" />
+                )}
               </button>
             </span>
           </TooltipTrigger>
-          <TooltipContent>{privacyReviewRequired ? t().editor.privacyReviewTooltip : t().editor.actions.copyImage}</TooltipContent>
+          <TooltipContent>
+            {privacyReviewRequired ? t().editor.privacyReviewTooltip : t().editor.actions.copyImage}
+          </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -127,13 +135,20 @@ export default function StepActions({
                 onClick={() => void handleRecapture()}
                 disabled={!onRecapture || operationsDisabled || busyShown || Boolean(recaptureDisabledReason)}
                 aria-label={t().editor.actions.recapture}
-                className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+                className="flex size-8 items-center justify-center rounded-sm text-muted-foreground focus-ring transition-colors outline-none hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
               >
-                {recapturing && busyShown ? <Loader2 className="size-4 animate-spin" /> : <SwitchCamera className="size-4" />}
+                {recapturing && busyShown ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <SwitchCamera className="size-4" />
+                )}
               </button>
             </span>
           </TooltipTrigger>
-          <TooltipContent>{recaptureDisabledReason ?? (operationsDisabled ? t().editor.actions.recaptureUnavailable : t().editor.actions.recapture)}</TooltipContent>
+          <TooltipContent>
+            {recaptureDisabledReason ??
+              (operationsDisabled ? t().editor.actions.recaptureUnavailable : t().editor.actions.recapture)}
+          </TooltipContent>
         </Tooltip>
         <span className="mx-0.5 h-5 w-0.5 rounded-full bg-border-soft" aria-hidden="true" />
         <Tooltip>
@@ -144,7 +159,7 @@ export default function StepActions({
                 onClick={handleDelete}
                 disabled={deleteDisabled || operationsDisabled || busyShown}
                 aria-label={t().editor.actions.deleteStep}
-                className="flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-danger-soft hover:text-danger disabled:pointer-events-none disabled:opacity-40"
+                className="flex size-8 items-center justify-center rounded-sm text-muted-foreground focus-ring transition-colors outline-none hover:bg-danger-soft hover:text-danger disabled:pointer-events-none disabled:opacity-40"
               >
                 {deleting && busyShown ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
               </button>

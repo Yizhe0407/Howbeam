@@ -183,17 +183,22 @@ test.describe('step recording', () => {
     await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(1);
 
     const sendControl = async (type: string, undoToken?: string) => {
-      return popupPage.evaluate(async ({ type, undoToken }) => {
-        const extensionApi = (globalThis as unknown as {
-          chrome: {
-            storage: { local: { get(key: string): Promise<Record<string, unknown>> } };
-            runtime: { sendMessage(message: unknown): Promise<unknown> };
-          };
-        }).chrome;
-        const stored = await extensionApi.storage.local.get('howbeam:recordingState');
-        const runId = (stored['howbeam:recordingState'] as { runId: string }).runId;
-        return extensionApi.runtime.sendMessage({ type, runId, ...(undoToken ? { undoToken } : {}) });
-      }, { type, undoToken });
+      return popupPage.evaluate(
+        async ({ type, undoToken }) => {
+          const extensionApi = (
+            globalThis as unknown as {
+              chrome: {
+                storage: { local: { get(key: string): Promise<Record<string, unknown>> } };
+                runtime: { sendMessage(message: unknown): Promise<unknown> };
+              };
+            }
+          ).chrome;
+          const stored = await extensionApi.storage.local.get('howbeam:recordingState');
+          const runId = (stored['howbeam:recordingState'] as { runId: string }).runId;
+          return extensionApi.runtime.sendMessage({ type, runId, ...(undoToken ? { undoToken } : {}) });
+        },
+        { type, undoToken },
+      );
     };
 
     expect(await sendControl('PAUSE_RECORDING')).toMatchObject({ ok: true });
@@ -206,7 +211,7 @@ test.describe('step recording', () => {
     await hoverTarget(appPage, '#action-button');
     expect((await getStepPreviewStyle(appPage)).hidden).toBe(false);
 
-    const undo = await sendControl('UNDO_LAST_CAPTURE') as { ok: boolean; undoToken: string };
+    const undo = (await sendControl('UNDO_LAST_CAPTURE')) as { ok: boolean; undoToken: string };
     expect(undo.ok).toBe(true);
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(0);
     await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(0);
@@ -238,9 +243,11 @@ test.describe('step recording', () => {
     const currentRunId = (await readRecordingState(popupPage)).runId as string;
     expect(currentRunId).not.toBe(oldRunId);
     const staleResult = await popupPage.evaluate(async (runId) => {
-      const extensionApi = (globalThis as unknown as {
-        chrome: { runtime: { sendMessage(message: unknown): Promise<unknown> } };
-      }).chrome;
+      const extensionApi = (
+        globalThis as unknown as {
+          chrome: { runtime: { sendMessage(message: unknown): Promise<unknown> } };
+        }
+      ).chrome;
       return extensionApi.runtime.sendMessage({ type: 'PAUSE_RECORDING', runId }) as Promise<{ ok: boolean }>;
     }, oldRunId);
     expect(staleResult.ok).toBe(false);
@@ -261,9 +268,14 @@ test.describe('step recording', () => {
     await editor.waitForLoadState('domcontentloaded');
     await expect.poll(async () => (await readRecordingState(editor)).isRecording).toBe(false);
     const editorBase = itemAt(editor.url().split('?'), 0);
-    await expect.poll(() => extensionContext.pages().filter((page) => {
-      return page.url().startsWith(editorBase);
-    }).length).toBe(1);
+    await expect
+      .poll(
+        () =>
+          extensionContext.pages().filter((page) => {
+            return page.url().startsWith(editorBase);
+          }).length,
+      )
+      .toBe(1);
   });
 
   test('keeps scrolling usable, previews below-the-fold targets, and ignores the scrollbar gutter', async ({
@@ -283,22 +295,27 @@ test.describe('step recording', () => {
     });
     // Virtualized sites can emit this while replacing the element under a stationary pointer; it must not clear the last viewport coordinate.
     await appPage.evaluate(({ x, y }) => {
-      window.dispatchEvent(new PointerEvent('pointerout', {
-        clientX: x,
-        clientY: y,
-        relatedTarget: null,
-      }));
+      window.dispatchEvent(
+        new PointerEvent('pointerout', {
+          clientX: x,
+          clientY: y,
+          relatedTarget: null,
+        }),
+      );
     }, scrollPoint);
     await appPage.mouse.wheel(0, 110);
     await expect.poll(() => appPage.locator('#scroll-viewport').evaluate((element) => element.scrollTop)).toBe(110);
-    await expect.poll(() => appPage.evaluate(
-      ({ x: clientX, y: clientY }) => document.elementFromPoint(clientX, clientY)?.id,
-      scrollPoint,
-    )).toBe('scroll-second');
-    await expect.poll(async () => {
-      const preview = await getStepPreviewStyle(appPage);
-      return !preview.hidden && preview.style !== previewBeforeScroll.style;
-    }).toBe(true);
+    await expect
+      .poll(() =>
+        appPage.evaluate(({ x: clientX, y: clientY }) => document.elementFromPoint(clientX, clientY)?.id, scrollPoint),
+      )
+      .toBe('scroll-second');
+    await expect
+      .poll(async () => {
+        const preview = await getStepPreviewStyle(appPage);
+        return !preview.hidden && preview.style !== previewBeforeScroll.style;
+      })
+      .toBe(true);
 
     // A virtual list may replace the row under a stationary pointer after scrolling settles; the local observer must refresh immediately.
     const beforeReplacement = await getStepPreviewStyle(appPage);
@@ -310,10 +327,15 @@ test.describe('step recording', () => {
       replacement.style.cssText = 'display:block;width:180px;height:70px;margin-left:100px';
       current.replaceWith(replacement);
     });
-    await expect.poll(async () => {
-      const preview = await getStepPreviewStyle(appPage);
-      return !preview.hidden && preview.style !== beforeReplacement.style;
-    }, { timeout: 500 }).toBe(true);
+    await expect
+      .poll(
+        async () => {
+          const preview = await getStepPreviewStyle(appPage);
+          return !preview.hidden && preview.style !== beforeReplacement.style;
+        },
+        { timeout: 500 },
+      )
+      .toBe(true);
 
     // Page-level wheel scrolling remains native too: some sites apply overflow to <body>, so its border box moves while hit-test coordinates stay viewport-relative.
     await appPage.evaluate(() => {
@@ -439,23 +461,19 @@ test.describe('step recording', () => {
     const selectors = ['#disabled-button', '#fixture-svg rect', '#fixture-canvas', '#visual-container strong'];
     for (const [index, selector] of selectors.entries()) {
       await clickTarget(appPage, selector);
-      await expect.poll(
-        async () => (await readSteps(popupPage)).length,
-        { message: `expected ${selector} to create a step` },
-      ).toBe(index + 1);
+      await expect
+        .poll(async () => (await readSteps(popupPage)).length, { message: `expected ${selector} to create a step` })
+        .toBe(index + 1);
       await appPage.waitForTimeout(420);
     }
 
     const descriptions = (await readSteps(popupPage)).map((step) => step.description);
-    expect(descriptions).toEqual([
-      '標記頁面區域',
-      '標記頁面區域',
-      '標記頁面區域',
-      '標記頁面區域',
-    ]);
-    expect(await appPage.evaluate(
-      () => (window.fixtureState as typeof window.fixtureState & { disabledEvents: number }).disabledEvents,
-    )).toBe(0);
+    expect(descriptions).toEqual(['標記頁面區域', '標記頁面區域', '標記頁面區域', '標記頁面區域']);
+    expect(
+      await appPage.evaluate(
+        () => (window.fixtureState as typeof window.fixtureState & { disabledEvents: number }).disabledEvents,
+      ),
+    ).toBe(0);
 
     await stopRecording(popupPage);
   });

@@ -19,12 +19,7 @@ import {
   StepUpdateConflictError,
   type StepImageEditChanges,
 } from './step-repository';
-import {
-  requireProject,
-  runProjectRead,
-  runProjectWrite,
-  type ProjectWriteTransaction,
-} from './database';
+import { requireProject, runProjectRead, runProjectWrite, type ProjectWriteTransaction } from './database';
 import { commitEntries, entrySteps, findEntryRecord, readEntries, readEntry, readEntryRecords } from './entry-store';
 
 export class ProjectContentConflictError extends Error {
@@ -97,14 +92,16 @@ function assertExactAnnotationIds(
 ): void {
   const actualIds = group.annotations.map((annotation) => annotation.id);
   if (
-    orderedAnnotationIds.length !== actualIds.length
-    || new Set(orderedAnnotationIds).size !== orderedAnnotationIds.length
+    orderedAnnotationIds.length !== actualIds.length ||
+    new Set(orderedAnnotationIds).size !== orderedAnnotationIds.length
   ) {
     throw new ProjectStructureIntegrityError('Annotation order must contain every group annotation exactly once.');
   }
   const actual = new Set(actualIds);
   if (orderedAnnotationIds.some((id) => !actual.has(id))) {
-    throw new ProjectStructureIntegrityError('Annotation order contains an anchor or an annotation from another group.');
+    throw new ProjectStructureIntegrityError(
+      'Annotation order contains an anchor or an annotation from another group.',
+    );
   }
 }
 
@@ -113,15 +110,12 @@ function assertExactRestoredAnnotationIds(
   restoredAnnotationId: string,
   previousAnnotationIds: readonly string[],
 ): void {
-  const expectedIds = new Set([
-    ...group.annotations.map((annotation) => annotation.id),
-    restoredAnnotationId,
-  ]);
+  const expectedIds = new Set([...group.annotations.map((annotation) => annotation.id), restoredAnnotationId]);
   if (
-    previousAnnotationIds.length !== group.annotations.length + 1
-    || new Set(previousAnnotationIds).size !== previousAnnotationIds.length
-    || expectedIds.size !== group.annotations.length + 1
-    || previousAnnotationIds.some((id) => !expectedIds.has(id))
+    previousAnnotationIds.length !== group.annotations.length + 1 ||
+    new Set(previousAnnotationIds).size !== previousAnnotationIds.length ||
+    expectedIds.size !== group.annotations.length + 1 ||
+    previousAnnotationIds.some((id) => !expectedIds.has(id))
   ) {
     throw new ProjectStructureIntegrityError(
       'Previous annotation order must contain the current group plus the restored annotation exactly once.',
@@ -217,7 +211,9 @@ function rebaseSectionsAfterDelete(
 }
 
 export async function getProjectStructureSnapshot(sessionId: string): Promise<ProjectStructureSnapshot> {
-  return runProjectRead(async (tx) => structureSnapshot(await requireProject(tx, sessionId), await readEntries(tx, sessionId)));
+  return runProjectRead(async (tx) =>
+    structureSnapshot(await requireProject(tx, sessionId), await readEntries(tx, sessionId)),
+  );
 }
 
 /** The Project's first entry, reading only its screenshot (a Library cover). */
@@ -279,9 +275,10 @@ export async function deleteProjectAnnotationAtomically(
       );
     } else {
       const annotations = group.annotations.filter((annotation) => annotation.id !== annotationId);
-      nextEntries = structure.entries.map((entry): StepEntry => (
-        entryId(entry) === anchorId ? { kind: 'group', anchor: group.anchor, annotations } : entry
-      ));
+      nextEntries = structure.entries.map(
+        (entry): StepEntry =>
+          entryId(entry) === anchorId ? { kind: 'group', anchor: group.anchor, annotations } : entry,
+      );
     }
 
     const result = await commitProjectStructure(tx, structure, nextEntries, nextSections, [anchorId]);
@@ -312,16 +309,8 @@ export async function reorderProjectAnnotationsAtomically(
       anchor: group.anchor,
       annotations: orderedAnnotationIds.map((id) => byId.get(id)!),
     };
-    const nextEntries = structure.entries.map((entry) => (
-      entryId(entry) === anchorId ? reorderedGroup : entry
-    ));
-    const result = await commitProjectStructure(
-      tx,
-      structure,
-      nextEntries,
-      structure.project.sections,
-      [anchorId],
-    );
+    const nextEntries = structure.entries.map((entry) => (entryId(entry) === anchorId ? reorderedGroup : entry));
+    const result = await commitProjectStructure(tx, structure, nextEntries, structure.project.sections, [anchorId]);
     return { ...result, previousAnnotationIds };
   });
 }
@@ -339,11 +328,11 @@ export async function restoreProjectAnnotationAtomically(
   return runProjectStructureMutation(sessionId, expectedContentRevision, async (tx, structure) => {
     const group = requireSnapshotGroup(structure.entries, anchorId);
     if (
-      typeof restoredAnnotation.id !== 'string'
-      || restoredAnnotation.id.length === 0
-      || restoredAnnotation.id === anchorId
-      || restoredAnnotation.sessionId !== sessionId
-      || restoredAnnotation.groupId !== anchorId
+      typeof restoredAnnotation.id !== 'string' ||
+      restoredAnnotation.id.length === 0 ||
+      restoredAnnotation.id === anchorId ||
+      restoredAnnotation.sessionId !== sessionId ||
+      restoredAnnotation.groupId !== anchorId
     ) {
       throw new ProjectStructureIntegrityError(
         'Restored annotation must be a distinct member of the requested snapshot group.',
@@ -362,16 +351,8 @@ export async function restoreProjectAnnotationAtomically(
       anchor: group.anchor,
       annotations: previousAnnotationIds.map((id) => byId.get(id)!),
     };
-    const nextEntries = structure.entries.map((entry) => (
-      entryId(entry) === anchorId ? restoredGroup : entry
-    ));
-    return commitProjectStructure(
-      tx,
-      structure,
-      nextEntries,
-      structure.project.sections,
-      [anchorId],
-    );
+    const nextEntries = structure.entries.map((entry) => (entryId(entry) === anchorId ? restoredGroup : entry));
+    return commitProjectStructure(tx, structure, nextEntries, structure.project.sections, [anchorId]);
   });
 }
 
@@ -411,9 +392,9 @@ export async function saveSnapshotImageAtomically(
     }
     const storedIds = group.annotations.map((annotation) => annotation.id);
     if (
-      (anchor.imageEditRevision ?? 0) !== guard.imageEditRevision
-      || storedIds.length !== guard.annotationIds.length
-      || storedIds.some((id, index) => id !== guard.annotationIds[index])
+      (anchor.imageEditRevision ?? 0) !== guard.imageEditRevision ||
+      storedIds.length !== guard.annotationIds.length ||
+      storedIds.some((id, index) => id !== guard.annotationIds[index])
     ) {
       throw new StepImageEditConflictError(anchorId, guard.imageEditRevision, anchor.imageEditRevision ?? 0);
     }
@@ -425,11 +406,16 @@ export async function saveSnapshotImageAtomically(
       }
       return applyStepChanges(row, { manualBounds: sameBounds(bounds, row.bounds) ? undefined : bounds });
     });
-    const nextEntries = structure.entries.map((entry): StepEntry => (
-      entryId(entry) === anchorId
-        ? { kind: 'group', anchor: { ...applyStepChanges(anchor, anchorChanges), screenshotBlob: anchor.screenshotBlob }, annotations }
-        : entry
-    ));
+    const nextEntries = structure.entries.map(
+      (entry): StepEntry =>
+        entryId(entry) === anchorId
+          ? {
+              kind: 'group',
+              anchor: { ...applyStepChanges(anchor, anchorChanges), screenshotBlob: anchor.screenshotBlob },
+              annotations,
+            }
+          : entry,
+    );
     await commitProjectStructure(tx, structure, nextEntries, structure.project.sections, [anchorId]);
   });
 }
@@ -471,13 +457,7 @@ export async function restoreProjectEntriesAtomically(
     assertExactEntryIds(allEntries, previousEntryIds);
     const byId = new Map(allEntries.map((entry) => [entryId(entry), entry]));
     const nextEntries = previousEntryIds.map((id) => byId.get(id)!);
-    return commitProjectStructure(
-      tx,
-      structure,
-      nextEntries,
-      previousSections,
-      restoredEntries.map(entryId),
-    );
+    return commitProjectStructure(tx, structure, nextEntries, previousSections, restoredEntries.map(entryId));
   });
 }
 
@@ -515,11 +495,14 @@ export async function addProjectSectionAtomically(
         `Project cannot contain more than ${PROJECT_SECTION_LIMITS.maxSections} sections.`,
       );
     }
-    const sections = [...structure.project.sections, {
-      id: crypto.randomUUID(),
-      title: sanitizedTitle,
-      startEntryId,
-    }];
+    const sections = [
+      ...structure.project.sections,
+      {
+        id: crypto.randomUUID(),
+        title: sanitizedTitle,
+        startEntryId,
+      },
+    ];
     return commitProjectStructure(tx, structure, structure.entries, sections, [startEntryId]);
   });
 }

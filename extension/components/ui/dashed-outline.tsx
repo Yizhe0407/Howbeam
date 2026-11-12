@@ -66,7 +66,11 @@ export function DashedOutline({ radius, outset = 0, hideOnHover = false, classNa
   );
 }
 
-function OutlineRect({ width, height, radius }: { width: number; height: number } & Pick<DashedOutlineProps, 'radius'>) {
+function OutlineRect({
+  width,
+  height,
+  radius,
+}: { width: number; height: number } & Pick<DashedOutlineProps, 'radius'>) {
   // Inset by half the stroke so the line is drawn fully inside the box.
   const w = width - STROKE;
   const h = height - STROKE;

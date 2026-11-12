@@ -85,7 +85,12 @@ export function wrapText(measure: MeasureText, text: string, maxWidth: number, s
         continue;
       }
       // A closing mark hangs past the margin, by at most its own width, rather than starting a line.
-      if (line && unit.trim() === unit && startsWithNoLineStart(unit) && measure(candidate) <= maxWidth + measure(unit)) {
+      if (
+        line &&
+        unit.trim() === unit &&
+        startsWithNoLineStart(unit) &&
+        measure(candidate) <= maxWidth + measure(unit)
+      ) {
         line = candidate;
         continue;
       }

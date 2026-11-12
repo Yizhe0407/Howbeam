@@ -159,8 +159,7 @@ const hide = (event: Event): void => {
   event.stopImmediatePropagation();
 };
 
-const isPrimaryButton = (event: Event): boolean =>
-  event.type === 'pointercancel' || (event as MouseEvent).button === 0;
+const isPrimaryButton = (event: Event): boolean => event.type === 'pointercancel' || (event as MouseEvent).button === 0;
 
 export function createStepPressGate(options: StepPressGateOptions): StepPressGate {
   const { lateClicks, isBusy } = options;
@@ -321,19 +320,21 @@ export function createStepPressGate(options: StepPressGateOptions): StepPressGat
       press.replayed = true;
       if (handingDown === 'mousedown' && press.target.isConnected) {
         // Its pointerdown was withheld before the browser's count was known.
-        press.target.dispatchEvent(new PointerEvent('pointerdown', {
-          bubbles: true,
-          cancelable: true,
-          composed: true,
-          clientX: press.clientX,
-          clientY: press.clientY,
-          button: 0,
-          buttons: 1,
-          detail: count,
-          pointerId: press.pointerId,
-          pointerType: press.pointerType,
-          isPrimary: true,
-        }));
+        press.target.dispatchEvent(
+          new PointerEvent('pointerdown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            clientX: press.clientX,
+            clientY: press.clientY,
+            button: 0,
+            buttons: 1,
+            detail: count,
+            pointerId: press.pointerId,
+            pointerType: press.pointerType,
+            isPrimary: true,
+          }),
+        );
       }
     } else {
       owner.followers.push(press);

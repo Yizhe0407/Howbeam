@@ -13,7 +13,14 @@ type TextKeys<T> = { [K in keyof T]: T[K] extends string ? K : never }[keyof T] 
  */
 export type CopyKey = { [S in CopySection]: `${S}.${TextKeys<Messages[S]>}` }[CopySection];
 
-const SECTIONS: ReadonlySet<string> = new Set<CopySection>(['background', 'recaptureFlow', 'runtime', 'nav', 'editor', 'toolbar']);
+const SECTIONS: ReadonlySet<string> = new Set<CopySection>([
+  'background',
+  'recaptureFlow',
+  'runtime',
+  'nav',
+  'editor',
+  'toolbar',
+]);
 
 /** Untrusted input (stored state, a runtime reply) naming copy that exists. */
 export function isCopyKey(value: unknown): value is CopyKey {

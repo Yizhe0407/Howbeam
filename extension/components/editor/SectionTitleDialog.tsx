@@ -33,7 +33,9 @@ export default function SectionTitleDialog({ request, onClose, onSubmit }: Props
   return (
     <Dialog open={request !== null} onOpenChange={(open) => !open && onClose()}>
       {/* Keyed by the request so every opening starts from its own initial title. */}
-      {request && <SectionTitleFields key={requestKey(request)} request={request} onClose={onClose} onSubmit={onSubmit} />}
+      {request && (
+        <SectionTitleFields key={requestKey(request)} request={request} onClose={onClose} onSubmit={onSubmit} />
+      )}
     </Dialog>
   );
 }
@@ -100,7 +102,9 @@ function SectionTitleFields({ request, onClose, onSubmit }: Props & { request: S
         />
         {failed && (
           <InlineAlert className="mt-4">
-            {request.kind === 'add' ? t().editor.mutations.addSection.failed : t().editor.mutations.renameSection.failed}
+            {request.kind === 'add'
+              ? t().editor.mutations.addSection.failed
+              : t().editor.mutations.renameSection.failed}
           </InlineAlert>
         )}
         <DialogFooter className="mt-6">

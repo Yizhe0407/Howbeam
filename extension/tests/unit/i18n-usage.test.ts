@@ -27,17 +27,22 @@ function isFunctionLike(node: ts.Node): boolean {
  */
 function moduleScopeCalls(file: string): string[] {
   const text = readFileSync(file, 'utf8');
-  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true,
-    file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const source = ts.createSourceFile(
+    file,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
   const hits: string[] = [];
   const visit = (node: ts.Node, insideFunction: boolean) => {
     const inside = insideFunction || isFunctionLike(node);
     if (
-      !inside
-      && ts.isCallExpression(node)
-      && ts.isIdentifier(node.expression)
-      && node.expression.text === 't'
-      && node.arguments.length === 0
+      !inside &&
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 't' &&
+      node.arguments.length === 0
     ) {
       const { line } = source.getLineAndCharacterOfPosition(node.getStart());
       hits.push(`${path.relative(ROOT, file)}:${line + 1}`);
@@ -50,9 +55,9 @@ function moduleScopeCalls(file: string): string[] {
 
 describe('i18n usage', () => {
   it('never reads the active catalog at module scope', () => {
-    const files = SOURCE_DIRS
-      .flatMap((directory) => sourceFiles(path.join(ROOT, directory)))
-      .filter((file) => !/entrypoints[\\/][^\\/]+[\\/]main\.tsx$/.test(file));
+    const files = SOURCE_DIRS.flatMap((directory) => sourceFiles(path.join(ROOT, directory))).filter(
+      (file) => !/entrypoints[\\/][^\\/]+[\\/]main\.tsx$/.test(file),
+    );
     expect(files.flatMap(moduleScopeCalls)).toEqual([]);
   });
 });

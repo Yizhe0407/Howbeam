@@ -63,9 +63,7 @@ describe('waitForTabComplete', () => {
   it('rechecks after subscribing so completion between the first read and subscription is not lost', async () => {
     const loadingTab = { id: 7, status: 'loading' };
     const completeTab = { id: 7, status: 'complete' };
-    mocks.tabsGet
-      .mockResolvedValueOnce(loadingTab)
-      .mockResolvedValueOnce(completeTab);
+    mocks.tabsGet.mockResolvedValueOnce(loadingTab).mockResolvedValueOnce(completeTab);
 
     await expect(waitForTabComplete(7)).resolves.toBe(completeTab);
 
@@ -82,9 +80,7 @@ describe('waitForTabComplete', () => {
       resolveRecheck = resolve;
     });
     const completeTab = { id: 7, status: 'complete' };
-    mocks.tabsGet
-      .mockResolvedValueOnce({ id: 7, status: 'loading' })
-      .mockReturnValueOnce(recheck);
+    mocks.tabsGet.mockResolvedValueOnce({ id: 7, status: 'loading' }).mockReturnValueOnce(recheck);
 
     const result = waitForTabComplete(7);
     await vi.waitFor(() => expect(mocks.updatedListeners.size).toBe(1));
@@ -103,9 +99,7 @@ describe('waitForTabComplete', () => {
   it('rejects on timeout and removes both listeners', async () => {
     vi.useFakeTimers();
     try {
-      mocks.tabsGet
-        .mockResolvedValueOnce({ id: 7, status: 'loading' })
-        .mockReturnValueOnce(new Promise(() => {}));
+      mocks.tabsGet.mockResolvedValueOnce({ id: 7, status: 'loading' }).mockReturnValueOnce(new Promise(() => {}));
 
       const result = waitForTabComplete(7, 25);
       const rejection = expect(result).rejects.toThrow('Timed out while loading the source page.');
@@ -133,9 +127,7 @@ describe('waitForTabComplete', () => {
   });
 
   it('rejects and cleans up when the tab is removed while loading', async () => {
-    mocks.tabsGet
-      .mockResolvedValueOnce({ id: 7, status: 'loading' })
-      .mockReturnValueOnce(new Promise(() => {}));
+    mocks.tabsGet.mockResolvedValueOnce({ id: 7, status: 'loading' }).mockReturnValueOnce(new Promise(() => {}));
 
     const result = waitForTabComplete(7);
     await vi.waitFor(() => expect(mocks.removedListeners.size).toBe(1));

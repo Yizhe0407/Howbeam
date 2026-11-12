@@ -28,9 +28,7 @@ export default function OpenEditorButton({ label, pending, onOpen, className }: 
       disabled={pendingShown || !onOpen}
       className={className}
     >
-      {pendingShown
-        ? <Loader2 className="animate-spin" />
-        : <PencilLine />}
+      {pendingShown ? <Loader2 className="animate-spin" /> : <PencilLine />}
       {pendingShown ? t().common.openingEditor : label}
     </button>
   );

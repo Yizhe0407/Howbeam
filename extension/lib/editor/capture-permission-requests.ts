@@ -1,9 +1,7 @@
 import { sendToBackground } from '../runtime/background-client';
 import { validatePreparedPermissionSource } from './continuation-tabs';
 import { t } from '@/lib/shared/i18n';
-import type {
-  StartRecordingMessage,
-} from '../runtime/messages';
+import type { StartRecordingMessage } from '../runtime/messages';
 import type { StepRecaptureTarget } from '../storage/recording-state';
 import type { PreparedCapturePermission } from './editor-app-model';
 import type { StepEntry } from '../storage/models';
@@ -94,10 +92,7 @@ export async function startRecordingOrThrow(message: StartRecordingMessage): Pro
   if (!started.ok) throw new UserMessageError(copyText(started.error));
 }
 
-export async function startStepRecaptureOrThrow(
-  sessionId: string,
-  target: StepRecaptureTarget,
-): Promise<void> {
+export async function startStepRecaptureOrThrow(sessionId: string, target: StepRecaptureTarget): Promise<void> {
   const result = await sendToBackground({ type: 'START_STEP_RECAPTURE', sessionId, target });
   if (!result.ok) throw new UserMessageError(copyText(result.error));
 }

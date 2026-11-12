@@ -8,16 +8,19 @@ import { itemAt } from '../setup/item-at';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
 
-vi.mock('wxt/browser', async () =>
-  (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
+vi.mock('wxt/browser', async () => (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
 vi.mock('@/lib/storage/step-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/project-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/storage', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal),
+);
 vi.mock('@/lib/recording/background/pending-undo-store', async () =>
-  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks));
+  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks),
+);
 
 const PAGE_URL = 'https://site.example/page';
 
@@ -176,7 +179,7 @@ describe('startup recovery validates the snapshot anchor', () => {
     expect(mocks.setRecordingState).not.toHaveBeenCalled();
   });
 
-  it('discards leftover pending snapshot images at startup, but not the live run\'s', async () => {
+  it("discards leftover pending snapshot images at startup, but not the live run's", async () => {
     mocks.getRecordingState.mockResolvedValue(snapshotState());
     mocks.getStep.mockResolvedValue(anchorStep());
 
@@ -192,9 +195,7 @@ describe('startup recovery validates the snapshot anchor', () => {
   });
 
   it('keeps a preparing-next run, whose anchor is legitimately absent', async () => {
-    mocks.getRecordingState.mockResolvedValue(
-      snapshotState({ phase: 'preparing-next', groupAnchorId: null }),
-    );
+    mocks.getRecordingState.mockResolvedValue(snapshotState({ phase: 'preparing-next', groupAnchorId: null }));
 
     await importBackground();
     await vi.waitFor(() => expect(mocks.tabsGet).toHaveBeenCalledWith(4));
@@ -212,9 +213,12 @@ describe('a click that wakes the worker over a stale persisted run', () => {
     // "snapshot anchor is gone; settling the run" in-click path.
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     let releaseTabGet!: (tab: { id: number; windowId: number; url: string }) => void;
-    mocks.tabsGet.mockImplementation(() => new Promise((resolve) => {
-      releaseTabGet = resolve;
-    }));
+    mocks.tabsGet.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseTabGet = resolve;
+        }),
+    );
     mocks.getRecordingState.mockResolvedValue(snapshotState());
     mocks.getStep.mockResolvedValue(undefined);
     mocks.getSteps.mockResolvedValue([]);
@@ -234,10 +238,7 @@ describe('a click that wakes the worker over a stale persisted run', () => {
       }),
     );
     expect(mocks.setRecordingState).toHaveBeenCalledTimes(1);
-    expect(errorSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('snapshot anchor is gone'),
-      expect.anything(),
-    );
+    expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining('snapshot anchor is gone'), expect.anything());
     errorSpy.mockRestore();
   });
 });

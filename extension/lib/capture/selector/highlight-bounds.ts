@@ -9,11 +9,7 @@ interface HighlightGeometry {
   paintElement: Element;
 }
 
-function resolveHighlightGeometry(
-  el: Element,
-  clientX: number,
-  clientY: number,
-): HighlightGeometry | null {
+function resolveHighlightGeometry(el: Element, clientX: number, clientY: number): HighlightGeometry | null {
   if (el instanceof HTMLAreaElement) {
     const resolved = resolveImageMapAreaBounds(el, clientX, clientY);
     return resolved ? { bounds: resolved.bounds, paintElement: resolved.image } : null;

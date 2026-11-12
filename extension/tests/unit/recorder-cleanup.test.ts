@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { addRecorderCleanup, removeRecorderCleanup, runRecorderCleanup } from '@/lib/recording/content/recorder-cleanup';
+import {
+  addRecorderCleanup,
+  removeRecorderCleanup,
+  runRecorderCleanup,
+} from '@/lib/recording/content/recorder-cleanup';
 
 describe('recorder cleanup', () => {
   it('runs each teardown once, and not one that was removed', () => {
@@ -18,7 +22,9 @@ describe('recorder cleanup', () => {
   it('keeps going when one teardown throws', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const after = vi.fn();
-    addRecorderCleanup(() => { throw new Error('boom'); });
+    addRecorderCleanup(() => {
+      throw new Error('boom');
+    });
     addRecorderCleanup(after);
     runRecorderCleanup();
     expect(after).toHaveBeenCalledOnce();

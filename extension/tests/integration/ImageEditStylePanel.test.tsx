@@ -55,7 +55,13 @@ describe('ImageEditStylePanel', () => {
 
   it('shows a picked colour as its own selected swatch, keeping the picker button', () => {
     const onChange = vi.fn();
-    render(<ImageEditStylePanel fields={['color']} style={{ ...DEFAULT_IMAGE_EDIT_STYLE, color: '#8a2be2' }} onChange={onChange} />);
+    render(
+      <ImageEditStylePanel
+        fields={['color']}
+        style={{ ...DEFAULT_IMAGE_EDIT_STYLE, color: '#8a2be2' }}
+        onChange={onChange}
+      />,
+    );
     expect(screen.getByRole('radio', { name: '#8a2be2' }).getAttribute('aria-checked')).toBe('true');
     expect(screen.getByRole('button', { name: '自訂顏色' })).toBeTruthy();
   });

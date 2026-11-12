@@ -52,12 +52,17 @@ describe('project sections', () => {
   });
 
   it('keeps only complete entry boundaries and sorts by timeline order', () => {
-    expect(repairProjectSections([
-      { id: 'last-section', title: ' Last ', startEntryId: 'last' },
-      { id: 'annotation-section', title: 'Unsafe middle', startEntryId: 'annotation' },
-      { id: 'first-section', title: 'First', startEntryId: 'first' },
-      { id: 'snapshot-section', title: 'Snapshot', startEntryId: 'snapshot' },
-    ], entries())).toEqual([
+    expect(
+      repairProjectSections(
+        [
+          { id: 'last-section', title: ' Last ', startEntryId: 'last' },
+          { id: 'annotation-section', title: 'Unsafe middle', startEntryId: 'annotation' },
+          { id: 'first-section', title: 'First', startEntryId: 'first' },
+          { id: 'snapshot-section', title: 'Snapshot', startEntryId: 'snapshot' },
+        ],
+        entries(),
+      ),
+    ).toEqual([
       { id: 'first-section', title: 'First', startEntryId: 'first' },
       { id: 'snapshot-section', title: 'Snapshot', startEntryId: 'snapshot' },
       { id: 'last-section', title: 'Last', startEntryId: 'last' },
@@ -65,26 +70,29 @@ describe('project sections', () => {
   });
 
   it('drops malformed and later duplicate ids or starts deterministically', () => {
-    expect(repairProjectSections([
-      { id: 'same', title: 'First winner', startEntryId: 'first' },
-      { id: 'same', title: 'Duplicate id', startEntryId: 'snapshot' },
-      { id: 'different', title: 'Duplicate start', startEntryId: 'first' },
-      { id: '', title: 'Empty id', startEntryId: 'last' },
-      { id: 'empty-title', title: '\n\u0000', startEntryId: 'last' },
-      { id: ' padded ', title: 'Bad id', startEntryId: 'last' },
-      {
-        id: 'x'.repeat(PROJECT_SECTION_LIMITS.maxIdLength + 1),
-        title: 'Overlong id',
-        startEntryId: 'last',
-      },
-      {
-        id: 'overlong-start',
-        title: 'Overlong start',
-        startEntryId: 'x'.repeat(PROJECT_SECTION_LIMITS.maxIdLength + 1),
-      },
-    ], entries())).toEqual([
-      { id: 'same', title: 'First winner', startEntryId: 'first' },
-    ]);
+    expect(
+      repairProjectSections(
+        [
+          { id: 'same', title: 'First winner', startEntryId: 'first' },
+          { id: 'same', title: 'Duplicate id', startEntryId: 'snapshot' },
+          { id: 'different', title: 'Duplicate start', startEntryId: 'first' },
+          { id: '', title: 'Empty id', startEntryId: 'last' },
+          { id: 'empty-title', title: '\n\u0000', startEntryId: 'last' },
+          { id: ' padded ', title: 'Bad id', startEntryId: 'last' },
+          {
+            id: 'x'.repeat(PROJECT_SECTION_LIMITS.maxIdLength + 1),
+            title: 'Overlong id',
+            startEntryId: 'last',
+          },
+          {
+            id: 'overlong-start',
+            title: 'Overlong start',
+            startEntryId: 'x'.repeat(PROJECT_SECTION_LIMITS.maxIdLength + 1),
+          },
+        ],
+        entries(),
+      ),
+    ).toEqual([{ id: 'same', title: 'First winner', startEntryId: 'first' }]);
   });
 
   it('caps repair work and output count', () => {
@@ -107,7 +115,9 @@ describe('project sections', () => {
     expect(sectionOfEntry(sections, timeline, 0)).toBeUndefined();
     expect(sectionOfEntry(sections, timeline, 1)?.id).toBe('later');
     expect(sectionOfEntry(sections, timeline, 2)?.id).toBe('later');
-    expect(sectionOfEntry([{ id: 'first', title: 'First', startEntryId: 'first' }, ...sections], timeline, 0)?.id).toBe('first');
+    expect(sectionOfEntry([{ id: 'first', title: 'First', startEntryId: 'first' }, ...sections], timeline, 0)?.id).toBe(
+      'first',
+    );
     expect(sectionOfEntry([], timeline, 2)).toBeUndefined();
   });
 
@@ -125,12 +135,14 @@ describe('project sections', () => {
       { id: 'one', title: 'One', startEntryId: 'first' },
       { id: 'two', title: 'Two', startEntryId: 'last' },
     ];
-    expect(sectionsInRows(sections, [
-      { kind: 'entry', id: 'first' },
-      { kind: 'section', id: 'one' },
-      { kind: 'entry', id: 'last' },
-      { kind: 'entry', id: 'snapshot' },
-      { kind: 'section', id: 'two' },
-    ])).toEqual([{ id: 'one', title: 'One', startEntryId: 'last' }]);
+    expect(
+      sectionsInRows(sections, [
+        { kind: 'entry', id: 'first' },
+        { kind: 'section', id: 'one' },
+        { kind: 'entry', id: 'last' },
+        { kind: 'entry', id: 'snapshot' },
+        { kind: 'section', id: 'two' },
+      ]),
+    ).toEqual([{ id: 'one', title: 'One', startEntryId: 'last' }]);
   });
 });

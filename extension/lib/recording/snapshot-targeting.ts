@@ -6,7 +6,11 @@ import { buildSnapshotTargetIdentity } from '../capture/selector/snapshot-identi
 import { findVisualTargetCandidatesAtPoint, selectVisualTargetCandidate } from '../capture/selector/visual-target';
 import { intersectBounds } from '../capture/bounds-geometry';
 import { describeElement } from '../capture/element-description';
-import { SNAPSHOT_KEYBOARD_LABEL_LIMIT, SNAPSHOT_REGION_COORDINATE_LIMIT, type SnapshotShieldKeyboardAnchor } from './snapshot-shield-protocol';
+import {
+  SNAPSHOT_KEYBOARD_LABEL_LIMIT,
+  SNAPSHOT_REGION_COORDINATE_LIMIT,
+  type SnapshotShieldKeyboardAnchor,
+} from './snapshot-shield-protocol';
 import { orderKeyboardCandidates, type RawKeyboardCandidate } from '../capture/snapshot-candidates';
 import { createFrameCoordinateMapper } from '../capture/frame-geometry';
 import {
@@ -102,10 +106,7 @@ function isSnapshotProbeResult(value: unknown): value is SnapshotProbeResult {
   );
 }
 
-function resolvedElement(
-  el: Element,
-  rect: Rect | null,
-): ResolvedSnapshotTarget | null {
+function resolvedElement(el: Element, rect: Rect | null): ResolvedSnapshotTarget | null {
   if (!rect) return null;
   return {
     element: el,
@@ -116,11 +117,7 @@ function resolvedElement(
   };
 }
 
-function resolvedImageMapTarget(
-  area: HTMLAreaElement,
-  image: HTMLImageElement,
-  rect: Rect,
-): ResolvedSnapshotTarget {
+function resolvedImageMapTarget(area: HTMLAreaElement, image: HTMLImageElement, rect: Rect): ResolvedSnapshotTarget {
   return {
     element: area,
     dedupeElement: null,
@@ -148,14 +145,10 @@ async function probeChildFrame(
     return resolvedElement(frame, visibleFrame);
   }
 
-  const targetOrigin = resolveFrameProbeTargetOrigin(
-    frame.getAttribute('src'),
-    document.baseURI,
-    {
-      hasSrcdoc: frame.hasAttribute('srcdoc'),
-      opaqueSandbox: frame.hasAttribute('sandbox') && !frame.sandbox.contains('allow-same-origin'),
-    },
-  );
+  const targetOrigin = resolveFrameProbeTargetOrigin(frame.getAttribute('src'), document.baseURI, {
+    hasSrcdoc: frame.hasAttribute('srcdoc'),
+    opaqueSandbox: frame.hasAttribute('sandbox') && !frame.sandbox.contains('allow-same-origin'),
+  });
   if (!targetOrigin) return resolvedElement(frame, visibleFrame);
 
   const channel = new MessageChannel();

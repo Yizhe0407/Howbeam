@@ -6,16 +6,11 @@ function asError(error: unknown): Error {
 
 /** Discriminated settle result so the one-shot finish path cannot resolve
  * without a tab or reject without an error. */
-type TabSettle =
-  | { ok: true; tab: Browser.tabs.Tab }
-  | { ok: false; error: Error };
+type TabSettle = { ok: true; tab: Browser.tabs.Tab } | { ok: false; error: Error };
 
 /** Waits until a tab is fully loaded without missing a completion transition
  * between the initial status check and listener registration. */
-export async function waitForTabComplete(
-  tabId: number,
-  timeoutMs = 15_000,
-): Promise<Browser.tabs.Tab> {
+export async function waitForTabComplete(tabId: number, timeoutMs = 15_000): Promise<Browser.tabs.Tab> {
   const current = await browser.tabs.get(tabId);
   if (current.status === 'complete') return current;
 
@@ -32,11 +27,7 @@ export async function waitForTabComplete(
       if (result.ok) resolve(result.tab);
       else reject(result.error);
     };
-    const onUpdated = (
-      updatedTabId: number,
-      changeInfo: { status?: string },
-      tab: Browser.tabs.Tab,
-    ) => {
+    const onUpdated = (updatedTabId: number, changeInfo: { status?: string }, tab: Browser.tabs.Tab) => {
       if (updatedTabId === tabId && changeInfo.status === 'complete') finish({ ok: true, tab });
     };
     const onRemoved = (removedTabId: number) => {
@@ -54,7 +45,8 @@ export async function waitForTabComplete(
 
     // The tab can complete after the first get() but before listeners are
     // installed. Recheck after subscribing so that transition cannot be lost.
-    void browser.tabs.get(tabId)
+    void browser.tabs
+      .get(tabId)
       .then((tab) => {
         if (tab.status === 'complete') finish({ ok: true, tab });
       })

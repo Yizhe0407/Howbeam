@@ -12,7 +12,15 @@ import {
   stopRecording,
 } from '../../e2e/support/harness';
 import { ACTIVATION_CASES, ANNOTATION_CASES, REPLAY_CASES, type TargetAccuracyCase } from './cases';
-import { fitPreviewFrame, intersectionOverUnion, summarizeBenchmark, type AccuracyResult, type AccuracyStatus, type BenchmarkSummary, type ReplayResult } from './metrics';
+import {
+  fitPreviewFrame,
+  intersectionOverUnion,
+  summarizeBenchmark,
+  type AccuracyResult,
+  type AccuracyStatus,
+  type BenchmarkSummary,
+  type ReplayResult,
+} from './metrics';
 import { renderMarkdown, type DetectionBenchmarkReport } from './report';
 import { itemAt } from '../../setup/item-at';
 import type { Rect } from '@/lib/shared/geometry';
@@ -76,7 +84,7 @@ interface CdpNode {
 function attribute(node: CdpNode, name: string): string | null {
   const attributes = node.attributes ?? [];
   const index = attributes.indexOf(name);
-  return index >= 0 ? attributes[index + 1] ?? '' : null;
+  return index >= 0 ? (attributes[index + 1] ?? '') : null;
 }
 
 function findNode(node: CdpNode, predicate: (candidate: CdpNode) => boolean): CdpNode | null {
@@ -102,14 +110,14 @@ function parsePreviewBounds(style: string | null): Rect | null {
   const y = value('top');
   const width = value('width');
   const height = value('height');
-  return x === null || y === null || width === null || height === null
-    ? null
-    : { x, y, width, height };
+  return x === null || y === null || width === null || height === null ? null : { x, y, width, height };
 }
 
-async function createStepPreviewReader(page: Page): Promise<{ read(): Promise<PreviewSnapshot>; close(): Promise<void> }> {
+async function createStepPreviewReader(
+  page: Page,
+): Promise<{ read(): Promise<PreviewSnapshot>; close(): Promise<void> }> {
   const client: CDPSession = await page.context().newCDPSession(page);
-  const { root } = await client.send('DOM.getDocument', { depth: -1, pierce: true }) as { root: CdpNode };
+  const { root } = (await client.send('DOM.getDocument', { depth: -1, pierce: true })) as { root: CdpNode };
   const host = findNode(root, (node) => attribute(node, 'data-howbeam-step-preview') !== null);
   const preview = host
     ? findNode(host, (node) => attribute(node, 'class')?.split(/\s+/).includes('preview') ?? false)
@@ -121,7 +129,9 @@ async function createStepPreviewReader(page: Page): Promise<{ read(): Promise<Pr
   const previewNodeId = preview.nodeId;
   return {
     async read() {
-      const { attributes } = await client.send('DOM.getAttributes', { nodeId: previewNodeId }) as { attributes: string[] };
+      const { attributes } = (await client.send('DOM.getAttributes', { nodeId: previewNodeId })) as {
+        attributes: string[];
+      };
       const style = attribute({ attributes }, 'style');
       return { style, bounds: parsePreviewBounds(style) };
     },
@@ -160,7 +170,12 @@ function pointInside(rect: Rect, ratio: { x: number; y: number } = { x: 0.5, y: 
   return { x: rect.x + rect.width * ratio.x, y: rect.y + rect.height * ratio.y };
 }
 
-function statusFor(actual: Rect | null, exact: Rect, accepted: Rect[], minimumIoU: number): {
+function statusFor(
+  actual: Rect | null,
+  exact: Rect,
+  accepted: Rect[],
+  minimumIoU: number,
+): {
   status: AccuracyStatus;
   exactIoU: number;
   bestIoU: number;
@@ -174,13 +189,10 @@ function statusFor(actual: Rect | null, exact: Rect, accepted: Rect[], minimumIo
     : { status: 'wrong', exactIoU, bestIoU: Math.max(exactIoU, acceptedIoU) };
 }
 
-
 function boundsChanged(previous: Rect | null, next: Rect | null, tolerance = 0.25): boolean {
   if (!next) return false;
   if (!previous) return true;
-  return (['x', 'y', 'width', 'height'] as const).some(
-    (key) => Math.abs(previous[key] - next[key]) > tolerance,
-  );
+  return (['x', 'y', 'width', 'height'] as const).some((key) => Math.abs(previous[key] - next[key]) > tolerance);
 }
 
 async function waitForStepPreviewChange(
@@ -342,9 +354,12 @@ async function runReplayCase(page: Page, popup: Page, index: number): Promise<Re
     if (!pointBounds || !targetBounds) throw new Error(`Frame target for ${benchmarkCase.id} has no bounds`);
     point = pointInside(pointBounds);
     expectedBounds = targetBounds;
-    readEvents = () => frame.evaluate(() => {
-      return (window as typeof window & { frameBenchmarkProbe: FrameBenchmarkProbe }).frameBenchmarkProbe.readEvents();
-    });
+    readEvents = () =>
+      frame.evaluate(() => {
+        return (
+          window as typeof window & { frameBenchmarkProbe: FrameBenchmarkProbe }
+        ).frameBenchmarkProbe.readEvents();
+      });
   } else if (benchmarkCase.targetKey && benchmarkCase.expectedKey) {
     await scrollProbeIntoView(page, benchmarkCase.targetKey);
     await resetTopEvents(page);
@@ -380,7 +395,10 @@ async function runReplayCase(page: Page, popup: Page, index: number): Promise<Re
   };
 }
 
-function baselineComparison(summary: BenchmarkSummary, baseline: BaselineFile): Record<string, number | string> | undefined {
+function baselineComparison(
+  summary: BenchmarkSummary,
+  baseline: BaselineFile,
+): Record<string, number | string> | undefined {
   const reference = baseline.reference;
   if (!reference) return undefined;
   return {
@@ -388,15 +406,11 @@ function baselineComparison(summary: BenchmarkSummary, baseline: BaselineFile): 
     'annotation semantic accuracy delta': summary.annotation.semanticAccuracy - reference.annotationSemanticAccuracy,
     'overall median IoU delta': summary.overall.medianIoU - reference.overallMedianIoU,
     'replay exactly-once delta': summary.replay.exactlyOnceRate - reference.replayExactlyOnceRate,
-    'activation hover p95 ratio': reference.activationHoverP95Ms > 0
-      ? summary.activation.latency.p95 / reference.activationHoverP95Ms
-      : 'n/a',
-    'annotation hover p95 ratio': reference.annotationHoverP95Ms > 0
-      ? summary.annotation.latency.p95 / reference.annotationHoverP95Ms
-      : 'n/a',
-    'replay p95 ratio': reference.replayP95Ms > 0
-      ? summary.replay.latency.p95 / reference.replayP95Ms
-      : 'n/a',
+    'activation hover p95 ratio':
+      reference.activationHoverP95Ms > 0 ? summary.activation.latency.p95 / reference.activationHoverP95Ms : 'n/a',
+    'annotation hover p95 ratio':
+      reference.annotationHoverP95Ms > 0 ? summary.annotation.latency.p95 / reference.annotationHoverP95Ms : 'n/a',
+    'replay p95 ratio': reference.replayP95Ms > 0 ? summary.replay.latency.p95 / reference.replayP95Ms : 'n/a',
   };
 }
 
@@ -495,9 +509,7 @@ test('measures target accuracy, preview latency, capture fidelity, and frame rel
   expect(summary.annotation.semanticAccuracy, 'annotation semantic accuracy').toBeGreaterThanOrEqual(
     baseline.thresholds.annotationSemanticAccuracy,
   );
-  expect(summary.overall.medianIoU, 'overall median IoU').toBeGreaterThanOrEqual(
-    baseline.thresholds.overallMedianIoU,
-  );
+  expect(summary.overall.medianIoU, 'overall median IoU').toBeGreaterThanOrEqual(baseline.thresholds.overallMedianIoU);
   expect(summary.replay.exactlyOnceRate, 'replay exactly-once rate').toBeGreaterThanOrEqual(
     baseline.thresholds.replayExactlyOnceRate,
   );
@@ -514,10 +526,7 @@ test('measures target accuracy, preview latency, capture fidelity, and frame rel
       baseline.reference.annotationHoverP95Ms * 1.35,
       baseline.reference.annotationHoverP95Ms + 6,
     );
-    const replayLimit = Math.max(
-      baseline.reference.replayP95Ms * 1.5,
-      baseline.reference.replayP95Ms + 150,
-    );
+    const replayLimit = Math.max(baseline.reference.replayP95Ms * 1.5, baseline.reference.replayP95Ms + 150);
     expect(summary.activation.latency.p95, 'activation hover p95 regression').toBeLessThanOrEqual(activationLimit);
     expect(summary.annotation.latency.p95, 'annotation hover p95 regression').toBeLessThanOrEqual(annotationLimit);
     expect(summary.replay.latency.p95, 'replay p95 regression').toBeLessThanOrEqual(replayLimit);

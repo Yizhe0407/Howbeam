@@ -21,7 +21,11 @@ import {
   releaseCapture,
 } from '../background/capture-registry';
 import type { SourceTabAcquisition } from '../background/source-tab';
-import { recaptureTargetErrorCopy, StepRecaptureStartError, type ValidatedRecaptureTarget } from '../background/recapture-target';
+import {
+  recaptureTargetErrorCopy,
+  StepRecaptureStartError,
+  type ValidatedRecaptureTarget,
+} from '../background/recapture-target';
 import { isSuperseded, type OperationContext, type RunActor } from './actor';
 import type { RunPorts } from './ports';
 import type { RecorderGate } from './recorder-gate';
@@ -36,11 +40,20 @@ export interface RecaptureSources {
   validateTarget(sessionId: string, target: StepRecaptureTarget): Promise<ValidatedRecaptureTarget>;
   permissionPreflight(sourceUrl: string): Extract<PreflightStepRecaptureSourcePermissionResult, { ok: true }> | null;
   checkPermission(sourceUrl: string): Promise<'granted' | 'restricted' | 'permission-required'>;
-  openSourceTab(sourceUrl: string, preferredTabId: number | undefined):
-    Promise<{ ok: true; source: SourceTabAcquisition } | { ok: false; reason: 'open-failed' | 'redirected' | 'unreachable' }>;
+  openSourceTab(
+    sourceUrl: string,
+    preferredTabId: number | undefined,
+  ): Promise<
+    { ok: true; source: SourceTabAcquisition } | { ok: false; reason: 'open-failed' | 'redirected' | 'unreachable' }
+  >;
   /** Closes a tab this flow opened unless `commit` was called before `body` settled. */
   withUncommittedTab<T>(source: SourceTabAcquisition, body: (commit: () => void) => Promise<T>): Promise<T>;
-  replaceCapture(sessionId: string, target: StepRecaptureTarget, capture: CaptureReplacement, runId: string): Promise<unknown>;
+  replaceCapture(
+    sessionId: string,
+    target: StepRecaptureTarget,
+    capture: CaptureReplacement,
+    runId: string,
+  ): Promise<unknown>;
   wasCommitted(context: StepRecaptureContext): Promise<boolean>;
   isSourceTabIntact(context: StepRecaptureContext): Promise<boolean>;
   closeTab(tabId: number): Promise<void>;
@@ -125,9 +138,11 @@ export function createRecapture(deps: RecaptureDeps) {
   async function fail(runId: string, errorCode: string, copy: CopyKey): Promise<void> {
     if (!current(actor.state(), runId)) return;
     actor.claim();
-    await actor.run((ctx) => settle(ctx, runId, 'failed', errorCode, copy)).catch((error) => {
-      if (!isSuperseded(error)) throw error;
-    });
+    await actor
+      .run((ctx) => settle(ctx, runId, 'failed', errorCode, copy))
+      .catch((error) => {
+        if (!isSuperseded(error)) throw error;
+      });
   }
 
   async function preflight(
@@ -144,17 +159,26 @@ export function createRecapture(deps: RecaptureDeps) {
       if (error instanceof StepRecaptureStartError) return { ok: false, code: error.code, message: error.copy };
       throw error;
     }
-    return sources.permissionPreflight(validated.sourceUrl)
-      ?? { ok: false, code: 'RESTRICTED_SOURCE', message: 'recaptureFlow.restrictedSource' };
+    return (
+      sources.permissionPreflight(validated.sourceUrl) ?? {
+        ok: false,
+        code: 'RESTRICTED_SOURCE',
+        message: 'recaptureFlow.restrictedSource',
+      }
+    );
   }
 
-  async function start(message: BackgroundRequest<'START_STEP_RECAPTURE'>, sender: Sender): Promise<StartStepRecaptureResult> {
+  async function start(
+    message: BackgroundRequest<'START_STEP_RECAPTURE'>,
+    sender: Sender,
+  ): Promise<StartStepRecaptureResult> {
     if (!sources.isEditorSenderForSession(sender, message.sessionId)) {
       return startFailure('INVALID_EDITOR', 'recaptureFlow.editorOnlyProjectStart');
     }
     if (starting) return startFailure('ACTIVE_OPERATION', 'recaptureFlow.alreadyStarting');
     await actor.ready();
-    if (actor.state().operation.kind !== 'idle') return startFailure('ACTIVE_OPERATION', 'recaptureFlow.activeOperation');
+    if (actor.state().operation.kind !== 'idle')
+      return startFailure('ACTIVE_OPERATION', 'recaptureFlow.activeOperation');
     starting = true;
     try {
       let validated: ValidatedRecaptureTarget;
@@ -166,18 +190,27 @@ export function createRecapture(deps: RecaptureDeps) {
       }
       const permission = await sources.checkPermission(validated.sourceUrl);
       if (permission === 'restricted') return startFailure('RESTRICTED_SOURCE', 'recaptureFlow.restrictedSource');
-      if (permission === 'permission-required') return startFailure('HOST_PERMISSION_REQUIRED', 'recaptureFlow.accessRequired');
+      if (permission === 'permission-required')
+        return startFailure('HOST_PERMISSION_REQUIRED', 'recaptureFlow.accessRequired');
 
       actor.claim();
       gate.cancel();
       deps.discardUndo();
       const opened = await sources.openSourceTab(validated.sourceUrl, message.preferredTabId);
       if (!opened.ok) {
-        return startFailure('SOURCE_TAB_FAILED', opened.reason === 'open-failed'
-          ? 'background.sourceTabOpenFailed'
-          : opened.reason === 'unreachable' ? 'recaptureFlow.sourceUnreachable' : 'recaptureFlow.sourceRedirected');
+        return startFailure(
+          'SOURCE_TAB_FAILED',
+          opened.reason === 'open-failed'
+            ? 'background.sourceTabOpenFailed'
+            : opened.reason === 'unreachable'
+              ? 'recaptureFlow.sourceUnreachable'
+              : 'recaptureFlow.sourceRedirected',
+        );
       }
-      return await sources.withUncommittedTab(opened.source, (commit) => actor.run((ctx) => runStart(ctx, message, validated, opened.source, commit)))
+      return await sources
+        .withUncommittedTab(opened.source, (commit) =>
+          actor.run((ctx) => runStart(ctx, message, validated, opened.source, commit)),
+        )
         .catch((error: unknown) => {
           if (isSuperseded(error)) return startFailure('ACTIVE_OPERATION', 'recaptureFlow.operationChanged');
           throw error;
@@ -195,7 +228,8 @@ export function createRecapture(deps: RecaptureDeps) {
     commit: () => void,
   ): Promise<StartStepRecaptureResult> {
     const { tab } = source;
-    if (tab.id == null || tab.windowId == null) return startFailure('SOURCE_TAB_FAILED', 'recaptureFlow.sourceRedirected');
+    if (tab.id == null || tab.windowId == null)
+      return startFailure('SOURCE_TAB_FAILED', 'recaptureFlow.sourceRedirected');
     if (ctx.state().operation.kind !== 'idle') return startFailure('ACTIVE_OPERATION', 'recaptureFlow.activeOperation');
     const runId = ports.newId();
     const context: StepRecaptureContext = {
@@ -219,7 +253,9 @@ export function createRecapture(deps: RecaptureDeps) {
       if (!reported) throw new Error('Recapture recorder did not become ready before timeout.');
       await ctx.commit((state) => {
         const live = current(state, runId);
-        return live ? { ...state, operation: { kind: 'recapture', context: { ...live, phase: 'awaiting-target' } } } : state;
+        return live
+          ? { ...state, operation: { kind: 'recapture', context: { ...live, phase: 'awaiting-target' } } }
+          : state;
       });
       await ports.tabs.focus(tab.id, tab.windowId);
       return { ok: true, runId, tabId: tab.id, reusedTab: source.reused };
@@ -235,7 +271,12 @@ export function createRecapture(deps: RecaptureDeps) {
   async function handleReady(message: BackgroundRequest<'HOWBEAM_RECAPTURE_READY'>, sender: Sender): Promise<boolean> {
     await actor.ready();
     const context = current(actor.state(), message.runId);
-    if (!context || context.phase !== 'starting' || !isTrustedRecaptureSourceSender(sender, context) || message.url !== context.sourceUrl) {
+    if (
+      !context ||
+      context.phase !== 'starting' ||
+      !isTrustedRecaptureSourceSender(sender, context) ||
+      message.url !== context.sourceUrl
+    ) {
       return false;
     }
     return gate.signal(message.runId, context.sourceTabId, {});
@@ -254,72 +295,103 @@ export function createRecapture(deps: RecaptureDeps) {
     };
   }
 
-  async function handleTarget(message: BackgroundRequest<'HOWBEAM_RECAPTURE_TARGET'>, sender: Sender): Promise<StepRecaptureTargetResult> {
-    const reject = (status: 'rejected' | 'cancelled' | 'failed', error?: CopyKey): StepRecaptureTargetResult =>
-      ({ ok: false, status, ...(error ? { error } : {}) });
-    await actor.ready();
-    const result = await actor.run(async (ctx): Promise<StepRecaptureTargetResult> => {
-      const context = current(ctx.state(), message.runId);
-      if (
-        !context ||
-        context.phase !== 'awaiting-target' ||
-        !isTrustedRecaptureSourceSender(sender, context) ||
-        message.url !== context.sourceUrl ||
-        activeCaptureId
-      ) {
-        return reject('rejected');
-      }
-      await ctx.commit((state) => ({ ...state, operation: { kind: 'recapture', context: { ...context, phase: 'capturing' } } }));
-      activeCaptureId = message.captureId;
-      try {
-        const shot = await ctx.until(ports.capture(
-          { tabId: context.sourceTabId, windowId: context.sourceWindowId, viewport: message.viewport, devicePixelRatio: message.devicePixelRatio, captureId: message.captureId },
-          contextGuard(ctx, message.runId, context),
-        ));
-        assertCaptureNotCancelled(message.captureId);
-        if (ctx.signal.aborted || current(ctx.state(), message.runId)?.phase !== 'capturing') {
-          throw new StaleCaptureError('Recapture changed before the replacement.');
-        }
-        // A cancellation after this point waits for the replacement and reports it done.
-        markCaptureCommitting(message.captureId);
-        await sources.replaceCapture(context.sessionId, context.target, {
-          screenshotBlob: shot.blob,
-          bounds: message.rect,
-          devicePixelRatio: message.devicePixelRatio,
-          screenshotScale: shot.scale,
-          url: message.url,
-          timestamp: message.timestamp,
-        }, message.runId);
-        await settle(ctx, message.runId, 'replaced');
-        return { ok: true, status: 'replaced' };
-      } catch (error) {
-        if (isSuperseded(error) || error instanceof StaleCaptureError) return reject('cancelled');
-        const errorCode = error instanceof StepRecaptureError ? error.code : 'CAPTURE_FAILED';
-        // The editor shows this copy: never a raw repository or browser diagnostic.
-        const copy = error instanceof StepRecaptureError
-          ? recaptureTargetErrorCopy(error.code, context.target.kind)
-          : userFacingErrorCopy(error, 'recaptureFlow.failedUnchanged');
-        console.error('[howbeam] failed to replace step capture', error);
-        await settle(ctx, message.runId, 'failed', errorCode, copy);
-        return reject('failed', copy);
-      } finally {
-        if (activeCaptureId === message.captureId) activeCaptureId = null;
-      }
-    }).catch((error: unknown) => {
-      if (isSuperseded(error)) return reject('cancelled');
-      throw error;
+  async function handleTarget(
+    message: BackgroundRequest<'HOWBEAM_RECAPTURE_TARGET'>,
+    sender: Sender,
+  ): Promise<StepRecaptureTargetResult> {
+    const reject = (status: 'rejected' | 'cancelled' | 'failed', error?: CopyKey): StepRecaptureTargetResult => ({
+      ok: false,
+      status,
+      ...(error ? { error } : {}),
     });
+    await actor.ready();
+    const result = await actor
+      .run(async (ctx): Promise<StepRecaptureTargetResult> => {
+        const context = current(ctx.state(), message.runId);
+        if (
+          !context ||
+          context.phase !== 'awaiting-target' ||
+          !isTrustedRecaptureSourceSender(sender, context) ||
+          message.url !== context.sourceUrl ||
+          activeCaptureId
+        ) {
+          return reject('rejected');
+        }
+        await ctx.commit((state) => ({
+          ...state,
+          operation: { kind: 'recapture', context: { ...context, phase: 'capturing' } },
+        }));
+        activeCaptureId = message.captureId;
+        try {
+          const shot = await ctx.until(
+            ports.capture(
+              {
+                tabId: context.sourceTabId,
+                windowId: context.sourceWindowId,
+                viewport: message.viewport,
+                devicePixelRatio: message.devicePixelRatio,
+                captureId: message.captureId,
+              },
+              contextGuard(ctx, message.runId, context),
+            ),
+          );
+          assertCaptureNotCancelled(message.captureId);
+          if (ctx.signal.aborted || current(ctx.state(), message.runId)?.phase !== 'capturing') {
+            throw new StaleCaptureError('Recapture changed before the replacement.');
+          }
+          // A cancellation after this point waits for the replacement and reports it done.
+          markCaptureCommitting(message.captureId);
+          await sources.replaceCapture(
+            context.sessionId,
+            context.target,
+            {
+              screenshotBlob: shot.blob,
+              bounds: message.rect,
+              devicePixelRatio: message.devicePixelRatio,
+              screenshotScale: shot.scale,
+              url: message.url,
+              timestamp: message.timestamp,
+            },
+            message.runId,
+          );
+          await settle(ctx, message.runId, 'replaced');
+          return { ok: true, status: 'replaced' };
+        } catch (error) {
+          if (isSuperseded(error) || error instanceof StaleCaptureError) return reject('cancelled');
+          const errorCode = error instanceof StepRecaptureError ? error.code : 'CAPTURE_FAILED';
+          // The editor shows this copy: never a raw repository or browser diagnostic.
+          const copy =
+            error instanceof StepRecaptureError
+              ? recaptureTargetErrorCopy(error.code, context.target.kind)
+              : userFacingErrorCopy(error, 'recaptureFlow.failedUnchanged');
+          console.error('[howbeam] failed to replace step capture', error);
+          await settle(ctx, message.runId, 'failed', errorCode, copy);
+          return reject('failed', copy);
+        } finally {
+          if (activeCaptureId === message.captureId) activeCaptureId = null;
+        }
+      })
+      .catch((error: unknown) => {
+        if (isSuperseded(error)) return reject('cancelled');
+        throw error;
+      });
     releaseCapture(message.captureId);
     return result;
   }
 
-  async function cancel(message: BackgroundRequest<'CANCEL_STEP_RECAPTURE'>, sender: Sender): Promise<CancelStepRecaptureResult> {
+  async function cancel(
+    message: BackgroundRequest<'CANCEL_STEP_RECAPTURE'>,
+    sender: Sender,
+  ): Promise<CancelStepRecaptureResult> {
     await actor.ready();
     const state = actor.state();
     if (state.recaptureResult?.runId === message.runId) return { ok: true, status: 'already-completed' };
     const context = current(state, message.runId);
     if (!context) return { ok: false, error: 'recaptureFlow.alreadyEnded' };
-    if (!sources.isEditorSenderForSession(sender, context.sessionId) && !isTrustedRecaptureSourceSender(sender, context)) {
+    if (
+      !sources.isEditorSenderForSession(sender, context.sessionId) &&
+      !isTrustedRecaptureSourceSender(sender, context)
+    ) {
       return { ok: false, error: 'recaptureFlow.invalidSource' };
     }
     if (activeCaptureId && isCaptureCommitting(activeCaptureId)) {
@@ -329,27 +401,37 @@ export function createRecapture(deps: RecaptureDeps) {
     if (activeCaptureId) cancelCapture(activeCaptureId);
     actor.claim();
     gate.cancel();
-    const settled = await actor.run((ctx) => settle(ctx, message.runId, 'cancelled', 'CANCELLED', 'recaptureFlow.cancelled'))
+    const settled = await actor
+      .run((ctx) => settle(ctx, message.runId, 'cancelled', 'CANCELLED', 'recaptureFlow.cancelled'))
       .catch(() => false);
     return { ok: true, status: settled ? 'cancelled' : 'already-completed' };
   }
 
-  async function acknowledge(message: BackgroundRequest<'ACK_STEP_RECAPTURE_RESULT'>, sender: Sender): Promise<boolean> {
+  async function acknowledge(
+    message: BackgroundRequest<'ACK_STEP_RECAPTURE_RESULT'>,
+    sender: Sender,
+  ): Promise<boolean> {
     if (!sources.isEditorSenderForSession(sender, message.sessionId)) return false;
     await actor.ready();
-    return actor.run(async (ctx) => {
-      const result = ctx.state().recaptureResult;
-      if (result?.runId !== message.runId || result.sessionId !== message.sessionId) return false;
-      await ctx.commit((state) => ({ ...state, recaptureResult: null }));
-      return true;
-    }).catch(() => false);
+    return actor
+      .run(async (ctx) => {
+        const result = ctx.state().recaptureResult;
+        if (result?.runId !== message.runId || result.sessionId !== message.sessionId) return false;
+        await ctx.commit((state) => ({ ...state, recaptureResult: null }));
+        return true;
+      })
+      .catch(() => false);
   }
 
-  async function focusSource(message: BackgroundRequest<'FOCUS_STEP_RECAPTURE_SOURCE'>, sender: Sender): Promise<FocusStepRecaptureSourceResult> {
+  async function focusSource(
+    message: BackgroundRequest<'FOCUS_STEP_RECAPTURE_SOURCE'>,
+    sender: Sender,
+  ): Promise<FocusStepRecaptureSourceResult> {
     await actor.ready();
     const context = current(actor.state(), message.runId);
     if (!context) return { ok: false, error: 'recaptureFlow.alreadyEnded' };
-    if (!sources.isEditorSenderForSession(sender, context.sessionId)) return { ok: false, error: 'recaptureFlow.invalidEditor' };
+    if (!sources.isEditorSenderForSession(sender, context.sessionId))
+      return { ok: false, error: 'recaptureFlow.invalidEditor' };
     try {
       await ports.tabs.focus(context.sourceTabId, context.sourceWindowId);
       return { ok: true };
@@ -359,12 +441,18 @@ export function createRecapture(deps: RecaptureDeps) {
   }
 
   /** Once selection is on, any navigation of the source tab ends the job. Returns whether the tab was the source. */
-  async function handleSourceTabUpdated(tabId: number, changeInfo: { status?: string; url?: string }): Promise<boolean> {
+  async function handleSourceTabUpdated(
+    tabId: number,
+    changeInfo: { status?: string; url?: string },
+  ): Promise<boolean> {
     await actor.ready();
     const op = actor.state().operation;
     if (op.kind !== 'recapture' || op.context.sourceTabId !== tabId) return false;
     const { context } = op;
-    if (context.phase !== 'starting' && (changeInfo.status === 'loading' || (changeInfo.url != null && changeInfo.url !== context.sourceUrl))) {
+    if (
+      context.phase !== 'starting' &&
+      (changeInfo.status === 'loading' || (changeInfo.url != null && changeInfo.url !== context.sourceUrl))
+    ) {
       await fail(context.runId, 'SOURCE_NAVIGATED', 'recaptureFlow.sourceNavigated');
     }
     return true;
@@ -390,13 +478,17 @@ export function createRecapture(deps: RecaptureDeps) {
     const { context } = op;
     if (context.phase === 'awaiting-target') {
       if (await sources.isSourceTabIntact(context)) return;
-      await actor.run((ctx) => settle(ctx, context.runId, 'failed', 'SOURCE_TAB_CLOSED', 'recaptureFlow.sourceTabChanged'));
+      await actor.run((ctx) =>
+        settle(ctx, context.runId, 'failed', 'SOURCE_TAB_CLOSED', 'recaptureFlow.sourceTabChanged'),
+      );
       return;
     }
-    const committed = context.phase === 'capturing' && await sources.wasCommitted(context);
-    await actor.run((ctx) => committed
-      ? settle(ctx, context.runId, 'replaced')
-      : settle(ctx, context.runId, 'failed', 'WORKER_RESTARTED', 'recaptureFlow.interrupted'));
+    const committed = context.phase === 'capturing' && (await sources.wasCommitted(context));
+    await actor.run((ctx) =>
+      committed
+        ? settle(ctx, context.runId, 'replaced')
+        : settle(ctx, context.runId, 'failed', 'WORKER_RESTARTED', 'recaptureFlow.interrupted'),
+    );
   }
 
   return {

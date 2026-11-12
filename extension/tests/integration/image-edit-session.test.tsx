@@ -10,7 +10,11 @@ import {
 import type { ImageEditItem } from '@/lib/editor/image-edit-items';
 import { itemAt } from '../setup/item-at';
 
-const item = (id: string, x = 0): ImageEditItem => ({ id, kind: 'redaction', bounds: { x, y: 0, width: 10, height: 10 } });
+const item = (id: string, x = 0): ImageEditItem => ({
+  id,
+  kind: 'redaction',
+  bounds: { x, y: 0, width: 10, height: 10 },
+});
 
 describe('historyReducer', () => {
   it('undoes and redoes, and a new change drops the redo branch', () => {
@@ -47,7 +51,9 @@ describe('useImageEditSession', () => {
     act(() => result.current.commit([item('a'), item('b')]));
     expect(persist).not.toHaveBeenCalled();
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
     expect(persist).toHaveBeenCalledTimes(1);
     expect(itemAt(persist.mock.calls, 0)[0]).toHaveLength(2);
   });
@@ -60,20 +66,30 @@ describe('useImageEditSession', () => {
       running += 1;
       expect(running).toBe(1);
       calls.push(items.length);
-      if (calls.length === 1) await new Promise<void>((resolve) => { release = resolve; });
+      if (calls.length === 1)
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
       running -= 1;
     });
     const { result } = renderHook(() => useImageEditSession({ initialItems: [], persist, debounceMs: 100 }));
 
     act(() => result.current.commit([item('a')]));
-    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
     expect(calls).toEqual([1]);
 
     act(() => result.current.commit([item('a'), item('b')]));
-    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
     expect(calls).toEqual([1]);
 
-    await act(async () => { release(); await result.current.flush(); });
+    await act(async () => {
+      release();
+      await result.current.flush();
+    });
     expect(calls).toEqual([1, 2]);
   });
 
@@ -82,19 +98,21 @@ describe('useImageEditSession', () => {
     const { result } = renderHook(() => useImageEditSession({ initialItems: [], persist }));
 
     act(() => result.current.commit([item('a')]));
-    await act(async () => { await expect(result.current.flush()).rejects.toThrow('disk'); });
+    await act(async () => {
+      await expect(result.current.flush()).rejects.toThrow('disk');
+    });
     expect(result.current.saveFailed).toBe(true);
 
-    await act(async () => { await result.current.flush(); });
+    await act(async () => {
+      await result.current.flush();
+    });
     expect(result.current.saveFailed).toBe(false);
     expect(persist).toHaveBeenCalledTimes(2);
   });
 
   it('on a conflict, refuses its own write and shows what storage holds instead, with no way to undo back over it', async () => {
     const stored = [item('theirs')];
-    const persist = vi.fn()
-      .mockRejectedValueOnce(new ImageEditSessionConflict(stored))
-      .mockResolvedValue(undefined);
+    const persist = vi.fn().mockRejectedValueOnce(new ImageEditSessionConflict(stored)).mockResolvedValue(undefined);
     const { result } = renderHook(() => useImageEditSession({ initialItems: [], persist }));
 
     act(() => result.current.commit([item('mine')]));
@@ -107,11 +125,16 @@ describe('useImageEditSession', () => {
     expect(result.current.canUndo).toBe(false);
 
     // What was adopted is already stored: nothing is written back.
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); await result.current.flush(); });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+      await result.current.flush();
+    });
     expect(persist).toHaveBeenCalledTimes(1);
 
     act(() => result.current.commit([item('theirs'), item('again')]));
-    await act(async () => { await result.current.flush(); });
+    await act(async () => {
+      await result.current.flush();
+    });
     expect(result.current.conflicted).toBe(false);
   });
 
@@ -120,11 +143,15 @@ describe('useImageEditSession', () => {
     const { result } = renderHook(() => useImageEditSession({ initialItems: [], persist, debounceMs: 10_000 }));
 
     const elsewhere = [item('elsewhere')];
-    act(() => { expect(result.current.adoptIfSettled(elsewhere)).toBe(true); });
+    act(() => {
+      expect(result.current.adoptIfSettled(elsewhere)).toBe(true);
+    });
     expect(result.current.items).toBe(elsewhere);
 
     act(() => result.current.commit([item('local')]));
-    act(() => { expect(result.current.adoptIfSettled([item('later')])).toBe(false); });
+    act(() => {
+      expect(result.current.adoptIfSettled([item('later')])).toBe(false);
+    });
     expect(result.current.items.map((entry) => entry.id)).toEqual(['local']);
   });
 
@@ -132,15 +159,21 @@ describe('useImageEditSession', () => {
     const persist = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useImageEditSession({ initialItems: [item('a')], persist }));
 
-    await act(async () => { await result.current.flush(); });
+    await act(async () => {
+      await result.current.flush();
+    });
     expect(persist).not.toHaveBeenCalled();
-    await act(async () => { await result.current.flush({ force: true }); });
+    await act(async () => {
+      await result.current.flush({ force: true });
+    });
     expect(persist).toHaveBeenCalledTimes(1);
   });
 
   it('writes pending edits when the editor closes', async () => {
     const persist = vi.fn().mockResolvedValue(undefined);
-    const { result, unmount } = renderHook(() => useImageEditSession({ initialItems: [], persist, debounceMs: 10_000 }));
+    const { result, unmount } = renderHook(() =>
+      useImageEditSession({ initialItems: [], persist, debounceMs: 10_000 }),
+    );
 
     act(() => result.current.commit([item('a')]));
     unmount();

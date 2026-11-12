@@ -46,22 +46,34 @@ afterEach(cleanup);
 async function mount(ui: ReactElement) {
   const view = render(ui);
   await waitFor(() => expect(mocks.get).toHaveBeenCalledWith(RECORDING_TOOLBAR_COLLAPSED_KEY));
-  await act(async () => { await Promise.resolve(); });
+  await act(async () => {
+    await Promise.resolve();
+  });
   return view;
 }
 
 describe('recording toolbar', () => {
   it('shows a page-side notice as an alert, behind any run error', async () => {
-    const { rerender } = await mount(<RecordingToolbar state={state} onCommand={vi.fn()} notice="剛才的點擊沒有記錄" />);
+    const { rerender } = await mount(
+      <RecordingToolbar state={state} onCommand={vi.fn()} notice="剛才的點擊沒有記錄" />,
+    );
     expect(screen.getByRole('alert').textContent).toBe('剛才的點擊沒有記錄');
-    rerender(<RecordingToolbar state={{ ...state, error: 'background.captureFailed' }} onCommand={vi.fn()} notice="剛才的點擊沒有記錄" />);
+    rerender(
+      <RecordingToolbar
+        state={{ ...state, error: 'background.captureFailed' }}
+        onCommand={vi.fn()}
+        notice="剛才的點擊沒有記錄"
+      />,
+    );
     expect(screen.getByRole('alert').textContent).toBe(t().background.captureFailed);
     rerender(<RecordingToolbar state={state} onCommand={vi.fn()} notice={null} />);
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('keeps the target project out of the bar, naming it only in the status label and tooltip', async () => {
-    const { rerender } = await mount(<RecordingToolbar state={{ ...state, projectTitle: '既有教學' }} onCommand={vi.fn()} />);
+    const { rerender } = await mount(
+      <RecordingToolbar state={{ ...state, projectTitle: '既有教學' }} onCommand={vi.fn()} />,
+    );
     expect(screen.queryByText('既有教學')).toBeNull();
     const handle = screen.getByRole('button', { name: /拖曳移動/ });
     expect(handle.getAttribute('aria-label')).toContain('加到「既有教學」');
@@ -74,7 +86,9 @@ describe('recording toolbar', () => {
 
   it('describes each mode on its switch button', async () => {
     await mount(<RecordingToolbar state={state} onCommand={vi.fn()} />);
-    expect(screen.getByRole('radio', { name: '標註' }).getAttribute('data-tooltip')).toBe('鎖定目前畫面，在同一張截圖上加入多個標註點。');
+    expect(screen.getByRole('radio', { name: '標註' }).getAttribute('data-tooltip')).toBe(
+      '鎖定目前畫面，在同一張截圖上加入多個標註點。',
+    );
   });
 
   it('offers the position control as drag-only: arrow keys do not move it', async () => {
@@ -132,12 +146,21 @@ describe('recording toolbar', () => {
     expect(onStartRegionCapture).toHaveBeenCalledOnce();
 
     rerender(
-      <RecordingToolbar state={{ ...state, mode: 'snapshot' }} onCommand={vi.fn()} onStartRegionCapture={onStartRegionCapture} />,
+      <RecordingToolbar
+        state={{ ...state, mode: 'snapshot' }}
+        onCommand={vi.fn()}
+        onStartRegionCapture={onStartRegionCapture}
+      />,
     );
     expect((screen.getByRole('button', { name: '框選區域' }) as HTMLButtonElement).disabled).toBe(false);
 
     rerender(
-      <RecordingToolbar state={state} onCommand={vi.fn()} onStartRegionCapture={onStartRegionCapture} regionCaptureActive />,
+      <RecordingToolbar
+        state={state}
+        onCommand={vi.fn()}
+        onStartRegionCapture={onStartRegionCapture}
+        regionCaptureActive
+      />,
     );
     expect(screen.getByRole('button', { name: /區域擷取中/ })).toBeTruthy();
     const active = screen.getByRole('button', { name: '區域擷取進行中' }) as HTMLButtonElement;
@@ -170,10 +193,7 @@ describe('recording toolbar', () => {
   it('offers discard directly in the invalidated shell, with no overflow menu', async () => {
     const onCommand = vi.fn().mockResolvedValue({ ok: true });
     await mount(
-      <RecordingToolbar
-        state={{ ...state, mode: 'snapshot', phase: 'invalidated' }}
-        onCommand={onCommand}
-      />,
+      <RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'invalidated' }} onCommand={onCommand} />,
     );
 
     expect(screen.queryByRole('button', { name: '更多錄製動作' })).toBeNull();
@@ -239,12 +259,22 @@ describe('recording toolbar', () => {
     rerender(<RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'recording' }} onCommand={vi.fn()} />);
     expect(screen.getByRole('button', { name: /標註中，2 處/ })).toBeTruthy();
 
-    rerender(<RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0 }} onCommand={vi.fn()} />);
+    rerender(
+      <RecordingToolbar
+        state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0 }}
+        onCommand={vi.fn()}
+      />,
+    );
     expect(screen.getByRole('button', { name: /待擷取/ })).toBeTruthy();
   });
 
   it('keeps the whole run in its count after switching to Mark, even before the first capture', async () => {
-    await mount(<RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0, runItemCount: 2 }} onCommand={vi.fn()} />);
+    await mount(
+      <RecordingToolbar
+        state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0, runItemCount: 2 }}
+        onCommand={vi.fn()}
+      />,
+    );
     const status = screen.getByRole('button', { name: /待擷取/ });
     expect(status.querySelector('.hb-dot')).toBeTruthy();
     expect(status.querySelector('.hb-count-badge')?.textContent).toBe('2');
@@ -253,14 +283,22 @@ describe('recording toolbar', () => {
   it('walks a snapshot through capture, next and finish with one main button per state', async () => {
     const onCommand = vi.fn().mockResolvedValue({ ok: true });
     const { rerender } = await mount(
-      <RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0 }} onCommand={onCommand} />,
+      <RecordingToolbar
+        state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0 }}
+        onCommand={onCommand}
+      />,
     );
     expect(screen.getByText('調整好頁面後，按「擷取」。')).toBeTruthy();
     expect(screen.queryByRole('button', { name: '復原上一個' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '擷取' }));
     await waitFor(() => expect(onCommand).toHaveBeenCalledWith('CREATE_NEXT_SNAPSHOT', undefined));
 
-    rerender(<RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'recording', itemCount: 1 }} onCommand={onCommand} />);
+    rerender(
+      <RecordingToolbar
+        state={{ ...state, mode: 'snapshot', phase: 'recording', itemCount: 1 }}
+        onCommand={onCommand}
+      />,
+    );
     expect(screen.queryByRole('button', { name: '擷取' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '下一張' }));
     await waitFor(() => expect(onCommand).toHaveBeenCalledWith('PREPARE_NEXT_SNAPSHOT', undefined));
@@ -272,7 +310,12 @@ describe('recording toolbar', () => {
 
   it('finishes from the waiting state too', async () => {
     const onCommand = vi.fn().mockResolvedValue({ ok: true });
-    await mount(<RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0 }} onCommand={onCommand} />);
+    await mount(
+      <RecordingToolbar
+        state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0 }}
+        onCommand={onCommand}
+      />,
+    );
     fireEvent.click(screen.getByRole('button', { name: '完成' }));
     await waitFor(() => expect(onCommand).toHaveBeenCalledWith('FINISH_RECORDING', undefined));
   });
@@ -280,9 +323,11 @@ describe('recording toolbar', () => {
 
 describe('recording toolbar collapse', () => {
   it('greys the collapsed status while paused, as the open bar does', async () => {
-    mocks.get.mockImplementation(async (key: string) => (
-      key === RECORDING_TOOLBAR_COLLAPSED_KEY ? { [key]: { runId: 'run-1', collapsed: true } } : { [RECORDING_TOOLBAR_CORNER_KEY]: 'bottom-right' }
-    ));
+    mocks.get.mockImplementation(async (key: string) =>
+      key === RECORDING_TOOLBAR_COLLAPSED_KEY
+        ? { [key]: { runId: 'run-1', collapsed: true } }
+        : { [RECORDING_TOOLBAR_CORNER_KEY]: 'bottom-right' },
+    );
     const { rerender } = await mount(<RecordingToolbar state={state} onCommand={vi.fn()} />);
     const expand = screen.getByRole('button', { name: /展開錄製控制/ });
     expect(expand.querySelector('.hb-dot')?.getAttribute('data-tone')).toBeNull();
@@ -299,9 +344,11 @@ describe('recording toolbar collapse', () => {
     expect(mocks.set).toHaveBeenCalledWith({ [RECORDING_TOOLBAR_COLLAPSED_KEY]: { runId: 'run-1', collapsed: true } });
     unmount();
 
-    mocks.get.mockImplementation(async (key: string) => (
-      key === RECORDING_TOOLBAR_COLLAPSED_KEY ? { [key]: { runId: 'run-1', collapsed: true } } : { [RECORDING_TOOLBAR_CORNER_KEY]: 'bottom-right' }
-    ));
+    mocks.get.mockImplementation(async (key: string) =>
+      key === RECORDING_TOOLBAR_COLLAPSED_KEY
+        ? { [key]: { runId: 'run-1', collapsed: true } }
+        : { [RECORDING_TOOLBAR_CORNER_KEY]: 'bottom-right' },
+    );
     const second = await mount(<RecordingToolbar state={state} onCommand={vi.fn()} />);
     expect(screen.getByRole('button', { name: /展開錄製控制/ })).toBeTruthy();
     second.unmount();
@@ -313,20 +360,33 @@ describe('recording toolbar collapse', () => {
 
   it('is not drawn until its saved corner is known, so it never appears in the default corner first', async () => {
     const releases: Array<() => void> = [];
-    mocks.get.mockImplementation((key: string) => new Promise((resolve) => {
-      releases.push(() => resolve(key === RECORDING_TOOLBAR_CORNER_KEY ? { [key]: 'bottom-left' } : {}));
-    }));
+    mocks.get.mockImplementation(
+      (key: string) =>
+        new Promise((resolve) => {
+          releases.push(() => resolve(key === RECORDING_TOOLBAR_CORNER_KEY ? { [key]: 'bottom-left' } : {}));
+        }),
+    );
     const { container } = render(<RecordingToolbar state={state} onCommand={vi.fn()} />);
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(container.querySelector('.hb-position')).toBeNull();
 
-    await act(async () => { releases.forEach((release) => release()); await Promise.resolve(); });
+    await act(async () => {
+      releases.forEach((release) => release());
+      await Promise.resolve();
+    });
     await waitFor(() => expect(container.querySelector('.hb-position')).not.toBeNull());
     expect(container.querySelector('.hb-position')!.getAttribute('data-horizontal')).toBe('left');
   });
 
   it('shows no guidance hint while collapsed', async () => {
-    await mount(<RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0 }} onCommand={vi.fn()} />);
+    await mount(
+      <RecordingToolbar
+        state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0 }}
+        onCommand={vi.fn()}
+      />,
+    );
     expect(screen.getByText('調整好頁面後，按「擷取」。')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '收合控制器' }));
     expect(screen.queryByText('調整好頁面後，按「擷取」。')).toBeNull();
@@ -335,18 +395,29 @@ describe('recording toolbar collapse', () => {
 
 describe('recording toolbar undo offer', () => {
   const stored = (overrides: Record<string, unknown> = {}) => ({
-    token: 'undo-1', itemNumber: 2, runId: 'run-1', expiresAt: Date.now() + 4_000, itemCount: 1, ...overrides,
+    token: 'undo-1',
+    itemNumber: 2,
+    runId: 'run-1',
+    expiresAt: Date.now() + 4_000,
+    itemCount: 1,
+    ...overrides,
   });
-  const serve = (offer: unknown) => mocks.get.mockImplementation(async (key: string) => (
-    key === RECORDING_TOOLBAR_UNDO_KEY ? { [key]: offer } : { [RECORDING_TOOLBAR_CORNER_KEY]: 'bottom-right' }
-  ));
+  const serve = (offer: unknown) =>
+    mocks.get.mockImplementation(async (key: string) =>
+      key === RECORDING_TOOLBAR_UNDO_KEY ? { [key]: offer } : { [RECORDING_TOOLBAR_CORNER_KEY]: 'bottom-right' },
+    );
 
   it('saves the offer after an undo and removes it once restored', async () => {
-    const onCommand = vi.fn().mockResolvedValueOnce({ ok: true, undoToken: 'undo-1', removedItemNumber: 2 }).mockResolvedValue({ ok: true });
+    const onCommand = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, undoToken: 'undo-1', removedItemNumber: 2 })
+      .mockResolvedValue({ ok: true });
     const { rerender } = await mount(<RecordingToolbar state={state} onCommand={onCommand} />);
     fireEvent.click(screen.getByRole('button', { name: '復原上一個' }));
     await screen.findAllByText('已移除步驟 2');
-    expect(mocks.set).toHaveBeenCalledWith({ [RECORDING_TOOLBAR_UNDO_KEY]: expect.objectContaining({ token: 'undo-1', runId: 'run-1', itemCount: 1 }) });
+    expect(mocks.set).toHaveBeenCalledWith({
+      [RECORDING_TOOLBAR_UNDO_KEY]: expect.objectContaining({ token: 'undo-1', runId: 'run-1', itemCount: 1 }),
+    });
 
     // The new count arrives after the undo: the offer must survive that, not be taken for a stale one.
     rerender(<RecordingToolbar state={{ ...state, itemCount: 1 }} onCommand={onCommand} />);
@@ -369,7 +440,9 @@ describe('recording toolbar undo offer', () => {
   ])('does not offer Restore when the saved offer %s', async (_name, offer, count) => {
     serve(offer);
     await mount(<RecordingToolbar state={{ ...state, itemCount: count }} onCommand={vi.fn()} />);
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(screen.queryByRole('button', { name: '還原' })).toBeNull();
   });
 });
@@ -377,7 +450,9 @@ describe('recording toolbar undo offer', () => {
 describe('recording toolbar layout', () => {
   /** jsdom has no layout, so the measured rectangles are supplied: the toolbar's right edge and its last child's. */
   function stubWidths(lastChildRight: number, toolbarRight: number) {
-    const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
       const right = this.classList.contains('hb-toolbar') ? toolbarRight : lastChildRight;
       return { x: 0, y: 0, top: 0, left: 0, bottom: 0, width: right, height: 0, right, toJSON: () => ({}) } as DOMRect;
     });

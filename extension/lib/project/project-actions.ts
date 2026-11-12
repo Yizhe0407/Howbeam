@@ -13,7 +13,10 @@ let selectionAction: Promise<void> = Promise.resolve();
 
 function queueSelectionAction<T>(action: () => Promise<T>): Promise<T> {
   const result = selectionAction.then(action, action);
-  selectionAction = result.then(() => undefined, () => undefined);
+  selectionAction = result.then(
+    () => undefined,
+    () => undefined,
+  );
   return result;
 }
 
@@ -45,11 +48,14 @@ export async function getSelectedProject(): Promise<Project | null> {
  * owns the whole start, so there is nothing to roll back here.
  */
 export async function startRecording(mode: RecordingMode, targetProjectId: string | null = null): Promise<void> {
-  const result = await sendToBackground({
-    type: 'START_RECORDING',
-    target: targetProjectId ? { kind: 'project', projectId: targetProjectId } : { kind: 'new' },
-    mode,
-  }, t().runtime.recordingServiceUnavailable);
+  const result = await sendToBackground(
+    {
+      type: 'START_RECORDING',
+      target: targetProjectId ? { kind: 'project', projectId: targetProjectId } : { kind: 'new' },
+      mode,
+    },
+    t().runtime.recordingServiceUnavailable,
+  );
   if (!result.ok) throw new UserMessageError(copyText(result.error));
 }
 
@@ -80,13 +86,19 @@ export function ensureSelectedProject(): Promise<Project> {
  * extension page asks to become the editor itself when no editor is open
  * elsewhere; an existing editor tab always takes precedence.
  */
-export async function openSelectedProjectInEditor(projectId: string, options: { inPlace?: boolean } = {}): Promise<void> {
+export async function openSelectedProjectInEditor(
+  projectId: string,
+  options: { inPlace?: boolean } = {},
+): Promise<void> {
   const project = await selectProject(projectId);
-  const result = await sendToBackground({
-    type: 'OPEN_EDITOR',
-    sessionId: project.id,
-    ...(options.inPlace ? { inPlace: true } : {}),
-  }, t().popup.editorServiceUnavailable);
+  const result = await sendToBackground(
+    {
+      type: 'OPEN_EDITOR',
+      sessionId: project.id,
+      ...(options.inPlace ? { inPlace: true } : {}),
+    },
+    t().popup.editorServiceUnavailable,
+  );
   if (!result.ok) throw new UserMessageError(copyText(result.error));
 }
 

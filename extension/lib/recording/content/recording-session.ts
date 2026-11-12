@@ -22,10 +22,7 @@ export interface ContentRecordingSession {
   gestureQueue: StepGestureQueue | null;
 }
 
-export function createContentRecordingSession(options: {
-  runId: string;
-  paused: boolean;
-}): ContentRecordingSession {
+export function createContentRecordingSession(options: { runId: string; paused: boolean }): ContentRecordingSession {
   return {
     runId: options.runId,
     paused: options.paused,

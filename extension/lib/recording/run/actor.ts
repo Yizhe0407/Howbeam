@@ -118,7 +118,10 @@ export function createRunActor(store: RunStore) {
         return operation(context(signal));
       };
       const result = chain.then(task, task);
-      chain = result.then(() => undefined, () => undefined);
+      chain = result.then(
+        () => undefined,
+        () => undefined,
+      );
       return result;
     },
 

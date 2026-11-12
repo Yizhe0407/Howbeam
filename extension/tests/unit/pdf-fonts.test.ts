@@ -20,7 +20,9 @@ type Manifest = {
 };
 
 const manifest = JSON.parse(readFileSync(path.join(fontDirectory, 'manifest.json'), 'utf8')) as Manifest;
-const sources = JSON.parse(readFileSync(path.join(root, 'scripts/pdf-fonts/sources.json'), 'utf8')) as Manifest['source'];
+const sources = JSON.parse(
+  readFileSync(path.join(root, 'scripts/pdf-fonts/sources.json'), 'utf8'),
+) as Manifest['source'];
 
 const sha256 = (data: Uint8Array) => createHash('sha256').update(data).digest('hex');
 const load = (file: string) => readFileSync(path.join(fontDirectory, file));
@@ -61,35 +63,46 @@ describe('PDF export fonts', () => {
     expect(load(manifest.license.file).toString('utf8')).toContain('SIL OPEN FONT LICENSE Version 1.1');
   });
 
-  it.each(['Regular', 'Bold'])('%s is renamed, keeps the copyright and license notices, and never uses the reserved name', (style) => {
-    const font = open(`HowbeamSansTC-${style}.ttf`);
+  it.each(['Regular', 'Bold'])(
+    '%s is renamed, keeps the copyright and license notices, and never uses the reserved name',
+    (style) => {
+      const font = open(`HowbeamSansTC-${style}.ttf`);
 
-    expect(font.familyName).toBe('Howbeam Sans TC');
-    expect(font.postscriptName).toBe(`HowbeamSansTC-${style}`);
-    expect(font.fullName).toBe(`Howbeam Sans TC ${style}`);
-    for (const name of [font.familyName, font.postscriptName, font.fullName]) {
-      expect(name).not.toMatch(/source|noto/i);
-    }
-    // Name IDs 0, 13 and 14 are the copyright statement and the license notice the OFL requires to travel with the font.
-    expect(font.copyright).toContain('Adobe');
-    const { license, licenseURL } = (font as unknown as { name: { records: { license: { en: string }; licenseURL: { en: string } } } }).name.records;
-    expect(license.en).toContain('SIL Open Font License');
-    expect(licenseURL.en).toContain('scripts.sil.org/OFL');
-  });
+      expect(font.familyName).toBe('Howbeam Sans TC');
+      expect(font.postscriptName).toBe(`HowbeamSansTC-${style}`);
+      expect(font.fullName).toBe(`Howbeam Sans TC ${style}`);
+      for (const name of [font.familyName, font.postscriptName, font.fullName]) {
+        expect(name).not.toMatch(/source|noto/i);
+      }
+      // Name IDs 0, 13 and 14 are the copyright statement and the license notice the OFL requires to travel with the font.
+      expect(font.copyright).toContain('Adobe');
+      const { license, licenseURL } = (
+        font as unknown as { name: { records: { license: { en: string }; licenseURL: { en: string } } } }
+      ).name.records;
+      expect(license.en).toContain('SIL Open Font License');
+      expect(licenseURL.en).toContain('scripts.sil.org/OFL');
+    },
+  );
 
   it('has a true Regular and a true Bold, both static', () => {
-    const [regular, bold] = firstItems(['Regular', 'Bold'].map((style) => open(`HowbeamSansTC-${style}.ttf`)), 2);
+    const [regular, bold] = firstItems(
+      ['Regular', 'Bold'].map((style) => open(`HowbeamSansTC-${style}.ttf`)),
+      2,
+    );
 
     expect(regular['OS/2'].usWeightClass).toBe(400);
     expect(bold['OS/2'].usWeightClass).toBe(700);
     expect(regular.variationAxes).toEqual({});
     expect(bold.variationAxes).toEqual({});
-    expect(bold.getGlyph(bold.glyphForCodePoint(0x6a19.valueOf()).id).advanceWidth).toBeGreaterThan(0);
+    expect(bold.getGlyph(bold.glyphForCodePoint((0x6a19).valueOf()).id).advanceWidth).toBeGreaterThan(0);
   });
 
   it.each(['Regular', 'Bold'])('%s covers every common Traditional character, Latin, punctuation and kana', (style) => {
     const font = open(`HowbeamSansTC-${style}.ttf`);
-    const required = [...big5Level1(), ...'ABCxyz0123456789 .,;:!?()[]{}"\'-–—…·「」『』，。、：；！？（）《》〈〉【】～ぁあいうえおアイウエオゔヴ・ー'];
+    const required = [
+      ...big5Level1(),
+      ...'ABCxyz0123456789 .,;:!?()[]{}"\'-–—…·「」『』，。、：；！？（）《》〈〉【】～ぁあいうえおアイウエオゔヴ・ー',
+    ];
 
     expect(big5Level1().length).toBe(5401);
     const missing = required.filter((character) => !font.hasGlyphForCodePoint(character.codePointAt(0)!));
@@ -120,7 +133,10 @@ describe('PDF export fonts', () => {
     const writer = await PdfWriter.create({
       title: 'Fonts',
       language: 'zh-Hant',
-      fonts: { regular: new Uint8Array(load('HowbeamSansTC-Regular.ttf')), bold: new Uint8Array(load('HowbeamSansTC-Bold.ttf')) },
+      fonts: {
+        regular: new Uint8Array(load('HowbeamSansTC-Regular.ttf')),
+        bold: new Uint8Array(load('HowbeamSansTC-Bold.ttf')),
+      },
       maxPages: 10,
       maxBytes: 10 * 1024 * 1024,
     });

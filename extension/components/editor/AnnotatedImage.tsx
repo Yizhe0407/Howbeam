@@ -38,10 +38,16 @@ interface ContentFrame {
 }
 
 /** Where the image's pixels land in the canvas box under object-fit. */
-function contentFrame(layout: Layout, naturalWidth: number, naturalHeight: number, fit: 'cover' | 'contain'): ContentFrame {
-  const scale = fit === 'cover'
-    ? Math.max(layout.width / naturalWidth, layout.height / naturalHeight)
-    : Math.min(layout.width / naturalWidth, layout.height / naturalHeight);
+function contentFrame(
+  layout: Layout,
+  naturalWidth: number,
+  naturalHeight: number,
+  fit: 'cover' | 'contain',
+): ContentFrame {
+  const scale =
+    fit === 'cover'
+      ? Math.max(layout.width / naturalWidth, layout.height / naturalHeight)
+      : Math.min(layout.width / naturalWidth, layout.height / naturalHeight);
   const width = naturalWidth * scale;
   const height = naturalHeight * scale;
   return {
@@ -59,13 +65,16 @@ function useDecodedImage(blob: Blob, enabled: boolean): ImageBitmap | null {
     if (!enabled) return undefined;
     let cancelled = false;
     let bitmap: ImageBitmap | null = null;
-    decodeImage(blob).then((result) => {
-      bitmap = result;
-      if (cancelled) result.close();
-      else setDecoded({ blob, bitmap: result });
-    }, (error) => {
-      console.error('[howbeam] failed to decode a preview image', error);
-    });
+    decodeImage(blob).then(
+      (result) => {
+        bitmap = result;
+        if (cancelled) result.close();
+        else setDecoded({ blob, bitmap: result });
+      },
+      (error) => {
+        console.error('[howbeam] failed to decode a preview image', error);
+      },
+    );
     return () => {
       cancelled = true;
       bitmap?.close();
@@ -79,9 +88,12 @@ function useNearViewport(lazy: boolean) {
   const [near, setNear] = useState(!lazy);
   useEffect(() => {
     if (near || !ref.current) return undefined;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) setNear(true);
-    }, { rootMargin: '200px' });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) setNear(true);
+      },
+      { rootMargin: '200px' },
+    );
     observer.observe(ref.current);
     return () => observer.disconnect();
   }, [near]);
@@ -113,12 +125,21 @@ export default function AnnotatedImage({
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
     const measure = () => {
-      const next = { left: canvas.offsetLeft, top: canvas.offsetTop, width: canvas.clientWidth, height: canvas.clientHeight };
-      setLayout((current) => (
-        current && current.left === next.left && current.top === next.top && current.width === next.width && current.height === next.height
+      const next = {
+        left: canvas.offsetLeft,
+        top: canvas.offsetTop,
+        width: canvas.clientWidth,
+        height: canvas.clientHeight,
+      };
+      setLayout((current) =>
+        current &&
+        current.left === next.left &&
+        current.top === next.top &&
+        current.width === next.width &&
+        current.height === next.height
           ? current
-          : next
-      ));
+          : next,
+      );
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -126,9 +147,10 @@ export default function AnnotatedImage({
     return () => observer.disconnect();
   }, [bitmap]);
 
-  const frame = bitmap && layout && layout.width > 0 && layout.height > 0
-    ? contentFrame(layout, bitmap.width, bitmap.height, fit)
-    : null;
+  const frame =
+    bitmap && layout && layout.width > 0 && layout.height > 0
+      ? contentFrame(layout, bitmap.width, bitmap.height, fit)
+      : null;
 
   const frameScale = frame?.scale ?? null;
   useLayoutEffect(() => {
@@ -167,7 +189,10 @@ export default function AnnotatedImage({
         data-howbeam-annotated-image=""
         data-howbeam-marks={marks}
         data-howbeam-privacy-block={scene.privacyBlock || undefined}
-        className={cn('block', imgClassName ?? (fit === 'contain' ? 'h-auto max-h-full w-auto max-w-full' : 'h-full w-full'))}
+        className={cn(
+          'block',
+          imgClassName ?? (fit === 'contain' ? 'h-auto max-h-full w-auto max-w-full' : 'h-full w-full'),
+        )}
         style={{ objectFit: fit, visibility: bitmap ? undefined : 'hidden' }}
       />
       {overlay && frame && (

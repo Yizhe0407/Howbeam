@@ -1,7 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { en } from '@/lib/shared/i18n/messages/en';
 import { zhTW } from '@/lib/shared/i18n/messages/zh-TW';
-import { applyLocalePreference, getLocale, intlLocale, messagesFor, resolveLocale, setLocale, t } from '@/lib/shared/i18n';
+import {
+  applyLocalePreference,
+  getLocale,
+  intlLocale,
+  messagesFor,
+  resolveLocale,
+  setLocale,
+  t,
+} from '@/lib/shared/i18n';
 import { projectDisplayTitle } from '@/lib/storage/models';
 
 const CJK = /[\u3400-\u9fff\u3000-\u303f\uff00-\uffef]/;

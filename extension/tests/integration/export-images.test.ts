@@ -20,11 +20,7 @@ vi.mock('@/lib/export/entry-render', () => ({
 }));
 
 import { PROJECT_EXPORT_LIMITS, ProjectExportLimitError } from '@/lib/export/project-export-contract';
-import {
-  RedactionReviewRequiredError,
-  exportImagesAsZip,
-  localDateStamp,
-} from '@/lib/export/export-images';
+import { RedactionReviewRequiredError, exportImagesAsZip, localDateStamp } from '@/lib/export/export-images';
 import { buildStepEntries, type Step } from '@/lib/storage/models';
 
 const asEntries = (steps: Step[]) => buildStepEntries(steps);
@@ -126,7 +122,6 @@ describe('image export', () => {
     expect(mocks.download).not.toHaveBeenCalled();
   });
 
-
   it('resolves null without downloading when no entry can be exported', async () => {
     await expect(exportImagesAsZip(asEntries([]))).resolves.toBeNull();
     await expect(exportImagesAsZip(asEntries([{ ...step(0), screenshotBlob: undefined }]))).resolves.toBeNull();
@@ -168,5 +163,4 @@ describe('image export', () => {
     expect(arrayBuffer).toHaveBeenCalledTimes(overflowAt - 1);
     expect(mocks.download).not.toHaveBeenCalled();
   });
-
 });

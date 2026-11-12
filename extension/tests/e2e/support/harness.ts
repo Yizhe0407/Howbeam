@@ -38,11 +38,13 @@ declare const chrome: {
     };
   };
   downloads: {
-    search(query: { orderBy?: string[]; limit?: number }): Promise<Array<{
-      filename: string;
-      mime?: string;
-      state: string;
-    }>>;
+    search(query: { orderBy?: string[]; limit?: number }): Promise<
+      Array<{
+        filename: string;
+        mime?: string;
+        state: string;
+      }>
+    >;
   };
 };
 
@@ -119,8 +121,8 @@ export async function readPageScreenshotPixel(
     page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight })),
   ]);
   const decoded = decodePngRgba(screenshot);
-  const x = Math.min(decoded.width - 1, Math.max(0, Math.floor(clientX * decoded.width / viewport.width)));
-  const y = Math.min(decoded.height - 1, Math.max(0, Math.floor(clientY * decoded.height / viewport.height)));
+  const x = Math.min(decoded.width - 1, Math.max(0, Math.floor((clientX * decoded.width) / viewport.width)));
+  const y = Math.min(decoded.height - 1, Math.max(0, Math.floor((clientY * decoded.height) / viewport.height)));
   const index = (y * decoded.width + x) * decoded.channels;
   return {
     red: itemAt(decoded.pixels, index),
@@ -145,7 +147,8 @@ export async function readRootScrollbarSentinelPixels(page: Page): Promise<numbe
         (red < 100 && green > 170 && blue < 100) ||
         (red < 100 && green > 170 && blue > 170) ||
         (red > 170 && green > 170 && blue < 100)
-      ) count += 1;
+      )
+        count += 1;
     }
   }
   return count;
@@ -164,88 +167,99 @@ export interface StoredStep {
 }
 
 export async function resetExtensionData(popup: Page): Promise<void> {
-  await popup.evaluate(async ({ howbeamDb, recordingStateKey, activeProjectIdKey, projectTemplate }) => {
-    const projectId = crypto.randomUUID();
-    const state = await chrome.storage.local.get(recordingStateKey);
-    if (state[recordingStateKey]?.isRecording) {
-      await chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
-    }
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
-      request.onerror = () => reject(request.error);
-      request.onblocked = () => reject(new Error('Howbeam IndexedDB reset was blocked.'));
-      request.onupgradeneeded = () => {
-        // Same layout lib/storage/database.ts creates.
-        const db = request.result;
-        for (const name of Array.from(db.objectStoreNames)) db.deleteObjectStore(name);
-        db.createObjectStore('projects', { keyPath: 'id' }).createIndex('by-updated-at', 'updatedAt');
-        const entries = db.createObjectStore('entries', { keyPath: 'id' });
-        entries.createIndex('by-project', 'projectId');
-        entries.createIndex('by-member', 'memberIds', { unique: true, multiEntry: true });
-        db.createObjectStore('screenshots', { keyPath: 'id' });
-        db.createObjectStore('pendingAnchors', { keyPath: 'id' }).createIndex('by-project', 'projectId');
-        db.createObjectStore('deviceState');
-        db.createObjectStore('backupManifest');
-      };
-      request.onsuccess = () => {
-        const db = request.result;
-        const storeNames = ['projects', 'entries', 'screenshots', 'pendingAnchors', 'deviceState', 'backupManifest'];
-        if (!storeNames.every((name) => db.objectStoreNames.contains(name))) {
-          db.close();
-          reject(new Error(`Howbeam IndexedDB v${howbeamDb.version} stores are incomplete.`));
-          return;
-        }
-        const tx = db.transaction(storeNames, 'readwrite');
-        for (const storeName of storeNames) tx.objectStore(storeName).clear();
-        tx.objectStore('projects').add({ id: projectId, ...projectTemplate });
-        tx.oncomplete = () => {
-          db.close();
-          resolve();
+  await popup.evaluate(
+    async ({ howbeamDb, recordingStateKey, activeProjectIdKey, projectTemplate }) => {
+      const projectId = crypto.randomUUID();
+      const state = await chrome.storage.local.get(recordingStateKey);
+      if (state[recordingStateKey]?.isRecording) {
+        await chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
+      }
+      await new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
+        request.onerror = () => reject(request.error);
+        request.onblocked = () => reject(new Error('Howbeam IndexedDB reset was blocked.'));
+        request.onupgradeneeded = () => {
+          // Same layout lib/storage/database.ts creates.
+          const db = request.result;
+          for (const name of Array.from(db.objectStoreNames)) db.deleteObjectStore(name);
+          db.createObjectStore('projects', { keyPath: 'id' }).createIndex('by-updated-at', 'updatedAt');
+          const entries = db.createObjectStore('entries', { keyPath: 'id' });
+          entries.createIndex('by-project', 'projectId');
+          entries.createIndex('by-member', 'memberIds', { unique: true, multiEntry: true });
+          db.createObjectStore('screenshots', { keyPath: 'id' });
+          db.createObjectStore('pendingAnchors', { keyPath: 'id' }).createIndex('by-project', 'projectId');
+          db.createObjectStore('deviceState');
+          db.createObjectStore('backupManifest');
         };
-        tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(tx.error ?? new Error('Reset transaction was aborted.'));
-      };
-    });
-    await chrome.storage.local.clear();
-    await chrome.storage.local.set({
-      [activeProjectIdKey]: projectId,
-    });
-  }, {
-    howbeamDb: HOWBEAM_DB,
-    recordingStateKey: RECORDING_STATE_KEY,
-    activeProjectIdKey: ACTIVE_PROJECT_ID_KEY,
-    projectTemplate: E2E_PROJECT_TEMPLATE,
-  });
+        request.onsuccess = () => {
+          const db = request.result;
+          const storeNames = ['projects', 'entries', 'screenshots', 'pendingAnchors', 'deviceState', 'backupManifest'];
+          if (!storeNames.every((name) => db.objectStoreNames.contains(name))) {
+            db.close();
+            reject(new Error(`Howbeam IndexedDB v${howbeamDb.version} stores are incomplete.`));
+            return;
+          }
+          const tx = db.transaction(storeNames, 'readwrite');
+          for (const storeName of storeNames) tx.objectStore(storeName).clear();
+          tx.objectStore('projects').add({ id: projectId, ...projectTemplate });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error ?? new Error('Reset transaction was aborted.'));
+        };
+      });
+      await chrome.storage.local.clear();
+      await chrome.storage.local.set({
+        [activeProjectIdKey]: projectId,
+      });
+    },
+    {
+      howbeamDb: HOWBEAM_DB,
+      recordingStateKey: RECORDING_STATE_KEY,
+      activeProjectIdKey: ACTIVE_PROJECT_ID_KEY,
+      projectTemplate: E2E_PROJECT_TEMPLATE,
+    },
+  );
   await popup.reload({ waitUntil: 'domcontentloaded' });
 }
 
 /** Adds another pristine Project (same shape as resetExtensionData) and selects it, so a spec can record into a different Project, as a popup start always does. */
 export async function seedAndSelectProject(popup: Page, title: string): Promise<string> {
-  return popup.evaluate(async ({ howbeamDb, activeProjectIdKey, projectTemplate, projectTitle }) => {
-    const projectId = crypto.randomUUID();
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const db = request.result;
-        const tx = db.transaction('projects', 'readwrite');
-        tx.objectStore('projects').add({ id: projectId, ...projectTemplate, title: projectTitle, updatedAt: Date.now() });
-        tx.oncomplete = () => {
-          db.close();
-          resolve();
+  return popup.evaluate(
+    async ({ howbeamDb, activeProjectIdKey, projectTemplate, projectTitle }) => {
+      const projectId = crypto.randomUUID();
+      await new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const db = request.result;
+          const tx = db.transaction('projects', 'readwrite');
+          tx.objectStore('projects').add({
+            id: projectId,
+            ...projectTemplate,
+            title: projectTitle,
+            updatedAt: Date.now(),
+          });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error ?? new Error('Project seed transaction was aborted.'));
         };
-        tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(tx.error ?? new Error('Project seed transaction was aborted.'));
-      };
-    });
-    await chrome.storage.local.set({ [activeProjectIdKey]: projectId });
-    return projectId;
-  }, {
-    howbeamDb: HOWBEAM_DB,
-    activeProjectIdKey: ACTIVE_PROJECT_ID_KEY,
-    projectTemplate: E2E_PROJECT_TEMPLATE,
-    projectTitle: title,
-  });
+      });
+      await chrome.storage.local.set({ [activeProjectIdKey]: projectId });
+      return projectId;
+    },
+    {
+      howbeamDb: HOWBEAM_DB,
+      activeProjectIdKey: ACTIVE_PROJECT_ID_KEY,
+      projectTemplate: E2E_PROJECT_TEMPLATE,
+      projectTitle: title,
+    },
+  );
 }
 
 export async function readRecordingState(popup: Page): Promise<Record<string, unknown>> {
@@ -268,7 +282,12 @@ export async function readSteps(popup: Page): Promise<StoredStep[]> {
           const entries = tx.objectStore('entries').getAll();
           const shots = tx.objectStore('screenshots').getAll();
           const pending = tx.objectStore('pendingAnchors').getAll();
-          const request = { result: [] as any[], error: null as DOMException | null, onsuccess: null as null | (() => void), onerror: null as null | (() => void) };
+          const request = {
+            result: [] as any[],
+            error: null as DOMException | null,
+            onsuccess: null as null | (() => void),
+            onerror: null as null | (() => void),
+          };
           tx.oncomplete = () => {
             const blobs = new Map(shots.result.map((shot) => [shot.id, shot.blob]));
             request.result = [
@@ -279,23 +298,28 @@ export async function readSteps(popup: Page): Promise<StoredStep[]> {
             ];
             request.onsuccess?.();
           };
-          tx.onerror = () => { request.error = tx.error; request.onerror?.(); };
+          tx.onerror = () => {
+            request.error = tx.error;
+            request.onerror?.();
+          };
           return request;
         })();
         all.onerror = () => reject(all.error);
         all.onsuccess = () => {
           resolve(
-            all.result.map((step) => ({
-              id: step.id,
-              sessionId: step.sessionId,
-              order: step.order,
-              description: step.description,
-              bounds: step.bounds,
-              groupId: step.groupId,
-              screenshotScale: step.screenshotScale,
-              devicePixelRatio: step.devicePixelRatio,
-              hasScreenshot: step.screenshotBlob instanceof Blob,
-            })).sort((first, second) => first.order - second.order),
+            all.result
+              .map((step) => ({
+                id: step.id,
+                sessionId: step.sessionId,
+                order: step.order,
+                description: step.description,
+                bounds: step.bounds,
+                groupId: step.groupId,
+                screenshotScale: step.screenshotScale,
+                devicePixelRatio: step.devicePixelRatio,
+                hasScreenshot: step.screenshotBlob instanceof Blob,
+              }))
+              .sort((first, second) => first.order - second.order),
           );
           db.close();
         };
@@ -320,67 +344,78 @@ export async function rawScreenshotRosePixels(
   stepId: string,
   boundsOverride?: { x: number; y: number; width: number; height: number },
 ): Promise<number> {
-  return popup.evaluate(async ({ id, boundsOverride, howbeamDb }) => {
-    return await new Promise<number>((resolve, reject) => {
-      const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = async () => {
-        const db = request.result;
-        const all = (() => {
-          // Every stored step, as the timeline flattens them, then snapshot base images still pending.
-          const tx = db.transaction(['entries', 'screenshots', 'pendingAnchors'], 'readonly');
-          const entries = tx.objectStore('entries').getAll();
-          const shots = tx.objectStore('screenshots').getAll();
-          const pending = tx.objectStore('pendingAnchors').getAll();
-          const request = { result: [] as any[], error: null as DOMException | null, onsuccess: null as null | (() => void), onerror: null as null | (() => void) };
-          tx.oncomplete = () => {
-            const blobs = new Map(shots.result.map((shot) => [shot.id, shot.blob]));
-            request.result = [
-              ...entries.result
-                .sort((first, second) => first.order - second.order)
-                .flatMap((entry) => [{ ...entry.owner, screenshotBlob: blobs.get(entry.id) }, ...entry.annotations]),
-              ...pending.result.map((anchor) => ({ ...anchor.step, order: Number.MAX_SAFE_INTEGER })),
-            ];
-            request.onsuccess?.();
-          };
-          tx.onerror = () => { request.error = tx.error; request.onerror?.(); };
-          return request;
-        })();
-        all.onerror = () => reject(all.error);
-        all.onsuccess = async () => {
-          const step = all.result.find((candidate) => candidate.id === id);
-          const sampleBounds = boundsOverride ?? step?.bounds;
-          if (!step?.screenshotBlob || !sampleBounds) {
+  return popup.evaluate(
+    async ({ id, boundsOverride, howbeamDb }) => {
+      return await new Promise<number>((resolve, reject) => {
+        const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = async () => {
+          const db = request.result;
+          const all = (() => {
+            // Every stored step, as the timeline flattens them, then snapshot base images still pending.
+            const tx = db.transaction(['entries', 'screenshots', 'pendingAnchors'], 'readonly');
+            const entries = tx.objectStore('entries').getAll();
+            const shots = tx.objectStore('screenshots').getAll();
+            const pending = tx.objectStore('pendingAnchors').getAll();
+            const request = {
+              result: [] as any[],
+              error: null as DOMException | null,
+              onsuccess: null as null | (() => void),
+              onerror: null as null | (() => void),
+            };
+            tx.oncomplete = () => {
+              const blobs = new Map(shots.result.map((shot) => [shot.id, shot.blob]));
+              request.result = [
+                ...entries.result
+                  .sort((first, second) => first.order - second.order)
+                  .flatMap((entry) => [{ ...entry.owner, screenshotBlob: blobs.get(entry.id) }, ...entry.annotations]),
+                ...pending.result.map((anchor) => ({ ...anchor.step, order: Number.MAX_SAFE_INTEGER })),
+              ];
+              request.onsuccess?.();
+            };
+            tx.onerror = () => {
+              request.error = tx.error;
+              request.onerror?.();
+            };
+            return request;
+          })();
+          all.onerror = () => reject(all.error);
+          all.onsuccess = async () => {
+            const step = all.result.find((candidate) => candidate.id === id);
+            const sampleBounds = boundsOverride ?? step?.bounds;
+            if (!step?.screenshotBlob || !sampleBounds) {
+              db.close();
+              reject(new Error(`Screenshot ${id} was not found`));
+              return;
+            }
+            const bitmap = await createImageBitmap(step.screenshotBlob);
+            const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+            const context = canvas.getContext('2d');
+            if (!context) throw new Error('Canvas context is unavailable');
+            context.drawImage(bitmap, 0, 0);
+            bitmap.close();
+            const scale = step.screenshotScale || step.devicePixelRatio || 1;
+            const left = Math.max(0, Math.floor((sampleBounds.x - 10) * scale));
+            const top = Math.max(0, Math.floor((sampleBounds.y - 10) * scale));
+            const right = Math.min(canvas.width, Math.ceil((sampleBounds.x + sampleBounds.width + 10) * scale));
+            const bottom = Math.min(canvas.height, Math.ceil((sampleBounds.y + sampleBounds.height + 10) * scale));
+            const pixels = context.getImageData(left, top, right - left, bottom - top).data;
+            let rosePixels = 0;
+            for (let index = 0; index < pixels.length; index += 4) {
+              // Runs in the page, where test helpers are not available.
+              const red = pixels[index] ?? 0;
+              const green = pixels[index + 1] ?? 0;
+              const blue = pixels[index + 2] ?? 0;
+              if (red > 180 && red - green > 60 && red - blue > 20) rosePixels++;
+            }
             db.close();
-            reject(new Error(`Screenshot ${id} was not found`));
-            return;
-          }
-          const bitmap = await createImageBitmap(step.screenshotBlob);
-          const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-          const context = canvas.getContext('2d');
-          if (!context) throw new Error('Canvas context is unavailable');
-          context.drawImage(bitmap, 0, 0);
-          bitmap.close();
-          const scale = step.screenshotScale || step.devicePixelRatio || 1;
-          const left = Math.max(0, Math.floor((sampleBounds.x - 10) * scale));
-          const top = Math.max(0, Math.floor((sampleBounds.y - 10) * scale));
-          const right = Math.min(canvas.width, Math.ceil((sampleBounds.x + sampleBounds.width + 10) * scale));
-          const bottom = Math.min(canvas.height, Math.ceil((sampleBounds.y + sampleBounds.height + 10) * scale));
-          const pixels = context.getImageData(left, top, right - left, bottom - top).data;
-          let rosePixels = 0;
-          for (let index = 0; index < pixels.length; index += 4) {
-            // Runs in the page, where test helpers are not available.
-            const red = pixels[index] ?? 0;
-            const green = pixels[index + 1] ?? 0;
-            const blue = pixels[index + 2] ?? 0;
-            if (red > 180 && red - green > 60 && red - blue > 20) rosePixels++;
-          }
-          db.close();
-          resolve(rosePixels);
+            resolve(rosePixels);
+          };
         };
-      };
-    });
-  }, { id: stepId, boundsOverride, howbeamDb: HOWBEAM_DB });
+      });
+    },
+    { id: stepId, boundsOverride, howbeamDb: HOWBEAM_DB },
+  );
 }
 
 /** Adds a green box that a CSS animation sweeps across the page, far faster
@@ -407,147 +442,167 @@ export async function storedScreenshotShowsMovingTarget(
   stepId: string,
   bounds: { x: number; y: number; width: number; height: number },
 ): Promise<boolean> {
-  return popup.evaluate(async ({ id, bounds, howbeamDb }) => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-    });
-    const step = await new Promise<{ screenshotBlob?: Blob; screenshotScale?: number; devicePixelRatio?: number } | undefined>((resolve, reject) => {
-      const tx = db.transaction(['entries', 'screenshots'], 'readonly');
-      const entry = tx.objectStore('entries').index('by-member').get(id);
-      const shot = tx.objectStore('screenshots').get(id);
-      tx.onerror = () => reject(tx.error);
-      tx.oncomplete = () => resolve(entry.result?.id === id ? { ...entry.result.owner, screenshotBlob: shot.result?.blob } : undefined);
-    });
-    db.close();
-    if (!step?.screenshotBlob) throw new Error(`Screenshot ${id} was not found`);
-    const bitmap = await createImageBitmap(step.screenshotBlob);
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Canvas context is unavailable');
-    context.drawImage(bitmap, 0, 0);
-    bitmap.close();
-    const scale = step.screenshotScale || step.devicePixelRatio || 1;
-    const y = bounds.y + bounds.height / 2;
-    return [bounds.x + 14, bounds.x + bounds.width / 2, bounds.x + bounds.width - 14].every((x) => {
-      const [red, green, blue] = context.getImageData(Math.floor(x * scale), Math.floor(y * scale), 1, 1).data;
-      return (red ?? 255) < 40 && (green ?? 0) > 160 && (blue ?? 255) < 40;
-    });
-  }, { id: stepId, bounds, howbeamDb: HOWBEAM_DB });
+  return popup.evaluate(
+    async ({ id, bounds, howbeamDb }) => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+      const step = await new Promise<
+        { screenshotBlob?: Blob; screenshotScale?: number; devicePixelRatio?: number } | undefined
+      >((resolve, reject) => {
+        const tx = db.transaction(['entries', 'screenshots'], 'readonly');
+        const entry = tx.objectStore('entries').index('by-member').get(id);
+        const shot = tx.objectStore('screenshots').get(id);
+        tx.onerror = () => reject(tx.error);
+        tx.oncomplete = () =>
+          resolve(entry.result?.id === id ? { ...entry.result.owner, screenshotBlob: shot.result?.blob } : undefined);
+      });
+      db.close();
+      if (!step?.screenshotBlob) throw new Error(`Screenshot ${id} was not found`);
+      const bitmap = await createImageBitmap(step.screenshotBlob);
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Canvas context is unavailable');
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      const scale = step.screenshotScale || step.devicePixelRatio || 1;
+      const y = bounds.y + bounds.height / 2;
+      return [bounds.x + 14, bounds.x + bounds.width / 2, bounds.x + bounds.width - 14].every((x) => {
+        const [red, green, blue] = context.getImageData(Math.floor(x * scale), Math.floor(y * scale), 1, 1).data;
+        return (red ?? 255) < 40 && (green ?? 0) > 160 && (blue ?? 255) < 40;
+      });
+    },
+    { id: stepId, bounds, howbeamDb: HOWBEAM_DB },
+  );
 }
 
-export async function readScreenshotScrollbarStats(popup: Page, stepId: string): Promise<{
+export async function readScreenshotScrollbarStats(
+  popup: Page,
+  stepId: string,
+): Promise<{
   width: number;
   height: number;
   rootSentinelPixels: number;
   nestedSentinelPixels: number;
 }> {
-  return popup.evaluate(async ({ id, howbeamDb }) => {
-    return await new Promise<{
-      width: number;
-      height: number;
-      rootSentinelPixels: number;
-      nestedSentinelPixels: number;
-    }>((resolve, reject) => {
-      const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const db = request.result;
-        const all = (() => {
-          // Every stored step, as the timeline flattens them, then snapshot base images still pending.
-          const tx = db.transaction(['entries', 'screenshots', 'pendingAnchors'], 'readonly');
-          const entries = tx.objectStore('entries').getAll();
-          const shots = tx.objectStore('screenshots').getAll();
-          const pending = tx.objectStore('pendingAnchors').getAll();
-          const request = { result: [] as any[], error: null as DOMException | null, onsuccess: null as null | (() => void), onerror: null as null | (() => void) };
-          tx.oncomplete = () => {
-            const blobs = new Map(shots.result.map((shot) => [shot.id, shot.blob]));
-            request.result = [
-              ...entries.result
-                .sort((first, second) => first.order - second.order)
-                .flatMap((entry) => [{ ...entry.owner, screenshotBlob: blobs.get(entry.id) }, ...entry.annotations]),
-              ...pending.result.map((anchor) => ({ ...anchor.step, order: Number.MAX_SAFE_INTEGER })),
-            ];
-            request.onsuccess?.();
-          };
-          tx.onerror = () => { request.error = tx.error; request.onerror?.(); };
-          return request;
-        })();
-        all.onerror = () => reject(all.error);
-        all.onsuccess = async () => {
-          try {
-            const step = all.result.find((candidate) => candidate.id === id);
-            if (!step?.screenshotBlob) throw new Error(`Screenshot ${id} was not found`);
-            const bitmap = await createImageBitmap(step.screenshotBlob);
-            const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-            const context = canvas.getContext('2d');
-            if (!context) throw new Error('Canvas context is unavailable');
-            context.drawImage(bitmap, 0, 0);
-            const pixels = context.getImageData(0, 0, bitmap.width, bitmap.height).data;
-            const rootStripWidth = Math.min(24, bitmap.width);
-            let rootSentinelPixels = 0;
-            let nestedSentinelPixels = 0;
-            for (let index = 0; index < pixels.length; index += 4) {
-              // Runs in the page, where test helpers are not available.
-              const red = pixels[index] ?? 0;
-              const green = pixels[index + 1] ?? 0;
-              const blue = pixels[index + 2] ?? 0;
-              const x = (index / 4) % bitmap.width;
-              const magenta = red > 170 && green < 100 && blue > 170;
-              const greenTrack = red < 100 && green > 170 && blue < 100;
-              const cyanButton = red < 100 && green > 170 && blue > 170;
-              const yellowCorner = red > 170 && green > 170 && blue < 100;
-              if (
-                x >= bitmap.width - rootStripWidth &&
-                (magenta || greenTrack || cyanButton || yellowCorner)
-              ) {
-                rootSentinelPixels++;
+  return popup.evaluate(
+    async ({ id, howbeamDb }) => {
+      return await new Promise<{
+        width: number;
+        height: number;
+        rootSentinelPixels: number;
+        nestedSentinelPixels: number;
+      }>((resolve, reject) => {
+        const request = indexedDB.open(howbeamDb.name, howbeamDb.version);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const db = request.result;
+          const all = (() => {
+            // Every stored step, as the timeline flattens them, then snapshot base images still pending.
+            const tx = db.transaction(['entries', 'screenshots', 'pendingAnchors'], 'readonly');
+            const entries = tx.objectStore('entries').getAll();
+            const shots = tx.objectStore('screenshots').getAll();
+            const pending = tx.objectStore('pendingAnchors').getAll();
+            const request = {
+              result: [] as any[],
+              error: null as DOMException | null,
+              onsuccess: null as null | (() => void),
+              onerror: null as null | (() => void),
+            };
+            tx.oncomplete = () => {
+              const blobs = new Map(shots.result.map((shot) => [shot.id, shot.blob]));
+              request.result = [
+                ...entries.result
+                  .sort((first, second) => first.order - second.order)
+                  .flatMap((entry) => [{ ...entry.owner, screenshotBlob: blobs.get(entry.id) }, ...entry.annotations]),
+                ...pending.result.map((anchor) => ({ ...anchor.step, order: Number.MAX_SAFE_INTEGER })),
+              ];
+              request.onsuccess?.();
+            };
+            tx.onerror = () => {
+              request.error = tx.error;
+              request.onerror?.();
+            };
+            return request;
+          })();
+          all.onerror = () => reject(all.error);
+          all.onsuccess = async () => {
+            try {
+              const step = all.result.find((candidate) => candidate.id === id);
+              if (!step?.screenshotBlob) throw new Error(`Screenshot ${id} was not found`);
+              const bitmap = await createImageBitmap(step.screenshotBlob);
+              const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+              const context = canvas.getContext('2d');
+              if (!context) throw new Error('Canvas context is unavailable');
+              context.drawImage(bitmap, 0, 0);
+              const pixels = context.getImageData(0, 0, bitmap.width, bitmap.height).data;
+              const rootStripWidth = Math.min(24, bitmap.width);
+              let rootSentinelPixels = 0;
+              let nestedSentinelPixels = 0;
+              for (let index = 0; index < pixels.length; index += 4) {
+                // Runs in the page, where test helpers are not available.
+                const red = pixels[index] ?? 0;
+                const green = pixels[index + 1] ?? 0;
+                const blue = pixels[index + 2] ?? 0;
+                const x = (index / 4) % bitmap.width;
+                const magenta = red > 170 && green < 100 && blue > 170;
+                const greenTrack = red < 100 && green > 170 && blue < 100;
+                const cyanButton = red < 100 && green > 170 && blue > 170;
+                const yellowCorner = red > 170 && green > 170 && blue < 100;
+                if (x >= bitmap.width - rootStripWidth && (magenta || greenTrack || cyanButton || yellowCorner)) {
+                  rootSentinelPixels++;
+                }
+                const orangeThumb = red > 180 && green > 50 && green < 170 && blue < 80;
+                const blueTrack = red < 80 && green > 50 && green < 160 && blue > 180;
+                if (orangeThumb || blueTrack) nestedSentinelPixels++;
               }
-              const orangeThumb = red > 180 && green > 50 && green < 170 && blue < 80;
-              const blueTrack = red < 80 && green > 50 && green < 160 && blue > 180;
-              if (orangeThumb || blueTrack) nestedSentinelPixels++;
+              const result = { width: bitmap.width, height: bitmap.height, rootSentinelPixels, nestedSentinelPixels };
+              bitmap.close();
+              resolve(result);
+            } catch (error) {
+              reject(error);
+            } finally {
+              db.close();
             }
-            const result = { width: bitmap.width, height: bitmap.height, rootSentinelPixels, nestedSentinelPixels };
-            bitmap.close();
-            resolve(result);
-          } catch (error) {
-            reject(error);
-          } finally {
-            db.close();
-          }
+          };
         };
-      };
-    });
-  }, { id: stepId, howbeamDb: HOWBEAM_DB });
+      });
+    },
+    { id: stepId, howbeamDb: HOWBEAM_DB },
+  );
 }
 
 export async function startRecording(appPage: Page, popup: Page, mode: RecordingMode): Promise<void> {
   await appPage.bringToFront();
-  await popup.evaluate(async ({ mode, activeProjectIdKey }) => {
-    try {
-      const stored = await chrome.storage.local.get(activeProjectIdKey);
-      const sessionId = stored[activeProjectIdKey];
-      if (typeof sessionId !== 'string' || sessionId.length === 0) {
-        throw new Error('No active E2E Project was initialized.');
-      }
-      const result = await chrome.runtime.sendMessage({
-        type: 'START_RECORDING',
-        target: { kind: 'project', projectId: sessionId },
-        mode,
-      }) as { ok: true } | { ok: false; error?: string } | undefined;
+  await popup.evaluate(
+    async ({ mode, activeProjectIdKey }) => {
+      try {
+        const stored = await chrome.storage.local.get(activeProjectIdKey);
+        const sessionId = stored[activeProjectIdKey];
+        if (typeof sessionId !== 'string' || sessionId.length === 0) {
+          throw new Error('No active E2E Project was initialized.');
+        }
+        const result = (await chrome.runtime.sendMessage({
+          type: 'START_RECORDING',
+          target: { kind: 'project', projectId: sessionId },
+          mode,
+        })) as { ok: true } | { ok: false; error?: string } | undefined;
 
-      if (!result?.ok) {
-        throw new Error(result?.error ?? 'START_RECORDING failed without a typed result');
+        if (!result?.ok) {
+          throw new Error(result?.error ?? 'START_RECORDING failed without a typed result');
+        }
+      } catch (error) {
+        throw new Error(
+          error instanceof Error
+            ? `START_RECORDING rejected: ${error.message}`
+            : `START_RECORDING rejected: ${String(error)}`,
+        );
       }
-    } catch (error) {
-      throw new Error(
-        error instanceof Error
-          ? `START_RECORDING rejected: ${error.message}`
-          : `START_RECORDING rejected: ${String(error)}`,
-      );
-    }
-  }, { mode, activeProjectIdKey: ACTIVE_PROJECT_ID_KEY });
+    },
+    { mode, activeProjectIdKey: ACTIVE_PROJECT_ID_KEY },
+  );
   await expect.poll(async () => (await readRecordingState(popup)).isRecording).toBe(true);
   if (mode === 'steps') {
     await expect.poll(() => appPage.locator('[data-howbeam-step-preview]').count()).toBe(1);
@@ -599,22 +654,21 @@ export async function sendRecordingControl(
   type: string,
   undoToken?: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  return page.evaluate(async ({ type, undoToken, recordingStateKey }) => {
-    const result = await chrome.storage.local.get(recordingStateKey);
-    const runId = (result[recordingStateKey] as { runId?: string } | undefined)?.runId;
-    return chrome.runtime.sendMessage({ type, runId, ...(undoToken ? { undoToken } : {}) }) as Promise<{
-      ok: boolean;
-      error?: string;
-    }>;
-  }, { type, undoToken, recordingStateKey: RECORDING_STATE_KEY });
+  return page.evaluate(
+    async ({ type, undoToken, recordingStateKey }) => {
+      const result = await chrome.storage.local.get(recordingStateKey);
+      const runId = (result[recordingStateKey] as { runId?: string } | undefined)?.runId;
+      return chrome.runtime.sendMessage({ type, runId, ...(undoToken ? { undoToken } : {}) }) as Promise<{
+        ok: boolean;
+        error?: string;
+      }>;
+    },
+    { type, undoToken, recordingStateKey: RECORDING_STATE_KEY },
+  );
 }
 
 /** 整個視窗反覆斷言值穩定，以捕捉 sleep-then-assert 會漏掉的短暫異常。 */
-export async function expectSteady<T>(
-  read: () => Promise<T>,
-  expected: T,
-  windowMs = 400,
-): Promise<void> {
+export async function expectSteady<T>(read: () => Promise<T>, expected: T, windowMs = 400): Promise<void> {
   const deadline = Date.now() + windowMs;
   do {
     // Widen to unknown: Playwright's conditional matcher types can't resolve the generic and would otherwise drop toEqual.
@@ -695,9 +749,16 @@ export async function clickSnapshotTarget(page: Page, point: { x: number; y: num
 export async function getStepPreviewStyle(page: Page): Promise<{ hidden: boolean; style: string | null }> {
   const client = await page.context().newCDPSession(page);
   const { root } = await client.send('DOM.getDocument', { depth: -1, pierce: true });
-  const find = (node: { attributes?: string[]; children?: unknown[]; shadowRoots?: unknown[]; contentDocument?: unknown }, predicate: (value: typeof node) => boolean): typeof node | null => {
+  const find = (
+    node: { attributes?: string[]; children?: unknown[]; shadowRoots?: unknown[]; contentDocument?: unknown },
+    predicate: (value: typeof node) => boolean,
+  ): typeof node | null => {
     if (predicate(node)) return node;
-    for (const collection of [node.children, node.shadowRoots, node.contentDocument ? [node.contentDocument] : undefined]) {
+    for (const collection of [
+      node.children,
+      node.shadowRoots,
+      node.contentDocument ? [node.contentDocument] : undefined,
+    ]) {
       for (const child of collection ?? []) {
         const found = find(child as typeof node, predicate);
         if (found) return found;
@@ -731,7 +792,11 @@ export async function clickRecordingToolbarButton(page: Page, name: string): Pro
     const { root } = await client.send('DOM.getDocument', { depth: -1, pierce: true });
     const find = (node: PiercedNode, predicate: (value: PiercedNode) => boolean): PiercedNode | null => {
       if (predicate(node)) return node;
-      for (const collection of [node.children, node.shadowRoots, node.contentDocument ? [node.contentDocument] : undefined]) {
+      for (const collection of [
+        node.children,
+        node.shadowRoots,
+        node.contentDocument ? [node.contentDocument] : undefined,
+      ]) {
         for (const child of collection ?? []) {
           const found = find(child as PiercedNode, predicate);
           if (found) return found;

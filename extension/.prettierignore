@@ -1,0 +1,9 @@
+.output
+.wxt
+node_modules
+coverage
+test-results
+playwright-report
+pnpm-lock.yaml
+assets/tokens.css
+public

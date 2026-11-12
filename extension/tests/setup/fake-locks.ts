@@ -12,7 +12,10 @@ export function createFakeLockManager(): LockManager {
     });
   };
   const request = (name: string, optionsOrCallback: object | Callback, maybeCallback?: Callback) => {
-    const options = (typeof optionsOrCallback === 'function' ? {} : optionsOrCallback) as { ifAvailable?: boolean; signal?: AbortSignal };
+    const options = (typeof optionsOrCallback === 'function' ? {} : optionsOrCallback) as {
+      ifAvailable?: boolean;
+      signal?: AbortSignal;
+    };
     const callback = (typeof optionsOrCallback === 'function' ? optionsOrCallback : maybeCallback) as Callback;
     if (!held.has(name)) return grant(name, callback);
     if (options.ifAvailable) return Promise.resolve(callback(null));
@@ -22,7 +25,10 @@ export function createFakeLockManager(): LockManager {
         grant(name, callback).then(resolve, reject);
       };
       options.signal?.addEventListener('abort', () => {
-        queues.set(name, (queues.get(name) ?? []).filter((queued) => queued !== turn));
+        queues.set(
+          name,
+          (queues.get(name) ?? []).filter((queued) => queued !== turn),
+        );
         reject(new DOMException('aborted', 'AbortError'));
       });
       queues.set(name, [...(queues.get(name) ?? []), turn]);

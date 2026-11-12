@@ -17,7 +17,14 @@ export function isInScrollbarGutter(
 
 /** Keys with which the browser scrolls a document by default. */
 const DOCUMENT_SCROLLING_KEYS = new Set([
-  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'PageUp',
+  'PageDown',
+  'Home',
+  'End',
 ]);
 /** Where a scrolling key means caret movement or text entry instead. */
 const TEXT_ENTRY_SELECTOR = 'input,textarea,select,[contenteditable=""],[contenteditable="true"]';

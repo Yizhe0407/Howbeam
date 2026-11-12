@@ -7,9 +7,15 @@ import {
 
 function adapter(events: string[]): CapturePresentationAdapter {
   return {
-    insert: vi.fn(async () => { events.push('insert'); }),
-    settle: vi.fn(async () => { events.push('settle'); }),
-    remove: vi.fn(async () => { events.push('remove'); }),
+    insert: vi.fn(async () => {
+      events.push('insert');
+    }),
+    settle: vi.fn(async () => {
+      events.push('settle');
+    }),
+    remove: vi.fn(async () => {
+      events.push('remove');
+    }),
   };
 }
 
@@ -36,11 +42,13 @@ describe('withCapturePresentation', () => {
       });
     }
 
-    await expect(withCapturePresentation(captureAdapter, async () => {
-      events.push('capture');
-      if (failurePoint === 'capture') throw captureError;
-      return 'image';
-    })).rejects.toBe(captureError);
+    await expect(
+      withCapturePresentation(captureAdapter, async () => {
+        events.push('capture');
+        if (failurePoint === 'capture') throw captureError;
+        return 'image';
+      }),
+    ).rejects.toBe(captureError);
 
     expect(events.at(-1)).toBe('remove');
   });
@@ -62,7 +70,9 @@ describe('withCapturePresentation', () => {
     const captureAdapter = adapter([]);
     const captureError = new Error('capture failed');
     const restoreError = new Error('restore failed');
-    captureAdapter.remove = vi.fn(async () => { throw restoreError; });
+    captureAdapter.remove = vi.fn(async () => {
+      throw restoreError;
+    });
 
     const failure = await withCapturePresentation(captureAdapter, async () => {
       throw captureError;

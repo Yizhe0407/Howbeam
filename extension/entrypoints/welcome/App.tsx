@@ -16,7 +16,11 @@ import { recordingModeCopy } from '@/lib/recording/recording-mode-copy';
  */
 function PinIllustration() {
   return (
-    <div role="img" aria-label={t().welcome.pinIllustrationLabel} className="relative h-44 rounded-md border-2 border-border-soft bg-surface-raised p-2.5">
+    <div
+      role="img"
+      aria-label={t().welcome.pinIllustrationLabel}
+      className="relative h-44 rounded-md border-2 border-border-soft bg-surface-raised p-2.5"
+    >
       <div className="flex h-9 items-center gap-2 rounded-full bg-secondary px-3" aria-hidden="true">
         <span className="size-3.5 rounded-full bg-muted-foreground/40" />
         <span className="size-3.5 rounded-full bg-muted-foreground/40" />
@@ -26,7 +30,10 @@ function PinIllustration() {
         </span>
         <span className="size-3.5 rounded-full bg-muted-foreground/40" />
       </div>
-      <div className="absolute top-14 right-3 w-52 rounded-md border-2 border-border bg-card py-1.5 text-xs" aria-hidden="true">
+      <div
+        className="absolute top-14 right-3 w-52 rounded-md border-2 border-border bg-card py-1.5 text-xs"
+        aria-hidden="true"
+      >
         <div className="px-3 py-1 text-muted-foreground">{t().welcome.pinMenuTitle}</div>
         <div className="flex items-center gap-2 bg-brand-bg-soft px-3 py-1.5 font-bold">
           <Mascot className="size-4" />
@@ -50,7 +57,10 @@ function Card({ title, badge, children }: { title: string; badge?: ReactNode; ch
     <section className="flex flex-col gap-3 rounded-md border-2 border-border bg-card p-4">
       <h2 className="flex items-center gap-2 text-base font-bold">
         {badge && (
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-primary text-primary-foreground" aria-hidden="true">
+          <span
+            className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-border bg-primary text-primary-foreground"
+            aria-hidden="true"
+          >
             {badge}
           </span>
         )}
@@ -121,13 +131,20 @@ export default function App() {
 
           <Card title={t().welcome.modesTitle}>
             <ul className="flex flex-col gap-3">
-              {([['steps', ListOrdered], ['snapshot', Camera]] as const).map(([mode, Icon]) => (
+              {(
+                [
+                  ['steps', ListOrdered],
+                  ['snapshot', Camera],
+                ] as const
+              ).map(([mode, Icon]) => (
                 <li key={mode} className="flex flex-col items-start gap-1.5">
                   <span className="inline-flex items-center gap-1.5 text-sm font-bold text-foreground">
                     <Icon className="size-4" aria-hidden="true" />
                     {recordingModeCopy(mode).label}
                   </span>
-                  <span className="text-sm leading-relaxed text-muted-foreground">{recordingModeCopy(mode).description}</span>
+                  <span className="text-sm leading-relaxed text-muted-foreground">
+                    {recordingModeCopy(mode).description}
+                  </span>
                 </li>
               ))}
             </ul>

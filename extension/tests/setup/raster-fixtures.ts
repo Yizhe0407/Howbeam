@@ -12,9 +12,34 @@ export function pngBlob(width = 2, height = 2, padding = 0): Blob {
 }
 
 export function jpegBlob(width = 2, height = 2): Blob {
-  return new Blob([new Uint8Array([
-    0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08,
-    (height >>> 8) & 255, height & 255, (width >>> 8) & 255, width & 255,
-    0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00, 0xff, 0xd9,
-  ])], { type: 'image/jpeg' });
+  return new Blob(
+    [
+      new Uint8Array([
+        0xff,
+        0xd8,
+        0xff,
+        0xc0,
+        0x00,
+        0x11,
+        0x08,
+        (height >>> 8) & 255,
+        height & 255,
+        (width >>> 8) & 255,
+        width & 255,
+        0x03,
+        0x01,
+        0x11,
+        0x00,
+        0x02,
+        0x11,
+        0x00,
+        0x03,
+        0x11,
+        0x00,
+        0xff,
+        0xd9,
+      ]),
+    ],
+    { type: 'image/jpeg' },
+  );
 }

@@ -5,10 +5,7 @@ import {
   installSnapshotFrameProbe,
   waitForNextFrame,
 } from '@/lib/recording/snapshot-targeting';
-import {
-  installSnapshotFrameFreeze,
-  installStepFrameRecorder,
-} from '@/lib/recording/frame-relay';
+import { installSnapshotFrameFreeze, installStepFrameRecorder } from '@/lib/recording/frame-relay';
 import { installRecorderLifecycle } from '@/lib/recording/recorder-lifecycle';
 import { createSnapshotShield } from '@/lib/recording/snapshot-shield';
 import { createSnapshotRecorder } from '@/lib/recording/content/snapshot-recorder';
@@ -28,11 +25,12 @@ import type {
 import { t } from '@/lib/shared/i18n';
 import { initLocalePreference } from '@/lib/runtime/locale-preference';
 import { mountRecordingToolbar } from '@/lib/recording/recording-toolbar-host';
+import { detectUnrecordablePage, isChildFrameUnrecordable } from '@/lib/recording/content/recordable-page';
 import {
-  detectUnrecordablePage,
-  isChildFrameUnrecordable,
-} from '@/lib/recording/content/recordable-page';
-import { addRecorderCleanup, removeRecorderCleanup, runRecorderCleanup } from '@/lib/recording/content/recorder-cleanup';
+  addRecorderCleanup,
+  removeRecorderCleanup,
+  runRecorderCleanup,
+} from '@/lib/recording/content/recorder-cleanup';
 
 const INSTANCE_KEY = `__howbeam_instance_${browser.runtime.id}`;
 /** The live recorder module of this document's extension world. */
@@ -107,7 +105,9 @@ async function startRecorder(): Promise<void> {
   const runId = recordingState.runId;
   const isSnapshotMode = recordingState.mode === 'snapshot';
   const isStepMode = recordingState.mode === 'steps';
-  const shouldFreezeSnapshot = isSnapshotMode && recordingState.phase !== 'preparing-next' &&
+  const shouldFreezeSnapshot =
+    isSnapshotMode &&
+    recordingState.phase !== 'preparing-next' &&
     (window.top !== window || detectUnrecordablePage() === null);
   if (isSnapshotMode && window.top !== window) {
     if (shouldFreezeSnapshot) {
@@ -168,13 +168,13 @@ async function startRecorder(): Promise<void> {
         return () => {};
       })()
     : isStepMode
-    ? installStepRecorder({
-        session,
-        capture,
-        toolbar,
-        initialToolbarState: toolbar.toToolbarState(recordingState),
-      })
-    : snapshot.install();
+      ? installStepRecorder({
+          session,
+          capture,
+          toolbar,
+          initialToolbarState: toolbar.toToolbarState(recordingState),
+        })
+      : snapshot.install();
 
   const unsubscribeRecordingState = onRecordingStateChange((state) => {
     if (state.runId !== runId) return;
@@ -212,7 +212,11 @@ async function startRecorder(): Promise<void> {
   });
 
   const onRecorderMessage = (
-    message: HowbeamStopMessage | HowbeamSnapshotActiveMessage | HowbeamSnapshotHistoryMessage | HowbeamCaptureTakenMessage,
+    message:
+      | HowbeamStopMessage
+      | HowbeamSnapshotActiveMessage
+      | HowbeamSnapshotHistoryMessage
+      | HowbeamCaptureTakenMessage,
   ) => {
     if (message?.type === 'HOWBEAM_STOP') {
       cleanup();

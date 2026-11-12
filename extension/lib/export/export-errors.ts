@@ -33,7 +33,9 @@ export class StepImageError extends Error {
  * rendering failure so the user is not told to check their masks. */
 export class DownloadFailedError extends Error {
   constructor(cause: unknown) {
-    super(`The browser could not start the download: ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
+    super(`The browser could not start the download: ${cause instanceof Error ? cause.message : String(cause)}`, {
+      cause,
+    });
     this.name = 'DownloadFailedError';
   }
 }

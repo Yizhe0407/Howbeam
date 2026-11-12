@@ -63,17 +63,10 @@ export function highlightFrame(bounds: Bounds): Bounds {
   return inflateBounds(bounds, HIGHLIGHT_PADDING);
 }
 
-export function fitPointInViewport(
-  point: Point,
-  radius: number,
-  viewportWidth: number,
-  viewportHeight: number,
-): Point {
+export function fitPointInViewport(point: Point, radius: number, viewportWidth: number, viewportHeight: number): Point {
   const fitAxis = (value: number, extent: number) => {
     const safeExtent = Math.max(Number.isFinite(extent) ? extent : 0, 0);
-    return safeExtent <= radius * 2
-      ? safeExtent / 2
-      : Math.min(Math.max(value, radius), safeExtent - radius);
+    return safeExtent <= radius * 2 ? safeExtent / 2 : Math.min(Math.max(value, radius), safeExtent - radius);
   };
   return {
     x: fitAxis(point.x, viewportWidth),
@@ -153,61 +146,66 @@ export function padApart<T extends { bounds: Bounds }>(items: T[]): (T & { frame
       left: HIGHLIGHT_PADDING,
     },
   }));
-  forEachNearbyPair(nodes, (node) => node.item.bounds, HIGHLIGHT_PADDING * 2 + 2, (first, second) => {
-    const a = first.item.bounds;
-    const b = second.item.bounds;
-    const dx = Math.max(0, a.x - (b.x + b.width), b.x - (a.x + a.width));
-    const dy = Math.max(0, a.y - (b.y + b.height), b.y - (a.y + a.height));
+  forEachNearbyPair(
+    nodes,
+    (node) => node.item.bounds,
+    HIGHLIGHT_PADDING * 2 + 2,
+    (first, second) => {
+      const a = first.item.bounds;
+      const b = second.item.bounds;
+      const dx = Math.max(0, a.x - (b.x + b.width), b.x - (a.x + a.width));
+      const dy = Math.max(0, a.y - (b.y + b.height), b.y - (a.y + a.height));
 
-    if (dx > 0 || dy > 0) {
-      const cap = Math.max(dx, dy) / 2 - 1;
-      if (dx >= dy) {
-        const [left, right] = a.x < b.x ? [first, second] : [second, first];
-        left.padding.right = Math.min(left.padding.right, cap);
-        right.padding.left = Math.min(right.padding.left, cap);
-      } else {
-        const [top, bottom] = a.y < b.y ? [first, second] : [second, first];
-        top.padding.bottom = Math.min(top.padding.bottom, cap);
-        bottom.padding.top = Math.min(bottom.padding.top, cap);
+      if (dx > 0 || dy > 0) {
+        const cap = Math.max(dx, dy) / 2 - 1;
+        if (dx >= dy) {
+          const [left, right] = a.x < b.x ? [first, second] : [second, first];
+          left.padding.right = Math.min(left.padding.right, cap);
+          right.padding.left = Math.min(right.padding.left, cap);
+        } else {
+          const [top, bottom] = a.y < b.y ? [first, second] : [second, first];
+          top.padding.bottom = Math.min(top.padding.bottom, cap);
+          bottom.padding.top = Math.min(bottom.padding.top, cap);
+        }
+        return;
       }
-      return;
-    }
 
-    const aInB = contains(b, a);
-    const bInA = contains(a, b);
-    if (aInB || bInA) {
-      const inner = bInA ? second.padding : first.padding;
-      const io = bInA ? b : a;
-      const oo = bInA ? a : b;
-      inner.left = Math.min(inner.left, io.x - oo.x - 1);
-      inner.top = Math.min(inner.top, io.y - oo.y - 1);
-      inner.right = Math.min(inner.right, oo.x + oo.width - (io.x + io.width) - 1);
-      inner.bottom = Math.min(inner.bottom, oo.y + oo.height - (io.y + io.height) - 1);
-      return;
-    }
+      const aInB = contains(b, a);
+      const bInA = contains(a, b);
+      if (aInB || bInA) {
+        const inner = bInA ? second.padding : first.padding;
+        const io = bInA ? b : a;
+        const oo = bInA ? a : b;
+        inner.left = Math.min(inner.left, io.x - oo.x - 1);
+        inner.top = Math.min(inner.top, io.y - oo.y - 1);
+        inner.right = Math.min(inner.right, oo.x + oo.width - (io.x + io.width) - 1);
+        inner.bottom = Math.min(inner.bottom, oo.y + oo.height - (io.y + io.height) - 1);
+        return;
+      }
 
-    const centerAX = a.x + a.width / 2;
-    const centerAY = a.y + a.height / 2;
-    const centerBX = b.x + b.width / 2;
-    const centerBY = b.y + b.height / 2;
-    const normalizedX = Math.abs(centerAX - centerBX) / Math.max((a.width + b.width) / 2, 1);
-    const normalizedY = Math.abs(centerAY - centerBY) / Math.max((a.height + b.height) / 2, 1);
-    const halfClearance = HIGHLIGHT_LINE_WIDTH / 2;
+      const centerAX = a.x + a.width / 2;
+      const centerAY = a.y + a.height / 2;
+      const centerBX = b.x + b.width / 2;
+      const centerBY = b.y + b.height / 2;
+      const normalizedX = Math.abs(centerAX - centerBX) / Math.max((a.width + b.width) / 2, 1);
+      const normalizedY = Math.abs(centerAY - centerBY) / Math.max((a.height + b.height) / 2, 1);
+      const halfClearance = HIGHLIGHT_LINE_WIDTH / 2;
 
-    if (normalizedX >= normalizedY && centerAX !== centerBX) {
-      const divider = (Math.max(a.x, b.x) + Math.min(a.x + a.width, b.x + b.width)) / 2;
-      const [left, right] = centerAX < centerBX ? [first, second] : [second, first];
-      const leftBounds = left.item.bounds;
-      left.padding.right = Math.min(left.padding.right, divider - halfClearance - (leftBounds.x + leftBounds.width));
-      right.padding.left = Math.min(right.padding.left, right.item.bounds.x - divider - halfClearance);
-    } else if (centerAY !== centerBY) {
-      const divider = (Math.max(a.y, b.y) + Math.min(a.y + a.height, b.y + b.height)) / 2;
-      const [top, bottom] = centerAY < centerBY ? [first, second] : [second, first];
-      const topBounds = top.item.bounds;
-      top.padding.bottom = Math.min(top.padding.bottom, divider - halfClearance - (topBounds.y + topBounds.height));
-      bottom.padding.top = Math.min(bottom.padding.top, bottom.item.bounds.y - divider - halfClearance);
-    }
-  });
+      if (normalizedX >= normalizedY && centerAX !== centerBX) {
+        const divider = (Math.max(a.x, b.x) + Math.min(a.x + a.width, b.x + b.width)) / 2;
+        const [left, right] = centerAX < centerBX ? [first, second] : [second, first];
+        const leftBounds = left.item.bounds;
+        left.padding.right = Math.min(left.padding.right, divider - halfClearance - (leftBounds.x + leftBounds.width));
+        right.padding.left = Math.min(right.padding.left, right.item.bounds.x - divider - halfClearance);
+      } else if (centerAY !== centerBY) {
+        const divider = (Math.max(a.y, b.y) + Math.min(a.y + a.height, b.y + b.height)) / 2;
+        const [top, bottom] = centerAY < centerBY ? [first, second] : [second, first];
+        const topBounds = top.item.bounds;
+        top.padding.bottom = Math.min(top.padding.bottom, divider - halfClearance - (topBounds.y + topBounds.height));
+        bottom.padding.top = Math.min(bottom.padding.top, bottom.item.bounds.y - divider - halfClearance);
+      }
+    },
+  );
 
   const clamp = (value: number) => Math.min(HIGHLIGHT_PADDING, value);
   return nodes.map(({ item, padding }) => ({

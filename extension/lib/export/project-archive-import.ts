@@ -151,7 +151,7 @@ async function parseScreenshots(
     if (!bytes) fail('INVALID_BLOB', `${path} has no file in the archive.`);
     if (bytes.byteLength !== size) fail('INVALID_BLOB', `${path} does not match its declared size.`);
     const owned = new Uint8Array(bytes);
-    if (await screenshotId(owned) !== id) fail('INVALID_BLOB', `${path} does not match its SHA-256 id.`);
+    if ((await screenshotId(owned)) !== id) fail('INVALID_BLOB', `${path} does not match its SHA-256 id.`);
     throwIfAborted(signal);
     const blob = new Blob([owned], { type: mediaType });
     await validateScreenshotRaster(blob, path);
@@ -182,10 +182,12 @@ export async function importProjectArchive(
 
   const stepCount = expectSafeInteger(manifest.stepCount, 'manifest.stepCount', 0, PROJECT_ARCHIVE_LIMITS.maxSteps);
   const rawSteps = expectArray(manifest.steps, 'manifest.steps');
-  if (rawSteps.length !== stepCount) fail('INVALID_ARCHIVE', 'manifest.stepCount does not match manifest.steps.length.');
+  if (rawSteps.length !== stepCount)
+    fail('INVALID_ARCHIVE', 'manifest.stepCount does not match manifest.steps.length.');
 
   const screenshots = await parseScreenshots(manifest.screenshots, entries, signal);
-  if (entries.size !== screenshots.size + 1) fail('INVALID_ARCHIVE', 'The archive contains files the manifest does not list.');
+  if (entries.size !== screenshots.size + 1)
+    fail('INVALID_ARCHIVE', 'The archive contains files the manifest does not list.');
   const used = new Set<string>();
   const steps = rawSteps.map((step, index) => {
     throwIfAborted(signal);

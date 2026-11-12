@@ -139,7 +139,12 @@ export class PdfLayouter {
   addTitleBlock(title: string, description: string): void {
     this.addTextBlock({ kind: 'heading', level: 1 }, title, PDF_TEXT.title);
     this.addTextBlock({ kind: 'paragraph' }, description, PDF_TEXT.description);
-    this.addRule(PDF_SPEC.headerRuleGapBefore, PDF_SPEC.headerRuleGapAfter, PDF_SPEC.headerRuleThickness, PDF_COLORS.text);
+    this.addRule(
+      PDF_SPEC.headerRuleGapBefore,
+      PDF_SPEC.headerRuleGapAfter,
+      PDF_SPEC.headerRuleThickness,
+      PDF_COLORS.text,
+    );
   }
 
   /**
@@ -160,13 +165,20 @@ export class PdfLayouter {
     this.stepCount += 1;
 
     const leadingHeight = step.section
-      ? PDF_TEXT.section.lineHeight + PDF_TEXT.section.gapAfter + PDF_SPEC.sectionRuleThickness + PDF_SPEC.sectionRuleGapAfter
+      ? PDF_TEXT.section.lineHeight +
+        PDF_TEXT.section.gapAfter +
+        PDF_SPEC.sectionRuleThickness +
+        PDF_SPEC.sectionRuleGapAfter
       : 0;
     const imageSpace = this.imageSpaceFor(step.image.width, step.image.height, leadingHeight);
     this.ensureSpace(leadingHeight + PDF_TEXT.stepTitle.lineHeight + PDF_TEXT.stepTitle.gapAfter + imageSpace);
     if (step.section) {
       this.addTextBlock(
-        { kind: 'heading', level: 2, outline: { level: 1, title: shortenText(step.section.title, OUTLINE_TITLE_LENGTH) } },
+        {
+          kind: 'heading',
+          level: 2,
+          outline: { level: 1, title: shortenText(step.section.title, OUTLINE_TITLE_LENGTH) },
+        },
         step.section.title,
         PDF_TEXT.section,
       );
@@ -195,9 +207,17 @@ export class PdfLayouter {
       1,
     );
     const freshPageSpace =
-      this.contentBottom - PDF_SPEC.margin - leadingHeight - PDF_TEXT.stepTitle.lineHeight - PDF_TEXT.stepTitle.gapAfter - PDF_SPEC.imageBottomClearance;
+      this.contentBottom -
+      PDF_SPEC.margin -
+      leadingHeight -
+      PDF_TEXT.stepTitle.lineHeight -
+      PDF_TEXT.stepTitle.gapAfter -
+      PDF_SPEC.imageBottomClearance;
     const preferred = Math.ceil(imageHeight * scale);
-    return Math.max(PDF_SPEC.imageMinSpace, Math.min(Math.ceil(preferred * PDF_SPEC.continuousImageMinShare), freshPageSpace));
+    return Math.max(
+      PDF_SPEC.imageMinSpace,
+      Math.min(Math.ceil(preferred * PDF_SPEC.continuousImageMinShare), freshPageSpace),
+    );
   }
 
   private measure(style: PdfTextStyle) {
@@ -221,9 +241,10 @@ export class PdfLayouter {
       this.cursorY += pendingGap;
       if (!block || blockPage !== this.pageNumber) {
         // Only the first fragment carries the bookmark.
-        block = template.kind === 'heading'
-          ? { kind: 'heading', level: template.level, lines: [], ...(block ? {} : { outline: template.outline }) }
-          : { kind: 'paragraph', lines: [] };
+        block =
+          template.kind === 'heading'
+            ? { kind: 'heading', level: template.level, lines: [], ...(block ? {} : { outline: template.outline }) }
+            : { kind: 'paragraph', lines: [] };
         blockPage = this.pageNumber;
         this.pushBlock(block);
       }
@@ -278,11 +299,16 @@ export class PdfLayouter {
     // Same rule as hasAnnotationText in project-export-render: unlabelled markers get no list.
     if (annotations.every((annotation) => annotation.description.trim() === '')) return;
     const style = PDF_TEXT.annotation;
-    const texts = annotations.map((annotation) => annotation.description.trim() || this.options.labels.missingDescription);
+    const texts = annotations.map(
+      (annotation) => annotation.description.trim() || this.options.labels.missingDescription,
+    );
     const labelFor = (index: number) => `${index + 1}. `;
     const labelWidth = Math.max(...texts.map((_, index) => this.options.measure(labelFor(index), style)));
     const layout = chooseAnnotationColumns(
-      (count) => texts.map((text) => wrapText(this.measure(style), text, this.annotationColumnWidth(count) - labelWidth, this.options.signal)),
+      (count) =>
+        texts.map((text) =>
+          wrapText(this.measure(style), text, this.annotationColumnWidth(count) - labelWidth, this.options.signal),
+        ),
       (lineCount) => style.gapBefore + lineCount * style.lineHeight + style.gapAfter,
     );
     const markers = layout.lines.map((lines, index) => ({
@@ -320,7 +346,12 @@ export class PdfLayouter {
           const lineTop = top + style.gapBefore;
           items.push({
             label: { text: marker.label, x, top: lineTop, style },
-            lines: marker.lines.map((line, lineIndex) => ({ text: line, x: x + labelWidth, top: lineTop + lineIndex * style.lineHeight, style })),
+            lines: marker.lines.map((line, lineIndex) => ({
+              text: line,
+              x: x + labelWidth,
+              top: lineTop + lineIndex * style.lineHeight,
+              style,
+            })),
           });
           top += marker.height;
         }

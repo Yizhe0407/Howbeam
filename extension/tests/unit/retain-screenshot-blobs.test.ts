@@ -5,8 +5,16 @@ import { itemAt } from '../setup/item-at';
 
 function step(id: string, overrides: Partial<ScreenshotStep> = {}, content = 'pixels'): ScreenshotStep {
   return {
-    id, sessionId: 's', order: 0, bounds: null, devicePixelRatio: 1, description: '', url: 'https://x.test', timestamp: 0,
-    screenshotBlob: new Blob([content], { type: 'image/png' }), ...overrides,
+    id,
+    sessionId: 's',
+    order: 0,
+    bounds: null,
+    devicePixelRatio: 1,
+    description: '',
+    url: 'https://x.test',
+    timestamp: 0,
+    screenshotBlob: new Blob([content], { type: 'image/png' }),
+    ...overrides,
   };
 }
 
@@ -21,7 +29,9 @@ describe('retainScreenshotBlobs', () => {
 
     const kept = itemAt(result, 0);
     const previous = itemAt(before, 0);
-    expect(kept.kind === 'single' && kept.step.screenshotBlob).toBe(previous.kind === 'single' && previous.step.screenshotBlob);
+    expect(kept.kind === 'single' && kept.step.screenshotBlob).toBe(
+      previous.kind === 'single' && previous.step.screenshotBlob,
+    );
     expect(kept.kind === 'single' && kept.step.description).toBe('edited');
   });
 
@@ -33,7 +43,9 @@ describe('retainScreenshotBlobs', () => {
 
     const taken = itemAt(result, 0);
     const recaptured = itemAt(after, 0);
-    expect(taken.kind === 'single' && taken.step.screenshotBlob).toBe(recaptured.kind === 'single' && recaptured.step.screenshotBlob);
+    expect(taken.kind === 'single' && taken.step.screenshotBlob).toBe(
+      recaptured.kind === 'single' && recaptured.step.screenshotBlob,
+    );
   });
 
   it('retains a snapshot anchor image and ignores steps it has not seen before', () => {

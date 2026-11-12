@@ -129,23 +129,27 @@ export function isValidImageEdit(value: unknown): value is ImageEdit {
   if (!isRecord(value) || !isEditId(value.id) || !isImageEditColor(value.color)) return false;
   switch (value.kind) {
     case 'text':
-      return isEditBounds(value.bounds)
-        && typeof value.text === 'string'
-        && value.text.length > 0
-        && value.text.length <= IMAGE_EDIT_LIMITS.maxTextLength
-        && isStoredText(value.text)
-        && isFontSize(value.fontSize)
-        && isTextLook(value.look);
+      return (
+        isEditBounds(value.bounds) &&
+        typeof value.text === 'string' &&
+        value.text.length > 0 &&
+        value.text.length <= IMAGE_EDIT_LIMITS.maxTextLength &&
+        isStoredText(value.text) &&
+        isFontSize(value.fontSize) &&
+        isTextLook(value.look)
+      );
     case 'arrow':
       return isEditPoint(value.from) && isEditPoint(value.to) && isStrokeWidth(value.width);
     case 'rect':
     case 'ellipse':
       return isEditBounds(value.bounds) && isStrokeWidth(value.width) && isShapeFill(value.fill);
     case 'step':
-      return isEditPoint(value.center)
-        && inRange(value.radius, IMAGE_EDIT_LIMITS.minMarkerRadius, IMAGE_EDIT_LIMITS.maxMarkerRadius)
-        && Number.isInteger(value.number)
-        && inRange(value.number, 1, IMAGE_EDIT_LIMITS.maxMarkerNumber);
+      return (
+        isEditPoint(value.center) &&
+        inRange(value.radius, IMAGE_EDIT_LIMITS.minMarkerRadius, IMAGE_EDIT_LIMITS.maxMarkerRadius) &&
+        Number.isInteger(value.number) &&
+        inRange(value.number, 1, IMAGE_EDIT_LIMITS.maxMarkerNumber)
+      );
     default:
       return false;
   }
@@ -155,15 +159,51 @@ export function isValidImageEdit(value: unknown): value is ImageEdit {
 export function cloneImageEdit(edit: ImageEdit): ImageEdit {
   switch (edit.kind) {
     case 'text':
-      return { id: edit.id, kind: 'text', bounds: { ...edit.bounds }, text: edit.text, fontSize: edit.fontSize, color: edit.color, look: edit.look };
+      return {
+        id: edit.id,
+        kind: 'text',
+        bounds: { ...edit.bounds },
+        text: edit.text,
+        fontSize: edit.fontSize,
+        color: edit.color,
+        look: edit.look,
+      };
     case 'arrow':
-      return { id: edit.id, kind: 'arrow', from: { ...edit.from }, to: { ...edit.to }, width: edit.width, color: edit.color };
+      return {
+        id: edit.id,
+        kind: 'arrow',
+        from: { ...edit.from },
+        to: { ...edit.to },
+        width: edit.width,
+        color: edit.color,
+      };
     case 'rect':
-      return { id: edit.id, kind: 'rect', bounds: { ...edit.bounds }, width: edit.width, color: edit.color, fill: edit.fill };
+      return {
+        id: edit.id,
+        kind: 'rect',
+        bounds: { ...edit.bounds },
+        width: edit.width,
+        color: edit.color,
+        fill: edit.fill,
+      };
     case 'ellipse':
-      return { id: edit.id, kind: 'ellipse', bounds: { ...edit.bounds }, width: edit.width, color: edit.color, fill: edit.fill };
+      return {
+        id: edit.id,
+        kind: 'ellipse',
+        bounds: { ...edit.bounds },
+        width: edit.width,
+        color: edit.color,
+        fill: edit.fill,
+      };
     case 'step':
-      return { id: edit.id, kind: 'step', center: { ...edit.center }, radius: edit.radius, number: edit.number, color: edit.color };
+      return {
+        id: edit.id,
+        kind: 'step',
+        center: { ...edit.center },
+        radius: edit.radius,
+        number: edit.number,
+        color: edit.color,
+      };
   }
 }
 

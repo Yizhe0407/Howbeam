@@ -30,7 +30,10 @@ describe('recordable page detection', () => {
 
   it('judges child frames by the top origin, not their own about:blank URL', () => {
     const frameUnder = (origins: string[]) =>
-      ({ href: 'about:blank', ancestorOrigins: Object.assign([...origins], { contains: () => false }) }) as unknown as Location;
+      ({
+        href: 'about:blank',
+        ancestorOrigins: Object.assign([...origins], { contains: () => false }),
+      }) as unknown as Location;
     expect(isChildFrameUnrecordable(frameUnder(['https://example.com']))).toBe(false);
     expect(isChildFrameUnrecordable(frameUnder(['https://a.test', 'file://']))).toBe(true);
     expect(isChildFrameUnrecordable({ href: 'https://x.test/' } as Location)).toBe(false);

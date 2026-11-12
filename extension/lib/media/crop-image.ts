@@ -20,7 +20,6 @@ export interface PixelRect {
   sh: number;
 }
 
-
 /** The crop as a whole-device-pixel rectangle inside the image, or null when it
  * covers the entire image (nothing to cut) or lies outside it. */
 export function cropToPixels(crop: Bounds, dpr: number, naturalWidth: number, naturalHeight: number): PixelRect | null {
@@ -87,7 +86,11 @@ export function getCroppedImage(blob: Blob, crop: Bounds, screenshotScale: numbe
 }
 
 /** The result if it has already been computed, so a render can use it immediately. */
-export function peekCroppedImage(blob: Blob, crop: Bounds, screenshotScale: number): { value: CroppedImage | null } | undefined {
+export function peekCroppedImage(
+  blob: Blob,
+  crop: Bounds,
+  screenshotScale: number,
+): { value: CroppedImage | null } | undefined {
   const existing = cache.get(blob);
   return existing?.key === keyOf(crop, screenshotScale) ? existing.settled : undefined;
 }

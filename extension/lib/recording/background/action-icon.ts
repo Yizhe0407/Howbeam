@@ -32,8 +32,10 @@ export function syncActionIconWithRecordingState(): () => void {
     void applyActionIcon(recording);
   };
   const unsubscribe = onRecordingStateChange(apply);
-  getRecordingState().then(apply).catch((error: unknown) => {
-    console.warn('[howbeam] failed to sync the toolbar icon with the recording state', error);
-  });
+  getRecordingState()
+    .then(apply)
+    .catch((error: unknown) => {
+      console.warn('[howbeam] failed to sync the toolbar icon with the recording state', error);
+    });
   return unsubscribe;
 }

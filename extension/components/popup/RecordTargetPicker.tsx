@@ -75,7 +75,7 @@ export default function RecordTargetPicker({ value, onChange, disabled = false, 
         // The trigger is one line; the tooltip keeps a long title reachable.
         title={selected && projectDisplayTitle(selected.title)}
         className={cn(
-          'h-9 w-full gap-2 border-2 border-border bg-card px-3 text-sm font-bold text-foreground focus-ring focus-visible:border-border focus-visible:ring-0 data-[size=default]:h-9 dark:bg-card dark:hover:bg-secondary *:data-[slot=select-value]:flex-1',
+          'h-9 w-full gap-2 border-2 border-border bg-card px-3 text-sm font-bold text-foreground focus-ring focus-visible:border-border focus-visible:ring-0 data-[size=default]:h-9 *:data-[slot=select-value]:flex-1 dark:bg-card dark:hover:bg-secondary',
           className,
         )}
       >
@@ -85,9 +85,13 @@ export default function RecordTargetPicker({ value, onChange, disabled = false, 
           {selected ? (
             <>
               <span className="min-w-0 flex-1 truncate">{projectDisplayTitle(selected.title)}</span>
-              <span className="shrink-0 text-xs font-bold text-muted-foreground">{t().popup.recordTargetCount(selected.entryCount)}</span>
+              <span className="shrink-0 text-xs font-bold text-muted-foreground">
+                {t().popup.recordTargetCount(selected.entryCount)}
+              </span>
             </>
-          ) : t().popup.recordTargetNew}
+          ) : (
+            t().popup.recordTargetNew
+          )}
         </SelectValue>
       </SelectTrigger>
       {/* The popup is a fixed 320px window that clips anything drawn past its
@@ -97,7 +101,9 @@ export default function RecordTargetPicker({ value, onChange, disabled = false, 
         position="popper"
         className="w-(--radix-select-trigger-width) max-w-(--radix-select-trigger-width) min-w-0 border-0 ring-2 ring-border"
       >
-        <SelectItem value={NEW_VALUE} className="font-bold">{t().popup.recordTargetNew}</SelectItem>
+        <SelectItem value={NEW_VALUE} className="font-bold">
+          {t().popup.recordTargetNew}
+        </SelectItem>
         {projects.map((project) => (
           <SelectItem key={project.id} value={`${PROJECT_PREFIX}${project.id}`} className="font-bold">
             <span title={projectDisplayTitle(project.title)} className="line-clamp-2 min-w-0 flex-1 break-words">

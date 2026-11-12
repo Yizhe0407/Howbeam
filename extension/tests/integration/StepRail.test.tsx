@@ -47,10 +47,14 @@ describe('StepRail keyboard navigation', () => {
           this.record = { callback };
           observers.push(this.record);
         }
-        observe(target: Element) { this.record.target = target; }
+        observe(target: Element) {
+          this.record.target = target;
+        }
         disconnect() {}
         unobserve() {}
-        takeRecords() { return []; }
+        takeRecords() {
+          return [];
+        }
         root = null;
         rootMargin = '320px';
         thresholds = [0];
@@ -72,7 +76,10 @@ describe('StepRail keyboard navigation', () => {
 
     act(() => {
       const record = itemAt(observers, 0);
-      record.callback([{ isIntersecting: true, target: record.target } as IntersectionObserverEntry], {} as IntersectionObserver);
+      record.callback(
+        [{ isIntersecting: true, target: record.target } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
     });
     await waitFor(() => expect(decode).toHaveBeenCalledTimes(2));
   });
@@ -288,7 +295,9 @@ describe('StepRail keyboard navigation', () => {
       fireEvent.scroll(list);
       expect(list.hasAttribute('data-scrolling')).toBe(true);
 
-      act(() => { vi.advanceTimersByTime(1_000); });
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
       expect(list.hasAttribute('data-scrolling')).toBe(false);
     } finally {
       vi.useRealTimers();
@@ -357,11 +366,23 @@ describe('StepRail keyboard navigation', () => {
 
   it('drops a step onto a heading from above to make it the section’s first step', async () => {
     // jsdom has no layout; give each row its own vertical slot so the keyboard can find the row below.
-    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
       const row = this.closest('li');
       const index = row ? Array.from(row.parentElement?.children ?? []).indexOf(row) : 0;
       const top = index * 100;
-      return { x: 0, y: top, top, bottom: top + 90, left: 0, right: 200, width: 200, height: 90, toJSON: () => ({}) } as DOMRect;
+      return {
+        x: 0,
+        y: top,
+        top,
+        bottom: top + 90,
+        left: 0,
+        right: 200,
+        width: 200,
+        height: 90,
+        toJSON: () => ({}),
+      } as DOMRect;
     });
     onTestFinished(() => rect.mockRestore());
     const onReorder = vi.fn().mockResolvedValue(undefined);
@@ -393,5 +414,4 @@ describe('StepRail keyboard navigation', () => {
       { kind: 'entry', id: 'step-3' },
     ]);
   });
-
 });

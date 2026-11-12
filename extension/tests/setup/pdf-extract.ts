@@ -77,8 +77,15 @@ export async function readPdf(blob: Blob): Promise<{
     }
     const convert = (node: PdfJsStructNode): StructureNode => {
       const children = (node.children ?? []).filter((child) => child.role !== undefined).map(convert);
-      const own = (node.children ?? []).filter((child) => child.type === 'content').map((child) => contentText.get(String(child.id)) ?? '');
-      return { role: node.role ?? '', ...(node.alt ? { alt: node.alt } : {}), text: [...own, ...children.map((child) => child.text)].join(''), children };
+      const own = (node.children ?? [])
+        .filter((child) => child.type === 'content')
+        .map((child) => contentText.get(String(child.id)) ?? '');
+      return {
+        role: node.role ?? '',
+        ...(node.alt ? { alt: node.alt } : {}),
+        text: [...own, ...children.map((child) => child.text)].join(''),
+        children,
+      };
     };
     structure.push(tree ? (tree.children ?? []).map(convert) : []);
   }

@@ -7,16 +7,19 @@ import { itemAt } from '../setup/item-at';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
 
-vi.mock('wxt/browser', async () =>
-  (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
+vi.mock('wxt/browser', async () => (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
 vi.mock('@/lib/storage/step-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/project-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/storage', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal),
+);
 vi.mock('@/lib/recording/background/pending-undo-store', async () =>
-  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks));
+  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks),
+);
 
 function recordingState(overrides: Partial<RecordingState> = {}): RecordingState {
   return makeRecordingState({
@@ -175,7 +178,7 @@ describe('follow-the-active-tab recording (steps mode)', () => {
     expect(mocks.executeScript).toHaveBeenCalled();
   });
 
-  it('follows the focused window\'s active tab on cross-window switches', async () => {
+  it("follows the focused window's active tab on cross-window switches", async () => {
     mocks.tabsQuery.mockResolvedValue([OTHER_TAB]);
     await importBackground();
     await flushAsyncWork();
@@ -352,7 +355,7 @@ describe('closing the tab a recording followed into', () => {
 describe('following a blank tab once it loads a page', () => {
   const LOADED_TAB = { id: 9, windowId: 2, active: true, url: 'https://typed.example/' };
 
-  it('follows the focused window\'s active tab when it finishes loading a recordable URL', async () => {
+  it("follows the focused window's active tab when it finishes loading a recordable URL", async () => {
     mocks.tabsQuery.mockResolvedValue([LOADED_TAB]);
     mocks.tabsGet.mockImplementation(async (tabId: number) => (tabId === 9 ? LOADED_TAB : RECORDED_TAB));
     await importBackground();

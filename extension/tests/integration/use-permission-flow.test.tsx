@@ -59,11 +59,15 @@ afterEach(() => {
 describe('starting a flow', () => {
   it('lets queued edits finish before it checks the source page', async () => {
     let finishQueued!: () => void;
-    const queued = new Promise<void>((resolve) => { finishQueued = resolve; });
+    const queued = new Promise<void>((resolve) => {
+      finishQueued = resolve;
+    });
     const { result } = renderFlow({ whenIdle: () => queued });
 
     let started!: Promise<void>;
-    act(() => { started = result.current.handleRecapture(); });
+    act(() => {
+      started = result.current.handleRecapture();
+    });
     // Held from the click, so no new edit can start meanwhile, but nothing is asked yet.
     expect(result.current.isPermissionFlowLocked()).toBe(true);
     expect(mocks.sendMessage).not.toHaveBeenCalled();
@@ -132,22 +136,25 @@ describe('continuation recording mode', () => {
   it.each([
     ['steps', 'snapshot'],
     ['snapshot', 'steps'],
-  ] as const)('defaults to the last entry (%s) and starts in the mode the user picked (%s)', async (lastEntryMode, picked) => {
-    answerStartWith('g1');
-    mocks.permissionsRequest.mockResolvedValue(true);
-    const { result } = renderFlow({ entryMode: () => lastEntryMode });
+  ] as const)(
+    'defaults to the last entry (%s) and starts in the mode the user picked (%s)',
+    async (lastEntryMode, picked) => {
+      answerStartWith('g1');
+      mocks.permissionsRequest.mockResolvedValue(true);
+      const { result } = renderFlow({ entryMode: () => lastEntryMode });
 
-    await act(() => result.current.handleContinueRecording());
-    expect(result.current.continuationMode).toBe(lastEntryMode);
+      await act(() => result.current.handleContinueRecording());
+      expect(result.current.continuationMode).toBe(lastEntryMode);
 
-    act(() => result.current.setContinuationMode(picked));
-    await act(() => result.current.confirmPreparedPermission());
+      act(() => result.current.setContinuationMode(picked));
+      await act(() => result.current.confirmPreparedPermission());
 
-    expect(mocks.sendMessage).toHaveBeenLastCalledWith({
-      type: 'START_RECORDING',
-      target: { kind: 'project', projectId: 'g1' },
-      mode: picked,
-      continuation: {},
-    });
-  });
+      expect(mocks.sendMessage).toHaveBeenLastCalledWith({
+        type: 'START_RECORDING',
+        target: { kind: 'project', projectId: 'g1' },
+        mode: picked,
+        continuation: {},
+      });
+    },
+  );
 });

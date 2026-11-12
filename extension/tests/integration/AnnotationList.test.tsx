@@ -100,5 +100,4 @@ describe('AnnotationList', () => {
 
     expect(onDelete).toHaveBeenCalledOnce();
   });
-
 });

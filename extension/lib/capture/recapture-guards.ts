@@ -22,9 +22,7 @@ function isSameExtensionPage(actualUrl: string | undefined, expectedUrl: string)
     const actual = new URL(actualUrl);
     const expected = new URL(expectedUrl);
     return (
-      actual.protocol === expected.protocol &&
-      actual.host === expected.host &&
-      actual.pathname === expected.pathname
+      actual.protocol === expected.protocol && actual.host === expected.host && actual.pathname === expected.pathname
     );
   } catch {
     return false;
@@ -34,10 +32,7 @@ function isSameExtensionPage(actualUrl: string | undefined, expectedUrl: string)
 /** Only the top-level editor document may issue editor-control messages.
  * Checking both sender.url (the actual frame) and tab.url (the top-level page)
  * prevents a child frame from inheriting trust from an editor tab. */
-export function isTrustedEditorSender(
-  sender: RecaptureMessageSender,
-  editorUrl: string,
-): boolean {
+export function isTrustedEditorSender(sender: RecaptureMessageSender, editorUrl: string): boolean {
   return (
     sender.frameId === 0 &&
     sender.tab?.id != null &&
@@ -58,14 +53,8 @@ function hasSessionQuery(url: string | undefined, expectedSessionId: string): bo
 /** Requires both the actual editor frame and its top-level tab to carry the
  * expected Project identity. Use this after (or together with) origin/path trust
  * checks for recapture controls whose payload/context names a session. */
-export function hasMatchingEditorSessionQuery(
-  sender: RecaptureMessageSender,
-  expectedSessionId: string,
-): boolean {
-  return (
-    hasSessionQuery(sender.url, expectedSessionId) &&
-    hasSessionQuery(sender.tab?.url, expectedSessionId)
-  );
+export function hasMatchingEditorSessionQuery(sender: RecaptureMessageSender, expectedSessionId: string): boolean {
+  return hasSessionQuery(sender.url, expectedSessionId) && hasSessionQuery(sender.tab?.url, expectedSessionId);
 }
 
 export function isTrustedEditorSenderForSession(
@@ -73,10 +62,7 @@ export function isTrustedEditorSenderForSession(
   editorUrl: string,
   expectedSessionId: string,
 ): boolean {
-  return (
-    isTrustedEditorSender(sender, editorUrl) &&
-    hasMatchingEditorSessionQuery(sender, expectedSessionId)
-  );
+  return isTrustedEditorSender(sender, editorUrl) && hasMatchingEditorSessionQuery(sender, expectedSessionId);
 }
 
 /** Recapture target messages are accepted only from the persisted, exact

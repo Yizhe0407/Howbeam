@@ -2,11 +2,28 @@ import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import { createRegionCapture, type RegionCapture } from '@/lib/capture/region-capture';
 import RecordingToolbar from '@/lib/recording/recording-toolbar';
-import { buildShieldTokenStorageKey, isSnapshotShieldTokenRecord, isSnapshotShieldFrameMessage, isSnapshotShieldInitMessage, SNAPSHOT_SHIELD_CANDIDATES, SNAPSHOT_SHIELD_CAPTURE_COMPLETE, SNAPSHOT_SHIELD_COMMIT, SNAPSHOT_SHIELD_CONTROL, SNAPSHOT_SHIELD_CONTROL_RESULT, SNAPSHOT_SHIELD_POINTER_DOWN, SNAPSHOT_SHIELD_POINTER_MOVE, SNAPSHOT_SHIELD_PREVIEW, SNAPSHOT_SHIELD_READY, SNAPSHOT_SHIELD_REGION_CAPTURE, SNAPSHOT_SHIELD_TOOLBAR_STATE, SNAPSHOT_SHIELD_UNDO, type SnapshotShieldKeyboardAnchor, type SnapshotShieldPortMessage, type WithoutToken } from '@/lib/recording/snapshot-shield-protocol';
 import {
-  RECORDING_CONTROL_TIMEOUT_MS,
-  SNAPSHOT_FREEZE_EVENTS,
-} from '@/lib/recording/content-script-constants';
+  buildShieldTokenStorageKey,
+  isSnapshotShieldTokenRecord,
+  isSnapshotShieldFrameMessage,
+  isSnapshotShieldInitMessage,
+  SNAPSHOT_SHIELD_CANDIDATES,
+  SNAPSHOT_SHIELD_CAPTURE_COMPLETE,
+  SNAPSHOT_SHIELD_COMMIT,
+  SNAPSHOT_SHIELD_CONTROL,
+  SNAPSHOT_SHIELD_CONTROL_RESULT,
+  SNAPSHOT_SHIELD_POINTER_DOWN,
+  SNAPSHOT_SHIELD_POINTER_MOVE,
+  SNAPSHOT_SHIELD_PREVIEW,
+  SNAPSHOT_SHIELD_READY,
+  SNAPSHOT_SHIELD_REGION_CAPTURE,
+  SNAPSHOT_SHIELD_TOOLBAR_STATE,
+  SNAPSHOT_SHIELD_UNDO,
+  type SnapshotShieldKeyboardAnchor,
+  type SnapshotShieldPortMessage,
+  type WithoutToken,
+} from '@/lib/recording/snapshot-shield-protocol';
+import { RECORDING_CONTROL_TIMEOUT_MS, SNAPSHOT_FREEZE_EVENTS } from '@/lib/recording/content-script-constants';
 import type { RecordingControlMessage, RecordingControlResult } from '@/lib/runtime/messages';
 import { nextCandidateIndex } from '@/lib/capture/snapshot-candidates';
 import { isDocumentScrollingKey } from '@/lib/recording/recording-guards';
@@ -31,9 +48,7 @@ void initLocalePreference();
 
 // Same freeze list as the frozen page, except pointerdown (its own handler
 // consumes selectively) and submit (nothing here can host a form submission).
-const FREEZE_EVENTS = SNAPSHOT_FREEZE_EVENTS.filter(
-  (type) => type !== 'pointerdown' && type !== 'submit',
-);
+const FREEZE_EVENTS = SNAPSHOT_FREEZE_EVENTS.filter((type) => type !== 'pointerdown' && type !== 'submit');
 
 // The frame URL only carries a public frame key; the secret init token is fetched
 // from extension storage (frame URLs leak via resource timing, so a URL-borne
@@ -348,12 +363,15 @@ function tryInitialize(event: MessageEvent): void {
     }
     // Leave any focused control so Enter commits the candidate instead of activating it;
     // the iframe keeps document focus.
-    if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) document.activeElement.blur();
+    if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body)
+      document.activeElement.blur();
     keyboardIndex = nextCandidateIndex(keyboardIndex, keyboardAnchors.length, delta);
     const anchor = keyboardAnchors[keyboardIndex];
     if (!anchor) return;
     hover.setAnchor(anchor.x, anchor.y);
-    announce(t().shield.candidate(keyboardIndex + 1, keyboardAnchors.length, anchor.label || t().shield.unnamedElement));
+    announce(
+      t().shield.candidate(keyboardIndex + 1, keyboardAnchors.length, anchor.label || t().shield.unnamedElement),
+    );
   };
 
   const commitCurrent = () => {
@@ -417,7 +435,6 @@ function tryInitialize(event: MessageEvent): void {
   liveRegion.setAttribute('role', 'status');
   liveRegion.setAttribute('aria-live', 'polite');
   document.body.append(liveRegion);
-
 
   port.onmessage = (event) => {
     if (!isSnapshotShieldFrameMessage(event.data, token)) return;
@@ -510,9 +527,13 @@ function tryInitialize(event: MessageEvent): void {
   };
 
   window.addEventListener('pointermove', onPointerMove, { capture: true, passive: true });
-  window.addEventListener('pointerout', (event) => {
-    if (!event.relatedTarget) clearHover();
-  }, { capture: true });
+  window.addEventListener(
+    'pointerout',
+    (event) => {
+      if (!event.relatedTarget) clearHover();
+    },
+    { capture: true },
+  );
   window.addEventListener('pointerdown', onPointerDown, { capture: true, passive: false });
   // Registered ahead of every other key handler, blind to the toolbar exemption
   // below: a scrolling key that reaches the browser scrolls the frozen page

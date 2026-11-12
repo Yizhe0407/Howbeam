@@ -76,15 +76,22 @@ async function expectRealRootScrollbar(page: Parameters<typeof startRecording>[0
   return state.geometry;
 }
 
-async function expectPresentationRestored(page: Parameters<typeof startRecording>[0], baseline: Geometry): Promise<void> {
-  await expect.poll(() => page.evaluate(() => window.capturePresentationMonitor)).toMatchObject({
-    baseline,
-    hidden: baseline,
-    restored: baseline,
-  });
-  await expect.poll(() => page.evaluate(() => (
-    getComputedStyle(document.documentElement, '::-webkit-scrollbar-thumb').backgroundColor
-  ))).toBe('rgb(255, 0, 255)');
+async function expectPresentationRestored(
+  page: Parameters<typeof startRecording>[0],
+  baseline: Geometry,
+): Promise<void> {
+  await expect
+    .poll(() => page.evaluate(() => window.capturePresentationMonitor))
+    .toMatchObject({
+      baseline,
+      hidden: baseline,
+      restored: baseline,
+    });
+  await expect
+    .poll(() =>
+      page.evaluate(() => getComputedStyle(document.documentElement, '::-webkit-scrollbar-thumb').backgroundColor),
+    )
+    .toBe('rgb(255, 0, 255)');
 }
 
 async function paintInteractionHostRose(

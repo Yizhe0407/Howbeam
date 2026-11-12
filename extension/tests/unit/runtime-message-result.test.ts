@@ -20,26 +20,25 @@ import {
 describe('requireRuntimeMessageResult', () => {
   it('returns a response only after its contract-specific guard accepts it', () => {
     const result = { ok: true as const, value: 3 };
-    const guard: RuntimeMessageResultGuard<typeof result> = (value): value is typeof result => (
+    const guard: RuntimeMessageResultGuard<typeof result> = (value): value is typeof result =>
       typeof value === 'object' &&
       value !== null &&
       (value as { ok?: unknown }).ok === true &&
-      (value as { value?: unknown }).value === 3
-    );
+      (value as { value?: unknown }).value === 3;
     expect(requireRuntimeMessageResult(result, guard)).toBe(result);
   });
 
   it.each([null, undefined, {}, { ok: 'yes' }, { ok: true, value: 'wrong' }])(
     'turns a missing or contract-invalid response into a useful transport error: %j',
     (value) => {
-      const guard = (candidate: unknown): candidate is { ok: true; value: number } => (
+      const guard = (candidate: unknown): candidate is { ok: true; value: number } =>
         typeof candidate === 'object' &&
         candidate !== null &&
         (candidate as { ok?: unknown }).ok === true &&
-        typeof (candidate as { value?: unknown }).value === 'number'
+        typeof (candidate as { value?: unknown }).value === 'number';
+      expect(() => requireRuntimeMessageResult(value, guard, 'background unavailable')).toThrow(
+        'background unavailable',
       );
-      expect(() => requireRuntimeMessageResult(value, guard, 'background unavailable'))
-        .toThrow('background unavailable');
     },
   );
 });
@@ -56,7 +55,11 @@ describe('runtime response contracts', () => {
     ['open library', isOpenLibraryResult, { ok: true }],
     ['editor handoff consenting to navigation', isEditorHandoffResult, { ok: true, ready: false }],
     ['editor handoff already showing the target', isEditorHandoffResult, { ok: true, ready: true }],
-    ['editor handoff refused by an unsaved description', isEditorHandoffResult, { ok: false, error: 'editor.descriptionSaveRetry' }],
+    [
+      'editor handoff refused by an unsaved description',
+      isEditorHandoffResult,
+      { ok: false, error: 'editor.descriptionSaveRetry' },
+    ],
     [
       'recording control',
       isRecordingControlResult,
@@ -82,11 +85,7 @@ describe('runtime response contracts', () => {
         permissionPattern: 'https://example.com/*',
       },
     ],
-    [
-      'start recapture',
-      isStartStepRecaptureResult,
-      { ok: true, runId: 'run-1', tabId: 5, reusedTab: true },
-    ],
+    ['start recapture', isStartStepRecaptureResult, { ok: true, runId: 'run-1', tabId: 5, reusedTab: true }],
     ['focus recapture source', isFocusStepRecaptureSourceResult, { ok: true }],
     ['cancel recapture', isCancelStepRecaptureResult, { ok: true, status: 'already-completed' }],
     ['click capture', isClickCaptureResult, { ok: false, error: 'wrong-phase' }],

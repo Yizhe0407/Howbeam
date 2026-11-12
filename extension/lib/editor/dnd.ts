@@ -71,14 +71,12 @@ function createSortableAccessibility(
     screenReaderInstructions: { draggable: copy().keyboardInstructions },
     announcements: {
       onDragStart: ({ active }) => copy().dragStart(describe(active.id)),
-      onDragOver: ({ active, over }) => (
-        over ? copy().dragOver(describe(active.id), positionOf(active.id, active.id, over.id)) : undefined
-      ),
-      onDragEnd: ({ active, over }) => (
+      onDragOver: ({ active, over }) =>
+        over ? copy().dragOver(describe(active.id), positionOf(active.id, active.id, over.id)) : undefined,
+      onDragEnd: ({ active, over }) =>
         over
           ? copy().dragEnd(describe(active.id), positionOf(active.id, active.id, over.id))
-          : copy().dragEndInPlace(describe(active.id))
-      ),
+          : copy().dragEndInPlace(describe(active.id)),
       onDragCancel: ({ active }) => copy().dragCancel(describe(active.id)),
     },
   };

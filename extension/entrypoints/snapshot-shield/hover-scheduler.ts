@@ -156,11 +156,7 @@ export function createHoverScheduler(deps: HoverSchedulerDeps): HoverScheduler {
       if (response.requestId !== pendingRequestId) return 'ignored';
       const responsePointRevision = pendingPointRevision;
       clearPending();
-      if (
-        deps.isCapturing() ||
-        response.requestId !== latestRequestId ||
-        responsePointRevision !== pointRevision
-      ) {
+      if (deps.isCapturing() || response.requestId !== latestRequestId || responsePointRevision !== pointRevision) {
         return 'stale';
       }
       return 'accepted';

@@ -54,13 +54,15 @@ export function useEditorLock(projectId: string | null): { state: EditorLockStat
       console.error('[howbeam] failed to lock the Project for this editor', error);
       setLock({ projectId, state: 'held' });
     };
-    void locks.request(name, { ifAvailable: true }, (granted) => {
-      if (granted) return hold();
-      if (waiting.signal.aborted) return undefined;
-      setLock({ projectId, state: 'elsewhere' });
-      void locks.request(name, { signal: waiting.signal }, hold).catch(failed);
-      return undefined;
-    }).catch(failed);
+    void locks
+      .request(name, { ifAvailable: true }, (granted) => {
+        if (granted) return hold();
+        if (waiting.signal.aborted) return undefined;
+        setLock({ projectId, state: 'elsewhere' });
+        void locks.request(name, { signal: waiting.signal }, hold).catch(failed);
+        return undefined;
+      })
+      .catch(failed);
     return () => {
       waiting.abort();
       release();

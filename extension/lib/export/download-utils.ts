@@ -70,7 +70,8 @@ export async function downloadBlobViaBrowser(
     } catch (rejection) {
       throw new DownloadFailedError(rejection);
     }
-    if (typeof downloadId !== 'number') throw new DownloadFailedError(new UserMessageError(t().export.downloadNotStarted));
+    if (typeof downloadId !== 'number')
+      throw new DownloadFailedError(new UserMessageError(t().export.downloadNotStarted));
     revokeWhenDownloadSettles(downloadId, url);
   } catch (downloadError) {
     // Nothing was queued, so no consumer is left holding the URL.

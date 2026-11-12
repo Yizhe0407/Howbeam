@@ -9,7 +9,11 @@ import { t } from '@/lib/shared/i18n';
  * revision its mutation produced, so it ends as soon as the Project moves on. A newer undo simply
  * replaces it on the snackbar; when nothing replaces it, a toast says it is now final.
  */
-export function useProjectUndo({ project, operationActive, projectDeleted = false }: {
+export function useProjectUndo({
+  project,
+  operationActive,
+  projectDeleted = false,
+}: {
   project: Project | null;
   operationActive: boolean;
   /** A deleted Project has nothing left to undo into; its undo ends silently. */
@@ -31,12 +35,15 @@ export function useProjectUndo({ project, operationActive, projectDeleted = fals
   }, []);
 
   /** Why `action` can no longer be offered, if it can't: 'gone' when its Project is. */
-  const invalidity = useCallback((action: UndoAction): 'gone' | 'moved' | null => {
-    const latest = latestProject.current;
-    if (!latest || projectDeleted || action.projectId !== latest.id) return 'gone';
-    if (operationActive || action.expectedRevision !== latest.contentRevision) return 'moved';
-    return null;
-  }, [operationActive, projectDeleted]);
+  const invalidity = useCallback(
+    (action: UndoAction): 'gone' | 'moved' | null => {
+      const latest = latestProject.current;
+      if (!latest || projectDeleted || action.projectId !== latest.id) return 'gone';
+      if (operationActive || action.expectedRevision !== latest.contentRevision) return 'moved';
+      return null;
+    },
+    [operationActive, projectDeleted],
+  );
 
   useEffect(() => {
     latestProject.current = project;
@@ -49,9 +56,12 @@ export function useProjectUndo({ project, operationActive, projectDeleted = fals
   }, [project, invalidity, publish]);
 
   /** Offers a new undo, replacing any earlier one on the snackbar. */
-  const offerUndo = useCallback((pending: PendingUndoAction, projectId: string) => {
-    publish({ ...pending, id: ++undoSequence.current, projectId });
-  }, [publish]);
+  const offerUndo = useCallback(
+    (pending: PendingUndoAction, projectId: string) => {
+      publish({ ...pending, id: ++undoSequence.current, projectId });
+    },
+    [publish],
+  );
 
   /** Takes the pending undo out of play while another mutation runs: it can no longer expire or
    * be invalidated. It stays on screen until the mutation's outcome replaces it, so the notice
@@ -64,23 +74,29 @@ export function useProjectUndo({ project, operationActive, projectDeleted = fals
   }, []);
 
   /** Puts a taken undo back after a mutation that changed nothing, if it is still valid and on screen. */
-  const returnUndo = useCallback((taken: UndoAction | null) => {
-    if (!taken || current.current || displayed.current !== taken) return;
-    const reason = invalidity(taken);
-    if (!reason) {
-      publish(taken);
-      return;
-    }
-    publish(null);
-    if (reason === 'moved') toast(t().editor.undo.nowFinal(taken.message));
-  }, [invalidity, publish]);
+  const returnUndo = useCallback(
+    (taken: UndoAction | null) => {
+      if (!taken || current.current || displayed.current !== taken) return;
+      const reason = invalidity(taken);
+      if (!reason) {
+        publish(taken);
+        return;
+      }
+      publish(null);
+      if (reason === 'moved') toast(t().editor.undo.nowFinal(taken.message));
+    },
+    [invalidity, publish],
+  );
 
   /** Tells the user a taken undo became final without a new undo to say it on. */
-  const finalizeUndo = useCallback((taken: UndoAction | null) => {
-    if (!taken || displayed.current !== taken) return;
-    publish(null);
-    toast(t().editor.undo.nowFinal(taken.message));
-  }, [publish]);
+  const finalizeUndo = useCallback(
+    (taken: UndoAction | null) => {
+      if (!taken || displayed.current !== taken) return;
+      publish(null);
+      toast(t().editor.undo.nowFinal(taken.message));
+    },
+    [publish],
+  );
 
   const clearUndo = useCallback(() => publish(null), [publish]);
 

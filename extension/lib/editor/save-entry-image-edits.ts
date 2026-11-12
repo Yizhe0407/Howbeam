@@ -41,7 +41,8 @@ function assertStorable({ redactions, imageEdits }: SplitItems): void {
   }
   const ids = new Set<string>();
   for (const redaction of redactions) {
-    if (!isValidRedaction(redaction) || ids.has(redaction.id)) throw new ImageEditsNotStorableError('Invalid privacy mask.');
+    if (!isValidRedaction(redaction) || ids.has(redaction.id))
+      throw new ImageEditsNotStorableError('Invalid privacy mask.');
     ids.add(redaction.id);
   }
   ids.clear();
@@ -52,7 +53,10 @@ function assertStorable({ redactions, imageEdits }: SplitItems): void {
 }
 
 /** The box fields an ordinary step stores for what the editor left: moved, removed, or as detected. */
-function boxChanges(step: Step, box: SplitItems['highlights'][number] | undefined): Pick<Step, 'manualBounds' | 'highlightRemoved'> {
+function boxChanges(
+  step: Step,
+  box: SplitItems['highlights'][number] | undefined,
+): Pick<Step, 'manualBounds' | 'highlightRemoved'> {
   if (!box) return step.bounds ? { manualBounds: undefined, highlightRemoved: true } : {};
   return { manualBounds: sameBounds(box.bounds, step.bounds) ? undefined : box.bounds, highlightRemoved: undefined };
 }
@@ -80,18 +84,27 @@ export async function saveEntryImageEdits(
     ...(base.confirmReview ? { redactionReviewRequired: false } : {}),
   };
   if (entry.kind === 'group') {
-    await saveSnapshotImageAtomically(owner.sessionId, owner.id, changes, items.highlights, {
-      captureRevision: owner.captureRevision ?? 0,
-      imageEditRevision: base.imageEditRevision,
-      annotationIds: base.annotationIds,
-    }, base.removed);
+    await saveSnapshotImageAtomically(
+      owner.sessionId,
+      owner.id,
+      changes,
+      items.highlights,
+      {
+        captureRevision: owner.captureRevision ?? 0,
+        imageEditRevision: base.imageEditRevision,
+        annotationIds: base.annotationIds,
+      },
+      base.removed,
+    );
   } else {
-    await updateStepsAtomically(owner.sessionId, [{
-      id: owner.id,
-      changes: { ...changes, ...boxChanges(entry.step, items.highlights[0]) },
-      expectedCaptureRevision: owner.captureRevision ?? 0,
-      expectedImageEditRevision: base.imageEditRevision,
-    }]);
+    await updateStepsAtomically(owner.sessionId, [
+      {
+        id: owner.id,
+        changes: { ...changes, ...boxChanges(entry.step, items.highlights[0]) },
+        expectedCaptureRevision: owner.captureRevision ?? 0,
+        expectedImageEditRevision: base.imageEditRevision,
+      },
+    ]);
   }
   // Every write of these fields moves the revision forward by exactly one.
   return base.imageEditRevision + 1;
@@ -104,8 +117,10 @@ export async function isEntryImageStale(entry: StepEntry, imageEditRevision: num
   const owner = getEntryImageOwner(entry);
   const stored = await getStep(owner.id);
   if (!stored) return true;
-  return (stored.imageEditRevision ?? 0) !== imageEditRevision
-    || (stored.captureRevision ?? 0) !== (owner.captureRevision ?? 0);
+  return (
+    (stored.imageEditRevision ?? 0) !== imageEditRevision ||
+    (stored.captureRevision ?? 0) !== (owner.captureRevision ?? 0)
+  );
 }
 
 /** The entry as storage holds it now, or null when it no longer exists. */

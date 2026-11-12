@@ -20,8 +20,11 @@ interface StoredOffer extends UndoOffer {
 function readStored(value: unknown): StoredOffer | null {
   if (!value || typeof value !== 'object') return null;
   const v = value as Partial<StoredOffer>;
-  return typeof v.token === 'string' && typeof v.runId === 'string' && Number.isFinite(v.itemNumber)
-    && Number.isFinite(v.expiresAt) && Number.isFinite(v.itemCount)
+  return typeof v.token === 'string' &&
+    typeof v.runId === 'string' &&
+    Number.isFinite(v.itemNumber) &&
+    Number.isFinite(v.expiresAt) &&
+    Number.isFinite(v.itemCount)
     ? (v as StoredOffer)
     : null;
 }
@@ -41,16 +44,21 @@ export function useToolbarUndo(runId: string, itemCount: number) {
 
   useEffect(() => {
     let disposed = false;
-    void browser.storage.local.get(RECORDING_TOOLBAR_UNDO_KEY).then((result) => {
-      if (disposed) return;
-      const saved = readStored(result?.[RECORDING_TOOLBAR_UNDO_KEY]);
-      if (saved && saved.runId === runId && saved.expiresAt > Date.now() && saved.itemCount === countRef.current) {
-        settled.current = true;
-        hasOffer.current = true;
-        setStored(saved);
-      }
-    }).catch(() => undefined);
-    return () => { disposed = true; };
+    void browser.storage.local
+      .get(RECORDING_TOOLBAR_UNDO_KEY)
+      .then((result) => {
+        if (disposed) return;
+        const saved = readStored(result?.[RECORDING_TOOLBAR_UNDO_KEY]);
+        if (saved && saved.runId === runId && saved.expiresAt > Date.now() && saved.itemCount === countRef.current) {
+          settled.current = true;
+          hasOffer.current = true;
+          setStored(saved);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      disposed = true;
+    };
   }, [runId]);
 
   const hasOffer = useRef(false);
@@ -61,15 +69,18 @@ export function useToolbarUndo(runId: string, itemCount: number) {
     void browser.storage.local.remove(RECORDING_TOOLBAR_UNDO_KEY).catch(() => undefined);
   }, []);
 
-  const offer = useCallback((next: UndoOffer, countAfterUndo: number) => {
-    const record: StoredOffer = { ...next, runId, expiresAt: Date.now() + UNDO_WINDOW_MS, itemCount: countAfterUndo };
-    settled.current = false;
-    hasOffer.current = true;
-    setStored(record);
-    void browser.storage.local.set({ [RECORDING_TOOLBAR_UNDO_KEY]: record }).catch((error) => {
-      console.warn('[howbeam] failed to save the undo offer', error);
-    });
-  }, [runId]);
+  const offer = useCallback(
+    (next: UndoOffer, countAfterUndo: number) => {
+      const record: StoredOffer = { ...next, runId, expiresAt: Date.now() + UNDO_WINDOW_MS, itemCount: countAfterUndo };
+      settled.current = false;
+      hasOffer.current = true;
+      setStored(record);
+      void browser.storage.local.set({ [RECORDING_TOOLBAR_UNDO_KEY]: record }).catch((error) => {
+        console.warn('[howbeam] failed to save the undo offer', error);
+      });
+    },
+    [runId],
+  );
 
   const expiresAt = stored?.expiresAt;
   useEffect(() => {

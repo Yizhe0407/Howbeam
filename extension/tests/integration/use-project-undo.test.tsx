@@ -26,7 +26,9 @@ describe('useProjectUndo', () => {
     const { result, rerender } = renderUndo();
     act(() => result.current.offerUndo(pending('已刪除步驟 3', 2), 'p1'));
 
-    act(() => { result.current.takeUndo(); });
+    act(() => {
+      result.current.takeUndo();
+    });
     rerender({ project: projectAt(3) });
     act(() => result.current.offerUndo(pending('已刪除步驟 2', 3), 'p1'));
 
@@ -39,7 +41,9 @@ describe('useProjectUndo', () => {
     const { result, rerender } = renderUndo();
     act(() => result.current.offerUndo(pending('已刪除步驟 3', 2), 'p1'));
 
-    act(() => { result.current.takeUndo(); });
+    act(() => {
+      result.current.takeUndo();
+    });
     expect(result.current.undoAction).toMatchObject({ message: '已刪除步驟 3' });
 
     rerender({ project: projectAt(3) });
@@ -54,7 +58,9 @@ describe('useProjectUndo', () => {
     const { result, rerender } = renderUndo();
     act(() => result.current.offerUndo(pending('已刪除步驟 3', 2), 'p1'));
     let taken = null as ReturnType<typeof result.current.takeUndo>;
-    act(() => { taken = result.current.takeUndo(); });
+    act(() => {
+      taken = result.current.takeUndo();
+    });
 
     rerender({ project: projectAt(3) });
     act(() => result.current.returnUndo(taken));
@@ -78,11 +84,15 @@ describe('useProjectUndo', () => {
     act(() => result.current.offerUndo(pending('已刪除步驟 3', 2), 'p1'));
 
     let taken = null as ReturnType<typeof result.current.takeUndo>;
-    act(() => { taken = result.current.takeUndo(); });
+    act(() => {
+      taken = result.current.takeUndo();
+    });
     act(() => result.current.returnUndo(taken));
     expect(result.current.undoAction).toMatchObject({ message: '已刪除步驟 3' });
 
-    act(() => { taken = result.current.takeUndo(); });
+    act(() => {
+      taken = result.current.takeUndo();
+    });
     act(() => result.current.finalizeUndo(taken));
     expect(result.current.undoAction).toBeNull();
     expect(toast).toHaveBeenCalledWith('「已刪除步驟 3」已無法還原。');
@@ -93,14 +103,15 @@ describe('useProjectUndo', () => {
     act(() => result.current.offerUndo(pending('已刪除步驟 3', 2), 'p1'));
 
     let taken = null as ReturnType<typeof result.current.takeUndo>;
-    act(() => { taken = result.current.takeUndo(); });
+    act(() => {
+      taken = result.current.takeUndo();
+    });
     act(() => result.current.clearUndo());
 
     act(() => result.current.returnUndo(taken));
     expect(result.current.undoAction).toBeNull();
     act(() => result.current.finalizeUndo(taken));
     expect(toast).not.toHaveBeenCalled();
-
   });
 
   it('offers for use only the undo in play, not one a running mutation took', () => {
@@ -108,7 +119,9 @@ describe('useProjectUndo', () => {
     act(() => result.current.offerUndo(pending('已刪除步驟 3', 2), 'p1'));
     expect(result.current.offeredUndo()).toMatchObject({ message: '已刪除步驟 3' });
 
-    act(() => { result.current.takeUndo(); });
+    act(() => {
+      result.current.takeUndo();
+    });
     expect(result.current.offeredUndo()).toBeNull();
   });
 

@@ -6,7 +6,9 @@ import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 
 const database = await vi.hoisted(async () => (await import('../setup/editor-app-mocks')).makeEditorDatabaseMocks());
 
-const recordingSession = await vi.hoisted(async () => (await import('../setup/editor-app-mocks')).makeRecordingSessionMocks());
+const recordingSession = await vi.hoisted(async () =>
+  (await import('../setup/editor-app-mocks')).makeRecordingSessionMocks(),
+);
 
 const browserApi = vi.hoisted(() => ({
   sendMessage: vi.fn(),
@@ -79,10 +81,7 @@ vi.mock('@/components/editor/StepRail', () => ({
   default: (props: any) => {
     rendered.stepRailProps = props;
     return (
-      <aside
-        aria-label="StepRail test double"
-        data-reorder-disabled={String(props.reorderDisabled)}
-      >
+      <aside aria-label="StepRail test double" data-reorder-disabled={String(props.reorderDisabled)}>
         <output data-testid="rail-selected">{props.selectedEntryId}</output>
         <output data-testid="rail-sections">
           {(props.sections ?? []).map((section: any) => `${section.title}:${section.startEntryId}`).join('|')}
@@ -105,11 +104,7 @@ vi.mock('@/components/editor/StepStage', () => ({
     rendered.stepStageProps = props;
     const id = database.entryId(props.entry);
     return (
-      <main
-        aria-label="StepStage test double"
-        data-entry-id={id}
-        data-editing-disabled={String(props.editingDisabled)}
-      >
+      <main aria-label="StepStage test double" data-entry-id={id} data-editing-disabled={String(props.editingDisabled)}>
         <button type="button" disabled={props.editingDisabled} onClick={() => void props.onRecapture()}>
           準備重拍
         </button>
@@ -277,9 +272,9 @@ describe('Editor App structure wiring', () => {
 
     await screen.findByRole('button', { name: '準備重拍' });
     await rendered.stepRailProps.onSelect('entry-2', { additive: false, range: false });
-    await waitFor(() => expect(
-      screen.getByLabelText('StepStage test double').getAttribute('data-entry-id'),
-    ).toBe('entry-2'));
+    await waitFor(() =>
+      expect(screen.getByLabelText('StepStage test double').getAttribute('data-entry-id')).toBe('entry-2'),
+    );
     fireEvent.click(screen.getByRole('button', { name: '準備重拍' }));
 
     expect(await screen.findByText('https://fresh.example')).toBeTruthy();
@@ -296,11 +291,13 @@ describe('Editor App structure wiring', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: '允許並開始' }));
-    await waitFor(() => expect(browserApi.sendMessage).toHaveBeenCalledWith({
-      type: 'START_STEP_RECAPTURE',
-      sessionId: 'project-1',
-      target: { kind: 'single', stepId: 'entry-2' },
-    }));
+    await waitFor(() =>
+      expect(browserApi.sendMessage).toHaveBeenCalledWith({
+        type: 'START_STEP_RECAPTURE',
+        sessionId: 'project-1',
+        target: { kind: 'single', stepId: 'entry-2' },
+      }),
+    );
     expect(browserApi.requestPermission).toHaveBeenCalledWith({ origins: ['https://fresh.example/*'] });
   });
 
@@ -320,9 +317,9 @@ describe('Editor App structure wiring', () => {
 
     await screen.findByRole('button', { name: '準備重拍' });
     await rendered.stepRailProps.onSelect('entry-2', { additive: false, range: false });
-    await waitFor(() => expect(
-      screen.getByLabelText('StepStage test double').getAttribute('data-entry-id'),
-    ).toBe('entry-2'));
+    await waitFor(() =>
+      expect(screen.getByLabelText('StepStage test double').getAttribute('data-entry-id')).toBe('entry-2'),
+    );
     fireEvent.click(screen.getByRole('button', { name: '準備重拍' }));
 
     const dialog = await screen.findByRole('dialog');
@@ -347,7 +344,9 @@ describe('Editor App structure wiring', () => {
 describe('Editor App and changes from other tabs', () => {
   it('locks editing and says so when the Project is deleted in another tab', async () => {
     render(<EditorApp />);
-    await waitFor(() => expect(screen.getByLabelText('StepStage test double').getAttribute('data-editing-disabled')).toBe('false'));
+    await waitFor(() =>
+      expect(screen.getByLabelText('StepStage test double').getAttribute('data-editing-disabled')).toBe('false'),
+    );
 
     silenceIntentionalErrorLogs();
     database.getProject.mockResolvedValue(undefined);
@@ -365,7 +364,11 @@ describe('Editor App and changes from other tabs', () => {
     await waitFor(() => expect(rendered.stepStageProps?.projectTitle).toBe('結構測試教學'));
 
     database.getProjectStructureSnapshot.mockClear();
-    database.getProject.mockResolvedValue({ ...project, title: '別的分頁改的標題', metadataRevision: project.metadataRevision + 1 });
+    database.getProject.mockResolvedValue({
+      ...project,
+      title: '別的分頁改的標題',
+      metadataRevision: project.metadataRevision + 1,
+    });
     notifyProjectsChanged();
 
     await waitFor(() => expect(rendered.stepStageProps.projectTitle).toBe('別的分頁改的標題'));
@@ -431,9 +434,11 @@ describe('Editor continuation on another page (改在其他頁面接續)', () =>
       expect.objectContaining({ type: 'PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION', afterEntryId: 'entry-1' }),
     );
     fireEvent.click(within(dialog).getByRole('button', { name: '允許並開始' }));
-    await waitFor(() => expect(browserApi.sendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'START_RECORDING', insertAfterEntryId: 'entry-1' }),
-    ));
+    await waitFor(() =>
+      expect(browserApi.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'START_RECORDING', insertAfterEntryId: 'entry-1' }),
+      ),
+    );
   });
 
   it('opens an explicit tab picker that skips preselecting the last-step URL tab', async () => {
@@ -460,12 +465,19 @@ describe('Editor continuation on another page (改在其他頁面接續)', () =>
       '最近的分頁recent.example',
       '較舊的分頁old.example',
     ]);
-    expect(within(picker).getByRole('radio', { name: /最近的分頁/ }).getAttribute('aria-checked')).toBe('true');
-    expect(within(picker).getByRole('radio', { name: /來源頁面/ }).getAttribute('aria-checked')).toBe('false');
+    expect(
+      within(picker)
+        .getByRole('radio', { name: /最近的分頁/ })
+        .getAttribute('aria-checked'),
+    ).toBe('true');
+    expect(
+      within(picker)
+        .getByRole('radio', { name: /來源頁面/ })
+        .getAttribute('aria-checked'),
+    ).toBe('false');
     // Nothing starts until the user confirms a pick.
     expect(browserApi.tabsUpdate).not.toHaveBeenCalled();
-    expect(browserApi.sendMessage.mock.calls.map(([message]: any[]) => message.type))
-      .not.toContain('START_RECORDING');
+    expect(browserApi.sendMessage.mock.calls.map(([message]: any[]) => message.type)).not.toContain('START_RECORDING');
   });
 
   it('starts a plain recording in the picked tab after explicit confirmation', async () => {
@@ -489,14 +501,20 @@ describe('Editor continuation on another page (改在其他頁面接續)', () =>
 
     // The user overrides the preselection with an explicit pick.
     fireEvent.click(within(picker).getByRole('radio', { name: /較舊的分頁/ }));
-    expect(within(picker).getByRole('radio', { name: /較舊的分頁/ }).getAttribute('aria-checked')).toBe('true');
+    expect(
+      within(picker)
+        .getByRole('radio', { name: /較舊的分頁/ })
+        .getAttribute('aria-checked'),
+    ).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: '開始錄製' }));
 
-    await waitFor(() => expect(browserApi.sendMessage).toHaveBeenCalledWith({
-      type: 'START_RECORDING',
-      target: { kind: 'project', projectId: 'project-1' },
-      mode: 'steps',
-    }));
+    await waitFor(() =>
+      expect(browserApi.sendMessage).toHaveBeenCalledWith({
+        type: 'START_RECORDING',
+        target: { kind: 'project', projectId: 'project-1' },
+        mode: 'steps',
+      }),
+    );
     const startCall = browserApi.sendMessage.mock.calls
       .map(([message]: any[]) => message)
       .find((message: any) => message.type === 'START_RECORDING');
@@ -526,8 +544,7 @@ describe('Editor continuation on another page (改在其他頁面接續)', () =>
     await within(dialog).findByText('找不到可錄製的一般網頁分頁，請先開啟要接續錄製的網站。');
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(browserApi.tabsUpdate).not.toHaveBeenCalled();
-    expect(browserApi.sendMessage.mock.calls.map(([message]: any[]) => message.type))
-      .not.toContain('START_RECORDING');
+    expect(browserApi.sendMessage.mock.calls.map(([message]: any[]) => message.type)).not.toContain('START_RECORDING');
   });
 
   it('opens the dialog in elsewhere-only mode when the Project has no continuation source', async () => {
@@ -562,14 +579,20 @@ describe('Editor continuation on another page (改在其他頁面接續)', () =>
 
     // With no last-step URL to avoid, the picker preselects the sole tab.
     const picker = await screen.findByRole('radiogroup', { name: '選擇要接續錄製的分頁' });
-    expect(within(picker).getByRole('radio', { name: /elsewhere\.example/ }).getAttribute('aria-checked')).toBe('true');
+    expect(
+      within(picker)
+        .getByRole('radio', { name: /elsewhere\.example/ })
+        .getAttribute('aria-checked'),
+    ).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: '開始錄製' }));
 
-    await waitFor(() => expect(browserApi.sendMessage).toHaveBeenCalledWith({
-      type: 'START_RECORDING',
-      target: { kind: 'project', projectId: 'project-1' },
-      mode: 'steps',
-    }));
+    await waitFor(() =>
+      expect(browserApi.sendMessage).toHaveBeenCalledWith({
+        type: 'START_RECORDING',
+        target: { kind: 'project', projectId: 'project-1' },
+        mode: 'steps',
+      }),
+    );
     expect(browserApi.requestPermission).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
@@ -596,7 +619,8 @@ describe('editor handoff answers (單一編輯器分頁)', () => {
     await mountEditor();
 
     const reply = await act(async () =>
-      handoff({ type: 'EDITOR_HANDOFF', sessionId: 'project-1', entryId: 'entry-3' }));
+      handoff({ type: 'EDITOR_HANDOFF', sessionId: 'project-1', entryId: 'entry-3' }),
+    );
 
     expect(reply).toEqual({ ok: true, ready: true });
     expect(editorSave.flushAll).toHaveBeenCalled();
@@ -637,7 +661,11 @@ describe('editor handoff answers (單一編輯器分頁)', () => {
   it.each<[string, unknown, unknown]>([
     ['another message type', { type: 'HOWBEAM_STOP' }, {}],
     ['a handoff without a Project', { type: 'EDITOR_HANDOFF' }, {}],
-    ['a handoff relayed from a tab rather than the background', { type: 'EDITOR_HANDOFF', sessionId: 'project-2' }, { tab: { id: 9 } }],
+    [
+      'a handoff relayed from a tab rather than the background',
+      { type: 'EDITOR_HANDOFF', sessionId: 'project-2' },
+      { tab: { id: 9 } },
+    ],
   ])('leaves %s untouched instead of answering it', async (_label, message, sender) => {
     await mountEditor();
 

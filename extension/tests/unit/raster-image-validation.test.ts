@@ -16,14 +16,36 @@ function png(width: number, height: number, type = 'image/png'): Blob {
 }
 
 function jpeg(width: number, height: number): Blob {
-  return new Blob([new Uint8Array([
-    0xff, 0xd8,
-    0xff, 0xc0, 0x00, 0x11, 0x08,
-    (height >>> 8) & 0xff, height & 0xff,
-    (width >>> 8) & 0xff, width & 0xff,
-    0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00,
-    0xff, 0xd9,
-  ])], { type: 'image/jpeg' });
+  return new Blob(
+    [
+      new Uint8Array([
+        0xff,
+        0xd8,
+        0xff,
+        0xc0,
+        0x00,
+        0x11,
+        0x08,
+        (height >>> 8) & 0xff,
+        height & 0xff,
+        (width >>> 8) & 0xff,
+        width & 0xff,
+        0x03,
+        0x01,
+        0x11,
+        0x00,
+        0x02,
+        0x11,
+        0x00,
+        0x03,
+        0x11,
+        0x00,
+        0xff,
+        0xd9,
+      ]),
+    ],
+    { type: 'image/jpeg' },
+  );
 }
 
 /** JPEG whose SOF sits behind `exifSegments` maximum-length APP1 segments, so
@@ -35,13 +57,31 @@ function jpegWithLargeExif(width: number, height: number, exifSegments = 2): Blo
     app1.set([0xff, 0xe1, 0xff, 0xff], 0);
     parts.push(app1);
   }
-  parts.push(new Uint8Array([
-    0xff, 0xc0, 0x00, 0x11, 0x08,
-    (height >>> 8) & 0xff, height & 0xff,
-    (width >>> 8) & 0xff, width & 0xff,
-    0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00,
-    0xff, 0xd9,
-  ]));
+  parts.push(
+    new Uint8Array([
+      0xff,
+      0xc0,
+      0x00,
+      0x11,
+      0x08,
+      (height >>> 8) & 0xff,
+      height & 0xff,
+      (width >>> 8) & 0xff,
+      width & 0xff,
+      0x03,
+      0x01,
+      0x11,
+      0x00,
+      0x02,
+      0x11,
+      0x00,
+      0x03,
+      0x11,
+      0x00,
+      0xff,
+      0xd9,
+    ]),
+  );
   return new Blob(parts, { type: 'image/jpeg' });
 }
 
@@ -60,9 +100,21 @@ function webpVp8x(width: number, height: number): Blob {
 
 describe('raster image validation', () => {
   it('reads bounded PNG, JPEG, and WebP dimensions without decoding pixels', async () => {
-    await expect(validateRasterImageBlob(png(320, 200))).resolves.toEqual({ width: 320, height: 200, mediaType: 'image/png' });
-    await expect(validateRasterImageBlob(jpeg(640, 480))).resolves.toEqual({ width: 640, height: 480, mediaType: 'image/jpeg' });
-    await expect(validateRasterImageBlob(webpVp8x(1024, 768))).resolves.toEqual({ width: 1024, height: 768, mediaType: 'image/webp' });
+    await expect(validateRasterImageBlob(png(320, 200))).resolves.toEqual({
+      width: 320,
+      height: 200,
+      mediaType: 'image/png',
+    });
+    await expect(validateRasterImageBlob(jpeg(640, 480))).resolves.toEqual({
+      width: 640,
+      height: 480,
+      mediaType: 'image/jpeg',
+    });
+    await expect(validateRasterImageBlob(webpVp8x(1024, 768))).resolves.toEqual({
+      width: 1024,
+      height: 768,
+      mediaType: 'image/webp',
+    });
   });
 
   it('sniffs only bounded prefixes instead of buffering the whole blob', async () => {
@@ -88,11 +140,15 @@ describe('raster image validation', () => {
 
   it('rejects MIME spoofing and truncated headers', async () => {
     await expect(validateRasterImageBlob(png(1, 1, 'image/jpeg'))).rejects.toBeInstanceOf(RasterImageValidationError);
-    await expect(validateRasterImageBlob(new Blob([new Uint8Array([0xff, 0xd8])], { type: 'image/jpeg' }))).rejects.toBeInstanceOf(RasterImageValidationError);
+    await expect(
+      validateRasterImageBlob(new Blob([new Uint8Array([0xff, 0xd8])], { type: 'image/jpeg' })),
+    ).rejects.toBeInstanceOf(RasterImageValidationError);
   });
 
   it('rejects dimensions and pixel counts that could exhaust canvas memory', async () => {
-    await expect(validateRasterImageBlob(png(RASTER_IMAGE_LIMITS.maxDimension + 1, 1))).rejects.toThrow(/dimension limit/);
+    await expect(validateRasterImageBlob(png(RASTER_IMAGE_LIMITS.maxDimension + 1, 1))).rejects.toThrow(
+      /dimension limit/,
+    );
     await expect(validateRasterImageBlob(png(16_384, 16_384))).rejects.toThrow(/allocation limit/);
   });
 });

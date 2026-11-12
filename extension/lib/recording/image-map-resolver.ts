@@ -3,11 +3,7 @@ import { isElementVisuallyUnavailable } from '../capture/selector/element-availa
 import { getVisibleHighlightBounds } from '../capture/selector/highlight-bounds';
 import { isInteractiveElement } from '../capture/selector/interactive-element';
 
-export {
-  findImageForArea,
-  findMapForImage,
-  parseImageMapCoordinates,
-} from '../capture/image-map-geometry';
+export { findImageForArea, findMapForImage, parseImageMapCoordinates } from '../capture/image-map-geometry';
 
 export interface ResolvedImageMapTarget {
   area: HTMLAreaElement;

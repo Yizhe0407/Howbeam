@@ -7,7 +7,15 @@ import {
   type RefObject,
 } from 'react';
 import { browser } from 'wxt/browser';
-import { clampToolbarPosition, isRecordingToolbarCorner, positionForToolbarCorner, RECORDING_TOOLBAR_CORNER_KEY, snapToolbarCorner, toolbarCornerLabel, type RecordingToolbarCorner } from './recording-toolbar-position';
+import {
+  clampToolbarPosition,
+  isRecordingToolbarCorner,
+  positionForToolbarCorner,
+  RECORDING_TOOLBAR_CORNER_KEY,
+  snapToolbarCorner,
+  toolbarCornerLabel,
+  type RecordingToolbarCorner,
+} from './recording-toolbar-position';
 import { t } from '@/lib/shared/i18n';
 import type { Point } from '@/lib/shared/geometry';
 
@@ -77,21 +85,26 @@ export function useToolbarPosition({
 
   useEffect(() => {
     let active = true;
-    void browser.storage.local.get(RECORDING_TOOLBAR_CORNER_KEY).then((stored) => {
-      const saved = stored[RECORDING_TOOLBAR_CORNER_KEY];
-      if (!active) return;
-      setReady(true);
-      if (!isRecordingToolbarCorner(saved)) return;
-      // Mount-time restore applies the saved corner without persisting it
-      // back; inlined instead of moveToCorner(saved, false) so this one-shot
-      // effect depends on nothing reactive.
-      setCorner(saved);
-      setPosition(positionForToolbarCorner(saved, floatingSize(), viewport(), margin()));
-    }).catch((error) => {
-      console.warn('[howbeam] failed to load recording toolbar position', error);
-      if (active) setReady(true);
-    });
-    return () => { active = false; };
+    void browser.storage.local
+      .get(RECORDING_TOOLBAR_CORNER_KEY)
+      .then((stored) => {
+        const saved = stored[RECORDING_TOOLBAR_CORNER_KEY];
+        if (!active) return;
+        setReady(true);
+        if (!isRecordingToolbarCorner(saved)) return;
+        // Mount-time restore applies the saved corner without persisting it
+        // back; inlined instead of moveToCorner(saved, false) so this one-shot
+        // effect depends on nothing reactive.
+        setCorner(saved);
+        setPosition(positionForToolbarCorner(saved, floatingSize(), viewport(), margin()));
+      })
+      .catch((error) => {
+        console.warn('[howbeam] failed to load recording toolbar position', error);
+        if (active) setReady(true);
+      });
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -99,7 +112,7 @@ export function useToolbarPosition({
     const reposition = () => {
       if (dragRef.current) return;
       const next = positionForToolbarCorner(corner, floatingSize(), viewport(), margin());
-      setPosition((current) => current?.x === next.x && current.y === next.y ? current : next);
+      setPosition((current) => (current?.x === next.x && current.y === next.y ? current : next));
     };
     reposition();
     const observer = new ResizeObserver(reposition);
@@ -149,7 +162,8 @@ export function useToolbarPosition({
   const finishPositionDrag = (event: ReactPointerEvent<HTMLElement>) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
     dragRef.current = null;
     floatingRef.current?.removeAttribute('data-dragging');
     if (!drag.moved) return;

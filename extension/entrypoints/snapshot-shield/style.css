@@ -109,7 +109,9 @@ body::after {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 0 4px var(--sora), inset 0 0 0 5px rgb(28 25 23 / 0.35);
+  box-shadow:
+    inset 0 0 0 4px var(--sora),
+    inset 0 0 0 5px rgb(28 25 23 / 0.35);
 }
 
 .is-pulsing {

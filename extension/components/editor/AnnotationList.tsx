@@ -54,19 +54,28 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
 
   return (
     <div className="group flex flex-col rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
-      {overlay && createPortal(
-        <div className="flex size-full items-start rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
-          <div className="flex min-w-0 flex-1 items-start gap-3">
-            <NumberBadge value={position} />
-            <span className={cn(LABEL_BOX, 'min-w-0 flex-1 break-words px-1.5', description ? 'text-foreground' : 'text-muted-foreground')}>
-              {description || t().editor.annotations.placeholder}
-            </span>
-            <span className="flex size-7 shrink-0 items-center justify-center text-muted-foreground"><Trash2 className="size-3.5" /></span>
-            <StaticHandle />
-          </div>
-        </div>,
-        overlay,
-      )}
+      {overlay &&
+        createPortal(
+          <div className="flex size-full items-start rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <NumberBadge value={position} />
+              <span
+                className={cn(
+                  LABEL_BOX,
+                  'min-w-0 flex-1 px-1.5 break-words',
+                  description ? 'text-foreground' : 'text-muted-foreground',
+                )}
+              >
+                {description || t().editor.annotations.placeholder}
+              </span>
+              <span className="flex size-7 shrink-0 items-center justify-center text-muted-foreground">
+                <Trash2 className="size-3.5" />
+              </span>
+              <StaticHandle />
+            </div>
+          </div>,
+          overlay,
+        )}
       <div className="flex items-start gap-3">
         <NumberBadge value={position} />
         {/* Grows with its text so a long marker label is read in full, not cut at the field's edge. */}
@@ -85,7 +94,10 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
           onBlur={() => void flush().catch(() => undefined)}
           disabled={deleteDisabled}
           placeholder={t().editor.annotations.placeholder}
-          className={cn(LABEL_BOX, "min-w-0 flex-1 resize-none rounded-md bg-transparent px-1.5 text-foreground outline-none [field-sizing:content] focus-ring placeholder:text-muted-foreground hover:border-border-soft focus:border-border focus:bg-background")}
+          className={cn(
+            LABEL_BOX,
+            '[field-sizing:content] min-w-0 flex-1 resize-none rounded-md bg-transparent px-1.5 text-foreground focus-ring outline-none placeholder:text-muted-foreground hover:border-border-soft focus:border-border focus:bg-background',
+          )}
         />
         <div className="flex shrink-0 items-center gap-0.5 opacity-80 transition-opacity group-hover:opacity-100">
           <Tooltip>
@@ -100,20 +112,19 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
                 onPointerDown={(event) => event.preventDefault()}
                 disabled={deleteDisabled}
                 aria-label={t().editor.annotations.delete(index + 1)}
-                className="flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors focus-ring hover:bg-danger-soft hover:text-danger disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex size-7 items-center justify-center rounded-md text-muted-foreground focus-ring transition-colors outline-none hover:bg-danger-soft hover:text-danger disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Trash2 className="size-3.5" />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{deleteDisabled ? t().editor.annotations.deleteDisabled : t().editor.annotations.deleteTooltip}</TooltipContent>
+            <TooltipContent>
+              {deleteDisabled ? t().editor.annotations.deleteDisabled : t().editor.annotations.deleteTooltip}
+            </TooltipContent>
           </Tooltip>
           {dragHandle}
         </div>
       </div>
-      <DescriptionSaveIssue
-        issue={saveIssue}
-        className="mt-2 ml-9"
-      />
+      <DescriptionSaveIssue issue={saveIssue} className="mt-2 ml-9" />
     </div>
   );
 }
@@ -125,26 +136,22 @@ interface Props {
   editingDisabled?: boolean;
 }
 
-export default function AnnotationList({
-  annotations,
-  onDelete,
-  onReorder,
-  editingDisabled = false,
-}: Props) {
+export default function AnnotationList({ annotations, onDelete, onReorder, editingDisabled = false }: Props) {
   const scrollbar = useAutoHideScrollbar<HTMLDivElement>();
-  const { sensors, accessibility, handlers, itemIds, overlayHost, setOverlayHost, previewPositionOf } = useSortableReorder(
-    annotations,
-    (step) => step.id,
-    onReorder,
-    {
+  const { sensors, accessibility, handlers, itemIds, overlayHost, setOverlayHost, previewPositionOf } =
+    useSortableReorder(annotations, (step) => step.id, onReorder, {
       disabled: editingDisabled,
       itemNoun: t().sortable.annotationNoun,
       logLabel: '[howbeam] failed to reorder snapshot annotations',
-    },
-  );
+    });
 
   if (annotations.length === 0) {
-    return <p className="relative rounded-md p-4 text-sm text-muted-foreground"><DashedOutline radius={8} />{t().editor.annotations.empty}</p>;
+    return (
+      <p className="relative rounded-md p-4 text-sm text-muted-foreground">
+        <DashedOutline radius={8} />
+        {t().editor.annotations.empty}
+      </p>
+    );
   }
 
   return (

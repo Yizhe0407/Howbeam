@@ -14,15 +14,20 @@ vi.mock('wxt/browser', async () =>
     onPermissionsAdded: (listener) => {
       extra.permissionsAddedListener = listener;
     },
-  }));
+  }),
+);
 vi.mock('@/lib/storage/step-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/project-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/storage', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal),
+);
 vi.mock('@/lib/recording/background/pending-undo-store', async () =>
-  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks));
+  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks),
+);
 
 let storedState: RecordingState;
 

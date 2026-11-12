@@ -12,13 +12,17 @@ interface Props {
 /** The content of the undo notice; `useUndoNotice` puts it on the notice stack. */
 export default function UndoNotice({ message, pending = false, onUndo, onDismiss }: Props) {
   return (
-    <div role="status" style={{ ...noticeStyle, maxWidth: 'calc(100vw - 2rem)', padding: '6px 6px 6px 14px' }} className="flex items-center gap-2">
+    <div
+      role="status"
+      style={{ ...noticeStyle, maxWidth: 'calc(100vw - 2rem)', padding: '6px 6px 6px 14px' }}
+      className="flex items-center gap-2"
+    >
       <span className="min-w-0 truncate">{message}</span>
       <button
         type="button"
         onClick={onUndo}
         disabled={pending}
-        className="inline-flex h-8 items-center gap-1.5 rounded-md border-2 border-border bg-selected px-3 font-bold text-on-accent outline-none transition-colors focus-ring hover:brightness-95 disabled:opacity-60"
+        className="inline-flex h-8 items-center gap-1.5 rounded-md border-2 border-border bg-selected px-3 font-bold text-on-accent focus-ring transition-colors outline-none hover:brightness-95 disabled:opacity-60"
       >
         {pending ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
         {pending ? t().common.restoring : t().common.restore}
@@ -28,7 +32,7 @@ export default function UndoNotice({ message, pending = false, onUndo, onDismiss
         onClick={onDismiss}
         disabled={pending}
         aria-label={t().editor.undo.close}
-        className="flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:opacity-60"
+        className="flex size-8 items-center justify-center rounded-md text-muted-foreground focus-ring transition-colors outline-none hover:bg-secondary hover:text-foreground disabled:opacity-60"
       >
         <X className="size-4" />
       </button>

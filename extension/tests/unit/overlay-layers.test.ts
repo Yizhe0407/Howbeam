@@ -9,7 +9,10 @@ const topLayer: HTMLElement[] = [];
 function popoverHost(name: string): HTMLElement {
   const host = document.createElement('div');
   host.dataset.name = name;
-  host.matches = ((selector: string) => selector === ':popover-open' ? topLayer.includes(host) : Element.prototype.matches.call(host, selector)) as typeof host.matches;
+  host.matches = ((selector: string) =>
+    selector === ':popover-open'
+      ? topLayer.includes(host)
+      : Element.prototype.matches.call(host, selector)) as typeof host.matches;
   host.showPopover = () => {
     if (topLayer.includes(host)) throw new DOMException('already open', 'InvalidStateError');
     topLayer.push(host);

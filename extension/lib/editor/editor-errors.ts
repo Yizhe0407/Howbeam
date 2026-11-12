@@ -31,16 +31,24 @@ export function useEditorErrors() {
   }, []);
 
   /** A setter bound to one flow, for the hooks that only know their own errors. */
-  const reporterFor = useCallback((source: EditorErrorSource): ReportEditorError => (message) => report(source, message), [report]);
+  const reporterFor = useCallback(
+    (source: EditorErrorSource): ReportEditorError =>
+      (message) =>
+        report(source, message),
+    [report],
+  );
 
-  const latest = useCallback((sources: readonly EditorErrorSource[]): string | null => {
-    let found: Slot | null = null;
-    for (const source of sources) {
-      const slot = slots[source];
-      if (slot && (!found || slot.sequence > found.sequence)) found = slot;
-    }
-    return found?.message ?? null;
-  }, [slots]);
+  const latest = useCallback(
+    (sources: readonly EditorErrorSource[]): string | null => {
+      let found: Slot | null = null;
+      for (const source of sources) {
+        const slot = slots[source];
+        if (slot && (!found || slot.sequence > found.sequence)) found = slot;
+      }
+      return found?.message ?? null;
+    },
+    [slots],
+  );
 
   return useMemo(() => ({ slots, report, reporterFor, latest }), [slots, report, reporterFor, latest]);
 }

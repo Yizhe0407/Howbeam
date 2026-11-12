@@ -51,11 +51,19 @@ test.describe('frames and recording lifecycle', () => {
     });
     const nestedPoint = {
       x:
-        outerFrameMetrics.x + outerFrameMetrics.borderLeft + nestedFrameMetrics.x +
-        nestedFrameMetrics.borderLeft + nestedTargetMetrics.x + nestedTargetMetrics.width / 2,
+        outerFrameMetrics.x +
+        outerFrameMetrics.borderLeft +
+        nestedFrameMetrics.x +
+        nestedFrameMetrics.borderLeft +
+        nestedTargetMetrics.x +
+        nestedTargetMetrics.width / 2,
       y:
-        outerFrameMetrics.y + outerFrameMetrics.borderTop + nestedFrameMetrics.y +
-        nestedFrameMetrics.borderTop + nestedTargetMetrics.y + nestedTargetMetrics.height / 2,
+        outerFrameMetrics.y +
+        outerFrameMetrics.borderTop +
+        nestedFrameMetrics.y +
+        nestedFrameMetrics.borderTop +
+        nestedTargetMetrics.y +
+        nestedTargetMetrics.height / 2,
     };
     const shield = await getSnapshotFrame(appPage);
     await shield.locator('body').hover({
@@ -92,12 +100,15 @@ test.describe('frames and recording lifecycle', () => {
 
     await button.evaluate((element, messageType) => {
       const rect = element.getBoundingClientRect();
-      window.parent.postMessage({
-        type: messageType,
-        captureId: 'forged-capture-id',
-        relayToken: 'forged-relay-token',
-        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-      }, '*');
+      window.parent.postMessage(
+        {
+          type: messageType,
+          captureId: 'forged-capture-id',
+          relayToken: 'forged-relay-token',
+          rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        },
+        '*',
+      );
     }, `howbeam_step_frame_click_${extensionId}`);
 
     await expectSteady(async () => (await readSteps(popupPage)).length, 0);
@@ -202,10 +213,18 @@ test.describe('frames and recording lifecycle', () => {
       return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
     });
     await appPage.mouse.click(
-      outerFrameMetrics.x + outerFrameMetrics.borderLeft + nestedFrameMetrics.x +
-        nestedFrameMetrics.borderLeft + nestedTargetMetrics.x + nestedTargetMetrics.width / 2,
-      outerFrameMetrics.y + outerFrameMetrics.borderTop + nestedFrameMetrics.y +
-        nestedFrameMetrics.borderTop + nestedTargetMetrics.y + nestedTargetMetrics.height / 2,
+      outerFrameMetrics.x +
+        outerFrameMetrics.borderLeft +
+        nestedFrameMetrics.x +
+        nestedFrameMetrics.borderLeft +
+        nestedTargetMetrics.x +
+        nestedTargetMetrics.width / 2,
+      outerFrameMetrics.y +
+        outerFrameMetrics.borderTop +
+        nestedFrameMetrics.y +
+        nestedFrameMetrics.borderTop +
+        nestedTargetMetrics.y +
+        nestedTargetMetrics.height / 2,
     );
     await expect.poll(() => nestedText.getAttribute('data-click-count')).toBe('1');
     await expectStepCount(popupPage, 2);
@@ -250,11 +269,19 @@ test.describe('frames and recording lifecycle', () => {
     });
     const nestedPoint = {
       x:
-        outerFrameMetrics.x + outerFrameMetrics.borderLeft + nestedFrameMetrics.x +
-        nestedFrameMetrics.borderLeft + nestedTargetMetrics.x + nestedTargetMetrics.width / 2,
+        outerFrameMetrics.x +
+        outerFrameMetrics.borderLeft +
+        nestedFrameMetrics.x +
+        nestedFrameMetrics.borderLeft +
+        nestedTargetMetrics.x +
+        nestedTargetMetrics.width / 2,
       y:
-        outerFrameMetrics.y + outerFrameMetrics.borderTop + nestedFrameMetrics.y +
-        nestedFrameMetrics.borderTop + nestedTargetMetrics.y + nestedTargetMetrics.height / 2,
+        outerFrameMetrics.y +
+        outerFrameMetrics.borderTop +
+        nestedFrameMetrics.y +
+        nestedFrameMetrics.borderTop +
+        nestedTargetMetrics.y +
+        nestedTargetMetrics.height / 2,
     };
 
     // Fired back to back with no wait in between: the shared gesture queue must not drop the second hop just because the first is still capturing.
@@ -366,11 +393,7 @@ test.describe('frames and recording lifecycle', () => {
     await expectSteady(async () => (await readSteps(popupPage)).length, 1);
   });
 
-  test('removes an empty snapshot anchor on stop', async ({
-    appPage,
-    popupPage,
-    browserErrors: _browserErrors,
-  }) => {
+  test('removes an empty snapshot anchor on stop', async ({ appPage, popupPage, browserErrors: _browserErrors }) => {
     await startRecording(appPage, popupPage, 'snapshot');
     expect(await readSteps(popupPage)).toHaveLength(1);
     await stopRecording(popupPage);

@@ -15,7 +15,12 @@ const BUSY_NOTICE_ID = 'editor-busy';
  * dismissed, so it is gone at once rather than after the toast exit delay. The
  * notice shows a restore as in progress only once it proves slow.
  */
-export function useUndoNotice({ action, pending, onUndo, onDismiss }: {
+export function useUndoNotice({
+  action,
+  pending,
+  onUndo,
+  onDismiss,
+}: {
   action: UndoAction | null;
   pending: boolean;
   onUndo: () => void;

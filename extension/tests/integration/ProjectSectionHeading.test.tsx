@@ -1,9 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import ProjectSectionHeading, {
-  type ProjectSectionHeadingProps,
-} from '@/components/editor/ProjectSectionHeading';
+import ProjectSectionHeading, { type ProjectSectionHeadingProps } from '@/components/editor/ProjectSectionHeading';
 
 function createProps(overrides: Partial<ProjectSectionHeadingProps> = {}): ProjectSectionHeadingProps {
   return {
@@ -67,9 +65,12 @@ describe('ProjectSectionHeading', () => {
 
   it('在外部 disabled 與刪除進行中停用選單，避免重複送出', async () => {
     let resolveDelete: (() => void) | undefined;
-    const onDelete = vi.fn(() => new Promise<void>((resolve) => {
-      resolveDelete = resolve;
-    }));
+    const onDelete = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveDelete = resolve;
+        }),
+    );
     const { rerender } = render(<ProjectSectionHeading {...createProps({ onDelete })} />);
 
     openMenu();

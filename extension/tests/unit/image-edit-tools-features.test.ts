@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { constrainToSquare, snapToAngle } from '@/lib/editor/image-edit-geometry';
 import { isCopyable, pasteItems } from '@/lib/editor/image-edit-clipboard';
-import { hasRoomFor, IMAGE_ITEM_LIMITS, itemRoom, nextStepNumber, reorderItem, roomForKind, type ImageEditItem } from '@/lib/editor/image-edit-items';
+import {
+  hasRoomFor,
+  IMAGE_ITEM_LIMITS,
+  itemRoom,
+  nextStepNumber,
+  reorderItem,
+  roomForKind,
+  type ImageEditItem,
+} from '@/lib/editor/image-edit-items';
 import { applyStylePatch, DEFAULT_IMAGE_EDIT_STYLE, STYLE_FIELDS, styleOfItem } from '@/lib/editor/image-edit-style';
 import { constrainDragEnd, imageEditTool, IMAGE_EDIT_TOOLS, toolForShortcut } from '@/lib/editor/image-edit-tools';
 import { isValidImageEdit } from '@/lib/storage/image-edit-model';
@@ -9,9 +17,31 @@ import { itemAt } from '../setup/item-at';
 
 const size = { width: 400, height: 300 };
 
-const rect: ImageEditItem = { id: 'r', kind: 'rect', bounds: { x: 10, y: 10, width: 50, height: 30 }, width: 2, color: '#ff4747', fill: 'none' };
-const text: ImageEditItem = { id: 't', kind: 'text', bounds: { x: 20, y: 20, width: 120, height: 30 }, text: 'Hi', fontSize: 24, color: '#111111', look: 'plain' };
-const marker = (id: string, number: number): ImageEditItem => ({ id, kind: 'step', center: { x: 50, y: 50 }, radius: 16, number, color: '#ff4747' });
+const rect: ImageEditItem = {
+  id: 'r',
+  kind: 'rect',
+  bounds: { x: 10, y: 10, width: 50, height: 30 },
+  width: 2,
+  color: '#ff4747',
+  fill: 'none',
+};
+const text: ImageEditItem = {
+  id: 't',
+  kind: 'text',
+  bounds: { x: 20, y: 20, width: 120, height: 30 },
+  text: 'Hi',
+  fontSize: 24,
+  color: '#111111',
+  look: 'plain',
+};
+const marker = (id: string, number: number): ImageEditItem => ({
+  id,
+  kind: 'step',
+  center: { x: 50, y: 50 },
+  radius: 16,
+  number,
+  color: '#ff4747',
+});
 const mask: ImageEditItem = { id: 'm', kind: 'redaction', bounds: { x: 0, y: 0, width: 10, height: 10 } };
 
 describe('Shift constraints', () => {
@@ -51,30 +81,66 @@ describe('tool registry', () => {
   });
 
   it('draws an ellipse and a numbered marker', () => {
-    const input = { from: { x: 10, y: 10 }, to: { x: 80, y: 50 }, size, style: DEFAULT_IMAGE_EDIT_STYLE, nextNumber: 3 };
-    expect(imageEditTool('ellipse').create!(input)).toMatchObject({ kind: 'ellipse', bounds: { x: 10, y: 10, width: 70, height: 40 }, fill: 'none' });
-    expect(imageEditTool('step').create!(input)).toMatchObject({ kind: 'step', center: { x: 80, y: 50 }, number: 3, radius: 16 });
+    const input = {
+      from: { x: 10, y: 10 },
+      to: { x: 80, y: 50 },
+      size,
+      style: DEFAULT_IMAGE_EDIT_STYLE,
+      nextNumber: 3,
+    };
+    expect(imageEditTool('ellipse').create!(input)).toMatchObject({
+      kind: 'ellipse',
+      bounds: { x: 10, y: 10, width: 70, height: 40 },
+      fill: 'none',
+    });
+    expect(imageEditTool('step').create!(input)).toMatchObject({
+      kind: 'step',
+      center: { x: 80, y: 50 },
+      number: 3,
+      radius: 16,
+    });
   });
 
   it('starts text with the chosen look', () => {
-    const created = imageEditTool('text').create!({ from: { x: 5, y: 5 }, to: { x: 5, y: 5 }, size, style: { ...DEFAULT_IMAGE_EDIT_STYLE, look: 'outline' }, nextNumber: 1 });
+    const created = imageEditTool('text').create!({
+      from: { x: 5, y: 5 },
+      to: { x: 5, y: 5 },
+      size,
+      style: { ...DEFAULT_IMAGE_EDIT_STYLE, look: 'outline' },
+      nextNumber: 1,
+    });
     expect(created).toMatchObject({ kind: 'text', look: 'outline', text: '' });
   });
 });
 
 describe('style', () => {
   it('only applies the parts an item has', () => {
-    expect(applyStylePatch(rect as never, { color: '#22a559', fontSize: 56, look: 'outline', fill: 'tint', strokeWidth: 6 })).toMatchObject({
-      color: '#22a559', fill: 'tint', width: 6,
+    expect(
+      applyStylePatch(rect as never, { color: '#22a559', fontSize: 56, look: 'outline', fill: 'tint', strokeWidth: 6 }),
+    ).toMatchObject({
+      color: '#22a559',
+      fill: 'tint',
+      width: 6,
     });
-    const restyled = applyStylePatch(text as never, { look: 'outline', fontSize: 56, strokeWidth: 6 }) as Extract<ImageEditItem, { kind: 'text' }>;
+    const restyled = applyStylePatch(text as never, { look: 'outline', fontSize: 56, strokeWidth: 6 }) as Extract<
+      ImageEditItem,
+      { kind: 'text' }
+    >;
     expect(restyled).toMatchObject({ look: 'outline', fontSize: 56 });
     expect('width' in restyled).toBe(false);
-    expect(applyStylePatch(marker('s', 1) as never, { markerRadius: 22, number: 7 })).toMatchObject({ radius: 22, number: 7 });
+    expect(applyStylePatch(marker('s', 1) as never, { markerRadius: 22, number: 7 })).toMatchObject({
+      radius: 22,
+      number: 7,
+    });
   });
 
   it('reads an item back as a style, falling back for what it lacks', () => {
-    expect(styleOfItem(text as never, DEFAULT_IMAGE_EDIT_STYLE)).toMatchObject({ look: 'plain', fontSize: 24, color: '#111111', strokeWidth: 4 });
+    expect(styleOfItem(text as never, DEFAULT_IMAGE_EDIT_STYLE)).toMatchObject({
+      look: 'plain',
+      fontSize: 24,
+      color: '#111111',
+      strokeWidth: 4,
+    });
   });
 
   it('offers marker numbering only once a marker exists', () => {
@@ -84,7 +150,8 @@ describe('style', () => {
 
   it('accepts custom hex colours only', () => {
     expect(isValidImageEdit({ ...rect, color: '#a1b2c3' })).toBe(true);
-    for (const bad of ['red', '#fff', '#GGGGGG', 'url(x)']) expect(isValidImageEdit({ ...rect, color: bad })).toBe(false);
+    for (const bad of ['red', '#fff', '#GGGGGG', 'url(x)'])
+      expect(isValidImageEdit({ ...rect, color: bad })).toBe(false);
     expect(isValidImageEdit({ ...text, look: 'neon' })).toBe(false);
     expect(isValidImageEdit({ ...rect, fill: 'gradient' })).toBe(false);
   });
@@ -97,7 +164,11 @@ describe('clipboard and layer order', () => {
     expect(itemAt(pasted, 0).id).not.toBe('a');
     expect(pasted[0]).toMatchObject({ kind: 'step', number: 3, center: { x: 66, y: 66 } });
     expect(items).toHaveLength(3);
-    const edge = itemAt(pasteItems([], [{ ...rect, bounds: { x: 390, y: 290, width: 10, height: 10 } } as ImageEditItem], 16, size).pasted, 0);
+    const edge = itemAt(
+      pasteItems([], [{ ...rect, bounds: { x: 390, y: 290, width: 10, height: 10 } } as ImageEditItem], 16, size)
+        .pasted,
+      0,
+    );
     expect(edge.kind === 'rect' && edge.bounds.x + edge.bounds.width).toBeLessThanOrEqual(size.width);
   });
 

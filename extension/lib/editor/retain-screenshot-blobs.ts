@@ -9,11 +9,13 @@ import type { ScreenshotStep, StepEntry } from '@/lib/storage/models';
  * `captureRevision`, so an unchanged step can safely keep its previous Blob.
  */
 function canReuse(previous: ScreenshotStep | undefined, next: ScreenshotStep): boolean {
-  return previous !== undefined
-    && previous.id === next.id
-    && (previous.captureRevision ?? 0) === (next.captureRevision ?? 0)
-    && previous.screenshotBlob.size === next.screenshotBlob.size
-    && previous.screenshotBlob.type === next.screenshotBlob.type;
+  return (
+    previous !== undefined &&
+    previous.id === next.id &&
+    (previous.captureRevision ?? 0) === (next.captureRevision ?? 0) &&
+    previous.screenshotBlob.size === next.screenshotBlob.size &&
+    previous.screenshotBlob.type === next.screenshotBlob.type
+  );
 }
 
 function imageOwner(entry: StepEntry): ScreenshotStep {

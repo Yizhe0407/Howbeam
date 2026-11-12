@@ -55,12 +55,8 @@ export default class ErrorBoundary extends Component<Props, State> {
           <TriangleAlert className="size-5 text-danger" />
         </span>
         <div className="flex w-full max-w-[280px] flex-col items-center gap-2">
-          <h2 className="text-base font-bold text-foreground">
-            {t().errorBoundary.title(label)}
-          </h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {t().errorBoundary.body}
-          </p>
+          <h2 className="text-base font-bold text-foreground">{t().errorBoundary.title(label)}</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">{t().errorBoundary.body}</p>
           <p className="w-full truncate rounded-md border-2 border-border-soft bg-secondary px-2.5 py-1 font-mono text-xs text-muted-foreground">
             {error.message || t().errorBoundary.unknownError}
           </p>

@@ -26,18 +26,24 @@ export const PERSISTED_PROJECT_LIMITS = Object.freeze({
 });
 
 const isCoordinate = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= PERSISTED_STEP_LIMITS.maxCoordinateMagnitude;
+  typeof value === 'number' &&
+  Number.isFinite(value) &&
+  Math.abs(value) <= PERSISTED_STEP_LIMITS.maxCoordinateMagnitude;
 
 const isDimension = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= PERSISTED_STEP_LIMITS.maxBoundsDimension;
 
 /** The one rule for a stored rectangle (highlights, crops, masks, drawn shapes), in storage and archives alike. */
 export function isPersistedRect(value: unknown): value is Rect {
-  return isRecord(value)
-    && isCoordinate(value.x) && isCoordinate(value.y)
-    && isDimension(value.width) && isDimension(value.height)
-    && isCoordinate((value.x as number) + (value.width as number))
-    && isCoordinate((value.y as number) + (value.height as number));
+  return (
+    isRecord(value) &&
+    isCoordinate(value.x) &&
+    isCoordinate(value.y) &&
+    isDimension(value.width) &&
+    isDimension(value.height) &&
+    isCoordinate((value.x as number) + (value.width as number)) &&
+    isCoordinate((value.y as number) + (value.height as number))
+  );
 }
 
 /** The one rule for a stored point (arrow ends, marker centres). */

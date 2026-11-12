@@ -39,7 +39,15 @@ describe('layoutTextLines', () => {
 });
 
 describe('text placement', () => {
-  const edit: TextEdit = { id: 't', kind: 'text', bounds: { x: 10, y: 20, width: 50, height: 40 }, text: 'hello brave new', fontSize: 10, look: 'plain' as const, color: '#ff4747' };
+  const edit: TextEdit = {
+    id: 't',
+    kind: 'text',
+    bounds: { x: 10, y: 20, width: 50, height: 40 },
+    text: 'hello brave new',
+    fontSize: 10,
+    look: 'plain' as const,
+    color: '#ff4747',
+  };
 
   it('puts each line on its own baseline inside the box', () => {
     const placement = placeText(edit, measure);
@@ -51,12 +59,18 @@ describe('text placement', () => {
   });
 
   it('measures the height a box needs for its content', () => {
-    expect(measureTextEditHeight({ text: 'hello brave new', fontSize: 10, width: 50 }, measure)).toBeCloseTo(2 * textLineHeight(10));
+    expect(measureTextEditHeight({ text: 'hello brave new', fontSize: 10, width: 50 }, measure)).toBeCloseTo(
+      2 * textLineHeight(10),
+    );
   });
 });
 
 describe('arrowShape', () => {
-  const arrow = (to: { x: number; y: number }, width = 4): Pick<ArrowEdit, 'from' | 'to' | 'width'> => ({ from: { x: 0, y: 0 }, to, width });
+  const arrow = (to: { x: number; y: number }, width = 4): Pick<ArrowEdit, 'from' | 'to' | 'width'> => ({
+    from: { x: 0, y: 0 },
+    to,
+    width,
+  });
 
   it('puts the tip at the end point with the shaft tucked under the head', () => {
     const shape = arrowShape(arrow({ x: 100, y: 0 }))!;
@@ -85,19 +99,60 @@ describe('arrowShape', () => {
 describe('drawImageEdits', () => {
   function fakeContext() {
     const calls: string[] = [];
-    const record = (name: string) => (...args: unknown[]) => void calls.push(`${name}(${args.join(',')})`);
-    const target = new Proxy({}, {
-      get: (_t, property: string) => (['save', 'restore', 'beginPath', 'moveTo', 'lineTo', 'closePath', 'stroke', 'fill', 'fillText', 'strokeText', 'roundRect', 'ellipse', 'arc'].includes(property) ? record(property) : undefined),
-      set: (_t, property: string, value) => { calls.push(`${property}=${String(value)}`); return true; },
-    });
+    const record =
+      (name: string) =>
+      (...args: unknown[]) =>
+        void calls.push(`${name}(${args.join(',')})`);
+    const target = new Proxy(
+      {},
+      {
+        get: (_t, property: string) =>
+          [
+            'save',
+            'restore',
+            'beginPath',
+            'moveTo',
+            'lineTo',
+            'closePath',
+            'stroke',
+            'fill',
+            'fillText',
+            'strokeText',
+            'roundRect',
+            'ellipse',
+            'arc',
+          ].includes(property)
+            ? record(property)
+            : undefined,
+        set: (_t, property: string, value) => {
+          calls.push(`${property}=${String(value)}`);
+          return true;
+        },
+      },
+    );
     return { ctx: target as unknown as OffscreenCanvasRenderingContext2D, calls };
   }
 
   it('paints edits in order at device pixel scale, each inside save/restore', () => {
     const { ctx, calls } = fakeContext();
     const edits: ImageEdit[] = [
-      { id: 'r', kind: 'rect', bounds: { x: 1, y: 2, width: 3, height: 4 }, width: 2, fill: 'none' as const, color: '#ff4747' },
-      { id: 't', kind: 'text', bounds: { x: 5, y: 6, width: 100, height: 20 }, text: 'Hi', fontSize: 10, look: 'plain' as const, color: '#111111' },
+      {
+        id: 'r',
+        kind: 'rect',
+        bounds: { x: 1, y: 2, width: 3, height: 4 },
+        width: 2,
+        fill: 'none' as const,
+        color: '#ff4747',
+      },
+      {
+        id: 't',
+        kind: 'text',
+        bounds: { x: 5, y: 6, width: 100, height: 20 },
+        text: 'Hi',
+        fontSize: 10,
+        look: 'plain' as const,
+        color: '#111111',
+      },
     ];
     drawImageEdits(ctx, edits, 2, measure);
 
@@ -114,7 +169,14 @@ describe('drawImageEdits', () => {
 
   it('skips a degenerate arrow without throwing', () => {
     const { ctx, calls } = fakeContext();
-    expect(() => drawImageEdits(ctx, [{ id: 'a', kind: 'arrow', from: { x: 1, y: 1 }, to: { x: 1, y: 1 }, width: 2, color: '#ff4747' }], 1, vi.fn())).not.toThrow();
+    expect(() =>
+      drawImageEdits(
+        ctx,
+        [{ id: 'a', kind: 'arrow', from: { x: 1, y: 1 }, to: { x: 1, y: 1 }, width: 2, color: '#ff4747' }],
+        1,
+        vi.fn(),
+      ),
+    ).not.toThrow();
     expect(calls.some((call) => call.startsWith('fill'))).toBe(false);
   });
 });

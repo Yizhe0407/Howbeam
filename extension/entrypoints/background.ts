@@ -24,7 +24,11 @@ import {
   sourcePermissionPreflightSuccess,
   withUncommittedSourceTab,
 } from '@/lib/recording/background/source-tab';
-import { isRecaptureSourceTabIntact, validateRecaptureTarget, wasRecaptureCommitted } from '@/lib/recording/background/recapture-target';
+import {
+  isRecaptureSourceTabIntact,
+  validateRecaptureTarget,
+  wasRecaptureCommitted,
+} from '@/lib/recording/background/recapture-target';
 import { createBrowserPorts } from '@/lib/recording/run/browser-ports';
 import { createRun } from '@/lib/recording/run';
 import { toRecordingState } from '@/lib/recording/run/state';
@@ -44,10 +48,11 @@ import { initLocalePreference } from '@/lib/runtime/locale-preference';
 
 const recorderRuntime = createRecorderRuntime({
   captureVisibleTab: (windowId) => browser.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 95 }),
-  executeRecorderScript: (target) => browser.scripting.executeScript({
-    target,
-    files: ['/content-scripts/content.js'],
-  }),
+  executeRecorderScript: (target) =>
+    browser.scripting.executeScript({
+      target,
+      files: ['/content-scripts/content.js'],
+    }),
   sendStopMessage: (tabId, message) => browser.tabs.sendMessage(tabId, message),
 });
 
@@ -66,7 +71,8 @@ const run = createRun({
     validateTarget: validateRecaptureTarget,
     permissionPreflight: sourcePermissionPreflightSuccess,
     checkPermission: checkSourcePermission,
-    openSourceTab: (sourceUrl, preferredTabId) => openVerifiedSourceTab(sourceUrl, preferredTabId, 'failed to open recapture source tab'),
+    openSourceTab: (sourceUrl, preferredTabId) =>
+      openVerifiedSourceTab(sourceUrl, preferredTabId, 'failed to open recapture source tab'),
     withUncommittedTab: withUncommittedSourceTab,
     replaceCapture: replaceStepCaptureAtomically,
     wasCommitted: wasRecaptureCommitted,
@@ -91,17 +97,28 @@ async function handleRecordingControl(
   }
   const { runId } = message;
   switch (message.type) {
-    case 'PAUSE_RECORDING': return run.lifecycle.pause(runId);
-    case 'RESUME_RECORDING': return run.lifecycle.resume(runId);
-    case 'UNDO_LAST_CAPTURE': return run.undo.undo(runId);
-    case 'RESTORE_LAST_CAPTURE': return run.undo.restore(runId, message.undoToken);
-    case 'PREPARE_NEXT_SNAPSHOT': return run.snapshot.prepareNext(runId);
-    case 'CREATE_NEXT_SNAPSHOT': return run.snapshot.createNext(runId, 'preparing-next');
-    case 'REBUILD_INVALIDATED_SNAPSHOT': return run.snapshot.createNext(runId, 'invalidated');
-    case 'SWITCH_TO_SNAPSHOT_MODE': return run.snapshot.switchToSnapshot(runId);
-    case 'SWITCH_TO_STEPS_MODE': return run.snapshot.switchToSteps(runId);
-    case 'DISCARD_CURRENT_RECORDING': return run.lifecycle.discard(runId);
-    case 'FINISH_RECORDING': return run.lifecycle.finish(runId);
+    case 'PAUSE_RECORDING':
+      return run.lifecycle.pause(runId);
+    case 'RESUME_RECORDING':
+      return run.lifecycle.resume(runId);
+    case 'UNDO_LAST_CAPTURE':
+      return run.undo.undo(runId);
+    case 'RESTORE_LAST_CAPTURE':
+      return run.undo.restore(runId, message.undoToken);
+    case 'PREPARE_NEXT_SNAPSHOT':
+      return run.snapshot.prepareNext(runId);
+    case 'CREATE_NEXT_SNAPSHOT':
+      return run.snapshot.createNext(runId, 'preparing-next');
+    case 'REBUILD_INVALIDATED_SNAPSHOT':
+      return run.snapshot.createNext(runId, 'invalidated');
+    case 'SWITCH_TO_SNAPSHOT_MODE':
+      return run.snapshot.switchToSnapshot(runId);
+    case 'SWITCH_TO_STEPS_MODE':
+      return run.snapshot.switchToSteps(runId);
+    case 'DISCARD_CURRENT_RECORDING':
+      return run.lifecycle.discard(runId);
+    case 'FINISH_RECORDING':
+      return run.lifecycle.finish(runId);
   }
 }
 
@@ -167,7 +184,11 @@ export default defineBackground(() => {
   });
 
   /** A child-frame relay hop from the live steps run's tab: from a child frame to begin, the top frame to claim. */
-  const isActiveStepRelaySender = (runId: string, sender: Browser.runtime.MessageSender, expectedFrame: 'child' | 'top') => {
+  const isActiveStepRelaySender = (
+    runId: string,
+    sender: Browser.runtime.MessageSender,
+    expectedFrame: 'child' | 'top',
+  ) => {
     const { frameId } = sender;
     if (frameId == null || (expectedFrame === 'child' ? frameId <= 0 : frameId !== 0)) return false;
     const recording = liveRecording(run.actor.state(), runId);
@@ -175,7 +196,10 @@ export default defineBackground(() => {
   };
 
   // After recovery: a restore must find the undo window a restarted worker rebuilds.
-  const handleRecordingControlMessage = async (message: RecordingControlMessage, sender: Browser.runtime.MessageSender) => {
+  const handleRecordingControlMessage = async (
+    message: RecordingControlMessage,
+    sender: Browser.runtime.MessageSender,
+  ) => {
     await startupRecovery;
     return handleRecordingControl(message, sender);
   };
@@ -192,11 +216,13 @@ export default defineBackground(() => {
       await run.lifecycle.stopRecording();
       return undefined;
     },
-    OPEN_EDITOR: (message, sender) => editorOpen!.openEditorForStoredSession(message, editorPlacementFor(message, sender)),
+    OPEN_EDITOR: (message, sender) =>
+      editorOpen!.openEditorForStoredSession(message, editorPlacementFor(message, sender)),
     OPEN_LIBRARY: () => openLibraryPage(),
     REGISTER_EXTENSION_PAGE: (_message, sender) => registerExtensionPage(sender),
     PREFLIGHT_STEP_RECAPTURE_SOURCE_PERMISSION: (message, sender) => run.recapture.preflight(message, sender),
-    PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION: (message, sender) => preflightProjectContinuation(message, sender),
+    PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION: (message, sender) =>
+      preflightProjectContinuation(message, sender),
     START_STEP_RECAPTURE: (message, sender) => run.recapture.start(message, sender),
     CANCEL_STEP_RECAPTURE: (message, sender) => run.recapture.cancel(message, sender),
     ACK_STEP_RECAPTURE_RESULT: (message, sender) => run.recapture.acknowledge(message, sender),
@@ -266,19 +292,12 @@ export default defineBackground(() => {
   // 回傳 true 並只呼叫一次 sendResponse；格式錯誤或不可信訊息刻意不回覆。
   browser.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
     if (!isBackgroundMessage(message)) return undefined;
-    if (
-      isExtensionPageOnlyMessage(message) &&
-      !isTrustedExtensionPageSender(sender, browser.runtime.getURL('/'))
-    ) {
+    if (isExtensionPageOnlyMessage(message) && !isTrustedExtensionPageSender(sender, browser.runtime.getURL('/'))) {
       console.warn('[howbeam] rejected an untrusted extension control message', message.type);
       return undefined;
     }
     void routeBackgroundMessage(message, sender).then(sendResponse, (error) => {
-      console.error(
-        '[howbeam] background message handling failed unexpectedly:',
-        describeBrowserError(error),
-        error,
-      );
+      console.error('[howbeam] background message handling failed unexpectedly:', describeBrowserError(error), error);
       sendResponse(undefined);
     });
     return true;
@@ -345,11 +364,14 @@ export default defineBackground(() => {
   // window's active tab instead. WINDOW_ID_NONE (-1) means focus left Chrome.
   browser.windows.onFocusChanged.addListener((windowId) => {
     if (windowId == null || windowId < 0) return;
-    void browser.tabs.query({ active: true, windowId }).then(([tab]) => {
-      if (tab?.id != null) run.navigation.scheduleFollow(tab.id);
-    }).catch((error) => {
-      console.warn('[howbeam] failed to inspect the focused window', error);
-    });
+    void browser.tabs
+      .query({ active: true, windowId })
+      .then(([tab]) => {
+        if (tab?.id != null) run.navigation.scheduleFollow(tab.id);
+      })
+      .catch((error) => {
+        console.warn('[howbeam] failed to inspect the focused window', error);
+      });
   });
 
   browser.tabs.onRemoved.addListener((tabId) => {

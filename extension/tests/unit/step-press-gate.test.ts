@@ -44,7 +44,16 @@ const pointer = (type: string, init: PointerEventInit = {}) =>
     ...init,
   });
 const mouse = (type: string, init: MouseEventInit = {}) =>
-  new MouseEvent(type, { bubbles: true, cancelable: true, composed: true, button: 0, clientX: 10, clientY: 10, detail: 1, ...init });
+  new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    button: 0,
+    clientX: 10,
+    clientY: 10,
+    detail: 1,
+    ...init,
+  });
 
 /** Mirrors the recorder's pointerdown listener. */
 function onPointerDown(event: Event) {
@@ -84,7 +93,16 @@ beforeEach(() => {
   });
   document.addEventListener('pointerdown', onPointerDown, { capture: true });
   for (const type of STEP_PRESS_GATE_EVENTS) document.addEventListener(type, onGateEvent, { capture: true });
-  for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick', 'dragstart', 'pointercancel']) {
+  for (const type of [
+    'pointerdown',
+    'mousedown',
+    'pointerup',
+    'mouseup',
+    'click',
+    'dblclick',
+    'dragstart',
+    'pointercancel',
+  ]) {
     target.addEventListener(type, pageListener);
   }
 });
@@ -230,7 +248,14 @@ describe('createStepPressGate', () => {
     fire(mouse('dblclick', { detail: 2 }));
     expect(await recordedSteps()).toBe(1);
     // The withheld pointerdown is handed over with the browser's count.
-    expect(seen).toEqual(['synthetic pointerdown:2', 'mousedown:2', 'pointerup:2', 'mouseup:2', 'click:2', 'dblclick:2']);
+    expect(seen).toEqual([
+      'synthetic pointerdown:2',
+      'mousedown:2',
+      'pointerup:2',
+      'mouseup:2',
+      'click:2',
+      'dblclick:2',
+    ]);
   });
 
   it('folds at pointerdown when the engine already reports the click count there', async () => {
@@ -242,7 +267,10 @@ describe('createStepPressGate', () => {
     fire(mouse('mouseup', { detail: 2 }));
     fire(mouse('click', { detail: 2 }));
     gate.replay(itemAt(presses, 0));
-    expect(seen.filter((entry) => entry.startsWith('synthetic click'))).toEqual(['synthetic click', 'synthetic click:2']);
+    expect(seen.filter((entry) => entry.startsWith('synthetic click'))).toEqual([
+      'synthetic click',
+      'synthetic click:2',
+    ]);
   });
 
   it('keeps two separate clicks on the same spot as two steps, however close together', async () => {

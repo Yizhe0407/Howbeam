@@ -17,7 +17,11 @@ import {
   markCaptureCommitting,
   releaseCapture,
 } from '../background/capture-registry';
-import { isMatchingSnapshotViewport, isTrustedRecordedPageSender, isValidSnapshotViewportContext } from '../recording-guards';
+import {
+  isMatchingSnapshotViewport,
+  isTrustedRecordedPageSender,
+  isValidSnapshotViewportContext,
+} from '../recording-guards';
 import { isSuperseded, type OperationContext, type RunActor } from './actor';
 import type { Lifecycle } from './lifecycle';
 import type { RunPorts } from './ports';
@@ -77,25 +81,42 @@ export function createCapture(deps: CaptureDeps) {
     const captureId = ports.newId();
     let anchorId: string | null = null;
     try {
-      const shot = await ctx.until(ports.capture(
-        { tabId: tab.id, windowId: tab.windowId, viewport: context.viewport, devicePixelRatio: context.devicePixelRatio, captureId },
-        guardFor(ctx, recording, tab.windowId, context.url),
-      ));
+      const shot = await ctx.until(
+        ports.capture(
+          {
+            tabId: tab.id,
+            windowId: tab.windowId,
+            viewport: context.viewport,
+            devicePixelRatio: context.devicePixelRatio,
+            captureId,
+          },
+          guardFor(ctx, recording, tab.windowId, context.url),
+        ),
+      );
       anchorId = ports.newId();
-      await ports.steps.add([{
+      await ports.steps.add(
+        [
+          {
+            id: anchorId,
+            sessionId: recording.sessionId,
+            runId: recording.runId,
+            screenshotBlob: shot.blob,
+            bounds: null,
+            devicePixelRatio: context.devicePixelRatio,
+            screenshotScale: shot.scale,
+            description: '',
+            url: context.url,
+            timestamp: context.timestamp,
+            groupId: anchorId,
+          },
+        ],
+        recording.insertAfterStepId,
+      );
+      const anchor: SnapshotAnchor = {
         id: anchorId,
-        sessionId: recording.sessionId,
-        runId: recording.runId,
-        screenshotBlob: shot.blob,
-        bounds: null,
+        viewport: context.viewport,
         devicePixelRatio: context.devicePixelRatio,
-        screenshotScale: shot.scale,
-        description: '',
-        url: context.url,
-        timestamp: context.timestamp,
-        groupId: anchorId,
-      }], recording.insertAfterStepId);
-      const anchor: SnapshotAnchor = { id: anchorId, viewport: context.viewport, devicePixelRatio: context.devicePixelRatio };
+      };
       const live = liveRecording(ctx.state(), recording.runId);
       if (!live) throw new StaleCaptureError('The recording changed while saving the snapshot.');
       // Published before the shield activates, so its first annotation finds it.
@@ -129,18 +150,35 @@ export function createCapture(deps: CaptureDeps) {
     if (live?.anchor?.id === anchorId) await ctx.commit((state) => withRecording(state, { ...live, anchor: null }));
   }
 
-  async function captureStep(ctx: OperationContext, recording: Recording, message: ClickCapture, windowId: number): Promise<void> {
-    const taken: HowbeamCaptureTakenMessage = { type: 'HOWBEAM_CAPTURE_TAKEN', runId: message.runId, captureId: message.captureId };
+  async function captureStep(
+    ctx: OperationContext,
+    recording: Recording,
+    message: ClickCapture,
+    windowId: number,
+  ): Promise<void> {
+    const taken: HowbeamCaptureTakenMessage = {
+      type: 'HOWBEAM_CAPTURE_TAKEN',
+      runId: message.runId,
+      captureId: message.captureId,
+    };
     const guard = guardFor(ctx, recording, windowId, message.url);
-    const shot = await ctx.until(ports.capture(
-      { tabId: recording.tabId, windowId, viewport: message.viewport, devicePixelRatio: message.devicePixelRatio, captureId: message.captureId },
-      async () => {
-        await guard();
-        assertCaptureNotCancelled(message.captureId);
-      },
-      // The pixels exist: the recorder may replay the click it is holding while the step is stored.
-      () => void ports.tabs.send(recording.tabId, taken).catch(() => {}),
-    ));
+    const shot = await ctx.until(
+      ports.capture(
+        {
+          tabId: recording.tabId,
+          windowId,
+          viewport: message.viewport,
+          devicePixelRatio: message.devicePixelRatio,
+          captureId: message.captureId,
+        },
+        async () => {
+          await guard();
+          assertCaptureNotCancelled(message.captureId);
+        },
+        // The pixels exist: the recorder may replay the click it is holding while the step is stored.
+        () => void ports.tabs.send(recording.tabId, taken).catch(() => {}),
+      ),
+    );
     // Once the recorder replayed the click the page may already show another
     // URL, so only a cancellation or a newer control can still void the pixels.
     if (ctx.signal.aborted || !liveRecording(ctx.state(), recording.runId)) {
@@ -151,18 +189,23 @@ export function createCapture(deps: CaptureDeps) {
     assertCaptureNotCancelled(message.captureId);
     // No await between the commit marker and the write: a later cancellation must not half-cancel it.
     markCaptureCommitting(message.captureId);
-    await ports.steps.add([{
-      id: ports.newId(),
-      sessionId: recording.sessionId,
-      runId: message.runId,
-      screenshotBlob: shot.blob,
-      bounds: message.rect,
-      devicePixelRatio: message.devicePixelRatio,
-      screenshotScale: shot.scale,
-      description: generateActionDescription(message),
-      url: message.url,
-      timestamp: message.timestamp,
-    }], recording.insertAfterStepId);
+    await ports.steps.add(
+      [
+        {
+          id: ports.newId(),
+          sessionId: recording.sessionId,
+          runId: message.runId,
+          screenshotBlob: shot.blob,
+          bounds: message.rect,
+          devicePixelRatio: message.devicePixelRatio,
+          screenshotScale: shot.scale,
+          description: generateActionDescription(message),
+          url: message.url,
+          timestamp: message.timestamp,
+        },
+      ],
+      recording.insertAfterStepId,
+    );
   }
 
   async function annotate(recording: Recording, message: ClickCapture): Promise<void> {
@@ -182,25 +225,31 @@ export function createCapture(deps: CaptureDeps) {
     if (stored.url !== message.url) throw new UserFacingError('background.annotationSkippedPageChanged');
     await lifecycle.ensureRunProject(recording);
     markCaptureCommitting(message.captureId);
-    await ports.steps.add([{
-      id: ports.newId(),
-      sessionId: recording.sessionId,
-      runId: message.runId,
-      bounds: message.rect,
-      devicePixelRatio: stored.devicePixelRatio,
-      screenshotScale: stored.screenshotScale,
-      description: '',
-      url: message.url,
-      timestamp: message.timestamp,
-      groupId: anchor.id,
-    }], recording.insertAfterStepId);
+    await ports.steps.add(
+      [
+        {
+          id: ports.newId(),
+          sessionId: recording.sessionId,
+          runId: message.runId,
+          bounds: message.rect,
+          devicePixelRatio: stored.devicePixelRatio,
+          screenshotScale: stored.screenshotScale,
+          description: '',
+          url: message.url,
+          timestamp: message.timestamp,
+          groupId: anchor.id,
+        },
+      ],
+      recording.insertAfterStepId,
+    );
   }
 
   async function click(ctx: OperationContext, message: ClickCapture, sender: Sender): Promise<ClickCaptureResult> {
     const recording = liveRecording(ctx.state(), message.runId);
     if (!recording) return { ok: false, error: 'not-recording' };
     if (recording.phase !== 'recording' && recording.phase !== 'finishing') return { ok: false, error: 'wrong-phase' };
-    if (!isTrustedRecordedPageSender(message.url, sender, recording.tabId)) return { ok: false, error: 'untrusted-sender' };
+    if (!isTrustedRecordedPageSender(message.url, sender, recording.tabId))
+      return { ok: false, error: 'untrusted-sender' };
     const windowId = sender.tab?.windowId;
     if (windowId == null) return { ok: false, error: 'missing-tab-context' };
 
@@ -234,7 +283,11 @@ export function createCapture(deps: CaptureDeps) {
       }
       if (error instanceof SnapshotAnchorMissingError) {
         console.error('[howbeam] snapshot anchor is gone; settling the run:', error.message);
-        await lifecycle.endWithError(ctx, recording, notice('SNAPSHOT_ANCHOR_MISSING', 'background.snapshotAnchorLost'));
+        await lifecycle.endWithError(
+          ctx,
+          recording,
+          notice('SNAPSHOT_ANCHOR_MISSING', 'background.snapshotAnchorLost'),
+        );
         return reported('snapshot-anchor-missing');
       }
       if (isMissingTabError(error)) {
@@ -256,13 +309,20 @@ export function createCapture(deps: CaptureDeps) {
   }
 
   /** Marks the snapshot invalidated, once; answers whether it is invalidated now. */
-  async function invalidate(ctx: OperationContext, runId: string, report?: { viewport: ClickCapture['viewport']; devicePixelRatio: number }): Promise<boolean> {
+  async function invalidate(
+    ctx: OperationContext,
+    runId: string,
+    report?: { viewport: ClickCapture['viewport']; devicePixelRatio: number },
+  ): Promise<boolean> {
     const recording = liveRecording(ctx.state(), runId);
     if (!recording || recording.mode !== 'snapshot') return false;
     if (recording.phase === 'invalidated') return true;
     const anchor = recording.anchor;
     if (recording.phase !== 'recording' || !anchor?.viewport || anchor.devicePixelRatio == null) return false;
-    if (report && isMatchingSnapshotViewport(anchor.viewport, anchor.devicePixelRatio, report.viewport, report.devicePixelRatio)) {
+    if (
+      report &&
+      isMatchingSnapshotViewport(anchor.viewport, anchor.devicePixelRatio, report.viewport, report.devicePixelRatio)
+    ) {
       return false;
     }
     deps.discardUndo();
@@ -302,7 +362,10 @@ export function createCapture(deps: CaptureDeps) {
     return recording.phase === 'recording' || recording.phase === 'paused' || recording.phase === 'preparing-next';
   }
 
-  async function handleSnapshotInvalidated(message: BackgroundRequest<'SNAPSHOT_INVALIDATED'>, sender: Sender): Promise<boolean> {
+  async function handleSnapshotInvalidated(
+    message: BackgroundRequest<'SNAPSHOT_INVALIDATED'>,
+    sender: Sender,
+  ): Promise<boolean> {
     if (!isValidSnapshotViewportContext(message.viewport, message.devicePixelRatio)) return false;
     await actor.ready();
     const recording = recorderRun(message.runId, sender);
@@ -311,7 +374,10 @@ export function createCapture(deps: CaptureDeps) {
     return actor.run((ctx) => invalidate(ctx, message.runId, message)).catch(() => false);
   }
 
-  async function handleSnapshotRecorderFailure(message: BackgroundRequest<'SNAPSHOT_RECORDER_FAILED'>, sender: Sender): Promise<boolean> {
+  async function handleSnapshotRecorderFailure(
+    message: BackgroundRequest<'SNAPSHOT_RECORDER_FAILED'>,
+    sender: Sender,
+  ): Promise<boolean> {
     await actor.ready();
     const recording = recorderRun(message.runId, sender);
     if (recording?.mode !== 'snapshot') return false;
@@ -320,7 +386,10 @@ export function createCapture(deps: CaptureDeps) {
   }
 
   /** Not queued: the capture it cancels may be the operation running right now. */
-  async function handleCancelCapture(message: BackgroundRequest<'HOWBEAM_CANCEL_CAPTURE'>, sender: Sender): Promise<ClickCaptureResult> {
+  async function handleCancelCapture(
+    message: BackgroundRequest<'HOWBEAM_CANCEL_CAPTURE'>,
+    sender: Sender,
+  ): Promise<ClickCaptureResult> {
     await actor.ready();
     if (!recorderRun(message.runId, sender)) return { ok: false, error: 'untrusted-sender' };
     cancelCapture(message.captureId);

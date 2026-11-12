@@ -32,8 +32,27 @@ function fakeDirectory(failOn?: string, asciiOnly = false) {
 }
 
 /** updatedAt is deliberately constant: the backup must follow the revisions, not the clock. */
-function project(id: string, title: string, contentRevision: number, metadataRevision = 0, stepEditRevision = 0): ProjectSummary {
-  return { id, title, description: '', sections: [], createdAt: 0, updatedAt: 0, contentRevision, stepEditRevision, metadataRevision, stepCount: 0, entryCount: 0, storageBytes: 0 };
+function project(
+  id: string,
+  title: string,
+  contentRevision: number,
+  metadataRevision = 0,
+  stepEditRevision = 0,
+): ProjectSummary {
+  return {
+    id,
+    title,
+    description: '',
+    sections: [],
+    createdAt: 0,
+    updatedAt: 0,
+    contentRevision,
+    stepEditRevision,
+    metadataRevision,
+    stepCount: 0,
+    entryCount: 0,
+    storageBytes: 0,
+  };
 }
 
 function setup(projects: ProjectSummary[], failOn?: string, asciiOnly = false) {
@@ -101,7 +120,11 @@ describe('runBackup', () => {
     const { deps, manifest } = setup([project('aaaaaaaa-1', 'One', 3)]);
     await runBackup(deps);
     const entry = manifest.get('aaaaaaaa-1')!;
-    manifest.set('aaaaaaaa-1', { contentRevision: 3, filename: entry.filename, backedUpAt: 1 } as unknown as BackupManifestEntry);
+    manifest.set('aaaaaaaa-1', {
+      contentRevision: 3,
+      filename: entry.filename,
+      backedUpAt: 1,
+    } as unknown as BackupManifestEntry);
     expect(await runBackup(deps)).toMatchObject({ written: 1, skipped: 0 });
   });
 
@@ -109,7 +132,11 @@ describe('runBackup', () => {
     const { deps, manifest } = setup([project('aaaaaaaa-1', 'One', 0)]);
     await runBackup(deps);
     const entry = manifest.get('aaaaaaaa-1')!;
-    manifest.set('aaaaaaaa-1', { updatedAt: 0, filename: entry.filename, backedUpAt: 1 } as unknown as BackupManifestEntry);
+    manifest.set('aaaaaaaa-1', {
+      updatedAt: 0,
+      filename: entry.filename,
+      backedUpAt: 1,
+    } as unknown as BackupManifestEntry);
     expect(await runBackup(deps)).toMatchObject({ written: 1, skipped: 0 });
     expect(manifest.get('aaaaaaaa-1')).toMatchObject({ contentRevision: 0 });
   });

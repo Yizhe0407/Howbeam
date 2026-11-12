@@ -1,4 +1,12 @@
-import { type ArrowEdit, type EllipseEdit, type ImageEdit, type ImageEditColor, type RectEdit, type StepMarkerEdit, type TextEdit } from '../storage/image-edit-model';
+import {
+  type ArrowEdit,
+  type EllipseEdit,
+  type ImageEdit,
+  type ImageEditColor,
+  type RectEdit,
+  type StepMarkerEdit,
+  type TextEdit,
+} from '../storage/image-edit-model';
 import { BADGE_FONT_FAMILY } from './annotation-contract';
 import type { Rect, Point } from '@/lib/shared/geometry';
 
@@ -53,9 +61,12 @@ function ensureMeasureContext() {
   if (measureContext !== undefined) return measureContext;
   measureContext = null;
   try {
-    const canvas = typeof OffscreenCanvas === 'function'
-      ? new OffscreenCanvas(1, 1)
-      : typeof document !== 'undefined' ? document.createElement('canvas') : null;
+    const canvas =
+      typeof OffscreenCanvas === 'function'
+        ? new OffscreenCanvas(1, 1)
+        : typeof document !== 'undefined'
+          ? document.createElement('canvas')
+          : null;
     measureContext = (canvas?.getContext('2d') as typeof measureContext) ?? null;
   } catch {
     measureContext = null;
@@ -115,7 +126,10 @@ export function layoutTextLines(text: string, fontSize: number, maxWidth: number
 }
 
 /** The height a text edit's box needs for its content. */
-export function measureTextEditHeight(edit: Pick<TextEdit, 'text' | 'fontSize'> & { width: number }, measure: TextMeasure = measureTextWidth): number {
+export function measureTextEditHeight(
+  edit: Pick<TextEdit, 'text' | 'fontSize'> & { width: number },
+  measure: TextMeasure = measureTextWidth,
+): number {
   return layoutTextLines(edit.text, edit.fontSize, edit.width, measure).length * textLineHeight(edit.fontSize);
 }
 
@@ -317,11 +331,21 @@ export function drawImageEdits(
   for (const edit of edits) {
     ctx.save();
     switch (edit.kind) {
-      case 'rect': drawRect(ctx, edit, dpr); break;
-      case 'ellipse': drawEllipse(ctx, edit, dpr); break;
-      case 'arrow': drawArrow(ctx, edit, dpr); break;
-      case 'text': drawText(ctx, edit, dpr, measure); break;
-      case 'step': drawMarker(ctx, edit, dpr); break;
+      case 'rect':
+        drawRect(ctx, edit, dpr);
+        break;
+      case 'ellipse':
+        drawEllipse(ctx, edit, dpr);
+        break;
+      case 'arrow':
+        drawArrow(ctx, edit, dpr);
+        break;
+      case 'text':
+        drawText(ctx, edit, dpr, measure);
+        break;
+      case 'step':
+        drawMarker(ctx, edit, dpr);
+        break;
     }
     ctx.restore();
   }

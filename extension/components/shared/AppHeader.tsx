@@ -39,7 +39,14 @@ const crumbClass = 'flex min-w-0 items-center gap-2 rounded-sm px-1.5 py-1 text-
  * the same corner everywhere, so any page reaches any other in one step —
  * within the same tab.
  */
-export default function AppHeader({ current, currentHeading, status, actions, isSettingsPage = false, beforeNavigate }: Props) {
+export default function AppHeader({
+  current,
+  currentHeading,
+  status,
+  actions,
+  isSettingsPage = false,
+  beforeNavigate,
+}: Props) {
   const isHome = current === undefined;
 
   async function navigate(page: InPlacePage): Promise<void> {
@@ -50,7 +57,9 @@ export default function AppHeader({ current, currentHeading, status, actions, is
   const brand = (
     <>
       <Mascot />
-      <span className={cn('shrink-0', !isHome && 'hidden min-[420px]:inline')}>{isHome ? 'Howbeam' : t().common.library}</span>
+      <span className={cn('shrink-0', !isHome && 'hidden min-[420px]:inline')}>
+        {isHome ? 'Howbeam' : t().common.library}
+      </span>
     </>
   );
 
@@ -62,13 +71,18 @@ export default function AppHeader({ current, currentHeading, status, actions, is
               the page gutter that the content below aligns to. */}
           <li className="-ml-1.5 flex shrink-0 items-center">
             {isHome ? (
-              <span aria-current="page" className={cn(crumbClass, 'text-foreground')}>{brand}</span>
+              <span aria-current="page" className={cn(crumbClass, 'text-foreground')}>
+                {brand}
+              </span>
             ) : (
               <button
                 type="button"
                 aria-label={t().nav.homeLabel}
                 onClick={() => void navigate('library')}
-                className={cn(crumbClass, 'text-foreground outline-none transition-colors focus-ring hover:bg-secondary')}
+                className={cn(
+                  crumbClass,
+                  'text-foreground focus-ring transition-colors outline-none hover:bg-secondary',
+                )}
               >
                 {brand}
               </button>
@@ -79,11 +93,18 @@ export default function AppHeader({ current, currentHeading, status, actions, is
               <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               {currentHeading ? (
                 // The crumb truncates on narrow windows; the tooltip keeps the full name reachable.
-                <h1 id={currentHeading.id} tabIndex={currentHeading.id ? -1 : undefined} title={current} className={cn(crumbClass, 'block min-w-0 truncate text-foreground outline-none')}>
+                <h1
+                  id={currentHeading.id}
+                  tabIndex={currentHeading.id ? -1 : undefined}
+                  title={current}
+                  className={cn(crumbClass, 'block min-w-0 truncate text-foreground outline-none')}
+                >
                   {current}
                 </h1>
               ) : (
-                <span title={current} className={cn(crumbClass, 'block min-w-0 truncate text-foreground')}>{current}</span>
+                <span title={current} className={cn(crumbClass, 'block min-w-0 truncate text-foreground')}>
+                  {current}
+                </span>
               )}
             </li>
           )}
@@ -105,7 +126,9 @@ export default function AppHeader({ current, currentHeading, status, actions, is
               aria-label={t().settings.open}
               aria-current={isSettingsPage ? 'page' : undefined}
               onClick={isSettingsPage ? undefined : () => void navigate('options')}
-              className={cn(isSettingsPage && 'border-border bg-selected text-on-accent hover:bg-selected hover:text-on-accent')}
+              className={cn(
+                isSettingsPage && 'border-border bg-selected text-on-accent hover:bg-selected hover:text-on-accent',
+              )}
             >
               <Settings />
             </Button>

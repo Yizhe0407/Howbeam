@@ -44,12 +44,7 @@ export async function generateProjectMarkdownArchive(
     }
 
     throwIfAborted(signal);
-    const markdown = renderProjectMarkdown(
-      markdownEntries,
-      entries,
-      metadata,
-      (entry) => entry.imageReference,
-    );
+    const markdown = renderProjectMarkdown(markdownEntries, entries, metadata, (entry) => entry.imageReference);
     addFile(markdownFilename, strToU8(markdown));
   });
   throwIfAborted(signal);
@@ -82,11 +77,12 @@ function renderProjectMarkdown<T extends RenderedEntryContent>(
     if (hasAnnotationText(entry.annotations)) {
       lines.push('');
       for (const [index, annotation] of entry.annotations.entries()) {
-        lines.push(`${index + 1}. ${escapeProjectMarkdown(textOrDefault(annotation.description, t().export.missingDescription))}`);
+        lines.push(
+          `${index + 1}. ${escapeProjectMarkdown(textOrDefault(annotation.description, t().export.missingDescription))}`,
+        );
       }
     }
   }
 
   return `${lines.join('\n')}\n`;
 }
-

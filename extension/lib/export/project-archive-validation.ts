@@ -1,13 +1,17 @@
 import { CONTROL_CHARACTERS, isIdentifier, isRecord } from '../shared/validation';
-import { buildStepEntries, stepDescriptionLimit, stepRole, type Bounds, type ImageEdit, type Redaction, type Step } from '../storage/models';
+import {
+  buildStepEntries,
+  stepDescriptionLimit,
+  stepRole,
+  type Bounds,
+  type ImageEdit,
+  type Redaction,
+  type Step,
+} from '../storage/models';
 import { cloneImageEdit, isValidImageEdit } from '../storage/image-edit-model';
 import { isPersistedRect } from '../storage/persistence-limits';
 import { screenshotBlobProblem, screenshotProblem } from '../storage/screenshot-rules';
-import {
-  repairProjectSections,
-  sanitizeProjectSectionTitle,
-  type ProjectSection,
-} from '../storage/project-sections';
+import { repairProjectSections, sanitizeProjectSectionTitle, type ProjectSection } from '../storage/project-sections';
 import { isStoredText } from '../storage/stored-text';
 import {
   BOUNDS_KEYS,
@@ -189,7 +193,12 @@ function expectImageEdits(value: unknown, path: string): ImageEdit[] {
     if (ids.has(id)) fail('DUPLICATE_ID', `${path} contains duplicate image edit id ${JSON.stringify(id)}.`);
     ids.add(id);
     for (const key of ['bounds', 'from', 'to', 'center'] as const) {
-      if (hasOwn(record, key)) assertExactKeys(expectRecord(record[key], `${itemPath}.${key}`), key === 'bounds' ? BOUNDS_KEYS : POINT_KEYS, `${itemPath}.${key}`);
+      if (hasOwn(record, key))
+        assertExactKeys(
+          expectRecord(record[key], `${itemPath}.${key}`),
+          key === 'bounds' ? BOUNDS_KEYS : POINT_KEYS,
+          `${itemPath}.${key}`,
+        );
     }
     const edit: unknown = record;
     if (!isValidImageEdit(edit)) fail('INVALID_IMAGE_EDIT', `${itemPath} is not a valid ${kind} image edit.`);
@@ -258,11 +267,7 @@ function parseSectionRecords(value: unknown, path: string, steps: readonly Step[
     const record = expectRecord(section, sectionPath);
     assertExactKeys(record, SECTION_KEYS, sectionPath);
     const id = expectString(record.id, `${sectionPath}.id`, PROJECT_ARCHIVE_LIMITS.maxIdLength);
-    const title = expectString(
-      record.title,
-      `${sectionPath}.title`,
-      PROJECT_ARCHIVE_LIMITS.maxSectionTitleLength,
-    );
+    const title = expectString(record.title, `${sectionPath}.title`, PROJECT_ARCHIVE_LIMITS.maxSectionTitleLength);
     const startEntryId = expectString(
       record.startEntryId,
       `${sectionPath}.startEntryId`,
@@ -274,7 +279,11 @@ function parseSectionRecords(value: unknown, path: string, steps: readonly Step[
   return repairProjectSections(sections, buildStepEntries([...steps]));
 }
 
-export function parseArchiveMetadata(value: unknown, steps: readonly Step[], path = 'manifest.metadata'): ProjectArchiveMetadata {
+export function parseArchiveMetadata(
+  value: unknown,
+  steps: readonly Step[],
+  path = 'manifest.metadata',
+): ProjectArchiveMetadata {
   const record = expectRecord(value, path);
   assertExactKeys(record, METADATA_KEYS, path);
   return {
@@ -288,22 +297,19 @@ export function parseArchiveMetadata(value: unknown, steps: readonly Step[], pat
   };
 }
 
-export function archiveMetadataFromInput(value: ProjectArchiveMetadataInput | undefined, steps: readonly Step[]): ArchiveMetadata {
+export function archiveMetadataFromInput(
+  value: ProjectArchiveMetadataInput | undefined,
+  steps: readonly Step[],
+): ArchiveMetadata {
   const record = expectRecord(value ?? {}, 'metadata');
   assertExactKeys(record, METADATA_KEYS, 'metadata');
   const title = hasOwn(record, 'title')
     ? parseMetadataText(record.title, 'metadata.title', PROJECT_ARCHIVE_LIMITS.maxTitleLength)
     : '';
   const description = hasOwn(record, 'description')
-    ? parseMetadataText(
-        record.description,
-        'metadata.description',
-        PROJECT_ARCHIVE_LIMITS.maxProjectDescriptionLength,
-      )
+    ? parseMetadataText(record.description, 'metadata.description', PROJECT_ARCHIVE_LIMITS.maxProjectDescriptionLength)
     : '';
-  const sections = hasOwn(record, 'sections')
-    ? parseSectionRecords(record.sections, 'metadata.sections', steps)
-    : [];
+  const sections = hasOwn(record, 'sections') ? parseSectionRecords(record.sections, 'metadata.sections', steps) : [];
   return { title, description, sections };
 }
 
@@ -356,9 +362,8 @@ export function validateRuntimeStep(stepValue: unknown, path: string): Step {
   const id = expectIdentifier(record.id, `${path}.id`);
   const sessionId = expectIdentifier(record.sessionId, `${path}.sessionId`);
   const bounds = expectNullableBounds(record.bounds, `${path}.bounds`);
-  const screenshotBlob = hasOwn(record, 'screenshotBlob') && record.screenshotBlob !== undefined
-    ? record.screenshotBlob
-    : undefined;
+  const screenshotBlob =
+    hasOwn(record, 'screenshotBlob') && record.screenshotBlob !== undefined ? record.screenshotBlob : undefined;
   if (screenshotBlob !== undefined && !(screenshotBlob instanceof Blob)) {
     fail('INVALID_BLOB', `${path}.screenshotBlob must be a Blob.`);
   }

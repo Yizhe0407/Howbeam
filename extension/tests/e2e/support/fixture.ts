@@ -36,14 +36,17 @@ function traceRecordingInWorker(recordingStateKey: string): void {
     if (area !== 'local' || !change) return;
     const state = (change.newValue ?? {}) as Record<string, unknown>;
     const notice = state.recoverableError as { code?: string } | null | undefined;
-    console.debug('[e2e] state', JSON.stringify({
-      runId: state.runId,
-      mode: state.mode,
-      phase: state.phase,
-      tabId: state.tabId,
-      itemCount: state.itemCount,
-      notice: notice?.code ?? null,
-    }));
+    console.debug(
+      '[e2e] state',
+      JSON.stringify({
+        runId: state.runId,
+        mode: state.mode,
+        phase: state.phase,
+        tabId: state.tabId,
+        itemCount: state.itemCount,
+        notice: notice?.code ?? null,
+      }),
+    );
   });
   chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
     console.debug('[e2e] tab activated', JSON.stringify({ tabId, windowId }));
@@ -82,10 +85,12 @@ function collectExtensionLog(context: BrowserContext): string[] {
  * closing it gives every spec the same single starting tab.
  */
 async function dismissWelcomePage(context: BrowserContext): Promise<void> {
-  await expect.poll(() => context.pages().some(isWelcomePage), {
-    message: 'the extension should open welcome.html on install',
-    timeout: 15_000,
-  }).toBe(true);
+  await expect
+    .poll(() => context.pages().some(isWelcomePage), {
+      message: 'the extension should open welcome.html on install',
+      timeout: 15_000,
+    })
+    .toBe(true);
   for (const page of context.pages().filter(isWelcomePage)) await page.close();
 }
 
@@ -148,7 +153,9 @@ export const test = base.extend<Fixtures & Options>({
         await writeFile(extensionLogPath, `${extensionLog.join('\n')}\n`);
         await testInfo.attach('extension-log', { path: extensionLogPath, contentType: 'text/plain' });
         for (const [index, page] of context.pages().entries()) {
-          await page.screenshot({ path: testInfo.outputPath(`browser/page-${index}.png`), fullPage: true }).catch(() => {});
+          await page
+            .screenshot({ path: testInfo.outputPath(`browser/page-${index}.png`), fullPage: true })
+            .catch(() => {});
         }
         if (recordTrace) {
           await context.tracing.stop({ path: testInfo.outputPath('browser/trace.zip') }).catch(() => {});
@@ -169,7 +176,7 @@ export const test = base.extend<Fixtures & Options>({
   },
 
   appPage: async ({ extensionContext }, use) => {
-    const page = extensionContext.pages()[0] ?? await extensionContext.newPage();
+    const page = extensionContext.pages()[0] ?? (await extensionContext.newPage());
     await page.goto(FIXTURE_URL);
     await use(page);
   },

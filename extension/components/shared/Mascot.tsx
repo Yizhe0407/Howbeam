@@ -13,5 +13,13 @@ interface Props {
  * Decorative only; callers supply any accessible name.
  */
 export default function Mascot({ className }: Props) {
-  return <img src={mascotUrl} alt="" aria-hidden="true" draggable={false} className={cn('size-7 shrink-0 select-none', className)} />;
+  return (
+    <img
+      src={mascotUrl}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+      className={cn('size-7 shrink-0 select-none', className)}
+    />
+  );
 }

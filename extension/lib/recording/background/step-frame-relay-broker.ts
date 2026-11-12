@@ -33,11 +33,7 @@ interface PendingStepFrameRelay {
 export interface StepFrameRelayBrokerDependencies {
   now?: () => number;
   createToken?: () => string;
-  sendResult: (
-    tabId: number,
-    frameId: number,
-    message: HowbeamStepFrameResultMessage,
-  ) => Promise<void>;
+  sendResult: (tabId: number, frameId: number, message: HowbeamStepFrameResultMessage) => Promise<void>;
 }
 
 export interface StepFrameRelayBroker {
@@ -59,9 +55,7 @@ function relayKey(tabId: number, captureId: string): string {
  * top-frame content script before any screenshot is requested. A fresh private
  * settle token keeps the page-visible token from confirming replay.
  */
-export function createStepFrameRelayBroker(
-  dependencies: StepFrameRelayBrokerDependencies,
-): StepFrameRelayBroker {
+export function createStepFrameRelayBroker(dependencies: StepFrameRelayBrokerDependencies): StepFrameRelayBroker {
   const now = dependencies.now ?? Date.now;
   const createToken = dependencies.createToken ?? (() => crypto.randomUUID());
   const pending = new Map<string, PendingStepFrameRelay>();

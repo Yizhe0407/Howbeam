@@ -1,9 +1,6 @@
 import { browser } from 'wxt/browser';
 import { sendToBackground } from './background-client';
-import type {
-  CancelStepRecaptureResult,
-  FocusStepRecaptureSourceResult,
-} from './messages';
+import type { CancelStepRecaptureResult, FocusStepRecaptureSourceResult } from './messages';
 import { copyText } from '@/lib/shared/i18n/copy';
 import { UserMessageError } from '@/lib/shared/user-message-error';
 

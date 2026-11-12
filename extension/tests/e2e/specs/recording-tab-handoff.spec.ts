@@ -78,9 +78,9 @@ test.describe('recording across tabs and unrecordable pages', () => {
     const tabId = (await readRecordingState(popupPage)).tabId as number;
 
     await appPage.goto('chrome://version/');
-    await expect.poll(async () =>
-      ((await readRecordingState(popupPage)).recoverableError as { code?: string } | null)?.code,
-    ).toBe('RECORDING_WAITING_RESTRICTED_PAGE');
+    await expect
+      .poll(async () => ((await readRecordingState(popupPage)).recoverableError as { code?: string } | null)?.code)
+      .toBe('RECORDING_WAITING_RESTRICTED_PAGE');
     expect(await readRecordingState(popupPage)).toMatchObject({ isRecording: true, tabId });
 
     await appPage.goto(`${FIXTURE_URL}navigated.html`);

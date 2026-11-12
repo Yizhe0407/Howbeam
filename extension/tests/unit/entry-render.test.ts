@@ -119,13 +119,30 @@ describe('compositeStepEntry', () => {
   });
 
   it('hands the owner\u2019s drawn edits to the compositor so exports match the editor', async () => {
-    const edits = [{ id: 'e1', kind: 'rect' as const, bounds: { x: 1, y: 2, width: 3, height: 4 }, width: 2, fill: 'none' as const, color: '#ff4747' }];
+    const edits = [
+      {
+        id: 'e1',
+        kind: 'rect' as const,
+        bounds: { x: 1, y: 2, width: 3, height: 4 },
+        width: 2,
+        fill: 'none' as const,
+        color: '#ff4747',
+      },
+    ];
     const step = makeStep('drawn', 1, { imageEdits: edits });
     const entry: StepEntry = { kind: 'single', step: step as Step & { screenshotBlob: Blob } };
 
     await compositeStepEntry(entry, 'image/png');
 
-    expect(mocks.compositeHighlight).toHaveBeenCalledWith(step.screenshotBlob, step.bounds, 1, 'image/png', [], false, edits);
+    expect(mocks.compositeHighlight).toHaveBeenCalledWith(
+      step.screenshotBlob,
+      step.bounds,
+      1,
+      'image/png',
+      [],
+      false,
+      edits,
+    );
   });
 
   describe('with a crop', () => {
@@ -139,7 +156,16 @@ describe('compositeStepEntry', () => {
         crop,
         bounds: { x: 150, y: 90, width: 30, height: 40 },
         redactions: [{ id: 'm', kind: 'solid', bounds: { x: 120, y: 70, width: 10, height: 10 } }],
-        imageEdits: [{ id: 'e', kind: 'rect', bounds: { x: 200, y: 100, width: 20, height: 20 }, width: 2, fill: 'none' as const, color: '#ff4747' }],
+        imageEdits: [
+          {
+            id: 'e',
+            kind: 'rect',
+            bounds: { x: 200, y: 100, width: 20, height: 20 },
+            width: 2,
+            fill: 'none' as const,
+            color: '#ff4747',
+          },
+        ],
       });
       const entry: StepEntry = { kind: 'single', step: step as Step & { screenshotBlob: Blob } };
 
@@ -153,19 +179,38 @@ describe('compositeStepEntry', () => {
         'image/png',
         [{ id: 'm', kind: 'solid', bounds: { x: 20, y: 20, width: 10, height: 10 } }],
         false,
-        [{ id: 'e', kind: 'rect', bounds: { x: 100, y: 50, width: 20, height: 20 }, width: 2, fill: 'none' as const, color: '#ff4747' }],
+        [
+          {
+            id: 'e',
+            kind: 'rect',
+            bounds: { x: 100, y: 50, width: 20, height: 20 },
+            width: 2,
+            fill: 'none' as const,
+            color: '#ff4747',
+          },
+        ],
       );
     });
 
     it('shifts snapshot annotations the same way', async () => {
       const anchor = makeStep('anchor', 1, { groupId: 'anchor', bounds: null, crop });
-      const note = makeStep('note', 2, { groupId: 'anchor', screenshotBlob: undefined, bounds: { x: 110, y: 60, width: 5, height: 5 } });
-      const entry: StepEntry = { kind: 'group', anchor: anchor as Step & { screenshotBlob: Blob }, annotations: [note] };
+      const note = makeStep('note', 2, {
+        groupId: 'anchor',
+        screenshotBlob: undefined,
+        bounds: { x: 110, y: 60, width: 5, height: 5 },
+      });
+      const entry: StepEntry = {
+        kind: 'group',
+        anchor: anchor as Step & { screenshotBlob: Blob },
+        annotations: [note],
+      };
 
       await compositeStepEntry(entry, 'image/jpeg');
 
       expect(itemAt(mocks.compositeMultiHighlight.mock.calls, 0)[0]).toBe(croppedBlob);
-      expect(itemAt(mocks.compositeMultiHighlight.mock.calls, 0)[1]).toEqual([{ bounds: { x: 10, y: 10, width: 5, height: 5 }, order: 1 }]);
+      expect(itemAt(mocks.compositeMultiHighlight.mock.calls, 0)[1]).toEqual([
+        { bounds: { x: 10, y: 10, width: 5, height: 5 }, order: 1 },
+      ]);
     });
 
     it('uses the original image untouched when the crop turns out to cover all of it', async () => {

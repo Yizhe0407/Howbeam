@@ -15,26 +15,21 @@ export default function ProjectCover({ projectId, revision }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    void getFirstProjectEntry(projectId).then((first) => {
-      if (!cancelled) setEntry(first);
-    }).catch((error: unknown) => {
-      console.error('[howbeam] failed to load project cover', error);
-    });
-    return () => { cancelled = true; };
+    void getFirstProjectEntry(projectId)
+      .then((first) => {
+        if (!cancelled) setEntry(first);
+      })
+      .catch((error: unknown) => {
+        console.error('[howbeam] failed to load project cover', error);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, revision]);
 
   return (
     <div className="aspect-[16/9] w-full overflow-hidden border-b-2 border-border bg-secondary">
-      {entry && (
-        <EntryThumbnail
-          entry={entry}
-          alt=""
-          fit="cover"
-          badges={false}
-          loading="lazy"
-          className="size-full"
-        />
-      )}
+      {entry && <EntryThumbnail entry={entry} alt="" fit="cover" badges={false} loading="lazy" className="size-full" />}
     </div>
   );
 }

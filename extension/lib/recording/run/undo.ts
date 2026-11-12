@@ -39,9 +39,10 @@ export function createUndo(deps: { actor: RunActor; ports: RunPorts }) {
     return actor.run(async (ctx) => {
       const recording = liveRecording(ctx.state(), runId);
       if (!undoable(recording) || recording.itemCount === 0) return { ok: false, error: 'background.nothingToUndo' };
-      const outline = (await ports.steps.outlines(recording.sessionId))
-        .findLast((step) => step.runId === runId && step.bounds !== null);
-      const step = outline && await ports.steps.get(outline.id);
+      const outline = (await ports.steps.outlines(recording.sessionId)).findLast(
+        (step) => step.runId === runId && step.bounds !== null,
+      );
+      const step = outline && (await ports.steps.get(outline.id));
       if (!step) return { ok: false, error: 'background.nothingToUndo' };
 
       const record: PendingUndoRecord = {

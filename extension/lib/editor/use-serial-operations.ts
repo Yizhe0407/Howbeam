@@ -16,7 +16,7 @@ export function useSerialOperations() {
   const queued = useRef(0);
   const [running, setRunning] = useState<RunningOperation | null>(null);
 
-  const run = useCallback(<T,>(label: string | null, operation: () => Promise<T>): Promise<T> => {
+  const run = useCallback(<T>(label: string | null, operation: () => Promise<T>): Promise<T> => {
     queued.current += 1;
     const result = tail.current.then(() => {
       setRunning({ label });

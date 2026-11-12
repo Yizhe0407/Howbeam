@@ -75,7 +75,10 @@ export function controlKindOf(element: Element): ControlKind {
   const role = element.getAttribute('role')?.trim().toLowerCase().split(/\s+/u)[0];
   const byRole = role ? ROLE_KINDS[role] : undefined;
   if (byRole) return byRole;
-  if (element instanceof HTMLElement && (element.isContentEditable || isEditableAttribute(element.getAttribute('contenteditable')))) {
+  if (
+    element instanceof HTMLElement &&
+    (element.isContentEditable || isEditableAttribute(element.getAttribute('contenteditable')))
+  ) {
     return 'text-field';
   }
   return 'element';
@@ -91,17 +94,29 @@ export function generateActionDescription({ intent, control }: ActionDescription
   if (intent === 'mark') return t().capture.markRegion;
   const copy = t().capture;
   switch (control) {
-    case 'link': return copy.openLink;
-    case 'link-new-tab': return copy.openNewTab;
-    case 'select': return copy.selectOption;
-    case 'text-field': return copy.typeInField;
-    case 'checkbox': return copy.toggleCheckbox;
-    case 'radio': return copy.selectRadio;
-    case 'submit': return copy.submitForm;
-    case 'button': return copy.clickButton;
-    case 'input': return copy.useInput;
-    case 'disclosure': return copy.toggleDisclosure;
-    case 'label': return copy.clickLabel;
-    case 'element': return copy.clickElement;
+    case 'link':
+      return copy.openLink;
+    case 'link-new-tab':
+      return copy.openNewTab;
+    case 'select':
+      return copy.selectOption;
+    case 'text-field':
+      return copy.typeInField;
+    case 'checkbox':
+      return copy.toggleCheckbox;
+    case 'radio':
+      return copy.selectRadio;
+    case 'submit':
+      return copy.submitForm;
+    case 'button':
+      return copy.clickButton;
+    case 'input':
+      return copy.useInput;
+    case 'disclosure':
+      return copy.toggleDisclosure;
+    case 'label':
+      return copy.clickLabel;
+    case 'element':
+      return copy.clickElement;
   }
 }

@@ -11,7 +11,8 @@ interface Props {
   children: ReactNode;
 }
 
-const thumb = 'pointer-events-none absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white ring-2 ring-border';
+const thumb =
+  'pointer-events-none absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white ring-2 ring-border';
 
 /** Tracks a pointer drag over `element`, reporting the position as fractions of its box. */
 function useDrag(onMove: (x: number, y: number) => void, onEnd: () => void) {
@@ -46,11 +47,16 @@ function useDrag(onMove: (x: number, y: number) => void, onEnd: () => void) {
 function arrowDelta(event: KeyboardEvent, horizontal: boolean): { dx: number; dy: number } | null {
   const step = event.shiftKey ? 10 : 1;
   switch (event.key) {
-    case 'ArrowLeft': return { dx: -step, dy: 0 };
-    case 'ArrowRight': return { dx: step, dy: 0 };
-    case 'ArrowUp': return horizontal ? { dx: step, dy: 0 } : { dx: 0, dy: step };
-    case 'ArrowDown': return horizontal ? { dx: -step, dy: 0 } : { dx: 0, dy: -step };
-    default: return null;
+    case 'ArrowLeft':
+      return { dx: -step, dy: 0 };
+    case 'ArrowRight':
+      return { dx: step, dy: 0 };
+    case 'ArrowUp':
+      return horizontal ? { dx: step, dy: 0 } : { dx: 0, dy: step };
+    case 'ArrowDown':
+      return horizontal ? { dx: -step, dy: 0 } : { dx: 0, dy: -step };
+    default:
+      return null;
   }
 }
 
@@ -82,8 +88,14 @@ export default function ImageEditColorPicker({ color, onChange, children }: Prop
     commit(next);
   };
 
-  const area = useDrag((x, y) => preview({ ...latest.current, s: x, v: 1 - y }), () => commit());
-  const hue = useDrag((x) => preview({ ...latest.current, h: Math.min(359, x * 360) }), () => commit());
+  const area = useDrag(
+    (x, y) => preview({ ...latest.current, s: x, v: 1 - y }),
+    () => commit(),
+  );
+  const hue = useDrag(
+    (x) => preview({ ...latest.current, h: Math.min(359, x * 360) }),
+    () => commit(),
+  );
 
   const onAreaKey = (event: KeyboardEvent<HTMLDivElement>) => {
     const delta = arrowDelta(event, false);
@@ -135,10 +147,15 @@ export default function ImageEditColorPicker({ color, onChange, children }: Prop
           aria-valuemax={100}
           onKeyDown={onAreaKey}
           {...area}
-          className="relative h-36 cursor-crosshair touch-none rounded-sm border-2 border-border outline-none focus-ring"
-          style={{ background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${pureHue})` }}
+          className="relative h-36 cursor-crosshair touch-none rounded-sm border-2 border-border focus-ring outline-none"
+          style={{
+            background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${pureHue})`,
+          }}
         >
-          <span className={thumb} style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, backgroundColor: current }} />
+          <span
+            className={thumb}
+            style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, backgroundColor: current }}
+          />
         </div>
 
         <div
@@ -150,16 +167,25 @@ export default function ImageEditColorPicker({ color, onChange, children }: Prop
           aria-valuemax={359}
           onKeyDown={onHueKey}
           {...hue}
-          className="relative h-3.5 cursor-pointer touch-none rounded-full border-2 border-border outline-none focus-ring"
+          className="relative h-3.5 cursor-pointer touch-none rounded-full border-2 border-border focus-ring outline-none"
           style={{ background: 'linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)' }}
         >
-          <span className={cn(thumb, 'top-1/2')} style={{ left: `${(hsv.h / 359) * 100}%`, backgroundColor: pureHue }} />
+          <span
+            className={cn(thumb, 'top-1/2')}
+            style={{ left: `${(hsv.h / 359) * 100}%`, backgroundColor: pureHue }}
+          />
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="size-8 shrink-0 rounded-full border-2 border-border" style={{ backgroundColor: current }} aria-hidden="true" />
+          <span
+            className="size-8 shrink-0 rounded-full border-2 border-border"
+            style={{ backgroundColor: current }}
+            aria-hidden="true"
+          />
           <label className="flex h-8 min-w-0 flex-1 items-center rounded-md border-2 border-input bg-card px-2 text-xs font-bold focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus">
-            <span className="text-muted-foreground" aria-hidden="true">#</span>
+            <span className="text-muted-foreground" aria-hidden="true">
+              #
+            </span>
             <input
               value={hexDraft}
               aria-label={copy.hexInput}
@@ -173,7 +199,7 @@ export default function ImageEditColorPicker({ color, onChange, children }: Prop
                 event.preventDefault();
                 commitHex();
               }}
-              className="min-w-0 flex-1 bg-transparent pl-1 font-mono uppercase tabular-nums text-foreground outline-none"
+              className="min-w-0 flex-1 bg-transparent pl-1 font-mono text-foreground uppercase tabular-nums outline-none"
             />
           </label>
         </div>

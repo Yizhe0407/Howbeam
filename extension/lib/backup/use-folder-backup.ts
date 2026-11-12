@@ -33,10 +33,13 @@ export function createBackupScheduler(
     const now = Date.now();
     if (timer === undefined) firstAt = now;
     clearTimeout(timer);
-    timer = setTimeout(() => {
-      timer = undefined;
-      callback();
-    }, Math.max(0, Math.min(debounceMs, firstAt + maxWaitMs - now)));
+    timer = setTimeout(
+      () => {
+        timer = undefined;
+        callback();
+      },
+      Math.max(0, Math.min(debounceMs, firstAt + maxWaitMs - now)),
+    );
   };
   return { schedule, cancel };
 }
@@ -114,41 +117,69 @@ export function useFolderBackup(): FolderBackupState {
     };
   }, [refresh]);
 
-  const guarded = useCallback(async (action: () => Promise<void>) => {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError(false);
-    try {
-      await action();
-      await refresh();
-    } catch (actionError) {
-      console.error('[howbeam] folder backup action failed', actionError);
-      setError(true);
-    } finally {
-      inFlight.current = false;
-      setBusy(false);
-    }
-  }, [refresh]);
+  const guarded = useCallback(
+    async (action: () => Promise<void>) => {
+      if (inFlight.current) return;
+      inFlight.current = true;
+      setBusy(true);
+      setError(false);
+      try {
+        await action();
+        await refresh();
+      } catch (actionError) {
+        console.error('[howbeam] folder backup action failed', actionError);
+        setError(true);
+      } finally {
+        inFlight.current = false;
+        setBusy(false);
+      }
+    },
+    [refresh],
+  );
 
-  const choose = useCallback(() => guarded(async () => {
-    const directory = await pickBackupDirectory();
-    if (!directory) return;
-    await saveBackupConfig({ directory, folderName: directory.name });
-    await runFolderBackup();
-  }), [guarded]);
+  const choose = useCallback(
+    () =>
+      guarded(async () => {
+        const directory = await pickBackupDirectory();
+        if (!directory) return;
+        await saveBackupConfig({ directory, folderName: directory.name });
+        await runFolderBackup();
+      }),
+    [guarded],
+  );
 
-  const reauthorize = useCallback(() => guarded(async () => {
-    const config = await getBackupConfig();
-    if (!config) return;
-    if ((await requestBackupPermission(config.directory)) === 'granted') await runFolderBackup();
-  }), [guarded]);
+  const reauthorize = useCallback(
+    () =>
+      guarded(async () => {
+        const config = await getBackupConfig();
+        if (!config) return;
+        if ((await requestBackupPermission(config.directory)) === 'granted') await runFolderBackup();
+      }),
+    [guarded],
+  );
 
-  const backUpNow = useCallback(() => guarded(async () => {
-    await runFolderBackup();
-  }), [guarded]);
+  const backUpNow = useCallback(
+    () =>
+      guarded(async () => {
+        await runFolderBackup();
+      }),
+    [guarded],
+  );
 
   const turnOff = useCallback(() => guarded(clearBackupConfig), [guarded]);
 
-  return { supported, loading, folderName, availability, lastRun, busy, busyShown, error, choose, reauthorize, backUpNow, turnOff };
+  return {
+    supported,
+    loading,
+    folderName,
+    availability,
+    lastRun,
+    busy,
+    busyShown,
+    error,
+    choose,
+    reauthorize,
+    backUpNow,
+    turnOff,
+  };
 }

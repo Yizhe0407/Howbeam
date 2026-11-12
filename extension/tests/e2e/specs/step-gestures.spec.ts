@@ -25,8 +25,12 @@ async function addGestureFixtures(page: import('@playwright/test').Page): Promis
     const counts = { dblclick: 0, click: 0 };
     (window as unknown as { gestureCounts: typeof counts }).gestureCounts = counts;
     const dbl = document.getElementById('gesture-dbl')!;
-    dbl.addEventListener('click', () => { counts.click += 1; });
-    dbl.addEventListener('dblclick', () => { counts.dblclick += 1; });
+    dbl.addEventListener('click', () => {
+      counts.click += 1;
+    });
+    dbl.addEventListener('dblclick', () => {
+      counts.dblclick += 1;
+    });
   });
 }
 
@@ -36,7 +40,11 @@ test.describe('step recording gestures', () => {
     await addGestureFixtures(appPage);
   });
 
-  test('a range slider drags natively and records no step', async ({ appPage, popupPage, browserErrors: _browserErrors }) => {
+  test('a range slider drags natively and records no step', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
     await startRecording(appPage, popupPage, 'steps');
     const box = (await appPage.locator('#gesture-range').boundingBox())!;
     await appPage.mouse.move(box.x + 4, box.y + box.height / 2);
@@ -48,7 +56,11 @@ test.describe('step recording gestures', () => {
     await stopRecording(popupPage);
   });
 
-  test('a text drag selects text and records no step', async ({ appPage, popupPage, browserErrors: _browserErrors }) => {
+  test('a text drag selects text and records no step', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
     await startRecording(appPage, popupPage, 'steps');
     const box = (await appPage.locator('#gesture-text').boundingBox())!;
     await appPage.mouse.move(box.x + 2, box.y + box.height / 2);
@@ -60,7 +72,11 @@ test.describe('step recording gestures', () => {
     await stopRecording(popupPage);
   });
 
-  test('a text drag selects text while a text field has focus', async ({ appPage, popupPage, browserErrors: _browserErrors }) => {
+  test('a text drag selects text while a text field has focus', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
     await startRecording(appPage, popupPage, 'steps');
     await appPage.locator('#gesture-input').focus();
     const box = (await appPage.locator('#gesture-text').boundingBox())!;
@@ -73,28 +89,48 @@ test.describe('step recording gestures', () => {
     await stopRecording(popupPage);
   });
 
-  test('a double click reaches its dblclick handler and records one step', async ({ appPage, popupPage, browserErrors: _browserErrors }) => {
+  test('a double click reaches its dblclick handler and records one step', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
     await startRecording(appPage, popupPage, 'steps');
     const point = await targetCenter(appPage, '#gesture-dbl');
     await appPage.mouse.dblclick(point.x, point.y);
-    await expect.poll(() => appPage.evaluate(() => (window as unknown as { gestureCounts: { dblclick: number } }).gestureCounts.dblclick)).toBe(1);
-    expect(await appPage.evaluate(() => (window as unknown as { gestureCounts: { click: number } }).gestureCounts.click)).toBe(2);
+    await expect
+      .poll(() =>
+        appPage.evaluate(() => (window as unknown as { gestureCounts: { dblclick: number } }).gestureCounts.dblclick),
+      )
+      .toBe(1);
+    expect(
+      await appPage.evaluate(() => (window as unknown as { gestureCounts: { click: number } }).gestureCounts.click),
+    ).toBe(2);
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
     await expectSteady(async () => (await readSteps(popupPage)).length, 1);
     await stopRecording(popupPage);
   });
 
-  test('a click in a text field puts the caret where the user clicked', async ({ appPage, popupPage, browserErrors: _browserErrors }) => {
+  test('a click in a text field puts the caret where the user clicked', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
     await startRecording(appPage, popupPage, 'steps');
     const box = (await appPage.locator('#gesture-input').boundingBox())!;
     await appPage.mouse.click(box.x + 30, box.y + box.height / 2);
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
-    const caret = await appPage.evaluate(() => (document.getElementById('gesture-input') as HTMLInputElement).selectionStart);
+    const caret = await appPage.evaluate(
+      () => (document.getElementById('gesture-input') as HTMLInputElement).selectionStart,
+    );
     expect(caret).toBeLessThan(10);
     await stopRecording(popupPage);
   });
 
-  test('repeated start/stop cycles reuse one toolbar host', async ({ appPage, popupPage, browserErrors: _browserErrors }) => {
+  test('repeated start/stop cycles reuse one toolbar host', async ({
+    appPage,
+    popupPage,
+    browserErrors: _browserErrors,
+  }) => {
     for (let cycle = 0; cycle < 3; cycle++) {
       // Each cycle runs in the content-script instance the first one created;
       // only one toolbar host may ever exist and none once stopped.

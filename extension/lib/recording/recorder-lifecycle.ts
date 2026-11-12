@@ -1,10 +1,7 @@
 import { browser } from 'wxt/browser';
 import { startKeepAlive } from '../runtime/keep-alive';
 import { installBfcacheLifecycle } from './bfcache-lifecycle';
-import {
-  CONTENT_KEEPALIVE_INTERVAL_MS,
-  CONTENT_KEEPALIVE_PORT_NAME,
-} from './content-script-constants';
+import { CONTENT_KEEPALIVE_INTERVAL_MS, CONTENT_KEEPALIVE_PORT_NAME } from './content-script-constants';
 
 export interface RecorderLifecycleOptions {
   /** Re-reads the authoritative recording state; true when this recorder's

@@ -1,5 +1,14 @@
 import { snapshotRectKey, type SnapshotShieldSelection } from '@/lib/recording/snapshot-shield-protocol';
-import { BADGE_RADIUS, type AnnotationLayout, HIGHLIGHT_LINE_WIDTH, HIGHLIGHT_RADIUS, LEADER_LINE_WIDTH, MARKER_INNER_RADIUS, MARKER_RADIUS, MARKER_RING_WIDTH } from '@/lib/media/annotation-contract';
+import {
+  BADGE_RADIUS,
+  type AnnotationLayout,
+  HIGHLIGHT_LINE_WIDTH,
+  HIGHLIGHT_RADIUS,
+  LEADER_LINE_WIDTH,
+  MARKER_INNER_RADIUS,
+  MARKER_RADIUS,
+  MARKER_RING_WIDTH,
+} from '@/lib/media/annotation-contract';
 import { getBadgeFontSize } from '@/lib/media/annotation-geometry';
 import { layoutWithProvisional } from '@/lib/media/annotation-layout';
 import type { Rect } from '@/lib/shared/geometry';
@@ -183,7 +192,8 @@ export function createOverlay(): SnapshotOverlay {
   return {
     preview(rect: Rect | null) {
       document.body.classList.toggle('has-preview-target', Boolean(rect));
-      if ((rect && previewRect && snapshotRectKey(rect) === snapshotRectKey(previewRect)) || (!rect && !previewRect)) return;
+      if ((rect && previewRect && snapshotRectKey(rect) === snapshotRectKey(previewRect)) || (!rect && !previewRect))
+        return;
       previewRect = rect;
       renderCommitted();
     },

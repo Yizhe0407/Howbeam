@@ -71,10 +71,14 @@ export function createRun(options: RunOptions) {
       return { sessionId, needsRecovery: needsEditorRecovery(actor.state()) };
     },
     async settle(sessionId: string, outcome: 'opened' | 'failed') {
-      await actor.run((ctx) => ctx.commit((state) => {
-        if (state.operation.kind !== 'idle' || state.operation.sessionId !== sessionId) return state;
-        return outcome === 'opened' ? editorRecovered(state) : editorOpenFailed(state);
-      })).catch(() => {});
+      await actor
+        .run((ctx) =>
+          ctx.commit((state) => {
+            if (state.operation.kind !== 'idle' || state.operation.sessionId !== sessionId) return state;
+            return outcome === 'opened' ? editorRecovered(state) : editorOpenFailed(state);
+          }),
+        )
+        .catch(() => {});
     },
   };
 

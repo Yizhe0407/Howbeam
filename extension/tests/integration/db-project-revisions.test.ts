@@ -68,12 +68,15 @@ describe('Project revisions', () => {
     const edited = (await getProject(project.id))!;
     expect(edited.contentRevision).toBe(added.contentRevision);
     expect(edited.stepEditRevision).toBe(added.stepEditRevision + 2);
-    expect(edited).toMatchObject({ stepCount: added.stepCount, entryCount: added.entryCount, storageBytes: added.storageBytes });
+    expect(edited).toMatchObject({
+      stepCount: added.stepCount,
+      entryCount: added.entryCount,
+      storageBytes: added.storageBytes,
+    });
 
     await addStepsAfter([makeStep(project.id, { order: 1 })], null);
     const grown = (await getProject(project.id))!;
     expect(grown.contentRevision).toBe(added.contentRevision + 1);
     expect(grown.stepEditRevision).toBe(edited.stepEditRevision);
   });
-
 });

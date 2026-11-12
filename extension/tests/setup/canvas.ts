@@ -27,7 +27,7 @@ export function setDefaultImageSize(width: number, height: number): void {
 
 /** Operations drawn on the canvas since its last clearRect (one full frame). */
 export function canvasOps(canvas: Element | null): CanvasOp[] {
-  const ops = canvas ? recorded.get(canvas as HTMLCanvasElement) ?? [] : [];
+  const ops = canvas ? (recorded.get(canvas as HTMLCanvasElement) ?? []) : [];
   const lastClear = ops.map((entry) => entry.op).lastIndexOf('clearRect');
   return lastClear === -1 ? ops : ops.slice(lastClear);
 }
@@ -42,7 +42,11 @@ export function maskRects(canvas: Element | null): number[][] {
 function recordingContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
   const ops: CanvasOp[] = [];
   recorded.set(canvas, ops);
-  const state: Record<string | symbol, unknown> = { fillStyle: '#000000', strokeStyle: '#000000', font: '10px sans-serif' };
+  const state: Record<string | symbol, unknown> = {
+    fillStyle: '#000000',
+    strokeStyle: '#000000',
+    font: '10px sans-serif',
+  };
   return new Proxy(state, {
     get(target, key) {
       if (key === 'canvas') return canvas;
@@ -78,7 +82,7 @@ if (typeof window !== 'undefined' && typeof HTMLCanvasElement !== 'undefined') {
 
   if (typeof globalThis.createImageBitmap === 'undefined') {
     globalThis.createImageBitmap = (async (source: unknown) => {
-      const size = source instanceof Blob ? imageSizes.get(source) ?? defaultImageSize : defaultImageSize;
+      const size = source instanceof Blob ? (imageSizes.get(source) ?? defaultImageSize) : defaultImageSize;
       return { ...size, close() {} } as ImageBitmap;
     }) as typeof createImageBitmap;
   }

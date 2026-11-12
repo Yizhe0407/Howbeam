@@ -5,7 +5,9 @@ export function itemAt<T>(items: ArrayLike<T>, index: number): T {
   return item;
 }
 
-type Tuple<T, N extends number, Items extends T[] = []> = Items['length'] extends N ? Items : Tuple<T, N, [...Items, T]>;
+type Tuple<T, N extends number, Items extends T[] = []> = Items['length'] extends N
+  ? Items
+  : Tuple<T, N, [...Items, T]>;
 
 /** The first `count` items, failing the test when there are fewer. */
 export function firstItems<T, N extends number>(items: ArrayLike<T>, count: N): Tuple<T, N> {

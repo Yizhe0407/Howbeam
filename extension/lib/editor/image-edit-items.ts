@@ -50,9 +50,13 @@ export function toItems(
   const cropItems: CropItem[] = crop ? [{ id: CROP_ITEM_ID, kind: 'crop', bounds: crop }] : [];
   return [
     ...cropItems,
-    ...highlights.map((highlight): HighlightItem => ({ id: highlight.id, kind: 'highlight', bounds: highlight.bounds })),
+    ...highlights.map(
+      (highlight): HighlightItem => ({ id: highlight.id, kind: 'highlight', bounds: highlight.bounds }),
+    ),
     ...edits,
-    ...redactions.map((redaction): RedactionItem => ({ id: redaction.id, kind: 'redaction', bounds: redaction.bounds })),
+    ...redactions.map(
+      (redaction): RedactionItem => ({ id: redaction.id, kind: 'redaction', bounds: redaction.bounds }),
+    ),
   ];
 }
 
@@ -108,7 +112,9 @@ export function reorderItem(items: readonly ImageEditItem[], id: string, to: 'fr
   const item = items.find((candidate) => candidate.id === id);
   if (!item || item.kind === 'crop' || item.kind === 'highlight') return [...items];
   const group = (candidate: ImageEditItem): boolean =>
-    candidate.kind !== 'highlight' && candidate.kind !== 'crop' && (candidate.kind === 'redaction') === (item.kind === 'redaction');
+    candidate.kind !== 'highlight' &&
+    candidate.kind !== 'crop' &&
+    (candidate.kind === 'redaction') === (item.kind === 'redaction');
   const others = items.filter((candidate) => candidate.id !== id);
   const members = others.filter(group);
   const anchor = to === 'front' ? members.at(-1) : members[0];
@@ -143,8 +149,8 @@ export function itemRoom(items: readonly ImageEditItem[]): ItemRoom {
 
 /** Whether `added` fit next to `items` without going past a storage limit. A crop always fits: it replaces the old one. */
 export function hasRoomFor(items: readonly ImageEditItem[], added: readonly ImageEditItem[]): boolean {
-  const masks = items.filter((item) => item.kind === 'redaction').length
-    + added.filter((item) => item.kind === 'redaction').length;
+  const masks =
+    items.filter((item) => item.kind === 'redaction').length + added.filter((item) => item.kind === 'redaction').length;
   const edits = items.filter(isDrawnEdit).length + added.filter(isDrawnEdit).length;
   return masks <= IMAGE_ITEM_LIMITS.maxMasks && edits <= IMAGE_ITEM_LIMITS.maxEdits;
 }

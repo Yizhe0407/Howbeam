@@ -6,21 +6,94 @@
     <link rel="icon" href="data:," />
     <title>Howbeam 偵測測試</title>
     <style>
-      * { box-sizing: border-box; }
-      body { margin: 0; padding: 40px; background: #f5f5f4; color: #1c1917; font-family: Arial, sans-serif; }
-      #closed-host { position: relative; display: block; width: 320px; height: 160px; margin-bottom: 28px; background: #e0e7ff; }
-      .delegated { width: 280px; margin-bottom: 28px; background: #fff7ed; padding: 16px; }
-      #image-map-image { position: absolute; left: 400px; top: 40px; width: 240px; height: 120px; }
-      .overlay-case { position: relative; width: 300px; height: 96px; margin-top: 28px; background: #e7e5e4; }
-      .overlay-case button { position: absolute; left: 60px; top: 24px; width: 180px; height: 48px; }
-      .test-overlay { position: absolute; inset: 0; z-index: 1; display: none; background: transparent; }
-      body.activation-overlay-armed #activation-transparent-overlay { display: block; }
-      body.annotation-overlay-armed #annotation-transparent-shim { display: block; }
-      #painted-ancestor-case { position: absolute; left: 680px; top: 40px; margin-top: 0; }
-      #painted-intermediate-case { position: absolute; left: 680px; top: 164px; margin-top: 0; }
-      #painted-descendant-case { position: absolute; left: 680px; top: 288px; margin-top: 0; }
-      #pseudo-painted-case { position: absolute; left: 680px; top: 412px; margin-top: 0; }
-      #pseudo-overflow-case { position: absolute; left: 680px; top: 536px; margin-top: 0; }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px;
+        background: #f5f5f4;
+        color: #1c1917;
+        font-family: Arial, sans-serif;
+      }
+      #closed-host {
+        position: relative;
+        display: block;
+        width: 320px;
+        height: 160px;
+        margin-bottom: 28px;
+        background: #e0e7ff;
+      }
+      .delegated {
+        width: 280px;
+        margin-bottom: 28px;
+        background: #fff7ed;
+        padding: 16px;
+      }
+      #image-map-image {
+        position: absolute;
+        left: 400px;
+        top: 40px;
+        width: 240px;
+        height: 120px;
+      }
+      .overlay-case {
+        position: relative;
+        width: 300px;
+        height: 96px;
+        margin-top: 28px;
+        background: #e7e5e4;
+      }
+      .overlay-case button {
+        position: absolute;
+        left: 60px;
+        top: 24px;
+        width: 180px;
+        height: 48px;
+      }
+      .test-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: none;
+        background: transparent;
+      }
+      body.activation-overlay-armed #activation-transparent-overlay {
+        display: block;
+      }
+      body.annotation-overlay-armed #annotation-transparent-shim {
+        display: block;
+      }
+      #painted-ancestor-case {
+        position: absolute;
+        left: 680px;
+        top: 40px;
+        margin-top: 0;
+      }
+      #painted-intermediate-case {
+        position: absolute;
+        left: 680px;
+        top: 164px;
+        margin-top: 0;
+      }
+      #painted-descendant-case {
+        position: absolute;
+        left: 680px;
+        top: 288px;
+        margin-top: 0;
+      }
+      #pseudo-painted-case {
+        position: absolute;
+        left: 680px;
+        top: 412px;
+        margin-top: 0;
+      }
+      #pseudo-overflow-case {
+        position: absolute;
+        left: 680px;
+        top: 536px;
+        margin-top: 0;
+      }
       #painted-ancestor-overlay,
       #painted-intermediate-layer,
       #painted-intermediate-shim,
@@ -30,15 +103,35 @@
         inset: 0;
         display: none;
       }
-      #painted-ancestor-overlay { z-index: 1; background: rgba(30, 41, 59, 0.42); }
-      #painted-ancestor-hit-surface { position: absolute; inset: 0; background: transparent; }
-      #painted-intermediate-layer { z-index: 1; background: rgba(30, 41, 59, 0.42); }
-      #painted-intermediate-shim { z-index: 2; background: transparent; }
-      body.painted-ancestor-armed #painted-ancestor-overlay { display: block; }
+      #painted-ancestor-overlay {
+        z-index: 1;
+        background: rgba(30, 41, 59, 0.42);
+      }
+      #painted-ancestor-hit-surface {
+        position: absolute;
+        inset: 0;
+        background: transparent;
+      }
+      #painted-intermediate-layer {
+        z-index: 1;
+        background: rgba(30, 41, 59, 0.42);
+      }
+      #painted-intermediate-shim {
+        z-index: 2;
+        background: transparent;
+      }
+      body.painted-ancestor-armed #painted-ancestor-overlay {
+        display: block;
+      }
       body.painted-intermediate-armed #painted-intermediate-layer,
-      body.painted-intermediate-armed #painted-intermediate-shim { display: block; }
+      body.painted-intermediate-armed #painted-intermediate-shim {
+        display: block;
+      }
       #painted-descendant-overlay,
-      #pseudo-painted-overlay { z-index: 1; background: transparent; }
+      #pseudo-painted-overlay {
+        z-index: 1;
+        background: transparent;
+      }
       #painted-descendant-surface {
         position: absolute;
         inset: 0;
@@ -46,14 +139,16 @@
         background: rgba(30, 41, 59, 0.42);
       }
       #pseudo-painted-overlay::before {
-        content: "";
+        content: '';
         position: absolute;
         inset: 0;
         pointer-events: none;
         background: rgba(30, 41, 59, 0.42);
       }
       body.painted-descendant-armed #painted-descendant-overlay,
-      body.pseudo-painted-armed #pseudo-painted-overlay { display: block; }
+      body.pseudo-painted-armed #pseudo-painted-overlay {
+        display: block;
+      }
       #pseudo-overflow-host {
         position: absolute;
         left: 0;
@@ -65,7 +160,7 @@
         background: transparent;
       }
       #pseudo-overflow-host::before {
-        content: "";
+        content: '';
         position: absolute;
         left: 60px;
         top: 24px;
@@ -73,8 +168,15 @@
         height: 48px;
         background: rgba(30, 41, 59, 0.42);
       }
-      body.pseudo-overflow-armed #pseudo-overflow-host { display: block; }
-      #painted-covered-button { display: block; width: 220px; height: 48px; margin-top: 28px; }
+      body.pseudo-overflow-armed #pseudo-overflow-host {
+        display: block;
+      }
+      #painted-covered-button {
+        display: block;
+        width: 220px;
+        height: 48px;
+        margin-top: 28px;
+      }
       #painted-backdrop {
         position: fixed;
         inset: 0;
@@ -82,7 +184,9 @@
         display: none;
         background: rgba(15, 23, 42, 0.58);
       }
-      body.painted-backdrop-armed #painted-backdrop { display: block; }
+      body.painted-backdrop-armed #painted-backdrop {
+        display: block;
+      }
     </style>
   </head>
   <body>
@@ -110,11 +214,9 @@
     </map>
 
     <div id="activation-overlay-case" class="overlay-case">
-      <button
-        id="activation-covered-button"
-        type="button"
-        onclick="window.detectionProbe.noteActivationButtonClick()"
-      >Steps 底層按鈕</button>
+      <button id="activation-covered-button" type="button" onclick="window.detectionProbe.noteActivationButtonClick()">
+        Steps 底層按鈕
+      </button>
       <div
         id="activation-transparent-overlay"
         class="test-overlay"
@@ -124,11 +226,9 @@
     </div>
 
     <div id="annotation-overlay-case" class="overlay-case">
-      <button
-        id="annotation-covered-button"
-        type="button"
-        onclick="window.detectionProbe.noteAnnotationButtonClick()"
-      >Snapshot 底層按鈕</button>
+      <button id="annotation-covered-button" type="button" onclick="window.detectionProbe.noteAnnotationButtonClick()">
+        Snapshot 底層按鈕
+      </button>
       <!-- Deliberately a semantic-free, unpainted shim; the script-only listener below only observes clicks, without adding targeting evidence. -->
       <div id="annotation-transparent-shim" class="test-overlay"></div>
     </div>
@@ -164,11 +264,9 @@
       <div id="pseudo-overflow-host"></div>
     </div>
 
-    <button
-      id="painted-covered-button"
-      type="button"
-      onclick="window.detectionProbe.notePaintedButtonClick()"
-    >Painted backdrop 底層按鈕</button>
+    <button id="painted-covered-button" type="button" onclick="window.detectionProbe.notePaintedButtonClick()">
+      Painted backdrop 底層按鈕
+    </button>
     <!-- Deliberately no role, label, focusability, cursor, or inline handler: its rgba background alone must make it a real visual surface. -->
     <div id="painted-backdrop"></div>
 

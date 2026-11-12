@@ -28,10 +28,7 @@ describe('isTrustedEditorSender', () => {
     expect(isTrustedEditorSender(sender({ frameId: 1 }), editorUrl)).toBe(false);
     expect(isTrustedEditorSender(sender({ url: 'https://evil.example/frame' }), editorUrl)).toBe(false);
     expect(
-      isTrustedEditorSender(
-        sender({ tab: { id: 0, windowId: 7, url: 'https://evil.example/' } }),
-        editorUrl,
-      ),
+      isTrustedEditorSender(sender({ tab: { id: 0, windowId: 7, url: 'https://evil.example/' } }), editorUrl),
     ).toBe(false);
     expect(isTrustedEditorSender(sender({ url: 'not a url' }), editorUrl)).toBe(false);
   });
@@ -84,11 +81,6 @@ describe('isTrustedRecaptureSourceSender', () => {
     expect(isTrustedRecaptureSourceSender(valid, context)).toBe(true);
     expect(isTrustedRecaptureSourceSender({ ...valid, frameId: 2 }, context)).toBe(false);
     expect(isTrustedRecaptureSourceSender({ ...valid, url: 'https://example.com/other' }, context)).toBe(false);
-    expect(
-      isTrustedRecaptureSourceSender(
-        { ...valid, tab: { ...valid.tab, windowId: 5 } },
-        context,
-      ),
-    ).toBe(false);
+    expect(isTrustedRecaptureSourceSender({ ...valid, tab: { ...valid.tab, windowId: 5 } }, context)).toBe(false);
   });
 });

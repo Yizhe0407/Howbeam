@@ -6,16 +6,19 @@ import { type Step } from '@/lib/storage/models';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
 
-vi.mock('wxt/browser', async () =>
-  (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
+vi.mock('wxt/browser', async () => (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
 vi.mock('@/lib/storage/step-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/project-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/storage', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal),
+);
 vi.mock('@/lib/recording/background/pending-undo-store', async () =>
-  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks));
+  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks),
+);
 
 const popupSender = { frameId: 0, url: 'chrome-extension://extension-id/popup.html' };
 const recorderSender = {
@@ -151,17 +154,12 @@ describe('SNAPSHOT_INVALIDATED handling', () => {
 describe('rebuild-invalidated-snapshot failure rollback', () => {
   it('restores the invalidated phase, counters and anchor, and re-injects the toolbar', async () => {
     mocks.getStep.mockResolvedValue(anchorStep());
-    mocks.getRecordingState.mockResolvedValue(
-      snapshotState({ phase: 'invalidated', itemCount: 3 }),
-    );
+    mocks.getRecordingState.mockResolvedValue(snapshotState({ phase: 'invalidated', itemCount: 3 }));
     await importBackground();
     await flushAsyncWork();
 
     mocks.tabsGet.mockRejectedValueOnce(new Error('boom'));
-    const result = await mocks.messageListener?.(
-      { type: 'REBUILD_INVALIDATED_SNAPSHOT', runId: 'run-1' },
-      popupSender,
-    );
+    const result = await mocks.messageListener?.({ type: 'REBUILD_INVALIDATED_SNAPSHOT', runId: 'run-1' }, popupSender);
 
     expect(result).toEqual({ ok: false, error: 'background.rebuildSnapshotFailed' });
     // The claim first cleared run-scoped fields into 'starting'; the rollback must restore every one of them.

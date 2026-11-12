@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
   const values: Record<string, unknown> = {};
-  const listeners = new Set<(changes: Record<string, { oldValue?: unknown; newValue?: unknown }>, area: string) => void>();
+  const listeners = new Set<
+    (changes: Record<string, { oldValue?: unknown; newValue?: unknown }>, area: string) => void
+  >();
   const local = {
     get: vi.fn(async (key: string) => ({ [key]: values[key] })),
     set: vi.fn(async (items: Record<string, unknown>) => {
@@ -81,7 +83,9 @@ describe('active Project storage', () => {
   it('serializes a clear followed by a newer select so the newer selection survives', async () => {
     mocks.values[ACTIVE_PROJECT_ID_KEY] = 'project-a';
     let releaseRead!: () => void;
-    const blockedRead = new Promise<void>((resolve) => { releaseRead = resolve; });
+    const blockedRead = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
     mocks.local.get.mockImplementationOnce(async (key: string) => {
       await blockedRead;
       return { [key]: mocks.values[key] };

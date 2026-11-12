@@ -9,7 +9,9 @@ const LONG = '新進員工到職第一天要完成的帳號申請、權限設定
 
 function renderTitle(props: Partial<Parameters<typeof EditableTitle>[0]> = {}) {
   const onCommit = vi.fn().mockResolvedValue(undefined);
-  render(<EditableTitle value={LONG} onCommit={onCommit} fallback="未命名專案" label="專案名稱" maxLength={80} {...props} />);
+  render(
+    <EditableTitle value={LONG} onCommit={onCommit} fallback="未命名專案" label="專案名稱" maxLength={80} {...props} />,
+  );
   return { onCommit };
 }
 

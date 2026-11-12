@@ -29,7 +29,8 @@ export function createBrowserPorts(deps: {
   openEditor(target: { sessionId: string; entryId: string | null }): Promise<unknown>;
 }): RunPorts {
   const { runtime } = deps;
-  const activeIn = async (query: Parameters<typeof browser.tabs.query>[0]) => (await browser.tabs.query({ active: true, ...query }))[0];
+  const activeIn = async (query: Parameters<typeof browser.tabs.query>[0]) =>
+    (await browser.tabs.query({ active: true, ...query }))[0];
 
   return {
     tabs: {
@@ -50,31 +51,32 @@ export function createBrowserPorts(deps: {
      * (captureVisibleTab shoots whatever tab is in front) and once more after
      * decoding, unless the page was already told the pixels exist.
      */
-    capture: (request, guard, onTaken) => queueCapture(async () => {
-      const check = async () => {
-        assertCaptureNotCancelled(request.captureId);
-        await guard();
-        assertCaptureNotCancelled(request.captureId);
-      };
-      await check();
-      const target = { tabId: request.tabId, frameIds: [0] };
-      const dataUrl = await withCapturePresentation(
-        {
-          insert: () => browser.scripting.insertCSS({ target, css: CAPTURE_PRESENTATION_CSS, origin: 'USER' }),
-          settle: async () => {
-            await browser.scripting.executeScript({ target, func: waitForCapturePresentationPaint });
+    capture: (request, guard, onTaken) =>
+      queueCapture(async () => {
+        const check = async () => {
+          assertCaptureNotCancelled(request.captureId);
+          await guard();
+          assertCaptureNotCancelled(request.captureId);
+        };
+        await check();
+        const target = { tabId: request.tabId, frameIds: [0] };
+        const dataUrl = await withCapturePresentation(
+          {
+            insert: () => browser.scripting.insertCSS({ target, css: CAPTURE_PRESENTATION_CSS, origin: 'USER' }),
+            settle: async () => {
+              await browser.scripting.executeScript({ target, func: waitForCapturePresentationPaint });
+            },
+            remove: () => browser.scripting.removeCSS({ target, css: CAPTURE_PRESENTATION_CSS, origin: 'USER' }),
           },
-          remove: () => browser.scripting.removeCSS({ target, css: CAPTURE_PRESENTATION_CSS, origin: 'USER' }),
-        },
-        () => runtime.captureVisibleTabWithRetry(request.windowId, check),
-      );
-      onTaken?.();
-      const blob = await runtime.dataUrlToBlob(dataUrl);
-      const scale = await runtime.getScreenshotScale(blob, request.viewport, request.devicePixelRatio);
-      if (onTaken) assertCaptureNotCancelled(request.captureId);
-      else await check();
-      return { blob, scale };
-    }),
+          () => runtime.captureVisibleTabWithRetry(request.windowId, check),
+        );
+        onTaken?.();
+        const blob = await runtime.dataUrlToBlob(dataUrl);
+        const scale = await runtime.getScreenshotScale(blob, request.viewport, request.devicePixelRatio);
+        if (onTaken) assertCaptureNotCancelled(request.captureId);
+        else await check();
+        return { blob, scale };
+      }),
     steps: {
       add: addStepsAfter,
       get: getStep,

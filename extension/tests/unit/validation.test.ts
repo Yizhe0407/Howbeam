@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  isBoundedString,
-  isFiniteRect,
-  isFiniteWithin,
-  isRecord,
-  isSafeId,
-} from '@/lib/shared/validation';
+import { isBoundedString, isFiniteRect, isFiniteWithin, isRecord, isSafeId } from '@/lib/shared/validation';
 
 describe('isRecord', () => {
   it('accepts plain objects only', () => {

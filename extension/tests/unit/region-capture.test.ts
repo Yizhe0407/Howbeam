@@ -40,10 +40,22 @@ afterEach(() => {
 
 describe('region capture geometry', () => {
   it.each([
-    [{ x: 20, y: 10 }, { x: 80, y: 70 }],
-    [{ x: 80, y: 10 }, { x: 20, y: 70 }],
-    [{ x: 20, y: 70 }, { x: 80, y: 10 }],
-    [{ x: 80, y: 70 }, { x: 20, y: 10 }],
+    [
+      { x: 20, y: 10 },
+      { x: 80, y: 70 },
+    ],
+    [
+      { x: 80, y: 10 },
+      { x: 20, y: 70 },
+    ],
+    [
+      { x: 20, y: 70 },
+      { x: 80, y: 10 },
+    ],
+    [
+      { x: 80, y: 70 },
+      { x: 20, y: 10 },
+    ],
   ])('normalizes all drag directions', (start, end) => {
     expect(normalizeRegionRect(start, end, viewport)).toEqual({ x: 20, y: 10, width: 60, height: 60 });
   });
@@ -102,12 +114,20 @@ describe('placeRegionActions', () => {
 describe('createRegionCapture', () => {
   it('hides visuals, waits two frames, and keeps the blocker until capture settles', async () => {
     const frames: FrameRequestCallback[] = [];
-    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
-      frames.push(callback);
-      return frames.length;
-    }));
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        frames.push(callback);
+        return frames.length;
+      }),
+    );
     let finishCapture!: () => void;
-    const onCapture = vi.fn(() => new Promise<void>((resolve) => { finishCapture = resolve; }));
+    const onCapture = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishCapture = resolve;
+        }),
+    );
     const controller = createRegionCapture({ onCapture, viewport: () => viewport });
     const blocker = controller.host.shadowRoot!.querySelector<HTMLElement>('.hb-region-blocker')!;
 
@@ -164,12 +184,20 @@ describe('createRegionCapture', () => {
 
   it('ignores Escape, resize, and cancel() while a capture is in flight', async () => {
     const frames: FrameRequestCallback[] = [];
-    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
-      frames.push(callback);
-      return frames.length;
-    }));
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        frames.push(callback);
+        return frames.length;
+      }),
+    );
     let finishCapture!: () => void;
-    const onCapture = vi.fn(() => new Promise<void>((resolve) => { finishCapture = resolve; }));
+    const onCapture = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishCapture = resolve;
+        }),
+    );
     const onCancel = vi.fn();
     const controller = createRegionCapture({ onCapture, onCancel, viewport: () => viewport });
     const blocker = controller.host.shadowRoot!.querySelector<HTMLElement>('.hb-region-blocker')!;
@@ -200,10 +228,13 @@ describe('createRegionCapture', () => {
 
   it('lets the drawn box be moved and resized before it is confirmed with Enter', async () => {
     const frames: FrameRequestCallback[] = [];
-    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
-      frames.push(callback);
-      return frames.length;
-    }));
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        frames.push(callback);
+        return frames.length;
+      }),
+    );
     const onCapture = vi.fn();
     const controller = createRegionCapture({ onCapture, viewport: () => viewport });
     const root = controller.host.shadowRoot!;

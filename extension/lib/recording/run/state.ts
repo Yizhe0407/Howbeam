@@ -32,13 +32,7 @@ export interface SnapshotAnchor {
   devicePixelRatio: number | null;
 }
 
-export type RecordingPhase =
-  | 'starting'
-  | 'recording'
-  | 'paused'
-  | 'preparing-next'
-  | 'invalidated'
-  | 'finishing';
+export type RecordingPhase = 'starting' | 'recording' | 'paused' | 'preparing-next' | 'invalidated' | 'finishing';
 
 export interface Recording {
   kind: 'recording';
@@ -213,9 +207,13 @@ export function fromRecordingState(stored: RecordingState): RunState {
     stored.phase !== 'idle' &&
     stored.phase !== 'error'
   ) {
-    const wait = notice?.code ? WAIT_BY_CODE.get(notice.code) ?? null : null;
+    const wait = notice?.code ? (WAIT_BY_CODE.get(notice.code) ?? null) : null;
     const anchor = stored.groupAnchorId
-      ? { id: stored.groupAnchorId, viewport: stored.snapshotViewport, devicePixelRatio: stored.snapshotDevicePixelRatio }
+      ? {
+          id: stored.groupAnchorId,
+          viewport: stored.snapshotViewport,
+          devicePixelRatio: stored.snapshotDevicePixelRatio,
+        }
       : null;
     return {
       operation: {

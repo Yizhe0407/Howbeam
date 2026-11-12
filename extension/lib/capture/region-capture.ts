@@ -45,11 +45,7 @@ function clipRegionPoint(point: Point, viewport: RegionViewport): Point {
   };
 }
 
-export function normalizeRegionRect(
-  start: Point,
-  end: Point,
-  viewport: RegionViewport,
-): Rect {
+export function normalizeRegionRect(start: Point, end: Point, viewport: RegionViewport): Rect {
   const clippedStart = clipRegionPoint(start, viewport);
   const clippedEnd = clipRegionPoint(end, viewport);
   const x = Math.min(clippedStart.x, clippedEnd.x);
@@ -62,10 +58,7 @@ export function normalizeRegionRect(
   };
 }
 
-export function isRegionRectLargeEnough(
-  rect: Rect,
-  minSize = REGION_CAPTURE_MIN_SIZE,
-): boolean {
+export function isRegionRectLargeEnough(rect: Rect, minSize = REGION_CAPTURE_MIN_SIZE): boolean {
   return (
     Number.isFinite(rect.x) &&
     Number.isFinite(rect.y) &&
@@ -139,7 +132,10 @@ export function placeRegionActions(
   viewport: RegionViewport,
   size: { width: number; height: number },
 ): Point {
-  const x = Math.min(Math.max(rect.x + rect.width - size.width, ACTIONS_GAP), Math.max(viewport.width - size.width - ACTIONS_GAP, ACTIONS_GAP));
+  const x = Math.min(
+    Math.max(rect.x + rect.width - size.width, ACTIONS_GAP),
+    Math.max(viewport.width - size.width - ACTIONS_GAP, ACTIONS_GAP),
+  );
   const below = rect.y + rect.height + ACTIONS_GAP;
   if (below + size.height <= viewport.height - ACTIONS_GAP) return { x, y: below };
   const above = rect.y - size.height - ACTIONS_GAP;
@@ -225,7 +221,11 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
   const settleFrames = options.settleFrames ?? 2;
   // Hit-testable on purpose: the transparent host swallows the drag so no page
   // target receives it.
-  const host = createViewportOverlayHost('data-howbeam-region-capture', { 'pointer-events': 'auto' }, { popover: true });
+  const host = createViewportOverlayHost(
+    'data-howbeam-region-capture',
+    { 'pointer-events': 'auto' },
+    { popover: true },
+  );
 
   const root = host.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
@@ -353,7 +353,8 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
     })();
   };
 
-  const pointOf = (event: PointerEvent): Point => clipRegionPoint({ x: event.clientX, y: event.clientY }, readViewport());
+  const pointOf = (event: PointerEvent): Point =>
+    clipRegionPoint({ x: event.clientX, y: event.clientY }, readViewport());
 
   const onPointerDown = (event: PointerEvent) => {
     // The action bar's own buttons are not part of the drawing surface: pressing one must not start a box
@@ -366,9 +367,12 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
     if (capturing || event.button !== 0 || !event.isPrimary) return;
     const point = pointOf(event);
     const handle = (event.target as HTMLElement | null)?.dataset?.handle as RegionHandle | undefined;
-    const inside = pending !== null
-      && point.x >= pending.x && point.x <= pending.x + pending.width
-      && point.y >= pending.y && point.y <= pending.y + pending.height;
+    const inside =
+      pending !== null &&
+      point.x >= pending.x &&
+      point.x <= pending.x + pending.width &&
+      point.y >= pending.y &&
+      point.y <= pending.y + pending.height;
     if (pending && handle) {
       drag = { pointerId: event.pointerId, mode: handle, origin: point, base: pending };
     } else if (pending && inside) {

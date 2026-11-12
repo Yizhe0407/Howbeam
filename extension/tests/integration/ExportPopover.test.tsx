@@ -14,12 +14,17 @@ const mocks = vi.hoisted(() => ({
   generateProjectHtml: vi.fn(),
   generateProjectMarkdownArchive: vi.fn(),
   generateProjectPdf: vi.fn(),
-  projectExportFilename: vi.fn((_metadata: unknown, format: string) => `project.${format === 'markdown-archive' ? 'zip' : format === 'markdown' ? 'md' : format}`),
+  projectExportFilename: vi.fn(
+    (_metadata: unknown, format: string) =>
+      `project.${format === 'markdown-archive' ? 'zip' : format === 'markdown' ? 'md' : format}`,
+  ),
   downloadBlobViaBrowser: vi.fn(),
 }));
 
 vi.mock('@/lib/export/project-export-html', () => ({ generateProjectHtml: mocks.generateProjectHtml }));
-vi.mock('@/lib/export/project-export-markdown', () => ({ generateProjectMarkdownArchive: mocks.generateProjectMarkdownArchive }));
+vi.mock('@/lib/export/project-export-markdown', () => ({
+  generateProjectMarkdownArchive: mocks.generateProjectMarkdownArchive,
+}));
 vi.mock('@/lib/export/project-export-pdf', () => ({ generateProjectPdf: mocks.generateProjectPdf }));
 vi.mock('@/lib/export/project-export-contract', () => ({
   projectExportFilename: mocks.projectExportFilename,
@@ -39,19 +44,19 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderPopover(overrides: {
-  projectEntries?: readonly StepEntry[];
-  runExport?: (task: () => Promise<unknown>) => Promise<unknown>;
-  getProjectEntries?: (signal: AbortSignal) => unknown;
-  metadata?: { title?: string; filename?: string };
-  onExportImages?: (signal: AbortSignal) => unknown;
-} = {}) {
+function renderPopover(
+  overrides: {
+    projectEntries?: readonly StepEntry[];
+    runExport?: (task: () => Promise<unknown>) => Promise<unknown>;
+    getProjectEntries?: (signal: AbortSignal) => unknown;
+    metadata?: { title?: string; filename?: string };
+    onExportImages?: (signal: AbortSignal) => unknown;
+  } = {},
+) {
   // Settles once the export's turn as the editor's data operation is over.
   const settled = vi.fn();
   const runExport = vi.fn(overrides.runExport ?? ((task: () => Promise<unknown>) => task().finally(settled)));
-  const getProjectEntries = vi.fn(
-    overrides.getProjectEntries ?? (() => overrides.projectEntries ?? projectEntries),
-  );
+  const getProjectEntries = vi.fn(overrides.getProjectEntries ?? (() => overrides.projectEntries ?? projectEntries));
   render(
     <ExportPopover
       trigger={<button type="button">匯出</button>}
@@ -168,7 +173,11 @@ describe('ExportPopover', () => {
 
   it('runs the whole export as one editor operation', async () => {
     let finishPdf: (blob: Blob) => void = () => {};
-    mocks.generateProjectPdf.mockReturnValue(new Promise<Blob>((resolve) => { finishPdf = resolve; }));
+    mocks.generateProjectPdf.mockReturnValue(
+      new Promise<Blob>((resolve) => {
+        finishPdf = resolve;
+      }),
+    );
     mocks.downloadBlobViaBrowser.mockResolvedValue(undefined);
     const { runExport, settled } = renderPopover();
 

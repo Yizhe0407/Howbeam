@@ -5,24 +5,47 @@
     <link rel="icon" href="data:," />
     <title>Howbeam 下拉選單測試</title>
     <style>
-      body { margin: 0; padding: 40px; font-family: Arial, sans-serif; }
-      #trigger { width: 200px; height: 36px; }
-      #menu { width: 200px; margin: 0; padding: 0; list-style: none; border: 1px solid #a8a29e; }
-      #menu[hidden] { display: none; }
-      #option { padding: 10px 12px; }
+      body {
+        margin: 0;
+        padding: 40px;
+        font-family: Arial, sans-serif;
+      }
+      #trigger {
+        width: 200px;
+        height: 36px;
+      }
+      #menu {
+        width: 200px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        border: 1px solid #a8a29e;
+      }
+      #menu[hidden] {
+        display: none;
+      }
+      #option {
+        padding: 10px 12px;
+      }
     </style>
   </head>
   <body>
     <button id="trigger" type="button">選擇城市</button>
-    <ul id="menu" hidden><li id="option">台北</li></ul>
+    <ul id="menu" hidden>
+      <li id="option">台北</li>
+    </ul>
     <p id="picked">未選擇</p>
     <script>
       // A listbox opened from a button: the menu closes when the button loses
       // focus, and its items keep that focus by cancelling mousedown.
       const trigger = document.querySelector('#trigger');
       const menu = document.querySelector('#menu');
-      trigger.addEventListener('click', () => { menu.hidden = false; });
-      trigger.addEventListener('blur', () => { menu.hidden = true; });
+      trigger.addEventListener('click', () => {
+        menu.hidden = false;
+      });
+      trigger.addEventListener('blur', () => {
+        menu.hidden = true;
+      });
       menu.addEventListener('mousedown', (event) => event.preventDefault());
       document.querySelector('#option').addEventListener('click', () => {
         document.querySelector('#picked').textContent = '台北';

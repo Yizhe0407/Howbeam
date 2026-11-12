@@ -1,335 +1,717 @@
 <!doctype html>
 <html lang="zh-Hant">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="data:,">
-  <title>Howbeam detection benchmark corpus</title>
-  <style>
-    :root {
-      color-scheme: light;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f4f6fa;
-      color: #172033;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; }
-    body { padding: 20px; }
-    button, input, select { font: inherit; }
-    h1 { margin: 0 0 6px; font-size: 24px; }
-    h2 { margin: 0 0 14px; font-size: 17px; }
-    p { margin: 0; }
-    .lede { color: #5d6678; margin-bottom: 18px; }
-    .benchmark-section {
-      margin: 0 0 24px;
-      padding: 18px;
-      border: 1px solid #dbe1eb;
-      border-radius: 16px;
-      background: white;
-      box-shadow: 0 8px 28px rgb(26 39 68 / 6%);
-    }
-    .case-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-    }
-    .case {
-      min-width: 0;
-      min-height: 104px;
-      padding: 12px;
-      border: 1px solid #e1e6ee;
-      border-radius: 12px;
-      background: #fbfcfe;
-      position: relative;
-      overflow: visible;
-    }
-    .case-title {
-      display: block;
-      margin-bottom: 10px;
-      color: #7b8495;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-    }
-    .primary-button,
-    .icon-button,
-    .menu-item,
-    .tab-button,
-    .toast-close,
-    .floating-button {
-      border: 0;
-      cursor: pointer;
-    }
-    .primary-button {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      border-radius: 9px;
-      background: #315efb;
-      color: white;
-      font-weight: 700;
-    }
-    .primary-button__icon { width: 15px; height: 15px; }
-    .icon-button {
-      width: 42px;
-      height: 42px;
-      display: inline-grid;
-      place-items: center;
-      border-radius: 10px;
-      background: #eef2ff;
-      color: #315efb;
-    }
-    .icon-button svg { width: 20px; height: 20px; }
-    .nav-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 13px;
-      border-radius: 9px;
-      color: #25365c;
-      background: #edf1f8;
-      text-decoration: none;
-      font-weight: 650;
-    }
-    .nav-link__badge {
-      min-width: 20px;
-      padding: 2px 5px;
-      border-radius: 999px;
-      background: #d7def0;
-      font-size: 11px;
-      text-align: center;
-    }
-    .menu {
-      width: 190px;
-      padding: 6px;
-      border: 1px solid #d7dde8;
-      border-radius: 11px;
-      background: white;
-      box-shadow: 0 10px 22px rgb(22 34 58 / 10%);
-    }
-    .menu-item {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 10px;
-      border-radius: 8px;
-      background: transparent;
-      color: #26324a;
-      text-align: left;
-    }
-    .menu-shortcut { color: #8a93a3; font-size: 11px; }
-    .custom-control {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 12px;
-      border-radius: 9px;
-      background: #16324f;
-      color: white;
-      cursor: pointer;
-      user-select: none;
-    }
-    .delegated-card {
-      width: 210px;
-      padding: 12px;
-      border: 1px solid #d9e0ec;
-      border-radius: 12px;
-      background: white;
-      cursor: pointer;
-    }
-    .delegated-card strong { display: block; margin-bottom: 3px; }
-    .delegated-card span { color: #667085; font-size: 12px; }
-    .form-field { display: grid; gap: 6px; width: 210px; }
-    .form-field span { font-size: 12px; color: #59657a; }
-    .form-field input, .form-field select {
-      width: 100%;
-      height: 38px;
-      border: 1px solid #bdc7d6;
-      border-radius: 8px;
-      background: white;
-      padding: 0 10px;
-    }
-    .check-label { display: inline-flex; align-items: center; gap: 8px; }
-    .tabs { display: inline-flex; padding: 4px; border-radius: 10px; background: #edf1f7; }
-    .tab-button { padding: 7px 13px; border-radius: 7px; background: white; color: #24324c; }
-    .switch {
-      position: relative;
-      width: 48px;
-      height: 28px;
-      border-radius: 999px;
-      background: #315efb;
-      cursor: pointer;
-    }
-    .switch-knob {
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      right: 4px;
-      top: 4px;
-      border-radius: 50%;
-      background: white;
-      box-shadow: 0 1px 4px rgb(0 0 0 / 25%);
-    }
-    .toast {
-      width: 220px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: #172033;
-      color: white;
-    }
-    .toast-close { width: 28px; height: 28px; border-radius: 7px; background: #ffffff1f; color: white; }
-    .overlay-stage {
-      width: 220px;
-      height: 64px;
-      display: grid;
-      place-items: center;
-      position: relative;
-      border-radius: 10px;
-      background: #eff3f9;
-    }
-    .overlay-stage button { padding: 9px 14px; }
-    .full-overlay { position: absolute; inset: 0; border-radius: inherit; z-index: 2; }
-    .transparent-overlay { background: transparent; }
-    .painted-overlay { background: rgb(24 40 72 / 16%); }
-    .border-overlay { border: 2px solid #ec4899; }
-    .semantic-overlay { background: transparent; }
-    .painted-descendant-overlay { background: transparent; }
-    .painted-descendant-overlay::after {
-      content: "";
-      position: absolute;
-      inset: 8px;
-      border-radius: 8px;
-      background: rgb(49 94 251 / 12%);
-      pointer-events: none;
-    }
-    .pseudo-overflow-host {
-      width: 1px;
-      height: 1px;
-      position: absolute;
-      left: 10px;
-      top: 10px;
-      z-index: 3;
-    }
-    .pseudo-overflow-host::before {
-      content: "";
-      position: absolute;
-      left: -10px;
-      top: -10px;
-      width: 220px;
-      height: 64px;
-      border-radius: 10px;
-      background: rgb(119 75 216 / 17%);
-    }
-    .geometry-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-    .geometry-case {
-      min-height: 130px;
-      padding: 14px;
-      border: 1px solid #e1e6ee;
-      border-radius: 12px;
-      background: #fbfcfe;
-      position: relative;
-      overflow: hidden;
-    }
-    .scaled-wrap { transform: scale(.84); transform-origin: left top; width: 210px; }
-    .rotated-button { transform: rotate(-5deg); margin: 12px 0 0 12px; }
-    .clipped-shell { width: 145px; height: 44px; overflow: hidden; border: 1px dashed #9aa5b7; }
-    .clipped-target { width: 220px; height: 42px; margin-left: 58px; }
-    .wrapped-copy { width: 160px; line-height: 1.45; }
-    .wrapped-copy span { color: #1e4fc4; text-decoration: underline; cursor: pointer; }
-    .svg-control { width: 120px; height: 56px; cursor: pointer; }
-    .canvas-control { width: 150px; height: 66px; border-radius: 10px; background: #15223a; }
-    .image-map-image { width: 220px; height: 100px; display: block; border: 2px solid #172033; }
-    .shadow-host { display: inline-block; }
-    .dense-toolbar { display: flex; gap: 3px; padding: 5px; border-radius: 10px; background: #edf1f7; }
-    .dense-toolbar button { width: 30px; height: 30px; padding: 0; border: 0; border-radius: 7px; background: white; }
-    .frame-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .benchmark-frame { width: 100%; height: 170px; border: 1px solid #cad2df; border-radius: 12px; background: white; }
-    #benchmark-idle-target {
-      position: fixed;
-      left: 8px;
-      top: 8px;
-      width: 18px;
-      height: 18px;
-      border: 0;
-      border-radius: 4px;
-      background: #cbd5e1;
-      z-index: 10;
-    }
-    @media (max-width: 900px) {
-      .case-grid, .geometry-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-  </style>
-</head>
-<body>
-  <button id="benchmark-idle-target" aria-label="Benchmark idle target"></button>
-  <h1>Howbeam detection benchmark</h1>
-  <p class="lede">Deterministic corpus of production-style interaction and occlusion patterns.</p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>Howbeam detection benchmark corpus</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        background: #f4f6fa;
+        color: #172033;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+      body {
+        padding: 20px;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 24px;
+      }
+      h2 {
+        margin: 0 0 14px;
+        font-size: 17px;
+      }
+      p {
+        margin: 0;
+      }
+      .lede {
+        color: #5d6678;
+        margin-bottom: 18px;
+      }
+      .benchmark-section {
+        margin: 0 0 24px;
+        padding: 18px;
+        border: 1px solid #dbe1eb;
+        border-radius: 16px;
+        background: white;
+        box-shadow: 0 8px 28px rgb(26 39 68 / 6%);
+      }
+      .case-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .case {
+        min-width: 0;
+        min-height: 104px;
+        padding: 12px;
+        border: 1px solid #e1e6ee;
+        border-radius: 12px;
+        background: #fbfcfe;
+        position: relative;
+        overflow: visible;
+      }
+      .case-title {
+        display: block;
+        margin-bottom: 10px;
+        color: #7b8495;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .primary-button,
+      .icon-button,
+      .menu-item,
+      .tab-button,
+      .toast-close,
+      .floating-button {
+        border: 0;
+        cursor: pointer;
+      }
+      .primary-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-radius: 9px;
+        background: #315efb;
+        color: white;
+        font-weight: 700;
+      }
+      .primary-button__icon {
+        width: 15px;
+        height: 15px;
+      }
+      .icon-button {
+        width: 42px;
+        height: 42px;
+        display: inline-grid;
+        place-items: center;
+        border-radius: 10px;
+        background: #eef2ff;
+        color: #315efb;
+      }
+      .icon-button svg {
+        width: 20px;
+        height: 20px;
+      }
+      .nav-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 13px;
+        border-radius: 9px;
+        color: #25365c;
+        background: #edf1f8;
+        text-decoration: none;
+        font-weight: 650;
+      }
+      .nav-link__badge {
+        min-width: 20px;
+        padding: 2px 5px;
+        border-radius: 999px;
+        background: #d7def0;
+        font-size: 11px;
+        text-align: center;
+      }
+      .menu {
+        width: 190px;
+        padding: 6px;
+        border: 1px solid #d7dde8;
+        border-radius: 11px;
+        background: white;
+        box-shadow: 0 10px 22px rgb(22 34 58 / 10%);
+      }
+      .menu-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: transparent;
+        color: #26324a;
+        text-align: left;
+      }
+      .menu-shortcut {
+        color: #8a93a3;
+        font-size: 11px;
+      }
+      .custom-control {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        border-radius: 9px;
+        background: #16324f;
+        color: white;
+        cursor: pointer;
+        user-select: none;
+      }
+      .delegated-card {
+        width: 210px;
+        padding: 12px;
+        border: 1px solid #d9e0ec;
+        border-radius: 12px;
+        background: white;
+        cursor: pointer;
+      }
+      .delegated-card strong {
+        display: block;
+        margin-bottom: 3px;
+      }
+      .delegated-card span {
+        color: #667085;
+        font-size: 12px;
+      }
+      .form-field {
+        display: grid;
+        gap: 6px;
+        width: 210px;
+      }
+      .form-field span {
+        font-size: 12px;
+        color: #59657a;
+      }
+      .form-field input,
+      .form-field select {
+        width: 100%;
+        height: 38px;
+        border: 1px solid #bdc7d6;
+        border-radius: 8px;
+        background: white;
+        padding: 0 10px;
+      }
+      .check-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .tabs {
+        display: inline-flex;
+        padding: 4px;
+        border-radius: 10px;
+        background: #edf1f7;
+      }
+      .tab-button {
+        padding: 7px 13px;
+        border-radius: 7px;
+        background: white;
+        color: #24324c;
+      }
+      .switch {
+        position: relative;
+        width: 48px;
+        height: 28px;
+        border-radius: 999px;
+        background: #315efb;
+        cursor: pointer;
+      }
+      .switch-knob {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        right: 4px;
+        top: 4px;
+        border-radius: 50%;
+        background: white;
+        box-shadow: 0 1px 4px rgb(0 0 0 / 25%);
+      }
+      .toast {
+        width: 220px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #172033;
+        color: white;
+      }
+      .toast-close {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        background: #ffffff1f;
+        color: white;
+      }
+      .overlay-stage {
+        width: 220px;
+        height: 64px;
+        display: grid;
+        place-items: center;
+        position: relative;
+        border-radius: 10px;
+        background: #eff3f9;
+      }
+      .overlay-stage button {
+        padding: 9px 14px;
+      }
+      .full-overlay {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        z-index: 2;
+      }
+      .transparent-overlay {
+        background: transparent;
+      }
+      .painted-overlay {
+        background: rgb(24 40 72 / 16%);
+      }
+      .border-overlay {
+        border: 2px solid #ec4899;
+      }
+      .semantic-overlay {
+        background: transparent;
+      }
+      .painted-descendant-overlay {
+        background: transparent;
+      }
+      .painted-descendant-overlay::after {
+        content: '';
+        position: absolute;
+        inset: 8px;
+        border-radius: 8px;
+        background: rgb(49 94 251 / 12%);
+        pointer-events: none;
+      }
+      .pseudo-overflow-host {
+        width: 1px;
+        height: 1px;
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        z-index: 3;
+      }
+      .pseudo-overflow-host::before {
+        content: '';
+        position: absolute;
+        left: -10px;
+        top: -10px;
+        width: 220px;
+        height: 64px;
+        border-radius: 10px;
+        background: rgb(119 75 216 / 17%);
+      }
+      .geometry-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .geometry-case {
+        min-height: 130px;
+        padding: 14px;
+        border: 1px solid #e1e6ee;
+        border-radius: 12px;
+        background: #fbfcfe;
+        position: relative;
+        overflow: hidden;
+      }
+      .scaled-wrap {
+        transform: scale(0.84);
+        transform-origin: left top;
+        width: 210px;
+      }
+      .rotated-button {
+        transform: rotate(-5deg);
+        margin: 12px 0 0 12px;
+      }
+      .clipped-shell {
+        width: 145px;
+        height: 44px;
+        overflow: hidden;
+        border: 1px dashed #9aa5b7;
+      }
+      .clipped-target {
+        width: 220px;
+        height: 42px;
+        margin-left: 58px;
+      }
+      .wrapped-copy {
+        width: 160px;
+        line-height: 1.45;
+      }
+      .wrapped-copy span {
+        color: #1e4fc4;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      .svg-control {
+        width: 120px;
+        height: 56px;
+        cursor: pointer;
+      }
+      .canvas-control {
+        width: 150px;
+        height: 66px;
+        border-radius: 10px;
+        background: #15223a;
+      }
+      .image-map-image {
+        width: 220px;
+        height: 100px;
+        display: block;
+        border: 2px solid #172033;
+      }
+      .shadow-host {
+        display: inline-block;
+      }
+      .dense-toolbar {
+        display: flex;
+        gap: 3px;
+        padding: 5px;
+        border-radius: 10px;
+        background: #edf1f7;
+      }
+      .dense-toolbar button {
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border: 0;
+        border-radius: 7px;
+        background: white;
+      }
+      .frame-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .benchmark-frame {
+        width: 100%;
+        height: 170px;
+        border: 1px solid #cad2df;
+        border-radius: 12px;
+        background: white;
+      }
+      #benchmark-idle-target {
+        position: fixed;
+        left: 8px;
+        top: 8px;
+        width: 18px;
+        height: 18px;
+        border: 0;
+        border-radius: 4px;
+        background: #cbd5e1;
+        z-index: 10;
+      }
+      @media (max-width: 900px) {
+        .case-grid,
+        .geometry-row {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <button id="benchmark-idle-target" aria-label="Benchmark idle target"></button>
+    <h1>Howbeam detection benchmark</h1>
+    <p class="lede">Deterministic corpus of production-style interaction and occlusion patterns.</p>
 
-  <section class="benchmark-section" id="snapshot-corpus">
-    <h2>Annotation occlusion corpus</h2>
-    <div class="case-grid">
-      <article class="case"><span class="case-title">Paintless shim</span><div class="overlay-stage"><button id="annotation-blank-button">Continue</button><div id="annotation-blank-shim" class="full-overlay transparent-overlay"></div></div></article>
-      <article class="case"><span class="case-title">Semantic shim</span><div class="overlay-stage"><button id="annotation-semantic-button">Delete</button><div id="annotation-semantic-shim" class="full-overlay semantic-overlay" aria-label="Selection surface"></div></div></article>
-      <article class="case"><span class="case-title">Painted overlay</span><div class="overlay-stage"><button id="annotation-painted-button">Open</button><div id="annotation-painted-overlay" class="full-overlay painted-overlay"></div></div></article>
-      <article class="case"><span class="case-title">Border paint</span><div class="overlay-stage"><button id="annotation-border-button">Archive</button><div id="annotation-border-overlay" class="full-overlay border-overlay"></div></div></article>
-      <article class="case"><span class="case-title">Generated paint</span><div class="overlay-stage"><button id="annotation-pseudo-button">Checkout</button><div id="annotation-pseudo-host" class="pseudo-overflow-host"></div></div></article>
-      <article class="case"><span class="case-title">Painted descendant</span><div class="overlay-stage"><button id="annotation-descendant-button">Publish</button><div id="annotation-descendant-overlay" class="full-overlay painted-descendant-overlay"></div></div></article>
-      <article class="case"><span class="case-title">Clickable transparent overlay</span><div class="overlay-stage"><button id="annotation-clickable-button">Download</button><div id="annotation-clickable-overlay" class="full-overlay transparent-overlay"></div></div></article>
-      <article class="case"><span class="case-title">Ordinary control</span><div class="overlay-stage"><button id="annotation-plain-button" class="primary-button"><span>Save changes</span></button></div></article>
-    </div>
-  </section>
+    <section class="benchmark-section" id="snapshot-corpus">
+      <h2>Annotation occlusion corpus</h2>
+      <div class="case-grid">
+        <article class="case">
+          <span class="case-title">Paintless shim</span>
+          <div class="overlay-stage">
+            <button id="annotation-blank-button">Continue</button>
+            <div id="annotation-blank-shim" class="full-overlay transparent-overlay"></div>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Semantic shim</span>
+          <div class="overlay-stage">
+            <button id="annotation-semantic-button">Delete</button>
+            <div
+              id="annotation-semantic-shim"
+              class="full-overlay semantic-overlay"
+              aria-label="Selection surface"
+            ></div>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Painted overlay</span>
+          <div class="overlay-stage">
+            <button id="annotation-painted-button">Open</button>
+            <div id="annotation-painted-overlay" class="full-overlay painted-overlay"></div>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Border paint</span>
+          <div class="overlay-stage">
+            <button id="annotation-border-button">Archive</button>
+            <div id="annotation-border-overlay" class="full-overlay border-overlay"></div>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Generated paint</span>
+          <div class="overlay-stage">
+            <button id="annotation-pseudo-button">Checkout</button>
+            <div id="annotation-pseudo-host" class="pseudo-overflow-host"></div>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Painted descendant</span>
+          <div class="overlay-stage">
+            <button id="annotation-descendant-button">Publish</button>
+            <div id="annotation-descendant-overlay" class="full-overlay painted-descendant-overlay"></div>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Clickable transparent overlay</span>
+          <div class="overlay-stage">
+            <button id="annotation-clickable-button">Download</button>
+            <div id="annotation-clickable-overlay" class="full-overlay transparent-overlay"></div>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Ordinary control</span>
+          <div class="overlay-stage">
+            <button id="annotation-plain-button" class="primary-button"><span>Save changes</span></button>
+          </div>
+        </article>
+      </div>
+    </section>
 
-  <section class="benchmark-section" id="controls-corpus">
-    <h2>Production-style controls</h2>
-    <div class="case-grid">
-      <article class="case"><span class="case-title">Primary action</span><button id="primary-button" class="primary-button"><svg id="primary-button-icon" class="primary-button__icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M2 8.5 6 12l8-9-1.5-1.3L5.8 9.2 3.4 7z"/></svg><span id="primary-button-label">Create project</span></button></article>
-      <article class="case"><span class="case-title">Icon toolbar</span><button id="toolbar-icon-button" class="icon-button" aria-label="Notifications"><svg id="toolbar-icon-glyph" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a5 5 0 0 0-5 5v3.6L5 15v1h14v-1l-2-3.4V8a5 5 0 0 0-5-5Zm0 18a2.5 2.5 0 0 0 2.4-2h-4.8A2.5 2.5 0 0 0 12 21Z"/></svg></button></article>
-      <article class="case"><span class="case-title">Navigation badge</span><a id="nav-link" class="nav-link" href="#navigation"><span id="nav-link-label">Inbox</span><span id="nav-link-badge" class="nav-link__badge">12</span></a></article>
-      <article class="case"><span class="case-title">Dropdown item</span><div class="menu"><button id="menu-item" class="menu-item"><span id="menu-item-label">Duplicate</span><span id="menu-item-shortcut" class="menu-shortcut">⌘D</span></button></div></article>
-      <article class="case"><span class="case-title">ARIA button</span><div id="custom-role-button" class="custom-control" role="button" tabindex="0"><span aria-hidden="true">＋</span><span id="custom-role-label">Add teammate</span></div></article>
-      <article class="case"><span class="case-title">Delegated card</span><div id="delegated-card" class="delegated-card"><strong id="delegated-card-title">Quarterly report</strong><span id="delegated-card-copy">Open analytics workspace</span></div></article>
-      <article class="case"><span class="case-title">Text input</span><label id="email-field-label" class="form-field"><span>Email address</span><input id="email-input" type="email" value="team@example.com"></label></article>
-      <article class="case"><span class="case-title">Select control</span><label class="form-field"><span>Workspace</span><select id="workspace-select"><option>Design</option><option>Engineering</option></select></label></article>
-      <article class="case"><span class="case-title">Checkbox label</span><label id="checkbox-label" class="check-label"><input id="checkbox-input" type="checkbox"><span id="checkbox-copy">Email me updates</span></label></article>
-      <article class="case"><span class="case-title">Tabs</span><div class="tabs" role="tablist"><button id="tab-button" class="tab-button" role="tab" aria-selected="true"><span id="tab-label">Overview</span></button></div></article>
-      <article class="case"><span class="case-title">ARIA switch</span><div id="switch-control" class="switch" role="switch" aria-checked="true" tabindex="0"><span id="switch-knob" class="switch-knob"></span></div></article>
-      <article class="case"><span class="case-title">Toast dismiss</span><div class="toast"><span>Changes published</span><button id="toast-close" class="toast-close" aria-label="Dismiss"><span id="toast-close-glyph">×</span></button></div></article>
-      <article class="case"><span class="case-title">Details summary</span><details open><summary id="details-summary"><span id="details-summary-label">Advanced options</span></summary><p>Configuration body</p></details></article>
-      <article class="case"><span class="case-title">Editable surface</span><div id="editable-surface" contenteditable="true" role="textbox" aria-label="Comment"><span id="editable-copy">Write a comment</span></div></article>
-      <article class="case"><span class="case-title">Transparent activation surface</span><div class="overlay-stage"><button id="activation-underlay-button">Run report</button><div id="activation-overlay" class="full-overlay transparent-overlay"></div></div></article>
-      <article class="case"><span class="case-title">Dense toolbar</span><div class="dense-toolbar"><button aria-label="Back">←</button><button id="dense-target" aria-label="Refresh"><span id="dense-target-glyph">↻</span></button><button aria-label="Forward">→</button><button aria-label="More">•••</button></div></article>
-    </div>
-  </section>
+    <section class="benchmark-section" id="controls-corpus">
+      <h2>Production-style controls</h2>
+      <div class="case-grid">
+        <article class="case">
+          <span class="case-title">Primary action</span
+          ><button id="primary-button" class="primary-button">
+            <svg id="primary-button-icon" class="primary-button__icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path fill="currentColor" d="M2 8.5 6 12l8-9-1.5-1.3L5.8 9.2 3.4 7z" /></svg
+            ><span id="primary-button-label">Create project</span>
+          </button>
+        </article>
+        <article class="case">
+          <span class="case-title">Icon toolbar</span
+          ><button id="toolbar-icon-button" class="icon-button" aria-label="Notifications">
+            <svg id="toolbar-icon-glyph" viewBox="0 0 24 24">
+              <path
+                fill="currentColor"
+                d="M12 3a5 5 0 0 0-5 5v3.6L5 15v1h14v-1l-2-3.4V8a5 5 0 0 0-5-5Zm0 18a2.5 2.5 0 0 0 2.4-2h-4.8A2.5 2.5 0 0 0 12 21Z"
+              />
+            </svg>
+          </button>
+        </article>
+        <article class="case">
+          <span class="case-title">Navigation badge</span
+          ><a id="nav-link" class="nav-link" href="#navigation"
+            ><span id="nav-link-label">Inbox</span><span id="nav-link-badge" class="nav-link__badge">12</span></a
+          >
+        </article>
+        <article class="case">
+          <span class="case-title">Dropdown item</span>
+          <div class="menu">
+            <button id="menu-item" class="menu-item">
+              <span id="menu-item-label">Duplicate</span><span id="menu-item-shortcut" class="menu-shortcut">⌘D</span>
+            </button>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">ARIA button</span>
+          <div id="custom-role-button" class="custom-control" role="button" tabindex="0">
+            <span aria-hidden="true">＋</span><span id="custom-role-label">Add teammate</span>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Delegated card</span>
+          <div id="delegated-card" class="delegated-card">
+            <strong id="delegated-card-title">Quarterly report</strong
+            ><span id="delegated-card-copy">Open analytics workspace</span>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Text input</span
+          ><label id="email-field-label" class="form-field"
+            ><span>Email address</span><input id="email-input" type="email" value="team@example.com"
+          /></label>
+        </article>
+        <article class="case">
+          <span class="case-title">Select control</span
+          ><label class="form-field"
+            ><span>Workspace</span
+            ><select id="workspace-select">
+              <option>Design</option>
+              <option>Engineering</option>
+            </select></label
+          >
+        </article>
+        <article class="case">
+          <span class="case-title">Checkbox label</span
+          ><label id="checkbox-label" class="check-label"
+            ><input id="checkbox-input" type="checkbox" /><span id="checkbox-copy">Email me updates</span></label
+          >
+        </article>
+        <article class="case">
+          <span class="case-title">Tabs</span>
+          <div class="tabs" role="tablist">
+            <button id="tab-button" class="tab-button" role="tab" aria-selected="true">
+              <span id="tab-label">Overview</span>
+            </button>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">ARIA switch</span>
+          <div id="switch-control" class="switch" role="switch" aria-checked="true" tabindex="0">
+            <span id="switch-knob" class="switch-knob"></span>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Toast dismiss</span>
+          <div class="toast">
+            <span>Changes published</span
+            ><button id="toast-close" class="toast-close" aria-label="Dismiss">
+              <span id="toast-close-glyph">×</span>
+            </button>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Details summary</span>
+          <details open>
+            <summary id="details-summary"><span id="details-summary-label">Advanced options</span></summary>
+            <p>Configuration body</p>
+          </details>
+        </article>
+        <article class="case">
+          <span class="case-title">Editable surface</span>
+          <div id="editable-surface" contenteditable="true" role="textbox" aria-label="Comment">
+            <span id="editable-copy">Write a comment</span>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Transparent activation surface</span>
+          <div class="overlay-stage">
+            <button id="activation-underlay-button">Run report</button>
+            <div id="activation-overlay" class="full-overlay transparent-overlay"></div>
+          </div>
+        </article>
+        <article class="case">
+          <span class="case-title">Dense toolbar</span>
+          <div class="dense-toolbar">
+            <button aria-label="Back">←</button
+            ><button id="dense-target" aria-label="Refresh"><span id="dense-target-glyph">↻</span></button
+            ><button aria-label="Forward">→</button><button aria-label="More">•••</button>
+          </div>
+        </article>
+      </div>
+    </section>
 
-  <section class="benchmark-section" id="geometry-corpus">
-    <h2>Geometry and rendering surfaces</h2>
-    <div class="geometry-row">
-      <article class="geometry-case"><span class="case-title">Scaled control</span><div class="scaled-wrap"><button id="scaled-button" class="primary-button"><span id="scaled-label">Scale transform</span></button></div></article>
-      <article class="geometry-case"><span class="case-title">Rotated control</span><button id="rotated-button" class="primary-button rotated-button"><span id="rotated-label">Rotate transform</span></button></article>
-      <article class="geometry-case"><span class="case-title">Clipped control</span><div id="clipped-shell" class="clipped-shell"><button id="clipped-target" class="primary-button clipped-target">Partially visible</button></div></article>
-      <article class="geometry-case"><span class="case-title">Wrapped inline</span><p class="wrapped-copy">Account settings include a <span id="wrapped-link">multiline interactive text target</span> for narrow layouts.</p></article>
-      <article class="geometry-case"><span class="case-title">Standalone SVG</span><svg id="svg-control" class="svg-control" viewBox="0 0 120 56" role="button" tabindex="0" aria-label="Open chart"><rect width="120" height="56" rx="10" fill="#e9efff"/><circle id="svg-control-dot" cx="28" cy="28" r="12" fill="#315efb"/><path d="M52 35V20h8v15zm14 0V14h8v21zm14 0V24h8v11z" fill="#315efb"/></svg></article>
-      <article class="geometry-case"><span class="case-title">Canvas</span><canvas id="canvas-control" class="canvas-control" width="300" height="132" aria-label="Revenue chart"></canvas></article>
-      <article class="geometry-case"><span class="case-title">Image map</span><img id="map-image" class="image-map-image" alt="Dashboard zones" usemap="#dashboard-map" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='100'%3E%3Crect width='220' height='100' fill='%23eef2ff'/%3E%3Crect x='24' y='20' width='82' height='52' rx='8' fill='%23315efb'/%3E%3Crect x='124' y='20' width='72' height='52' rx='8' fill='%23c7d2fe'/%3E%3C/svg%3E"><map name="dashboard-map"><area id="map-area" shape="rect" coords="24,20,106,72" href="#map" alt="Open primary dashboard zone"></map></article>
-      <article class="geometry-case"><span class="case-title">Shadow controls</span><div id="open-shadow-host" class="shadow-host"></div><div id="closed-shadow-host" class="shadow-host"></div></article>
-    </div>
-  </section>
+    <section class="benchmark-section" id="geometry-corpus">
+      <h2>Geometry and rendering surfaces</h2>
+      <div class="geometry-row">
+        <article class="geometry-case">
+          <span class="case-title">Scaled control</span>
+          <div class="scaled-wrap">
+            <button id="scaled-button" class="primary-button"><span id="scaled-label">Scale transform</span></button>
+          </div>
+        </article>
+        <article class="geometry-case">
+          <span class="case-title">Rotated control</span
+          ><button id="rotated-button" class="primary-button rotated-button">
+            <span id="rotated-label">Rotate transform</span>
+          </button>
+        </article>
+        <article class="geometry-case">
+          <span class="case-title">Clipped control</span>
+          <div id="clipped-shell" class="clipped-shell">
+            <button id="clipped-target" class="primary-button clipped-target">Partially visible</button>
+          </div>
+        </article>
+        <article class="geometry-case">
+          <span class="case-title">Wrapped inline</span>
+          <p class="wrapped-copy">
+            Account settings include a <span id="wrapped-link">multiline interactive text target</span> for narrow
+            layouts.
+          </p>
+        </article>
+        <article class="geometry-case">
+          <span class="case-title">Standalone SVG</span
+          ><svg
+            id="svg-control"
+            class="svg-control"
+            viewBox="0 0 120 56"
+            role="button"
+            tabindex="0"
+            aria-label="Open chart"
+          >
+            <rect width="120" height="56" rx="10" fill="#e9efff" />
+            <circle id="svg-control-dot" cx="28" cy="28" r="12" fill="#315efb" />
+            <path d="M52 35V20h8v15zm14 0V14h8v21zm14 0V24h8v11z" fill="#315efb" />
+          </svg>
+        </article>
+        <article class="geometry-case">
+          <span class="case-title">Canvas</span
+          ><canvas
+            id="canvas-control"
+            class="canvas-control"
+            width="300"
+            height="132"
+            aria-label="Revenue chart"
+          ></canvas>
+        </article>
+        <article class="geometry-case">
+          <span class="case-title">Image map</span
+          ><img
+            id="map-image"
+            class="image-map-image"
+            alt="Dashboard zones"
+            usemap="#dashboard-map"
+            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='100'%3E%3Crect width='220' height='100' fill='%23eef2ff'/%3E%3Crect x='24' y='20' width='82' height='52' rx='8' fill='%23315efb'/%3E%3Crect x='124' y='20' width='72' height='52' rx='8' fill='%23c7d2fe'/%3E%3C/svg%3E"
+          /><map name="dashboard-map"
+            ><area id="map-area" shape="rect" coords="24,20,106,72" href="#map" alt="Open primary dashboard zone"
+          /></map>
+        </article>
+        <article class="geometry-case">
+          <span class="case-title">Shadow controls</span>
+          <div id="open-shadow-host" class="shadow-host"></div>
+          <div id="closed-shadow-host" class="shadow-host"></div>
+        </article>
+      </div>
+    </section>
 
-  <section class="benchmark-section" id="frame-corpus">
-    <h2>Frame relay corpus</h2>
-    <div class="frame-grid">
-      <iframe id="same-origin-frame" class="benchmark-frame" src="/benchmark-frame.html?origin=same" title="Same-origin benchmark"></iframe>
-      <iframe id="cross-origin-frame" class="benchmark-frame" src="http://localhost:__FIXTURE_PORT__/benchmark-frame.html?origin=cross" title="Cross-origin benchmark"></iframe>
-    </div>
-  </section>
+    <section class="benchmark-section" id="frame-corpus">
+      <h2>Frame relay corpus</h2>
+      <div class="frame-grid">
+        <iframe
+          id="same-origin-frame"
+          class="benchmark-frame"
+          src="/benchmark-frame.html?origin=same"
+          title="Same-origin benchmark"
+        ></iframe>
+        <iframe
+          id="cross-origin-frame"
+          class="benchmark-frame"
+          src="http://localhost:__FIXTURE_PORT__/benchmark-frame.html?origin=cross"
+          title="Cross-origin benchmark"
+        ></iframe>
+      </div>
+    </section>
 
-  <script src="/benchmark.js"></script>
-</body>
+    <script src="/benchmark.js"></script>
+  </body>
 </html>

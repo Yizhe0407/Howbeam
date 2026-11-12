@@ -37,7 +37,9 @@ export function readTypographicMetrics(font: Uint8Array): TypographicMetrics {
   return { ascent, descent };
 }
 
-async function fetchFont(path: '/fonts/pdf/HowbeamSansTC-Regular.ttf' | '/fonts/pdf/HowbeamSansTC-Bold.ttf'): Promise<Uint8Array> {
+async function fetchFont(
+  path: '/fonts/pdf/HowbeamSansTC-Regular.ttf' | '/fonts/pdf/HowbeamSansTC-Bold.ttf',
+): Promise<Uint8Array> {
   const response = await fetch(browser.runtime.getURL(path));
   if (!response.ok) throw new Error(`Couldn't load the PDF font ${path} (${response.status}).`);
   return new Uint8Array(await response.arrayBuffer());

@@ -6,12 +6,20 @@ export default defineConfig({
     alias: [
       { find: '@', replacement: fileURLToPath(new URL('.', import.meta.url)) },
       // The PDF export ships pdfkit's browser build; tests run that same build instead of its Node one.
-      { find: /^pdfkit$/, replacement: fileURLToPath(new URL('./node_modules/pdfkit/js/pdfkit.browser.mjs', import.meta.url)) },
+      {
+        find: /^pdfkit$/,
+        replacement: fileURLToPath(new URL('./node_modules/pdfkit/js/pdfkit.browser.mjs', import.meta.url)),
+      },
     ],
   },
   test: {
     include: ['tests/unit/**/*.test.{ts,tsx}', 'tests/integration/**/*.test.{ts,tsx}'],
-    setupFiles: ['tests/setup/browser-storage.ts', 'tests/setup/i18n.ts', 'tests/setup/canvas.ts', 'tests/setup/dom-polyfills.ts'],
+    setupFiles: [
+      'tests/setup/browser-storage.ts',
+      'tests/setup/i18n.ts',
+      'tests/setup/canvas.ts',
+      'tests/setup/dom-polyfills.ts',
+    ],
     coverage: {
       provider: 'v8',
       // Opt-in via `pnpm test:coverage`; no thresholds yet so the report

@@ -36,7 +36,9 @@ vi.mock('@/lib/recording/use-recording-session', () => ({
 }));
 vi.mock('@/components/popup/RecordControls', () => ({
   default: ({ onOpenEditor }: { onOpenEditor: () => void }) => (
-    <button type="button" onClick={onOpenEditor}>編輯器</button>
+    <button type="button" onClick={onOpenEditor}>
+      編輯器
+    </button>
   ),
 }));
 vi.mock('@/components/shared/ResetButton', () => ({ default: () => <button type="button">重設</button> }));
@@ -59,10 +61,12 @@ describe('popup editor open', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '編輯器' }));
 
-    await waitFor(() => expect(runtime.sendMessage).toHaveBeenCalledWith({
-      type: 'OPEN_EDITOR',
-      sessionId: 'project-selected',
-    }));
+    await waitFor(() =>
+      expect(runtime.sendMessage).toHaveBeenCalledWith({
+        type: 'OPEN_EDITOR',
+        sessionId: 'project-selected',
+      }),
+    );
   });
 
   it('shows a recoverable error when the background returns no editor response', async () => {

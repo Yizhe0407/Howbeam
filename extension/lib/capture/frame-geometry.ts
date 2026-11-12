@@ -31,17 +31,15 @@ function finiteCssPixels(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function computedBorderBoxDimension(
-  style: CSSStyleDeclaration,
-  dimension: 'width' | 'height',
-): number | null {
+function computedBorderBoxDimension(style: CSSStyleDeclaration, dimension: 'width' | 'height'): number | null {
   const contentOrBorderSize = finiteCssPixels(style[dimension]);
   if (contentOrBorderSize === null) return null;
   if (style.boxSizing === 'border-box') return contentOrBorderSize;
 
-  const additions = dimension === 'width'
-    ? [style.paddingLeft, style.paddingRight, style.borderLeftWidth, style.borderRightWidth]
-    : [style.paddingTop, style.paddingBottom, style.borderTopWidth, style.borderBottomWidth];
+  const additions =
+    dimension === 'width'
+      ? [style.paddingLeft, style.paddingRight, style.borderLeftWidth, style.borderRightWidth]
+      : [style.paddingTop, style.paddingBottom, style.borderTopWidth, style.borderBottomWidth];
   return additions.reduce((total, value) => total + (finiteCssPixels(value) ?? 0), contentOrBorderSize);
 }
 

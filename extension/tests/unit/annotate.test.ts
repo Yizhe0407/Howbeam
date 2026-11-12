@@ -3,8 +3,20 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@/lib/shared/raster-image-validation', () => ({
   validateRasterImageBlob: vi.fn().mockResolvedValue({ width: 100, height: 100, mediaType: 'image/png' }),
 }));
-import { BADGE_RADIUS, HIGHLIGHT_PADDING, LEADER_LINE_WIDTH, MARKER_RADIUS, REDACTION_COLOR, REDACTION_EXPANSION, type AnnotationLayout } from '@/lib/media/annotation-contract';
-import { compositeHighlight, compositeMultiHighlight, getExpandedRedactionBounds } from '@/lib/media/annotation-composite';
+import {
+  BADGE_RADIUS,
+  HIGHLIGHT_PADDING,
+  LEADER_LINE_WIDTH,
+  MARKER_RADIUS,
+  REDACTION_COLOR,
+  REDACTION_EXPANSION,
+  type AnnotationLayout,
+} from '@/lib/media/annotation-contract';
+import {
+  compositeHighlight,
+  compositeMultiHighlight,
+  getExpandedRedactionBounds,
+} from '@/lib/media/annotation-composite';
 import { distanceToBounds, getBadgeFontSize } from '@/lib/media/annotation-geometry';
 import { layoutAnnotations, layoutWithProvisional } from '@/lib/media/annotation-layout';
 import { itemAt } from '../setup/item-at';
@@ -15,8 +27,7 @@ interface Point {
 }
 
 function segmentsCross(a1: Point, a2: Point, b1: Point, b2: Point): boolean {
-  const orient = (p: Point, q: Point, r: Point) =>
-    Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+  const orient = (p: Point, q: Point, r: Point) => Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
   const d1 = orient(b1, b2, a1);
   const d2 = orient(b1, b2, a2);
   const d3 = orient(a1, a2, b1);
@@ -31,7 +42,15 @@ function countLeaderCrossings(layouts: AnnotationLayout[]): number {
     for (let j = i + 1; j < leaders.length; j++) {
       for (let a = 1; a < itemAt(leaders, i).length; a++) {
         for (let b = 1; b < itemAt(leaders, j).length; b++) {
-          if (segmentsCross(itemAt(itemAt(leaders, i), a - 1), itemAt(itemAt(leaders, i), a), itemAt(itemAt(leaders, j), b - 1), itemAt(itemAt(leaders, j), b))) crossings++;
+          if (
+            segmentsCross(
+              itemAt(itemAt(leaders, i), a - 1),
+              itemAt(itemAt(leaders, i), a),
+              itemAt(itemAt(leaders, j), b - 1),
+              itemAt(itemAt(leaders, j), b),
+            )
+          )
+            crossings++;
         }
       }
     }
@@ -115,7 +134,9 @@ describe('layoutAnnotations', () => {
       expectCircleInsideViewport(layout.badgeAnchor, BADGE_RADIUS, viewportWidth, viewportHeight);
     });
 
-    expect(itemAt(layoutAnnotations([{ bounds: itemAt(cases, 0), order: 1 }], viewportWidth, viewportHeight), 0).frame).toEqual({
+    expect(
+      itemAt(layoutAnnotations([{ bounds: itemAt(cases, 0), order: 1 }], viewportWidth, viewportHeight), 0).frame,
+    ).toEqual({
       x: 0,
       y: 0,
       width: viewportWidth,
@@ -276,13 +297,20 @@ describe('layoutAnnotations', () => {
     const committedOnly = layoutWithProvisional([{ bounds: search, order: 6 }], 1_920, 1_080, null);
     const withHover = layoutWithProvisional([{ bounds: search, order: 6 }], 1_920, 1_080, icon);
     const committedBoth = layoutAnnotations(
-      [{ bounds: search, order: 6 }, { bounds: icon, order: 7 }],
+      [
+        { bounds: search, order: 6 },
+        { bounds: icon, order: 7 },
+      ],
       1_920,
       1_080,
     );
 
-    expect(distanceToBounds(itemAt(committedOnly.layouts, 0).badgeAnchor, itemAt(committedBoth, 1).frame)).toBeLessThan(15);
-    expect(distanceToBounds(itemAt(withHover.layouts, 0).badgeAnchor, withHover.provisionalFrame!)).toBeGreaterThanOrEqual(15);
+    expect(distanceToBounds(itemAt(committedOnly.layouts, 0).badgeAnchor, itemAt(committedBoth, 1).frame)).toBeLessThan(
+      15,
+    );
+    expect(
+      distanceToBounds(itemAt(withHover.layouts, 0).badgeAnchor, withHover.provisionalFrame!),
+    ).toBeGreaterThanOrEqual(15);
     expect(withHover.layouts).toHaveLength(1);
     expect(itemAt(withHover.layouts, 0).markerOnly).toBe(false);
     expect(itemAt(withHover.layouts, 0).badgeAnchor).toEqual(itemAt(committedBoth, 0).badgeAnchor);
@@ -291,12 +319,10 @@ describe('layoutAnnotations', () => {
 
   it('keeps a committed target framed when the provisional one coincides with it', () => {
     const bounds = { x: 300, y: 200, width: 120, height: 40 };
-    const { layouts, provisionalFrame } = layoutWithProvisional(
-      [{ bounds, order: 1 }],
-      1_280,
-      800,
-      { ...bounds, x: bounds.x + 10 },
-    );
+    const { layouts, provisionalFrame } = layoutWithProvisional([{ bounds, order: 1 }], 1_280, 800, {
+      ...bounds,
+      x: bounds.x + 10,
+    });
 
     expect(layouts).toHaveLength(1);
     expect(itemAt(layouts, 0).markerOnly).toBe(false);
@@ -408,8 +434,9 @@ describe('layoutAnnotations', () => {
     expect(layouts.every((layout) => !layout.markerOnly)).toBe(true);
     for (let index = 1; index < layouts.length; index++) {
       expect(rectsOverlap(itemAt(layouts, index - 1).frame, itemAt(layouts, index).frame)).toBe(false);
-      expect(itemAt(layouts, index - 1).frame.x + itemAt(layouts, index - 1).frame.width)
-        .toBeLessThan(itemAt(layouts, index).frame.x);
+      expect(itemAt(layouts, index - 1).frame.x + itemAt(layouts, index - 1).frame.width).toBeLessThan(
+        itemAt(layouts, index).frame.x,
+      );
     }
   });
 
@@ -489,7 +516,6 @@ describe('layoutAnnotations', () => {
   });
 });
 
-
 describe('raster redactions', () => {
   it('expands each mask by two CSS pixels and clips it to the screenshot viewport', () => {
     expect(REDACTION_EXPANSION).toBe(2);
@@ -533,20 +559,21 @@ describe('raster redactions', () => {
     }
     const close = vi.fn();
     vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 200, height: 100, close })));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 200, height: 100, close })),
+    );
 
     try {
-      await compositeHighlight(
-        new Blob(['source']),
-        { x: 20, y: 10, width: 30, height: 20 },
-        2,
-        'image/png',
-        [{ id: 'mask', kind: 'solid', bounds: { x: 98, y: 48, width: 10, height: 10 } }],
-      );
+      await compositeHighlight(new Blob(['source']), { x: 20, y: 10, width: 30, height: 20 }, 2, 'image/png', [
+        { id: 'mask', kind: 'solid', bounds: { x: 98, y: 48, width: 10, height: 10 } },
+      ]);
 
       expect(context.fillStyle).toBe(REDACTION_COLOR);
       expect(calls).toContainEqual(['fillRect', 192, 92, 8, 8]);
-      expect(calls.findIndex(([name]) => name === 'fillRect')).toBeGreaterThan(calls.findIndex(([name]) => name === 'stroke'));
+      expect(calls.findIndex(([name]) => name === 'fillRect')).toBeGreaterThan(
+        calls.findIndex(([name]) => name === 'stroke'),
+      );
       expect(calls.at(-1)).toEqual(['convertToBlob']);
       expect(close).toHaveBeenCalledOnce();
     } finally {
@@ -582,7 +609,10 @@ describe('raster redactions', () => {
       }
     }
     vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 200, height: 100, close: vi.fn() })));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 200, height: 100, close: vi.fn() })),
+    );
 
     try {
       const screenshot = new Blob(['source'], { type: 'image/png' });
@@ -628,7 +658,10 @@ describe('raster redactions', () => {
       }
     }
     vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 200, height: 100, close: vi.fn() })));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 200, height: 100, close: vi.fn() })),
+    );
 
     try {
       // Bounds beyond the 100x50 viewport's right edge clamp to a zero-width
@@ -646,7 +679,10 @@ describe('compositeMultiHighlight', () => {
   /** Records every context call by name so ordering invariants are checkable. */
   function fakeCanvas() {
     const calls: Array<[string, ...unknown[]]> = [];
-    const record = (name: string) => (...args: unknown[]) => calls.push([name, ...args]);
+    const record =
+      (name: string) =>
+      (...args: unknown[]) =>
+        calls.push([name, ...args]);
     const context = {
       fillStyle: '',
       strokeStyle: '',
@@ -689,7 +725,10 @@ describe('compositeMultiHighlight', () => {
   function stubBitmap(width: number, height: number, FakeOffscreenCanvas: unknown) {
     const close = vi.fn();
     vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width, height, close })));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width, height, close })),
+    );
     return close;
   }
 
@@ -727,7 +766,6 @@ describe('compositeMultiHighlight', () => {
       vi.unstubAllGlobals();
     }
   });
-
 
   it('renders coincident targets as markers with leaders and callout badges', async () => {
     const { calls, FakeOffscreenCanvas } = fakeCanvas();

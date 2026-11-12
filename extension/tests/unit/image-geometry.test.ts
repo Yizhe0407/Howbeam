@@ -18,8 +18,7 @@ describe('createImageCoordinateMapper', () => {
     defineMetric(image, 'offsetHeight', 80);
     defineMetric(image, 'naturalWidth', 1_000);
     defineMetric(image, 'naturalHeight', 500);
-    image.getBoundingClientRect = () =>
-      ({ left: 100, top: 50, width: 200, height: 160 } as DOMRect);
+    image.getBoundingClientRect = () => ({ left: 100, top: 50, width: 200, height: 160 }) as DOMRect;
 
     const mapper = createImageCoordinateMapper(image)!;
 
@@ -48,8 +47,7 @@ describe('createImageCoordinateMapper', () => {
     defineMetric(image, 'clientHeight', 120);
     defineMetric(image, 'naturalWidth', 1_000);
     defineMetric(image, 'naturalHeight', 500);
-    image.getBoundingClientRect = () =>
-      ({ left: 100, top: 50, width: 160, height: 140 } as DOMRect);
+    image.getBoundingClientRect = () => ({ left: 100, top: 50, width: 160, height: 140 }) as DOMRect;
 
     const mapper = createImageCoordinateMapper(image)!;
 
@@ -71,8 +69,7 @@ describe('createImageCoordinateMapper', () => {
     document.body.append(image);
     defineMetric(image, 'offsetWidth', 101);
     defineMetric(image, 'offsetHeight', 51);
-    image.getBoundingClientRect = () =>
-      ({ left: 0, top: 0, width: 100.5, height: 50.5 } as DOMRect);
+    image.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100.5, height: 50.5 }) as DOMRect;
 
     const mapper = createImageCoordinateMapper(image)!;
 
@@ -95,8 +92,7 @@ describe('createImageCoordinateMapper', () => {
     defineMetric(image, 'offsetHeight', 200);
     defineMetric(image, 'naturalWidth', 1_000);
     defineMetric(image, 'naturalHeight', 500);
-    image.getBoundingClientRect = () =>
-      ({ left: 10, top: 20, width: 200, height: 200 } as DOMRect);
+    image.getBoundingClientRect = () => ({ left: 10, top: 20, width: 200, height: 200 }) as DOMRect;
 
     const mapper = createImageCoordinateMapper(image)!;
 

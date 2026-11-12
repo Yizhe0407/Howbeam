@@ -5,10 +5,7 @@ import { vi } from 'vitest';
  * their hit-tests read. Shared by the four selector/* suites, which build real
  * DOM trees and stub globals per case.
  */
-export function makeVisible(
-  element: Element,
-  rect = { x: 20, y: 20, width: 120, height: 40 },
-): void {
+export function makeVisible(element: Element, rect = { x: 20, y: 20, width: 120, height: 40 }): void {
   Object.defineProperty(element, 'getBoundingClientRect', {
     configurable: true,
     value: () => ({

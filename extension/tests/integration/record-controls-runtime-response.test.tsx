@@ -68,7 +68,7 @@ describe('record controls runtime responses', () => {
     expect(onStarted).not.toHaveBeenCalled();
   });
 
-  it('resumes a paused run from its status, and shows the whole run\'s count', async () => {
+  it("resumes a paused run from its status, and shows the whole run's count", async () => {
     mocks.sendMessage.mockResolvedValue({ ok: true });
     const paused = makeRecordingState({
       operation: 'recording',

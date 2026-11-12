@@ -12,12 +12,13 @@ import {
 } from '@/lib/editor/image-edit-item-geometry';
 import { nextStepNumber, type ImageEditItem } from '@/lib/editor/image-edit-items';
 import type { ImageEditStyle } from '@/lib/editor/image-edit-style';
-import { constrainDragEnd, imageEditTool, type ImageEditTool, type ImageEditToolId } from '@/lib/editor/image-edit-tools';
 import {
-  IMAGE_EDIT_FONT_FAMILY,
-  IMAGE_EDIT_FONT_WEIGHT,
-  textLineHeight,
-} from '@/lib/media/image-edit-render';
+  constrainDragEnd,
+  imageEditTool,
+  type ImageEditTool,
+  type ImageEditToolId,
+} from '@/lib/editor/image-edit-tools';
+import { IMAGE_EDIT_FONT_FAMILY, IMAGE_EDIT_FONT_WEIGHT, textLineHeight } from '@/lib/media/image-edit-render';
 import type { Point, Size } from '@/lib/shared/geometry';
 
 interface Props {
@@ -94,7 +95,8 @@ function arrowHandleStyle(item: Extract<ImageEditItem, { kind: 'arrow' }>, handl
 }
 
 /** Shapes that are grabbed by their outline, so clicking inside reaches whatever is under them. */
-const isStrokeHit = (item: ImageEditItem): boolean => item.kind === 'rect' || item.kind === 'ellipse' || item.kind === 'arrow';
+const isStrokeHit = (item: ImageEditItem): boolean =>
+  item.kind === 'rect' || item.kind === 'ellipse' || item.kind === 'arrow';
 
 /** Dims everything outside the crop, so the area that will be kept stands out. */
 function CropShade({ bounds, size }: { bounds: { x: number; y: number; width: number; height: number }; size: Size }) {
@@ -154,51 +156,51 @@ function TextEditor({
   const top = percent(item.bounds.y, size.height);
   return (
     <>
-    <textarea
-      ref={ref}
-      data-howbeam-text-editor
-      defaultValue={item.text}
-      maxLength={IMAGE_EDIT_LIMITS.maxTextLength}
-      aria-label={t().editor.imageEdit.textInput}
-      rows={1}
-      onInput={(event) => {
-        grow();
-        setAtLimit(event.currentTarget.value.length >= IMAGE_EDIT_LIMITS.maxTextLength);
-      }}
-      onBlur={(event) => finish(event.currentTarget.value)}
-      onKeyDown={(event) => {
-        if (event.nativeEvent.isComposing) return;
-        if (event.key === 'Enter' && !event.shiftKey) {
-          event.preventDefault();
-          finish(event.currentTarget.value);
-        } else if (event.key === 'Escape') {
-          event.preventDefault();
-          event.stopPropagation();
-          finish(null);
-        }
-      }}
-      className="absolute m-0 box-border resize-none overflow-hidden rounded-sm border-2 border-dashed border-focus bg-black/25 p-0 outline-none"
-      style={{
-        left,
-        top,
-        width: percent(item.bounds.width, size.width),
-        fontFamily: IMAGE_EDIT_FONT_FAMILY,
-        fontWeight: IMAGE_EDIT_FONT_WEIGHT,
-        fontSize: item.fontSize * scale,
-        lineHeight: `${textLineHeight(item.fontSize) * scale}px`,
-        color: item.color,
-      }}
-    />
-    {atLimit && (
-      <span
-        role="status"
-        data-howbeam-text-limit
-        className="pointer-events-none absolute -translate-y-full rounded-sm bg-card px-1.5 py-0.5 text-xs font-bold text-foreground shadow"
-        style={{ left, top }}
-      >
-        {t().editor.imageEdit.textLimitReached(IMAGE_EDIT_LIMITS.maxTextLength)}
-      </span>
-    )}
+      <textarea
+        ref={ref}
+        data-howbeam-text-editor
+        defaultValue={item.text}
+        maxLength={IMAGE_EDIT_LIMITS.maxTextLength}
+        aria-label={t().editor.imageEdit.textInput}
+        rows={1}
+        onInput={(event) => {
+          grow();
+          setAtLimit(event.currentTarget.value.length >= IMAGE_EDIT_LIMITS.maxTextLength);
+        }}
+        onBlur={(event) => finish(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.nativeEvent.isComposing) return;
+          if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            finish(event.currentTarget.value);
+          } else if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            finish(null);
+          }
+        }}
+        className="absolute m-0 box-border resize-none overflow-hidden rounded-sm border-2 border-dashed border-focus bg-black/25 p-0 outline-none"
+        style={{
+          left,
+          top,
+          width: percent(item.bounds.width, size.width),
+          fontFamily: IMAGE_EDIT_FONT_FAMILY,
+          fontWeight: IMAGE_EDIT_FONT_WEIGHT,
+          fontSize: item.fontSize * scale,
+          lineHeight: `${textLineHeight(item.fontSize) * scale}px`,
+          color: item.color,
+        }}
+      />
+      {atLimit && (
+        <span
+          role="status"
+          data-howbeam-text-limit
+          className="pointer-events-none absolute -translate-y-full rounded-sm bg-card px-1.5 py-0.5 text-xs font-bold text-foreground shadow"
+          style={{ left, top }}
+        >
+          {t().editor.imageEdit.textLimitReached(IMAGE_EDIT_LIMITS.maxTextLength)}
+        </span>
+      )}
     </>
   );
 }
@@ -315,7 +317,9 @@ export default function ImageEditLayer({
   function draftFor(session: Session, point: Point, shift: boolean): ImageEditItem | null {
     if (session.mode === 'create') {
       const to = shift ? constrainDragEnd(session.tool, session.origin, point, size) : point;
-      return session.tool.create?.({ from: session.origin, to, size, style, nextNumber: nextStepNumber(items) }) ?? null;
+      return (
+        session.tool.create?.({ from: session.origin, to, size, style, nextNumber: nextStepNumber(items) }) ?? null
+      );
     }
     let dx = point.x - session.origin.x;
     let dy = point.y - session.origin.y;
@@ -442,18 +446,28 @@ export default function ImageEditLayer({
         onFocus={() => onSelect(item.id)}
         onKeyDown={(event) => handleKeyDown(event, item)}
       >
-        {selected && !disabled && itemHandles(item).map((handle) => (
-          <span
-            key={handle}
-            data-howbeam-edit-handle={handle}
-            className={cn(
-              'pointer-events-auto absolute size-2.5 border-2 border-focus bg-card',
-              handle === 'from' || handle === 'to' ? '-translate-x-1/2 -translate-y-1/2 cursor-move rounded-full' : HANDLE_POSITION[handle],
-            )}
-            style={item.kind === 'arrow' && (handle === 'from' || handle === 'to') ? arrowHandleStyle(item, handle) : undefined}
-            onPointerDown={(event) => begin(event, { mode: 'resize', start: item, handle, origin: pointFromEvent(event) })}
-          />
-        ))}
+        {selected &&
+          !disabled &&
+          itemHandles(item).map((handle) => (
+            <span
+              key={handle}
+              data-howbeam-edit-handle={handle}
+              className={cn(
+                'pointer-events-auto absolute size-2.5 border-2 border-focus bg-card',
+                handle === 'from' || handle === 'to'
+                  ? '-translate-x-1/2 -translate-y-1/2 cursor-move rounded-full'
+                  : HANDLE_POSITION[handle],
+              )}
+              style={
+                item.kind === 'arrow' && (handle === 'from' || handle === 'to')
+                  ? arrowHandleStyle(item, handle)
+                  : undefined
+              }
+              onPointerDown={(event) =>
+                begin(event, { mode: 'resize', start: item, handle, origin: pointFromEvent(event) })
+              }
+            />
+          ))}
       </div>
     );
   }
@@ -472,7 +486,9 @@ export default function ImageEditLayer({
           ? 'cursor-not-allowed'
           : tool === 'text'
             ? 'cursor-text'
-            : activeTool.create ? 'cursor-crosshair' : 'cursor-default',
+            : activeTool.create
+              ? 'cursor-crosshair'
+              : 'cursor-default',
       )}
       onPointerDown={handleLayerPointerDown}
       onPointerMove={handlePointerMove}
@@ -486,36 +502,57 @@ export default function ImageEditLayer({
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        {hitSvgItems.filter(() => tool !== 'crop' && !drawsOverItems).map((item) => {
-          const hit = {
-            fill: 'none',
-            stroke: 'transparent',
-            strokeWidth: HIT_STROKE,
-            vectorEffect: 'non-scaling-stroke' as const,
-            pointerEvents: 'stroke' as const,
-            className: disabled ? undefined : 'cursor-move',
-            onPointerDown: (event: PointerEvent<SVGElement>) => beginMove(event as unknown as PointerEvent, item),
-          };
-          if (item.kind === 'rect') {
-            return <rect key={item.id} x={item.bounds.x} y={item.bounds.y} width={item.bounds.width} height={item.bounds.height} {...hit} />;
-          }
-          if (item.kind === 'ellipse') {
-            return (
-              <ellipse
-                key={item.id}
-                cx={item.bounds.x + item.bounds.width / 2}
-                cy={item.bounds.y + item.bounds.height / 2}
-                rx={item.bounds.width / 2}
-                ry={item.bounds.height / 2}
-                {...hit}
-              />
-            );
-          }
-          if (item.kind === 'arrow') {
-            return <line key={item.id} x1={item.from.x} y1={item.from.y} x2={item.to.x} y2={item.to.y} strokeLinecap="round" {...hit} />;
-          }
-          return null;
-        })}
+        {hitSvgItems
+          .filter(() => tool !== 'crop' && !drawsOverItems)
+          .map((item) => {
+            const hit = {
+              fill: 'none',
+              stroke: 'transparent',
+              strokeWidth: HIT_STROKE,
+              vectorEffect: 'non-scaling-stroke' as const,
+              pointerEvents: 'stroke' as const,
+              className: disabled ? undefined : 'cursor-move',
+              onPointerDown: (event: PointerEvent<SVGElement>) => beginMove(event as unknown as PointerEvent, item),
+            };
+            if (item.kind === 'rect') {
+              return (
+                <rect
+                  key={item.id}
+                  x={item.bounds.x}
+                  y={item.bounds.y}
+                  width={item.bounds.width}
+                  height={item.bounds.height}
+                  {...hit}
+                />
+              );
+            }
+            if (item.kind === 'ellipse') {
+              return (
+                <ellipse
+                  key={item.id}
+                  cx={item.bounds.x + item.bounds.width / 2}
+                  cy={item.bounds.y + item.bounds.height / 2}
+                  rx={item.bounds.width / 2}
+                  ry={item.bounds.height / 2}
+                  {...hit}
+                />
+              );
+            }
+            if (item.kind === 'arrow') {
+              return (
+                <line
+                  key={item.id}
+                  x1={item.from.x}
+                  y1={item.from.y}
+                  x2={item.to.x}
+                  y2={item.to.y}
+                  strokeLinecap="round"
+                  {...hit}
+                />
+              );
+            }
+            return null;
+          })}
       </svg>
       {strokeLike.map(renderChrome)}
       {boxLike.map(renderChrome)}
@@ -525,7 +562,9 @@ export default function ImageEditLayer({
           {renderChrome(cropItem)}
         </>
       )}
-      {editingText && <TextEditor key={editingText.id} item={editingText} scale={scale} size={size} onFinish={onFinishTextEdit} />}
+      {editingText && (
+        <TextEditor key={editingText.id} item={editingText} scale={scale} size={size} onFinish={onFinishTextEdit} />
+      )}
     </div>
   );
 }

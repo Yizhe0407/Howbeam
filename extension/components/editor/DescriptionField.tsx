@@ -30,9 +30,7 @@ export default function DescriptionField({ step, disabled = false }: Props) {
         placeholder={t().editor.description.placeholder}
         className="min-h-16 resize-none px-3.5 py-3 text-sm leading-relaxed"
       />
-      <DescriptionSaveIssue
-        issue={saveIssue}
-      />
+      <DescriptionSaveIssue issue={saveIssue} />
     </div>
   );
 }

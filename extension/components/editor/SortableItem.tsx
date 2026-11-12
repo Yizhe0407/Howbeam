@@ -7,7 +7,8 @@ import { GripVertical } from 'lucide-react';
 import { cn } from '@/lib/shared/utils';
 import { t } from '@/lib/shared/i18n';
 
-const HANDLE = 'flex size-7 shrink-0 items-center justify-center rounded-md border-none bg-transparent text-muted-foreground outline-none';
+const HANDLE =
+  'flex size-7 shrink-0 items-center justify-center rounded-md border-none bg-transparent text-muted-foreground outline-none';
 
 interface Props {
   id: string;
@@ -61,7 +62,7 @@ export default function SortableItem({
       disabled={disabled}
       className={cn(
         HANDLE,
-        'cursor-grab touch-none transition-colors focus-ring hover:bg-secondary hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40',
+        'cursor-grab touch-none focus-ring transition-colors hover:bg-secondary hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40',
         handleClassName,
       )}
     >
@@ -70,11 +71,7 @@ export default function SortableItem({
   );
 
   return (
-    <li
-      ref={setNodeRef}
-      style={style}
-      className={cn(className, isDragging && 'opacity-40')}
-    >
+    <li ref={setNodeRef} style={style} className={cn(className, isDragging && 'opacity-40')}>
       {children(handle, isDragging ? overlayHost : null)}
     </li>
   );

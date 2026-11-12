@@ -69,10 +69,7 @@ describe('registerExtensionPage', () => {
 
   it.each([
     ['a child frame of an editor tab', editorSender({ frameId: 3 })],
-    [
-      'a page merely embedded in an editor tab',
-      editorSender({ url: 'https://evil.test/embedded' }),
-    ],
+    ['a page merely embedded in an editor tab', editorSender({ url: 'https://evil.test/embedded' })],
     [
       'an extension page that is not a registered surface',
       {

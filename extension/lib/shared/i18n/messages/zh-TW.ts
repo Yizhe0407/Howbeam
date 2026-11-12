@@ -55,7 +55,8 @@ export const zhTW = {
       change: '更換資料夾',
       turnOff: '停止自動備份',
       turnOffTitle: '停止自動備份？',
-      turnOffBody: (folder: string) => `資料夾「${folder}」裡已經備份的檔案都會保留，不會被刪除。只是之後專案有變動時，不會再自動更新它們。你隨時可以重新選擇資料夾來開始備份。`,
+      turnOffBody: (folder: string) =>
+        `資料夾「${folder}」裡已經備份的檔案都會保留，不會被刪除。只是之後專案有變動時，不會再自動更新它們。你隨時可以重新選擇資料夾來開始備份。`,
       backUpNow: '立即備份',
       reauthorize: '重新授權',
       folder: (name: string) => `備份到：${name}`,
@@ -66,7 +67,8 @@ export const zhTW = {
       paused: '自動備份已暫停：需要重新允許存取備份資料夾。',
       unsupported: '這個瀏覽器不支援自動備份，請改用專案庫的匯出功能手動備份。',
       failed: '無法完成操作，請再試一次。',
-      someFailed: (count: number, names: string) => `有 ${count} 個專案備份失敗${names ? `（${names}）` : ''}，下次會自動重試。請確認資料夾仍存在且可寫入。`,
+      someFailed: (count: number, names: string) =>
+        `有 ${count} 個專案備份失敗${names ? `（${names}）` : ''}，下次會自動重試。請確認資料夾仍存在且可寫入。`,
     },
   },
 
@@ -200,7 +202,6 @@ export const zhTW = {
     returnFailed: '無法回到錄製頁面，請重試。',
   },
 
-
   editor: {
     loading: '正在讀取專案…',
     missingTitle: '找不到這個專案',
@@ -248,7 +249,16 @@ export const zhTW = {
       title: (number: number) => `編輯圖片 · 步驟 ${number}`,
       done: '完成',
       toolbarLabel: '圖片編輯工具',
-      tools: { select: '選取', text: '文字', arrow: '箭頭', rect: '外框', ellipse: '橢圓', step: '編號', redact: '遮罩', crop: '裁切' },
+      tools: {
+        select: '選取',
+        text: '文字',
+        arrow: '箭頭',
+        rect: '外框',
+        ellipse: '橢圓',
+        step: '編號',
+        redact: '遮罩',
+        crop: '裁切',
+      },
       hints: {
         select: '點選項目可選取；拖曳移動（按住 Shift 鎖定方向），拖曳控制點調整，連點文字可修改；拖曳空白處平移。',
         text: '點一下或拖曳出範圍後輸入文字。Enter 完成，Shift+Enter 換行。',
@@ -260,7 +270,19 @@ export const zhTW = {
         crop: '拖曳選出要保留的範圍，再拖曳邊緣調整。原圖不會被改動，隨時可以清除裁切。',
         navigate: '滾輪縮放，按住空白鍵或滑鼠中鍵拖曳平移。',
       },
-      itemLabel: (kind: string): string => ({ highlight: '紅框', redaction: '遮罩', text: '文字', arrow: '箭頭', rect: '外框', ellipse: '橢圓', step: '編號', crop: '裁切範圍' } as Record<string, string>)[kind] ?? '項目',
+      itemLabel: (kind: string): string =>
+        (
+          ({
+            highlight: '紅框',
+            redaction: '遮罩',
+            text: '文字',
+            arrow: '箭頭',
+            rect: '外框',
+            ellipse: '橢圓',
+            step: '編號',
+            crop: '裁切範圍',
+          }) as Record<string, string>
+        )[kind] ?? '項目',
       textInput: '輸入文字',
       clearCrop: '清除裁切',
       cropSize: (width: number, height: number) => `裁切後 ${width} × ${height} px`,
@@ -296,13 +318,15 @@ export const zhTW = {
       saving: '儲存中…',
       saveFailed: '無法儲存圖片編輯。',
       retry: '再試一次',
-      conflictReloaded: '這張圖片剛被其他操作（例如重拍）修改。為了不覆蓋那邊的遮罩與編輯，這次的儲存已取消，並載入最新內容；剛才尚未儲存的變更請重新套用。',
+      conflictReloaded:
+        '這張圖片剛被其他操作（例如重拍）修改。為了不覆蓋那邊的遮罩與編輯，這次的儲存已取消，並載入最新內容；剛才尚未儲存的變更請重新套用。',
       updatedElsewhere: '已載入這張圖片最新儲存的編輯。',
       maskLimitReached: (max: number) => `已達每張圖片 ${max} 個遮罩的上限，請先刪除部分遮罩再新增。`,
       editLimitReached: (max: number) => `已達每張圖片 ${max} 個編輯項目的上限，請先刪除部分項目再新增。`,
       textLimitReached: (max: number) => `文字最多 ${max} 字`,
       openReview: '檢查遮罩',
-      reviewNotice: '這張圖片的遮罩需要重新確認：請檢查是否仍有敏感資訊需要遮住，確認後按「確認遮罩」。在確認前，預覽、複製與匯出都會被阻擋。',
+      reviewNotice:
+        '這張圖片的遮罩需要重新確認：請檢查是否仍有敏感資訊需要遮住，確認後按「確認遮罩」。在確認前，預覽、複製與匯出都會被阻擋。',
       confirmReview: '確認遮罩',
     },
 
@@ -378,8 +402,10 @@ export const zhTW = {
       title: '匯出',
       format: '格式',
       exporting: '匯出中…',
-      stepImageFailed: (step: number) => `第 ${step} 步的圖片無法讀取，匯出已中止。請在編輯器重新擷取或刪除該步驟後再試一次。`,
-      reviewRequired: (steps: string) => `以下步驟的敏感資訊遮罩尚待檢查，匯出已中止：${steps}。請先在編輯器檢查這些步驟的遮罩。`,
+      stepImageFailed: (step: number) =>
+        `第 ${step} 步的圖片無法讀取，匯出已中止。請在編輯器重新擷取或刪除該步驟後再試一次。`,
+      reviewRequired: (steps: string) =>
+        `以下步驟的敏感資訊遮罩尚待檢查，匯出已中止：${steps}。請先在編輯器檢查這些步驟的遮罩。`,
       downloadFailed: '瀏覽器無法開始下載檔案。請檢查下載設定或檔案名稱後再試一次。',
       nothingExported: '沒有可匯出的圖片，未下載任何檔案。',
       markdown: {
@@ -529,7 +555,8 @@ export const zhTW = {
     stepNotRecorded: '剛才的點擊已在頁面上執行，但沒有記錄成步驟。',
     regionNotRecorded: '剛才選取的區域沒有記錄成步驟，請再選取一次。',
     pageNotRecordablePdf: '無法錄製瀏覽器內建的 PDF 檢視器，這裡的點擊不會被記錄。請切換到一般網頁繼續錄製。',
-    pageNotRecordableLocal: '只能錄製 http 或 https 網頁，這個頁面（例如本機檔案）的點擊不會被記錄。請切換到一般網頁繼續錄製。',
+    pageNotRecordableLocal:
+      '只能錄製 http 或 https 網頁，這個頁面（例如本機檔案）的點擊不會被記錄。請切換到一般網頁繼續錄製。',
     discardTitle: '放棄這次錄製？',
     discardBody: '這次新增的內容會被移除，先前已完成的內容不受影響。',
     discard: '放棄錄製',
@@ -694,7 +721,8 @@ export const zhTW = {
     controlsUnavailableHere: '無法在這個頁面顯示錄製控制；請重新載入一般網站後再試一次。',
     stoppedSnapshotPageChanged: '錄製已停止，因為快照頁面已變更。',
     waitingRestrictedPage: '這個頁面無法錄製。回到一般網站後會繼續錄製。',
-    waitingSiteAccess: 'Howbeam 沒有這個網站的存取權限，這裡的操作不會被錄下。請在 Howbeam 彈出視窗允許存取所有網站，或回到已允許的網站。',
+    waitingSiteAccess:
+      'Howbeam 沒有這個網站的存取權限，這裡的操作不會被錄下。請在 Howbeam 彈出視窗允許存取所有網站，或回到已允許的網站。',
     waitingFollowFailed: '無法在剛才切換到的分頁錄製，那裡的操作不會被錄下。重新載入該頁面，或回到原本的分頁繼續錄製。',
     stoppedRecorderUnavailable: '錄製已停止，因為頁面切換後無法繼續錄製。',
     sourceTabOpenFailed: '無法開啟原始頁面。',

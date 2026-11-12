@@ -24,16 +24,7 @@ export const NON_SELECTABLE_VISUAL_TAGS = new Set([
 /** Replaced/graphics elements can paint meaningful pixels without DOM text or
  * CSS background/border clues, so they must never be treated as transparent
  * hit-test shims. */
-export const SELF_PAINTING_TAGS = new Set([
-  'canvas',
-  'embed',
-  'iframe',
-  'img',
-  'object',
-  'picture',
-  'svg',
-  'video',
-]);
+export const SELF_PAINTING_TAGS = new Set(['canvas', 'embed', 'iframe', 'img', 'object', 'picture', 'svg', 'video']);
 
 export function getComposedParent(el: Element): Element | null {
   if (el.assignedSlot) return el.assignedSlot;
@@ -60,10 +51,7 @@ export function isElementInteractionDisabled(el: Element): boolean {
 export function isElementVisuallyUnavailable(el: Element): boolean {
   const isImageMapArea = el instanceof HTMLAreaElement;
   const targetStyle = isImageMapArea ? null : getComputedStyle(el);
-  if (
-    targetStyle &&
-    (hasComputedVisibilityUnavailable(targetStyle) || targetStyle.display === 'contents')
-  ) {
+  if (targetStyle && (hasComputedVisibilityUnavailable(targetStyle) || targetStyle.display === 'contents')) {
     return true;
   }
   let current: Element | null = el;
@@ -73,9 +61,7 @@ export function isElementVisuallyUnavailable(el: Element): boolean {
     // does not make an otherwise actionable image-map region unavailable.
     if (!isImageMapArea) {
       const style = getComputedStyle(current);
-      if (
-        hasOwnSubtreeVisualUnavailableState(style)
-      ) {
+      if (hasOwnSubtreeVisualUnavailableState(style)) {
         return true;
       }
     }

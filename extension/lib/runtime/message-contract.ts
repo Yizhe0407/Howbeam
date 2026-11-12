@@ -68,8 +68,10 @@ function isDevicePixelRatio(value: unknown): value is number {
 function isViewport(value: unknown): value is ClickCapture['viewport'] {
   if (!isRecord(value)) return false;
   return (
-    isFiniteWithin(value.width) && value.width > 0 &&
-    isFiniteWithin(value.height) && value.height > 0 &&
+    isFiniteWithin(value.width) &&
+    value.width > 0 &&
+    isFiniteWithin(value.height) &&
+    value.height > 0 &&
     isFiniteWithin(value.scrollX) &&
     isFiniteWithin(value.scrollY)
   );
@@ -84,10 +86,7 @@ function isHttpUrl(value: unknown): value is string {
   try {
     const url = new URL(value);
     return (
-      (url.protocol === 'http:' || url.protocol === 'https:') &&
-      Boolean(url.hostname) &&
-      !url.username &&
-      !url.password
+      (url.protocol === 'http:' || url.protocol === 'https:') && Boolean(url.hostname) && !url.username && !url.password
     );
   } catch {
     return false;
@@ -119,7 +118,6 @@ function isContinuation(value: unknown): value is { preferredTabId?: number } | 
     (value.preferredTabId === undefined || isBrowserId(value.preferredTabId))
   );
 }
-
 
 /**
  * `extension-pages`: only Howbeam's own pages (popup, editor, library), checked
@@ -172,12 +170,11 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
 
   START_RECORDING: {
     senders: 'extension-pages',
-    isRequest: (value) => (
+    isRequest: (value) =>
       isRecordTarget(value.target) &&
       (value.mode === 'steps' || value.mode === 'snapshot') &&
       isContinuation(value.continuation) &&
-      (value.insertAfterEntryId === undefined || typeof value.insertAfterEntryId === 'string')
-    ),
+      (value.insertAfterEntryId === undefined || typeof value.insertAfterEntryId === 'string'),
     isResponse: isStartRecordingResult,
     failure: () => ({ ok: false, error: 'background.startServiceFailed' }),
   },
@@ -190,11 +187,10 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
   },
   OPEN_EDITOR: {
     senders: 'extension-pages',
-    isRequest: (value) => (
+    isRequest: (value) =>
       isOptionalString(value.sessionId) &&
       isOptionalString(value.entryId) &&
-      (value.inPlace === undefined || typeof value.inPlace === 'boolean')
-    ),
+      (value.inPlace === undefined || typeof value.inPlace === 'boolean'),
     isResponse: isOpenEditorResult,
     failure: () => ({ ok: false, error: 'runtime.editorOpenFailed' }),
   },
@@ -220,17 +216,17 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
   },
   PREFLIGHT_PROJECT_CONTINUATION_SOURCE_PERMISSION: {
     senders: 'handler-checked',
-    isRequest: (value) => isString(value.sessionId) && (value.afterEntryId === undefined || isString(value.afterEntryId)),
+    isRequest: (value) =>
+      isString(value.sessionId) && (value.afterEntryId === undefined || isString(value.afterEntryId)),
     isResponse: isPreflightProjectContinuationSourcePermissionResult,
     failure: () => ({ ok: false, code: 'INVALID_EDITOR', message: 'background.continuationServiceFailed' }),
   },
   START_STEP_RECAPTURE: {
     senders: 'handler-checked',
-    isRequest: (value) => (
+    isRequest: (value) =>
       isString(value.sessionId) &&
       isTarget(value.target) &&
-      (value.preferredTabId === undefined || isBrowserId(value.preferredTabId))
-    ),
+      (value.preferredTabId === undefined || isBrowserId(value.preferredTabId)),
     isResponse: isStartStepRecaptureResult,
     failure: () => ({ ok: false, code: 'INJECTION_FAILED', error: 'background.recaptureServiceFailed' }),
   },
@@ -260,15 +256,14 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
   },
   HOWBEAM_RECAPTURE_TARGET: {
     senders: 'handler-checked',
-    isRequest: (value) => (
+    isRequest: (value) =>
       isString(value.runId) &&
       isString(value.captureId) &&
       isRect(value.rect) &&
       isViewport(value.viewport) &&
       isDevicePixelRatio(value.devicePixelRatio) &&
       isHttpUrl(value.url) &&
-      isTimestamp(value.timestamp)
-    ),
+      isTimestamp(value.timestamp),
     isResponse: isStepRecaptureTargetResult,
     failure: () => ({ ok: false, status: 'failed' }),
   },
@@ -291,7 +286,7 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
   },
   HOWBEAM_CLICK: {
     senders: 'handler-checked',
-    isRequest: (value) => (
+    isRequest: (value) =>
       (value.captureKind === undefined || value.captureKind === 'element' || value.captureKind === 'region') &&
       isString(value.captureId) &&
       isString(value.runId) &&
@@ -301,8 +296,7 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
       isControlKind(value.control) &&
       (value.intent === 'click' || value.intent === 'mark') &&
       isHttpUrl(value.url) &&
-      isTimestamp(value.timestamp)
-    ),
+      isTimestamp(value.timestamp),
     isResponse: isClickCaptureResult,
     // A diagnostic code, not copy: the recorder only logs it.
     failure: () => ({ ok: false, error: 'capture-request-failed' }),
@@ -315,7 +309,8 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
   },
   SNAPSHOT_INVALIDATED: {
     senders: 'handler-checked',
-    isRequest: (value) => isString(value.runId) && isViewport(value.viewport) && isDevicePixelRatio(value.devicePixelRatio),
+    isRequest: (value) =>
+      isString(value.runId) && isViewport(value.viewport) && isDevicePixelRatio(value.devicePixelRatio),
     isResponse: isRuntimeBoolean,
     failure: () => false,
   },
@@ -328,13 +323,12 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
 
   HOWBEAM_STEP_FRAME_BEGIN: {
     senders: 'handler-checked',
-    isRequest: (value) => (
+    isRequest: (value) =>
       isString(value.runId) &&
       isString(value.captureId) &&
       isRect(value.rect) &&
       isControlKind(value.control) &&
-      typeof value.interactive === 'boolean'
-    ),
+      typeof value.interactive === 'boolean',
     isResponse: isStepFrameRelayBeginResult,
     failure: () => ({ ok: false }),
   },
@@ -351,12 +345,11 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
   },
   HOWBEAM_STEP_FRAME_SETTLE: {
     senders: 'handler-checked',
-    isRequest: (value) => (
+    isRequest: (value) =>
       isString(value.runId) &&
       isString(value.captureId) &&
       isString(value.settleToken) &&
-      typeof value.replay === 'boolean'
-    ),
+      typeof value.replay === 'boolean',
     ...relayMutation,
   },
   HOWBEAM_STEP_FRAME_ABORT: {

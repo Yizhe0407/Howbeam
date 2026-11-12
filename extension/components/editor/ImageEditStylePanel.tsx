@@ -50,14 +50,23 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** A row of mutually exclusive options. */
-function Segmented<V extends string | number>({ label, value, options, onSelect }: {
+function Segmented<V extends string | number>({
+  label,
+  value,
+  options,
+  onSelect,
+}: {
   label: string;
   value: V;
   options: readonly { value: V; content: ReactNode; title: string }[];
   onSelect: (value: V) => void;
 }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5" role="radiogroup" aria-label={label}>
+    <div
+      className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5"
+      role="radiogroup"
+      aria-label={label}
+    >
       {options.map((option) => (
         <button
           key={option.value}
@@ -69,7 +78,9 @@ function Segmented<V extends string | number>({ label, value, options, onSelect 
           onClick={() => onSelect(option.value)}
           className={cn(
             pillButton,
-            value === option.value ? 'bg-selected text-on-accent' : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+            value === option.value
+              ? 'bg-selected text-on-accent'
+              : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
           )}
         >
           {option.content}
@@ -97,7 +108,7 @@ function ColorControl({ color, onChange }: { color: string; onChange: (color: st
           title={swatch}
           onClick={() => onChange(swatch)}
           className={cn(
-            'size-6 rounded-full border-2 outline-none transition-transform focus-ring',
+            'size-6 rounded-full border-2 focus-ring transition-transform outline-none',
             color === swatch ? 'scale-110 border-foreground ring-2 ring-card' : 'border-border-soft hover:scale-105',
           )}
           style={{ backgroundColor: swatch }}
@@ -108,7 +119,7 @@ function ColorControl({ color, onChange }: { color: string; onChange: (color: st
           type="button"
           aria-label={copy.customColor}
           title={copy.customColor}
-          className="group relative flex size-6 items-center justify-center rounded-full border-2 border-transparent text-muted-foreground outline-none transition-colors focus-ring hover:border-foreground hover:text-foreground data-[state=open]:border-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground"
+          className="group relative flex size-6 items-center justify-center rounded-full border-2 border-transparent text-muted-foreground focus-ring transition-colors outline-none hover:border-foreground hover:text-foreground data-[state=open]:border-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground"
         >
           <DashedOutline radius="full" outset={2} hideOnHover className="group-data-[state=open]:hidden" />
           <Plus className="size-3.5" strokeWidth={2.5} />
@@ -123,11 +134,23 @@ function NumberStepper({ value, onChange }: { value: number; onChange: (value: n
   const max = IMAGE_EDIT_LIMITS.maxMarkerNumber;
   return (
     <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5">
-      <button type="button" aria-label={copy.numberDown} disabled={value <= 1} onClick={() => onChange(value - 1)} className={cn(pillButton, 'w-8 px-0 text-muted-foreground hover:bg-secondary disabled:opacity-40')}>
+      <button
+        type="button"
+        aria-label={copy.numberDown}
+        disabled={value <= 1}
+        onClick={() => onChange(value - 1)}
+        className={cn(pillButton, 'w-8 px-0 text-muted-foreground hover:bg-secondary disabled:opacity-40')}
+      >
         <Minus className="size-3.5" />
       </button>
       <NumberField value={value} max={max} onChange={onChange} />
-      <button type="button" aria-label={copy.numberUp} disabled={value >= max} onClick={() => onChange(value + 1)} className={cn(pillButton, 'w-8 px-0 text-muted-foreground hover:bg-secondary disabled:opacity-40')}>
+      <button
+        type="button"
+        aria-label={copy.numberUp}
+        disabled={value >= max}
+        onClick={() => onChange(value + 1)}
+        className={cn(pillButton, 'w-8 px-0 text-muted-foreground hover:bg-secondary disabled:opacity-40')}
+      >
         <Plus className="size-3.5" />
       </button>
     </div>
@@ -168,7 +191,7 @@ function NumberField({ value, max, onChange }: { value: number; max: number; onC
           if (next !== value) onChange(next);
         }
       }}
-      className="h-7 w-10 rounded-sm bg-transparent text-center text-xs font-bold tabular-nums text-foreground outline-none transition-colors focus:bg-secondary"
+      className="h-7 w-10 rounded-sm bg-transparent text-center text-xs font-bold text-foreground tabular-nums transition-colors outline-none focus:bg-secondary"
     />
   );
 }
@@ -192,7 +215,9 @@ export default function ImageEditStylePanel({ fields, style, number, onChange }:
                   options={IMAGE_EDIT_STROKE_WIDTHS.map((value) => ({
                     value,
                     title: copy.strokeWidths[value],
-                    content: <span className="w-5 rounded-full bg-current" style={{ height: value }} aria-hidden="true" />,
+                    content: (
+                      <span className="w-5 rounded-full bg-current" style={{ height: value }} aria-hidden="true" />
+                    ),
                   }))}
                 />
               </Group>
@@ -204,7 +229,11 @@ export default function ImageEditStylePanel({ fields, style, number, onChange }:
                   label={copy.fontSizeLabel}
                   value={style.fontSize}
                   onSelect={(fontSize) => onChange({ fontSize })}
-                  options={IMAGE_EDIT_FONT_SIZES.map((value) => ({ value, title: copy.fontSizes[value], content: copy.fontSizes[value] }))}
+                  options={IMAGE_EDIT_FONT_SIZES.map((value) => ({
+                    value,
+                    title: copy.fontSizes[value],
+                    content: copy.fontSizes[value],
+                  }))}
                 />
               </Group>
             );
@@ -236,7 +265,11 @@ export default function ImageEditStylePanel({ fields, style, number, onChange }:
                     content: (
                       <span
                         className="size-4 rounded-[4px] border-2 border-current"
-                        style={value === 'tint' ? { backgroundColor: `color-mix(in srgb, ${style.color} 35%, transparent)` } : undefined}
+                        style={
+                          value === 'tint'
+                            ? { backgroundColor: `color-mix(in srgb, ${style.color} 35%, transparent)` }
+                            : undefined
+                        }
                         aria-hidden="true"
                       />
                     ),
@@ -251,7 +284,11 @@ export default function ImageEditStylePanel({ fields, style, number, onChange }:
                   label={copy.radiusLabel}
                   value={style.markerRadius}
                   onSelect={(markerRadius) => onChange({ markerRadius })}
-                  options={IMAGE_EDIT_MARKER_RADII.map((value) => ({ value, title: copy.radii[value], content: copy.radii[value] }))}
+                  options={IMAGE_EDIT_MARKER_RADII.map((value) => ({
+                    value,
+                    title: copy.radii[value],
+                    content: copy.radii[value],
+                  }))}
                 />
               </Group>
             );
@@ -303,7 +340,7 @@ export function ImageEditCropPanel({ size, onClear }: CropProps) {
         type="button"
         onClick={onClear}
         disabled={!size}
-        className="flex h-8 items-center rounded-md border-2 border-border bg-card px-3 text-xs font-bold text-foreground outline-none transition-colors focus-ring hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
+        className="flex h-8 items-center rounded-md border-2 border-border bg-card px-3 text-xs font-bold text-foreground focus-ring transition-colors outline-none hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
       >
         {copy.clearCrop}
       </button>
@@ -323,8 +360,10 @@ export function ImageEditItemActions({ onDuplicate, onDelete }: ItemActions) {
             aria-label={label}
             onClick={onClick}
             className={cn(
-              'flex size-8 items-center justify-center rounded-sm outline-none transition-colors focus-ring',
-              danger ? 'text-muted-foreground hover:bg-danger-soft hover:text-danger' : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+              'flex size-8 items-center justify-center rounded-sm focus-ring transition-colors outline-none',
+              danger
+                ? 'text-muted-foreground hover:bg-danger-soft hover:text-danger'
+                : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
             )}
           >
             {icon}

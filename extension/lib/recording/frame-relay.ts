@@ -7,24 +7,14 @@ import { ACTIVATION_TARGETING_POLICY, resolveVisualTargetAtPoint } from '../capt
 import { intersectBounds } from '../capture/bounds-geometry';
 import { pauseMotion } from '../capture/page-motion';
 import { createFrameCoordinateMapper } from '../capture/frame-geometry';
-import {
-  createFrameProbeRateLimiter,
-  type FrameProbeRateLimiter,
-} from '../capture/frame-probe';
+import { createFrameProbeRateLimiter, type FrameProbeRateLimiter } from '../capture/frame-probe';
 import { createLateClickSuppressor } from '../capture/step-capture';
 import { createStepGestureQueue, type StepGesture } from '../capture/step-gesture-queue';
 import { STEP_PRESS_GATE_EVENTS, createStepPressGate, type StepPress } from '../capture/step-press-gate';
 import { controlKindOf } from '../capture/action-description';
-import {
-  isInScrollbarGutter,
-  isPointInAnyScrollGutter,
-} from './recording-guards';
+import { isInScrollbarGutter, isPointInAnyScrollGutter } from './recording-guards';
 import { onRecordingStateChange } from '../storage/storage';
-import {
-  CAPTURE_FAILSAFE_MS,
-  SNAPSHOT_FREEZE_EVENTS,
-  STEP_LATE_CLICK_SUPPRESS_MS,
-} from './content-script-constants';
+import { CAPTURE_FAILSAFE_MS, SNAPSHOT_FREEZE_EVENTS, STEP_LATE_CLICK_SUPPRESS_MS } from './content-script-constants';
 import { isFiniteRect } from '../shared/validation';
 import {
   STEP_FRAME_LIMITS,
@@ -153,11 +143,7 @@ function mapChildRectIntoFrameViewport(frame: HTMLIFrameElement, rect: Bounds): 
   const mapper = createFrameCoordinateMapper(frame);
   if (!mapper) return null;
   const mapped = mapper.toParentBounds(rect);
-  const visibleFrame = getVisibleHighlightBounds(
-    frame,
-    mapped.x + mapped.width / 2,
-    mapped.y + mapped.height / 2,
-  );
+  const visibleFrame = getVisibleHighlightBounds(frame, mapped.x + mapped.width / 2, mapped.y + mapped.height / 2);
   if (!visibleFrame) return null;
   return intersectBounds(mapped, visibleFrame);
 }
@@ -222,11 +208,13 @@ export function installStepFrameRecorder(
   const pressGate = createStepPressGate({ lateClicks, isBusy: () => gestureQueue.isBusy() });
 
   const abortRelay = (captureId: string) => {
-    void browser.runtime.sendMessage({
-      type: 'HOWBEAM_STEP_FRAME_ABORT',
-      runId,
-      captureId,
-    } satisfies StepFrameRelayAbortMessage).catch(() => {});
+    void browser.runtime
+      .sendMessage({
+        type: 'HOWBEAM_STEP_FRAME_ABORT',
+        runId,
+        captureId,
+      } satisfies StepFrameRelayAbortMessage)
+      .catch(() => {});
   };
 
   /** Runs one gesture's BEGIN -> postMessage hop -> await settlement chain.
@@ -341,11 +329,7 @@ export function installStepFrameRecorder(
     if (paused) return;
     if (isInScrollbarGutter(event.clientX, event.clientY, document.documentElement)) return;
     if (isPointInAnyScrollGutter(event.clientX, event.clientY)) return;
-    const el = resolveVisualTargetAtPoint(
-      event.clientX,
-      event.clientY,
-      ACTIVATION_TARGETING_POLICY,
-    )?.element ?? null;
+    const el = resolveVisualTargetAtPoint(event.clientX, event.clientY, ACTIVATION_TARGETING_POLICY)?.element ?? null;
     if (!el) return;
 
     // Same contract as the top frame: page scripts stop seeing the press,
@@ -385,12 +369,14 @@ export function installStepFrameRecorder(
   const onBlur = () => pressGate.handleBlur();
 
   const rejectRelay = (payload: StepFrameHopPayload) => {
-    void browser.runtime.sendMessage({
-      type: 'HOWBEAM_STEP_FRAME_REJECT',
-      runId,
-      captureId: payload.captureId,
-      relayToken: payload.relayToken,
-    } satisfies StepFrameRelayRejectMessage).catch(() => {});
+    void browser.runtime
+      .sendMessage({
+        type: 'HOWBEAM_STEP_FRAME_REJECT',
+        runId,
+        captureId: payload.captureId,
+        relayToken: payload.relayToken,
+      } satisfies StepFrameRelayRejectMessage)
+      .catch(() => {});
   };
 
   const onRelayMessage = (event: MessageEvent) => {
@@ -412,11 +398,7 @@ export function installStepFrameRecorder(
       cleanup();
       return;
     }
-    if (
-      isHowbeamStepFrameResultMessage(message) &&
-      message.runId === runId &&
-      message.captureId === activeCaptureId
-    ) {
+    if (isHowbeamStepFrameResultMessage(message) && message.runId === runId && message.captureId === activeCaptureId) {
       settleActiveRelay?.(message.replay);
     }
   };

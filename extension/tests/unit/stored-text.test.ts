@@ -39,8 +39,18 @@ describe('stored text rule', () => {
     expect(() => validateRuntimeStep(step('a\u0085b'), 'steps[0]')).toThrow(/control characters/);
 
     const project = sanitizeProject({
-      id: 'p', title: `標題${EVERY_LOW_CODE_UNIT}`, description: EVERY_LOW_CODE_UNIT, sections: [],
-      createdAt: 1, updatedAt: 1, contentRevision: 0, stepEditRevision: 0, metadataRevision: 0, stepCount: 0, entryCount: 0, storageBytes: 0,
+      id: 'p',
+      title: `標題${EVERY_LOW_CODE_UNIT}`,
+      description: EVERY_LOW_CODE_UNIT,
+      sections: [],
+      createdAt: 1,
+      updatedAt: 1,
+      contentRevision: 0,
+      stepEditRevision: 0,
+      metadataRevision: 0,
+      stepCount: 0,
+      entryCount: 0,
+      storageBytes: 0,
     } as Project);
     expect(isStoredText(project.title)).toBe(true);
     expect(isStoredText(project.description)).toBe(true);

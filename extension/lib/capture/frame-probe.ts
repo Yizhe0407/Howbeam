@@ -1,7 +1,4 @@
-export type FrameProbeOutcome<T> =
-  | { kind: 'target'; target: T }
-  | { kind: 'empty' }
-  | { kind: 'fallback' };
+export type FrameProbeOutcome<T> = { kind: 'target'; target: T } | { kind: 'empty' } | { kind: 'fallback' };
 
 /** A responsive child returning null is a valid empty hit, not evidence that
  * instrumentation is unavailable. Only transport timeout permits fallback. */
@@ -95,10 +92,7 @@ export function createFrameProbeRateLimiter(options: FrameProbeRateLimiterOption
     tryAcquire() {
       const timestamp = now();
       resetWindowIfNeeded(timestamp);
-      if (
-        activeRequests >= options.maxConcurrent ||
-        requestsInWindow >= options.maxRequestsPerWindow
-      ) {
+      if (activeRequests >= options.maxConcurrent || requestsInWindow >= options.maxRequestsPerWindow) {
         return null;
       }
       activeRequests += 1;
@@ -117,7 +111,12 @@ export function createFrameProbeRateLimiter(options: FrameProbeRateLimiterOption
  * result is terminal: callers must select the visible iframe instead of opening
  * another MessageChannel with an already exhausted deadline. */
 export function childFrameProbeTimeout(parentTimeoutMs: number, childBudgetMs: number): number {
-  if (!Number.isFinite(parentTimeoutMs) || parentTimeoutMs < 0 || !Number.isFinite(childBudgetMs) || childBudgetMs < 0) {
+  if (
+    !Number.isFinite(parentTimeoutMs) ||
+    parentTimeoutMs < 0 ||
+    !Number.isFinite(childBudgetMs) ||
+    childBudgetMs < 0
+  ) {
     throw new TypeError('Frame probe timeouts must be finite non-negative values.');
   }
   return Math.max(0, parentTimeoutMs - childBudgetMs);

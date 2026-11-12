@@ -1,4 +1,10 @@
-import { DECORATIVE_SVG_TAGS, NON_SELECTABLE_VISUAL_TAGS, deepElementFromPoint, descendShadowRoots, elementAndComposedAncestors } from './element-availability';
+import {
+  DECORATIVE_SVG_TAGS,
+  NON_SELECTABLE_VISUAL_TAGS,
+  deepElementFromPoint,
+  descendShadowRoots,
+  elementAndComposedAncestors,
+} from './element-availability';
 import { OCCLUDER_STACK_LIMIT, hasOnlyBlankExclusiveOccluders } from './element-paint';
 import { clipsPaint, getHighlightBounds, getVisibleHighlightBounds } from './highlight-bounds';
 import { intersectBounds } from '../bounds-geometry';
@@ -41,9 +47,10 @@ function findInteractiveTargetFromEntries(entries: AnalyzedElement[]): Element |
     }
 
     const rect = boundingRect(entry);
-    const cursorScore = kind === 'cursor'
-      ? Math.min(Math.min(rect.width, rect.height), 44) * 100 - Math.min(visibleArea(entry), 40_000) / 100
-      : 0;
+    const cursorScore =
+      kind === 'cursor'
+        ? Math.min(Math.min(rect.width, rect.height), 44) * 100 - Math.min(visibleArea(entry), 40_000) / 100
+        : 0;
     if (
       !best ||
       kindScore[kind] > kindScore[best.entry.kind!] ||
@@ -90,9 +97,7 @@ export const ACTIVATION_TARGETING_POLICY: Readonly<VisualTargetPolicy> = Object.
 });
 
 function visualBoundsKey(bounds: Bounds): string {
-  return [bounds.x, bounds.y, bounds.width, bounds.height]
-    .map((value) => Math.round(value * 2))
-    .join(':');
+  return [bounds.x, bounds.y, bounds.width, bounds.height].map((value) => Math.round(value * 2)).join(':');
 }
 
 /** Collapses tiny layout insets while retaining genuinely different parent
@@ -101,10 +106,7 @@ function visualBoundsKey(bounds: Bounds): string {
 function hasSamePerceivedBoundary(a: Bounds, b: Bounds): boolean {
   const close = (first: number, second: number) => Math.abs(first - second) <= VISUAL_EDGE_MERGE_TOLERANCE;
   return (
-    close(a.x, b.x) &&
-    close(a.y, b.y) &&
-    close(a.x + a.width, b.x + b.width) &&
-    close(a.y + a.height, b.y + b.height)
+    close(a.x, b.x) && close(a.y, b.y) && close(a.x + a.width, b.x + b.width) && close(a.y + a.height, b.y + b.height)
   );
 }
 
@@ -131,10 +133,7 @@ function highlightBounds(entry: AnalyzedElement, clientX: number, clientY: numbe
   return entry.highlightBounds;
 }
 
-function overflowClipBoundsFromEntry(
-  entry: AnalyzedElement,
-  viewport: { width: number; height: number },
-): Bounds {
+function overflowClipBoundsFromEntry(entry: AnalyzedElement, viewport: { width: number; height: number }): Bounds {
   const el = entry.element;
   if (el === document.body || el === document.documentElement || el === document.scrollingElement) {
     return { x: 0, y: 0, width: viewport.width, height: viewport.height };
@@ -259,9 +258,7 @@ function analyzeChain(
     candidates.push({ element, bounds });
   }
 
-  const interactiveIndex = interactive
-    ? candidates.findIndex((candidate) => candidate.element === interactive)
-    : -1;
+  const interactiveIndex = interactive ? candidates.findIndex((candidate) => candidate.element === interactive) : -1;
   return {
     targets: { candidates, defaultIndex: interactiveIndex >= 0 ? interactiveIndex : 0 },
     interactive,
@@ -283,10 +280,7 @@ export function findVisualTargetCandidatesAtPoint(
   policy: Readonly<VisualTargetPolicy> = ANNOTATION_TARGETING_POLICY,
 ): VisualTargetCandidates {
   const top = analyzeChain(hit, clientX, clientY, viewport, policy);
-  if (
-    !policy.pierceTransparentOccluders ||
-    top.interactive
-  ) {
+  if (!policy.pierceTransparentOccluders || top.interactive) {
     return top.targets;
   }
 
@@ -294,18 +288,12 @@ export function findVisualTargetCandidatesAtPoint(
   const analyzed = new Set(top.entries.map((entry) => entry.element));
   for (const occluded of document.elementsFromPoint(clientX, clientY).slice(0, OCCLUDER_STACK_LIMIT)) {
     if (analyzed.has(occluded) || isExtensionOverlay(occluded)) continue;
-    const deeper = analyzeChain(
-      descendShadowRoots(occluded, clientX, clientY),
-      clientX,
-      clientY,
-      viewport,
-      policy,
-    );
+    const deeper = analyzeChain(descendShadowRoots(occluded, clientX, clientY), clientX, clientY, viewport, policy);
     for (const entry of deeper.entries) analyzed.add(entry.element);
     if (deeper.interactive) {
       const targetElements = new Set(deeper.entries.map((entry) => entry.element));
       return occludingBranches.every((branch) =>
-        hasOnlyBlankExclusiveOccluders(branch, targetElements, clientX, clientY, viewport)
+        hasOnlyBlankExclusiveOccluders(branch, targetElements, clientX, clientY, viewport),
       )
         ? deeper.targets
         : top.targets;
@@ -318,9 +306,7 @@ export function findVisualTargetCandidatesAtPoint(
 /** Picks the chain's default candidate — the one box a point resolves to.
  * `defaultIndex` is where the policy landed, so this is the single place that
  * knows how to read a candidate list. */
-export function selectVisualTargetCandidate(
-  targets: VisualTargetCandidates,
-): VisualTargetCandidate | null {
+export function selectVisualTargetCandidate(targets: VisualTargetCandidates): VisualTargetCandidate | null {
   return targets.candidates[targets.defaultIndex] ?? null;
 }
 

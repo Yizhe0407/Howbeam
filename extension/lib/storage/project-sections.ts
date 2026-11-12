@@ -1,16 +1,7 @@
 import { entryId, stepRole, type StepEntry } from './models';
 import { isIdentifier, isRecord } from '../shared/validation';
-import {
-  PROJECT_SECTION_LIMITS,
-  sanitizeProjectSectionTitle,
-  type ProjectSection,
-} from './project-section-model';
-export {
-  PROJECT_SECTION_LIMITS,
-  sanitizeProjectSectionTitle,
-  type ProjectSection,
-} from './project-section-model';
-
+import { PROJECT_SECTION_LIMITS, sanitizeProjectSectionTitle, type ProjectSection } from './project-section-model';
+export { PROJECT_SECTION_LIMITS, sanitizeProjectSectionTitle, type ProjectSection } from './project-section-model';
 
 /**
  * Repairs untrusted or stale section metadata against the current renderable
@@ -21,10 +12,7 @@ export {
  * are deliberately not added to the boundary map, so a section can never begin
  * in the middle of a shared-image annotation group.
  */
-export function repairProjectSections(
-  value: unknown,
-  entries: readonly StepEntry[],
-): ProjectSection[] {
+export function repairProjectSections(value: unknown, entries: readonly StepEntry[]): ProjectSection[] {
   if (!Array.isArray(value) || value.length === 0 || entries.length === 0) return [];
 
   const boundaryOrder = collectEntryBoundaries(entries);
@@ -80,7 +68,12 @@ export function railRows(entries: readonly StepEntry[], sections: readonly Proje
   return entries.flatMap((entry): RailRow[] => {
     const id = entryId(entry);
     const section = sectionByStart.get(id);
-    return section ? [{ kind: 'section', id: section.id }, { kind: 'entry', id }] : [{ kind: 'entry', id }];
+    return section
+      ? [
+          { kind: 'section', id: section.id },
+          { kind: 'entry', id },
+        ]
+      : [{ kind: 'entry', id }];
   });
 }
 

@@ -45,15 +45,12 @@ export type PreparedCapturePermission = {
   /** The entry the grant is bound to, so changing the selection cancels it.
    * Continuation records into the Project as a whole and has no such anchor. */
   entryId: string | null;
-  action:
-    | { kind: 'recapture'; target: StepRecaptureTarget }
-    | { kind: 'continuation' };
+  action: { kind: 'recapture'; target: StepRecaptureTarget } | { kind: 'continuation' };
 };
 
 export function equalIds(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((id, index) => id === right[index]);
 }
-
 
 /** The Project can't be changed right now (it is gone, being recorded, or held by a permission flow). */
 export class EditingBlockedError extends Error {

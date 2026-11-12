@@ -52,7 +52,8 @@ export const en: Messages = {
       change: 'Change folder',
       turnOff: 'Stop automatic backup',
       turnOffTitle: 'Stop automatic backup?',
-      turnOffBody: (folder: string) => `The backup files already in “${folder}” are kept and nothing is deleted. They just won’t be updated automatically when your projects change. You can pick a folder again any time to start over.`,
+      turnOffBody: (folder: string) =>
+        `The backup files already in “${folder}” are kept and nothing is deleted. They just won’t be updated automatically when your projects change. You can pick a folder again any time to start over.`,
       backUpNow: 'Back up now',
       reauthorize: 'Allow again',
       folder: (name: string) => `Backing up to: ${name}`,
@@ -63,7 +64,8 @@ export const en: Messages = {
       paused: 'Automatic backup is paused: allow access to the backup folder again.',
       unsupported: 'This browser doesn’t support automatic backup. Use Export in the library to back up by hand.',
       failed: 'That didn’t work. Please try again.',
-      someFailed: (count: number, names: string) => `${count} project(s) failed to back up and will be retried${names ? `: ${names}` : ''}. Check that the folder still exists and can be written to.`,
+      someFailed: (count: number, names: string) =>
+        `${count} project(s) failed to back up and will be retried${names ? `: ${names}` : ''}. Check that the folder still exists and can be written to.`,
     },
   },
 
@@ -88,7 +90,8 @@ export const en: Messages = {
     modesTitle: 'Recording modes',
     promisesTitle: 'Privacy and permissions',
     localOnly: 'All screenshots stay on this computer. Nothing is uploaded.',
-    crossTab: 'Recording covers the current tab. To follow you across tabs, Howbeam asks for permission the first time you start.',
+    crossTab:
+      'Recording covers the current tab. To follow you across tabs, Howbeam asks for permission the first time you start.',
     done: 'Got it',
   },
 
@@ -170,7 +173,8 @@ export const en: Messages = {
     exportProjectLabel: (title: string) => `Download a backup of ${title}`,
     exportArchiveTooltip: 'Download backup',
     exportDialogTitle: 'Download backup?',
-    exportDialogDescription: 'You can import it back into Howbeam to keep editing. It includes unmasked screenshots, so don’t share it publicly.',
+    exportDialogDescription:
+      'You can import it back into Howbeam to keep editing. It includes unmasked screenshots, so don’t share it publicly.',
     exportDialogConfirm: 'Download .howbeam',
     exportDialogPending: 'Downloading',
     deleteDialogTitle: 'Delete this project permanently?',
@@ -194,7 +198,6 @@ export const en: Messages = {
     returnFailed: 'Couldn’t return to the recording page. Please try again.',
   },
 
-
   editor: {
     loading: 'Loading…',
     missingTitle: 'Project not found',
@@ -207,7 +210,8 @@ export const en: Messages = {
     noSelectionTitle: 'No step selected',
     noSelectionBody: 'Choose a step from the list on the left to edit it.',
     recaptureFailed: 'The retake failed. Nothing was changed.',
-    recaptureReplaced: 'Retake complete. The step’s description and position were kept; its old masks and image annotations were cleared.',
+    recaptureReplaced:
+      'Retake complete. The step’s description and position were kept; its old masks and image annotations were cleared.',
     recaptureCancelled: 'Retake cancelled. Nothing was changed.',
     selectedEntryMissing: 'Couldn’t find the selected step.',
     selectFailed: 'Couldn’t switch steps: saving the current description failed. Please try again.',
@@ -246,9 +250,19 @@ export const en: Messages = {
       title: (number: number) => `Edit image · Step ${number}`,
       done: 'Done',
       toolbarLabel: 'Image editing tools',
-      tools: { select: 'Select', text: 'Text', arrow: 'Arrow', rect: 'Box', ellipse: 'Ellipse', step: 'Number', redact: 'Mask', crop: 'Crop' },
+      tools: {
+        select: 'Select',
+        text: 'Text',
+        arrow: 'Arrow',
+        rect: 'Box',
+        ellipse: 'Ellipse',
+        step: 'Number',
+        redact: 'Mask',
+        crop: 'Crop',
+      },
       hints: {
-        select: 'Click an item to select it. Drag to move (hold Shift to lock the direction), drag the handles to adjust, double-click text to edit. Drag empty space to pan.',
+        select:
+          'Click an item to select it. Drag to move (hold Shift to lock the direction), drag the handles to adjust, double-click text to edit. Drag empty space to pan.',
         text: 'Click, or drag out an area, then type. Enter finishes, Shift+Enter adds a line.',
         arrow: 'Drag from the start to where it should point. Hold Shift to snap to 45°.',
         rect: 'Drag to draw a box. Hold Shift for a square.',
@@ -258,7 +272,19 @@ export const en: Messages = {
         crop: 'Drag to choose the area to keep, then drag its edges to adjust. The original image is never changed, and you can clear the crop any time.',
         navigate: 'Scroll to zoom. Hold Space or the middle mouse button and drag to pan.',
       },
-      itemLabel: (kind: string): string => ({ highlight: 'Highlight', redaction: 'Mask', text: 'Text', arrow: 'Arrow', rect: 'Box', ellipse: 'Ellipse', step: 'Number', crop: 'Crop area' } as Record<string, string>)[kind] ?? 'Item',
+      itemLabel: (kind: string): string =>
+        (
+          ({
+            highlight: 'Highlight',
+            redaction: 'Mask',
+            text: 'Text',
+            arrow: 'Arrow',
+            rect: 'Box',
+            ellipse: 'Ellipse',
+            step: 'Number',
+            crop: 'Crop area',
+          }) as Record<string, string>
+        )[kind] ?? 'Item',
       textInput: 'Type text',
       clearCrop: 'Clear crop',
       cropSize: (width: number, height: number) => `After crop: ${width} × ${height} px`,
@@ -297,8 +323,10 @@ export const en: Messages = {
       conflictReloaded:
         'This image was just changed elsewhere, for example by a retake. To avoid overwriting its masks and edits, this save was cancelled and the latest version loaded. Please redo the changes you hadn’t saved yet.',
       updatedElsewhere: 'Loaded the image’s latest saved edits.',
-      maskLimitReached: (max: number) => `This image already has the maximum of ${max} masks. Delete some before adding more.`,
-      editLimitReached: (max: number) => `This image already has the maximum of ${max} edits. Delete some before adding more.`,
+      maskLimitReached: (max: number) =>
+        `This image already has the maximum of ${max} masks. Delete some before adding more.`,
+      editLimitReached: (max: number) =>
+        `This image already has the maximum of ${max} edits. Delete some before adding more.`,
       textLimitReached: (max: number) => `Text is limited to ${max} characters`,
       openReview: 'Check masks',
       reviewNotice:
@@ -378,9 +406,12 @@ export const en: Messages = {
       title: 'Export',
       format: 'Format',
       exporting: 'Exporting…',
-      stepImageFailed: (step: number) => `The image in step ${step} couldn’t be read, so the export was stopped. Retake or delete that step in the editor, then try again.`,
-      reviewRequired: (steps: string) => `The export was stopped because the masks in these steps still need review: ${steps}. Review them in the editor first.`,
-      downloadFailed: 'The browser couldn’t start the download. Check your download settings or the file name, then try again.',
+      stepImageFailed: (step: number) =>
+        `The image in step ${step} couldn’t be read, so the export was stopped. Retake or delete that step in the editor, then try again.`,
+      reviewRequired: (steps: string) =>
+        `The export was stopped because the masks in these steps still need review: ${steps}. Review them in the editor first.`,
+      downloadFailed:
+        'The browser couldn’t start the download. Check your download settings or the file name, then try again.',
       nothingExported: 'There are no images to export, so nothing was downloaded.',
       markdown: {
         tab: 'Markdown',
@@ -462,7 +493,8 @@ export const en: Messages = {
     },
 
     mutations: {
-      conflict: 'The project was changed somewhere else, so this change wasn’t applied. The screen was reloaded with the latest version.',
+      conflict:
+        'The project was changed somewhere else, so this change wasn’t applied. The screen was reloaded with the latest version.',
       reorderSteps: {
         pending: 'Saving step order…',
         failed: 'Couldn’t reorder the steps. The current data was reloaded.',
@@ -514,7 +546,8 @@ export const en: Messages = {
     dragEnd: (item: string, position: number) => `${item} dropped at position ${position}.`,
     dragEndInPlace: (item: string) => `${item} returned to its original position.`,
     dragCancel: (item: string) => `Reordering cancelled. ${item} returned to its original position.`,
-    keyboardInstructions: 'Press Space or Enter to pick up the item, use the arrow keys to move it, then press Space or Enter to drop it. Press Escape to cancel.',
+    keyboardInstructions:
+      'Press Space or Enter to pick up the item, use the arrow keys to move it, then press Space or Enter to drop it. Press Escape to cancel.',
   },
 
   continuationTabs: {
@@ -529,8 +562,10 @@ export const en: Messages = {
     recorded: 'Recorded',
     stepNotRecorded: 'Your last click ran on the page but wasn’t recorded as a step.',
     regionNotRecorded: 'The region you selected wasn’t recorded as a step. Select it again.',
-    pageNotRecordablePdf: 'The browser’s PDF viewer can’t be recorded, so clicks here won’t be captured. Switch to a regular web page to keep recording.',
-    pageNotRecordableLocal: 'Only http and https web pages can be recorded, so clicks on this page (such as a local file) won’t be captured. Switch to a regular web page to keep recording.',
+    pageNotRecordablePdf:
+      'The browser’s PDF viewer can’t be recorded, so clicks here won’t be captured. Switch to a regular web page to keep recording.',
+    pageNotRecordableLocal:
+      'Only http and https web pages can be recorded, so clicks on this page (such as a local file) won’t be captured. Switch to a regular web page to keep recording.',
     discardTitle: 'Discard this recording?',
     discardBody: 'Everything added in this run will be removed. Earlier content isn’t affected.',
     discard: 'Discard recording',
@@ -580,7 +615,8 @@ export const en: Messages = {
     instructions: 'Drag to select an area. Esc cancels',
     cancelLabel: 'Cancel region capture',
     dragging: 'Release to adjust the area',
-    tooSmall: (minSize: number) => `That area is too small. Make it at least ${minSize} pixels wide and tall, then drag again`,
+    tooSmall: (minSize: number) =>
+      `That area is too small. Make it at least ${minSize} pixels wide and tall, then drag again`,
     adjust: 'Drag the edges to adjust',
     confirmLabel: 'Confirm capture',
     capturing: 'Capturing the selected area',
@@ -690,10 +726,12 @@ export const en: Messages = {
     recaptureCancelFailed: 'Something went wrong while cancelling the retake. Please try again.',
     recaptureTabSwitchFailed: 'Couldn’t switch to the retake tab. Please try again.',
     recordingServiceFailed: 'Recording ran into a problem. Reload the page and try again.',
-    snapshotUnavailableHere: 'Snapshots can’t be created on this page. Go back to a regular website or finish recording.',
+    snapshotUnavailableHere:
+      'Snapshots can’t be created on this page. Go back to a regular website or finish recording.',
     controlsUnavailableHere: 'Recording controls can’t be shown on this page. Reload a regular website and try again.',
     stoppedSnapshotPageChanged: 'Recording stopped because the snapshot page changed.',
-    waitingRestrictedPage: 'This page can’t be recorded. Recording picks up again when you go back to a regular website.',
+    waitingRestrictedPage:
+      'This page can’t be recorded. Recording picks up again when you go back to a regular website.',
     waitingSiteAccess:
       'Howbeam doesn’t have access to this site, so nothing here is recorded. Allow access to all sites in the Howbeam popup, or go back to a site you allowed.',
     waitingFollowFailed:
@@ -701,9 +739,11 @@ export const en: Messages = {
     stoppedRecorderUnavailable: 'Recording stopped because it couldn’t carry on after the page changed.',
     sourceTabOpenFailed: 'Couldn’t open the original page.',
     restrictedContinuationSource: 'The source page can’t be recorded.',
-    editorOnlyContinuation: 'To continue recording, open this project in the Howbeam editor and choose Continue recording.',
+    editorOnlyContinuation:
+      'To continue recording, open this project in the Howbeam editor and choose Continue recording.',
     continuationSourceRedirected: 'The original page redirected, so recording didn’t start.',
-    continuationSourceMissing: 'This project has no source page to continue from yet. Start a new recording from the popup.',
+    continuationSourceMissing:
+      'This project has no source page to continue from yet. Start a new recording from the popup.',
     continuationAccessRequired: 'Allow Howbeam to access this site before continuing the recording.',
     continuationSourceUnreachable:
       'The original page couldn’t be loaded, so recording didn’t start. Check the connection, or continue the recording from another page.',
@@ -717,11 +757,13 @@ export const en: Messages = {
     activeOperation: 'A recording or retake is already in progress.',
     operationChanged: 'Something changed in the meantime. Please try again.',
     sourceRedirected: 'The original page redirected, so the retake didn’t start.',
-    sourceUnreachable: 'The original page couldn’t be loaded, so the retake didn’t start. Check the connection and try again.',
+    sourceUnreachable:
+      'The original page couldn’t be loaded, so the retake didn’t start. Check the connection and try again.',
     restrictedSource: 'The source page can’t be retaken.',
     editorOnlyPreflight: 'To retake a step, open this project in the Howbeam editor and choose Retake.',
     editorOnlyStart: 'Retakes can only be started from the Howbeam editor. Open the project there and try again.',
-    editorOnlyProjectStart: 'Retakes can only be started from this project’s editor. Reopen the project from the library and try again.',
+    editorOnlyProjectStart:
+      'Retakes can only be started from this project’s editor. Reopen the project from the library and try again.',
     stepNotFound: 'Couldn’t find the step to retake.',
     stepChanged: 'This step has changed. Reload the editor and try again.',
     snapshotNotFound: 'Couldn’t find the snapshot to retake.',
@@ -739,7 +781,8 @@ export const en: Messages = {
     alreadyStarting: 'A retake is already starting.',
     alreadyEnded: 'This retake has already ended.',
     invalidSource: 'That page can’t be used for a retake. Go back to the editor and start the retake again.',
-    invalidEditor: 'The retake must be started from this project’s editor. Reopen the project from the library and try again.',
+    invalidEditor:
+      'The retake must be started from this project’s editor. Reopen the project from the library and try again.',
     tabMissing: 'Couldn’t find the retake tab.',
     cancelled: 'Retake cancelled. Nothing was changed.',
     sourceNotActive: 'Retake failed: the original page is no longer the active tab.',

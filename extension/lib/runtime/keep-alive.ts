@@ -12,11 +12,7 @@ function isKeepAliveRejectionMessage(message: unknown): boolean {
 }
 
 function isKeepAliveHeartbeat(message: unknown): boolean {
-  return (
-    typeof message === 'object' &&
-    message !== null &&
-    (message as { type?: unknown }).type === 'heartbeat'
-  );
+  return typeof message === 'object' && message !== null && (message as { type?: unknown }).type === 'heartbeat';
 }
 
 export interface KeepAlivePortLike {
@@ -65,14 +61,17 @@ export function createKeepAlivePortHandler<TSender, TState>(
       disconnect();
     };
     const authorize = () => {
-      void deps.getRecordingState().then((state) => {
-        if (!disconnected && !deps.isTrustedKeepAliveSender(port.sender, state)) reject();
-      }).catch((error) => {
-        // Reading state failed, which says nothing about the sender: drop the
-        // port without the rejection message so a healthy recorder reconnects.
-        console.error('[howbeam] failed to authorize keep-alive port', error);
-        disconnect();
-      });
+      void deps
+        .getRecordingState()
+        .then((state) => {
+          if (!disconnected && !deps.isTrustedKeepAliveSender(port.sender, state)) reject();
+        })
+        .catch((error) => {
+          // Reading state failed, which says nothing about the sender: drop the
+          // port without the rejection message so a healthy recorder reconnects.
+          console.error('[howbeam] failed to authorize keep-alive port', error);
+          disconnect();
+        });
     };
     port.onDisconnect.addListener(() => {
       disconnected = true;
@@ -115,10 +114,7 @@ export interface KeepAliveHandle {
 const DEFAULT_MAX_CONSECUTIVE_FAILURES = 10;
 
 /** 以受保護 port、有限指數 backoff 與孤立拒絕維持操作。 */
-export function startKeepAlive(
-  runtime: KeepAliveRuntimeLike,
-  options: KeepAliveOptions,
-): KeepAliveHandle {
+export function startKeepAlive(runtime: KeepAliveRuntimeLike, options: KeepAliveOptions): KeepAliveHandle {
   const initialReconnectDelayMs = Math.max(1, options.initialReconnectDelayMs ?? 250);
   const maxReconnectDelayMs = Math.max(initialReconnectDelayMs, options.maxReconnectDelayMs ?? 10_000);
   const intervalMs = Math.max(1, options.intervalMs);
@@ -162,10 +158,7 @@ export function startKeepAlive(
       giveUp();
       return;
     }
-    const delay = Math.min(
-      maxReconnectDelayMs,
-      initialReconnectDelayMs * 2 ** Math.min(reconnectAttempt, 10),
-    );
+    const delay = Math.min(maxReconnectDelayMs, initialReconnectDelayMs * 2 ** Math.min(reconnectAttempt, 10));
     reconnectAttempt++;
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;

@@ -151,7 +151,9 @@ describe('resolveRelayedStepFrameHop', () => {
     const limiter = createStepFrameRelayLimiter();
 
     expect(resolveRelayedStepFrameHop(hop(frame.contentWindow, payload(), false), messageType, limiter)).toBeNull();
-    expect(resolveRelayedStepFrameHop(hop(frame.contentWindow, payload({ type: 'other' })), messageType, limiter)).toBeNull();
+    expect(
+      resolveRelayedStepFrameHop(hop(frame.contentWindow, payload({ type: 'other' })), messageType, limiter),
+    ).toBeNull();
     expect(resolveRelayedStepFrameHop(hop({}), messageType, limiter)).toBeNull();
   });
 
@@ -159,7 +161,8 @@ describe('resolveRelayedStepFrameHop', () => {
     const frame = placeIframe(document.body);
     const limiter = createStepFrameRelayLimiter();
     const results = Array.from({ length: 91 }, () =>
-      resolveRelayedStepFrameHop(hop(frame.contentWindow), messageType, limiter));
+      resolveRelayedStepFrameHop(hop(frame.contentWindow), messageType, limiter),
+    );
 
     expect(results.slice(0, 90).every((result) => result !== null)).toBe(true);
     expect(results[90]).toBeNull();

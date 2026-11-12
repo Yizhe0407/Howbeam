@@ -87,7 +87,11 @@ export function intersectionOverUnion(first: Rect, second: Rect): number {
   return union > 0 ? intersection / union : 0;
 }
 
-export function fitPreviewFrame(bounds: Rect, viewport: { width: number; height: number }, padding = HIGHLIGHT_PADDING): Rect {
+export function fitPreviewFrame(
+  bounds: Rect,
+  viewport: { width: number; height: number },
+  padding = HIGHLIGHT_PADDING,
+): Rect {
   const left = Math.min(Math.max(bounds.x - padding, 0), viewport.width);
   const top = Math.min(Math.max(bounds.y - padding, 0), viewport.height);
   const right = Math.min(Math.max(bounds.x + bounds.width + padding, left), viewport.width);
@@ -136,7 +140,12 @@ function summarizeAccuracy(results: AccuracyResult[]): AccuracySummary {
     miss,
     exactAccuracy: cases > 0 ? exact / cases : 0,
     semanticAccuracy: cases > 0 ? (exact + semanticOnly) / cases : 0,
-    medianIoU: rounded(quantile(results.map((result) => result.bestIoU), 0.5)),
+    medianIoU: rounded(
+      quantile(
+        results.map((result) => result.bestIoU),
+        0.5,
+      ),
+    ),
     latency: summarizePercentiles(results.flatMap((result) => result.latencySamplesMs)),
   };
 }
@@ -151,7 +160,12 @@ export function summarizeBenchmark(accuracy: AccuracyResult[], replay: ReplayRes
       cases: replay.length,
       passed: replayPassed,
       exactlyOnceRate: replay.length > 0 ? replayPassed / replay.length : 0,
-      medianBoundsIoU: rounded(quantile(replay.map((result) => result.boundsIoU), 0.5)),
+      medianBoundsIoU: rounded(
+        quantile(
+          replay.map((result) => result.boundsIoU),
+          0.5,
+        ),
+      ),
       latency: summarizePercentiles(replay.map((result) => result.latencyMs)),
     },
   };

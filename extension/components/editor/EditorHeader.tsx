@@ -47,7 +47,8 @@ export default function EditorHeader({
       className="px-2.5 sm:px-4"
       disabled={unavailable || !hasSteps || !publish}
     >
-      <Download /><span className="hidden sm:inline">{t().common.export}</span>
+      <Download />
+      <span className="hidden sm:inline">{t().common.export}</span>
     </Button>
   );
 
@@ -56,24 +57,26 @@ export default function EditorHeader({
       current={projectTitle == null ? t().common.editor : projectDisplayTitle(projectTitle)}
       currentHeading={{ id: 'howbeam-editor-title' }}
       beforeNavigate={beforeNavigate}
-      status={operationActive && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge variant="status" className="min-w-0 hover:bg-danger-soft/70 disabled:pointer-events-none" asChild>
-              <button type="button" onClick={onShowRecording} disabled={!onShowRecording}>
-                <span className="size-1.5 rounded-full bg-recording animate-pulse" />
-                <span className="truncate">{operation === 'recapture' ? t().common.recapturing : t().common.recording}</span>
-              </button>
-            </Badge>
-          </TooltipTrigger>
-          {onShowRecording && <TooltipContent>{t().popup.returnToRecordingTab}</TooltipContent>}
-        </Tooltip>
-      )}
-      actions={projectActionsAvailable && (
-        <>
-          {publish ? <ExportPopover {...publish} trigger={exportButton} /> : exportButton}
-        </>
-      )}
+      status={
+        operationActive && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="status" className="min-w-0 hover:bg-danger-soft/70 disabled:pointer-events-none" asChild>
+                <button type="button" onClick={onShowRecording} disabled={!onShowRecording}>
+                  <span className="size-1.5 animate-pulse rounded-full bg-recording" />
+                  <span className="truncate">
+                    {operation === 'recapture' ? t().common.recapturing : t().common.recording}
+                  </span>
+                </button>
+              </Badge>
+            </TooltipTrigger>
+            {onShowRecording && <TooltipContent>{t().popup.returnToRecordingTab}</TooltipContent>}
+          </Tooltip>
+        )
+      }
+      actions={
+        projectActionsAvailable && <>{publish ? <ExportPopover {...publish} trigger={exportButton} /> : exportButton}</>
+      }
     />
   );
 }

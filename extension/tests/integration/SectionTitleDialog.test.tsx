@@ -86,9 +86,12 @@ describe('SectionTitleDialog', () => {
 
   it('cannot be dismissed while saving', async () => {
     let finish: (() => void) | undefined;
-    const onSubmit = vi.fn(() => new Promise<void>((resolve) => {
-      finish = resolve;
-    }));
+    const onSubmit = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
     const { onClose } = renderDialog(ADD, onSubmit);
 
     fireEvent.change(field(), { target: { value: '條目頁面' } });

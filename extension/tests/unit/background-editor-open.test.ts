@@ -6,16 +6,19 @@ import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 
 const mocks = await vi.hoisted(async () => (await import('../setup/background-test-utils')).makeBackgroundMocks());
 
-vi.mock('wxt/browser', async () =>
-  (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
+vi.mock('wxt/browser', async () => (await import('../setup/background-test-utils')).mockWxtBrowserModule(mocks));
 vi.mock('@/lib/storage/step-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/project-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/storage', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal),
+);
 vi.mock('@/lib/recording/background/pending-undo-store', async () =>
-  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks));
+  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks),
+);
 
 const EDITOR_KEY = 'howbeam:extensionPageTab:editor';
 const EDITOR_TAB = { tabId: 12, windowId: 4 };
@@ -33,9 +36,8 @@ async function openEditor(message: { sessionId?: string; entryId?: string } = {}
 /** Puts an editor tab in the registry, as REGISTER_EXTENSION_PAGE would. */
 function withRegisteredEditor(): void {
   mocks.sessionGet.mockImplementation(async (keys?: string | string[]) =>
-    (keys === EDITOR_KEY || (Array.isArray(keys) && keys.includes(EDITOR_KEY))
-      ? { [EDITOR_KEY]: EDITOR_TAB }
-      : {}));
+    keys === EDITOR_KEY || (Array.isArray(keys) && keys.includes(EDITOR_KEY)) ? { [EDITOR_KEY]: EDITOR_TAB } : {},
+  );
 }
 
 beforeEach(async () => {
@@ -215,10 +217,7 @@ describe('finishing a recording twice', () => {
     mocks.tabsGet.mockResolvedValue({ id: 4, windowId: 1, active: true, url: 'https://example.com/flow' });
     await importBackground();
 
-    const first = await mocks.messageListener?.(
-      { type: 'FINISH_RECORDING', runId: 'run-1' },
-      EXTENSION_PAGE_SENDER,
-    );
+    const first = await mocks.messageListener?.({ type: 'FINISH_RECORDING', runId: 'run-1' }, EXTENSION_PAGE_SENDER);
     await flushAsyncWork();
     expect(first).toMatchObject({ ok: true });
     expect(mocks.tabsCreate).toHaveBeenCalledTimes(1);
@@ -285,15 +284,21 @@ describe('opening the editor from another extension page', () => {
 
   it.each([
     ['the popup, which has no tab of its own', EXTENSION_PAGE_SENDER],
-    ['the editor itself', {
-      url: 'chrome-extension://extension-id/editor.html?sessionId=project-a',
-      frameId: 0,
-      tab: { id: 12, url: 'chrome-extension://extension-id/editor.html?sessionId=project-a' },
-    }],
+    [
+      'the editor itself',
+      {
+        url: 'chrome-extension://extension-id/editor.html?sessionId=project-a',
+        frameId: 0,
+        tab: { id: 12, url: 'chrome-extension://extension-id/editor.html?sessionId=project-a' },
+      },
+    ],
   ])('opens a tab of its own when the request comes from %s', async (_label, sender) => {
     await openFrom(sender, { sessionId: 'project-a', inPlace: true });
 
-    expect(mocks.tabsCreate).toHaveBeenCalledExactlyOnceWith({ url: `${EDITOR_URL_PREFIX}?sessionId=project-a`, active: true });
+    expect(mocks.tabsCreate).toHaveBeenCalledExactlyOnceWith({
+      url: `${EDITOR_URL_PREFIX}?sessionId=project-a`,
+      active: true,
+    });
     expect(mocks.tabsUpdate).not.toHaveBeenCalled();
   });
 
@@ -311,7 +316,10 @@ describe('extension page registry', () => {
 
   async function register(page: string, tabId: number): Promise<unknown> {
     const url = `chrome-extension://extension-id/${page}`;
-    const result = await mocks.messageListener?.({ type: 'REGISTER_EXTENSION_PAGE' }, { url, frameId: 0, tab: { id: tabId, windowId: 2, url } });
+    const result = await mocks.messageListener?.(
+      { type: 'REGISTER_EXTENSION_PAGE' },
+      { url, frameId: 0, tab: { id: tabId, windowId: 2, url } },
+    );
     await flushAsyncWork();
     return result;
   }
@@ -319,7 +327,8 @@ describe('extension page registry', () => {
   it('remembers a tab as only the page it shows now', async () => {
     // Tab 30 was the library and has just navigated to settings.
     mocks.sessionGet.mockImplementation(async (keys?: string | string[]) =>
-      (Array.isArray(keys) && keys.includes(LIBRARY_KEY) ? { [LIBRARY_KEY]: { tabId: 30, windowId: 2 } } : {}));
+      Array.isArray(keys) && keys.includes(LIBRARY_KEY) ? { [LIBRARY_KEY]: { tabId: 30, windowId: 2 } } : {},
+    );
 
     await expect(register('options.html', 30)).resolves.toBe(true);
 
@@ -329,7 +338,8 @@ describe('extension page registry', () => {
 
   it('leaves other tabs’ records alone', async () => {
     mocks.sessionGet.mockImplementation(async (keys?: string | string[]) =>
-      (Array.isArray(keys) && keys.includes(LIBRARY_KEY) ? { [LIBRARY_KEY]: { tabId: 31, windowId: 2 } } : {}));
+      Array.isArray(keys) && keys.includes(LIBRARY_KEY) ? { [LIBRARY_KEY]: { tabId: 31, windowId: 2 } } : {},
+    );
 
     await register('options.html', 30);
 

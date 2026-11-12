@@ -2,18 +2,10 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, Video } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
-import {
-  SortableContext,
-  horizontalListSortingStrategy,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, horizontalListSortingStrategy, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { entryId, type StepEntry } from '@/lib/storage/models';
 import { railRows, type ProjectSection, type RailRow } from '@/lib/storage/project-sections';
-import {
-  horizontalListModifiers,
-  useSortableReorder,
-  verticalListModifiers,
-} from '@/lib/editor/dnd';
+import { horizontalListModifiers, useSortableReorder, verticalListModifiers } from '@/lib/editor/dnd';
 import { t } from '@/lib/shared/i18n';
 import { cn } from '@/lib/shared/utils';
 import { useAutoHideScrollbar } from '@/lib/editor/use-auto-hide-scrollbar';
@@ -21,8 +13,8 @@ import EntryThumbnail from './EntryThumbnail';
 import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import ProjectSectionHeading from './ProjectSectionHeading';
 
-
-const SEAM_PILL = 'relative flex h-[18px] min-w-0 scale-90 items-center gap-1 whitespace-nowrap rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
+const SEAM_PILL =
+  'relative flex h-[18px] min-w-0 scale-90 items-center gap-1 whitespace-nowrap rounded-full border-2 border-border px-2 text-[11px] leading-none font-bold text-on-accent opacity-0 shadow-sm outline-none transition-[transform,opacity] duration-150 ease-out group-hover/slot:scale-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-100 group-focus-within/slot:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none motion-reduce:transition-none';
 
 /**
  * The seam between two steps. It takes no room of its own: a zero-height row
@@ -51,7 +43,7 @@ function SeamActions({
       <div className="group/slot absolute inset-y-0 -left-0.5 flex w-4 flex-col items-center justify-end gap-1 pb-1 lg:inset-x-0 lg:inset-y-auto lg:-top-0.5 lg:h-4 lg:w-auto lg:flex-row lg:justify-center lg:px-2 lg:pb-0">
         <span
           aria-hidden="true"
-          className="absolute inset-y-2 left-1/2 origin-center scale-y-0 border-l-2 border-dashed border-border opacity-0 transition-[transform,opacity] duration-200 ease-out group-hover/slot:scale-y-100 group-hover/slot:opacity-100 [li:hover+li_&]:scale-y-100 [li:hover+li_&]:opacity-100 group-focus-within/slot:scale-y-100 group-focus-within/slot:opacity-100 motion-reduce:transition-none lg:inset-x-2 lg:top-1/2 lg:bottom-auto lg:scale-x-0 lg:scale-y-100 lg:border-t-2 lg:border-l-0 lg:group-hover/slot:scale-x-100 lg:[li:hover+li_&]:scale-x-100 lg:group-focus-within/slot:scale-x-100"
+          className="absolute inset-y-2 left-1/2 origin-center scale-y-0 border-l-2 border-dashed border-border opacity-0 transition-[transform,opacity] duration-200 ease-out group-focus-within/slot:scale-y-100 group-focus-within/slot:opacity-100 group-hover/slot:scale-y-100 group-hover/slot:opacity-100 motion-reduce:transition-none lg:inset-x-2 lg:top-1/2 lg:bottom-auto lg:scale-x-0 lg:scale-y-100 lg:border-t-2 lg:border-l-0 lg:group-focus-within/slot:scale-x-100 lg:group-hover/slot:scale-x-100 [li:hover+li_&]:scale-y-100 [li:hover+li_&]:opacity-100 lg:[li:hover+li_&]:scale-x-100"
         />
         {onInsert && (
           <button
@@ -61,7 +53,8 @@ function SeamActions({
             aria-label={t().editor.rail.insertAfter(afterStep)}
             className={cn(SEAM_PILL, 'bg-sora')}
           >
-            <Plus className="size-3 shrink-0" strokeWidth={3} aria-hidden="true" /><span className="truncate">{t().editor.rail.insertHere}</span>
+            <Plus className="size-3 shrink-0" strokeWidth={3} aria-hidden="true" />
+            <span className="truncate">{t().editor.rail.insertHere}</span>
           </button>
         )}
         {onStartSection && (
@@ -72,7 +65,8 @@ function SeamActions({
             aria-label={t().editor.sections.addAt(afterStep + 1)}
             className={cn(SEAM_PILL, 'bg-matcha')}
           >
-            <Plus className="size-3 shrink-0" strokeWidth={3} aria-hidden="true" /><span className="truncate">{t().editor.sections.addShort}</span>
+            <Plus className="size-3 shrink-0" strokeWidth={3} aria-hidden="true" />
+            <span className="truncate">{t().editor.sections.addShort}</span>
           </button>
         )}
       </div>
@@ -96,49 +90,47 @@ function LazyRailPreview({ eager, children }: { eager: boolean; children: ReactN
     }
     const element = host.current;
     if (!element) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
-      setVisible(true);
-      observer.disconnect();
-    }, { rootMargin: '320px' });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setVisible(true);
+        observer.disconnect();
+      },
+      { rootMargin: '320px' },
+    );
     observer.observe(element);
     return () => observer.disconnect();
   }, [eager, visible]);
 
   return (
-    <div
-      ref={host}
-      aria-busy={!visible}
-      className="relative size-full overflow-hidden"
-    >
+    <div ref={host} aria-busy={!visible} className="relative size-full overflow-hidden">
       {visible ? children : <span className="sr-only">{t().editor.rail.thumbnailPending}</span>}
     </div>
   );
 }
 
 // Sits on top of a screenshot, so it wears the same solid sticker chip as the step number.
-const RAIL_HANDLE = 'size-6 rounded-full border-2 border-border bg-card text-foreground hover:bg-secondary [&_svg]:size-3.5';
+const RAIL_HANDLE =
+  'size-6 rounded-full border-2 border-border bg-card text-foreground hover:bg-secondary [&_svg]:size-3.5';
 
 /** An entry's screenshot with its step number, as the rail and a dragged entry's copy show it. */
 function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: number; active: boolean }) {
   return (
-    <div className={cn(
-      'pointer-events-none relative z-[1] aspect-[16/9] w-full overflow-hidden rounded-sm border-2 bg-secondary',
-      active ? 'border-selected' : 'border-border',
-    )}>
+    <div
+      className={cn(
+        'pointer-events-none relative z-[1] aspect-[16/9] w-full overflow-hidden rounded-sm border-2 bg-secondary',
+        active ? 'border-selected' : 'border-border',
+      )}
+    >
       <LazyRailPreview eager={active}>
-        <EntryThumbnail
-          entry={entry}
-          alt=""
-          fit="cover"
-          badges={false}
-          className="size-full"
-        />
+        <EntryThumbnail entry={entry} alt="" fit="cover" badges={false} className="size-full" />
       </LazyRailPreview>
-      <span className={cn(
-        'absolute top-1.5 left-1.5 z-30 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-border px-1 text-xs font-bold tabular-nums transition-colors',
-        active ? 'bg-selected text-on-accent' : 'bg-card text-foreground',
-      )}>
+      <span
+        className={cn(
+          'absolute top-1.5 left-1.5 z-30 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-border px-1 text-xs font-bold tabular-nums transition-colors',
+          active ? 'bg-selected text-on-accent' : 'bg-card text-foreground',
+        )}
+      >
         {number}
       </span>
     </div>
@@ -176,17 +168,13 @@ export default function StepRail({
 }: Props) {
   const labelled = Boolean(onRenameSection && onDeleteSection);
   const rows = railRows(entries, labelled ? sections : []);
-  const { sensors, accessibility, handlers, itemIds, overlayHost, setOverlayHost, previewPositionOf } = useSortableReorder(
-    rows,
-    rowId,
-    onReorder,
-    {
+  const { sensors, accessibility, handlers, itemIds, overlayHost, setOverlayHost, previewPositionOf } =
+    useSortableReorder(rows, rowId, onReorder, {
       disabled: reorderDisabled,
       itemNoun: t().sortable.stepNoun,
       logLabel: '[howbeam] failed to reorder project entries',
       isFixed: (row) => row.kind === 'section',
-    },
-  );
+    });
   const entryById = new Map(entries.map((entry) => [entryId(entry), entry]));
   const sectionById = new Map(sections.map((section) => [section.id, section]));
   const selectedItem = useRef<HTMLButtonElement | null>(null);
@@ -242,7 +230,7 @@ export default function StepRail({
     <nav
       ref={railRef}
       aria-label={t().editor.rail.label}
-      className="fixed inset-x-0 bottom-0 z-30 grid h-[var(--step-rail-height,8rem)] shrink-0 grid-cols-[1fr_auto] grid-rows-[auto_minmax(0,1fr)] border-t-2 border-border bg-card lg:static lg:z-auto lg:my-6 lg:ml-6 lg:h-auto lg:max-h-[calc(100%-3rem)] lg:min-h-0 lg:w-[200px] lg:min-w-[200px] lg:shrink-0 lg:self-start lg:basis-[200px] lg:flex lg:flex-col lg:rounded-md lg:border-2"
+      className="fixed inset-x-0 bottom-0 z-30 grid h-[var(--step-rail-height,8rem)] shrink-0 grid-cols-[1fr_auto] grid-rows-[auto_minmax(0,1fr)] border-t-2 border-border bg-card lg:static lg:z-auto lg:my-6 lg:ml-6 lg:flex lg:h-auto lg:max-h-[calc(100%-3rem)] lg:min-h-0 lg:w-[200px] lg:min-w-[200px] lg:shrink-0 lg:basis-[200px] lg:flex-col lg:self-start lg:rounded-md lg:border-2"
     >
       <div className="flex shrink-0 items-center justify-between gap-2 px-3.5 pt-3 pb-2 text-xs font-bold text-muted-foreground">
         <span>{t().editor.rail.count(entries.length)}</span>
@@ -269,7 +257,12 @@ export default function StepRail({
                 if (!section || !onRenameSection || !onDeleteSection) return null;
                 return (
                   // The mobile rail is a fixed-height strip, so a heading sits beside its first step there instead of above it.
-                  <SortableItem key={rowId(row)} id={rowId(row)} fixed className="w-36 shrink-0 self-center lg:w-auto lg:self-auto">
+                  <SortableItem
+                    key={rowId(row)}
+                    id={rowId(row)}
+                    fixed
+                    className="w-36 shrink-0 self-center lg:w-auto lg:self-auto"
+                  >
                     {() => (
                       <ProjectSectionHeading
                         section={section}
@@ -290,66 +283,67 @@ export default function StepRail({
               const number = previewPositionOf(rowId(row));
               return (
                 <Fragment key={rowId(row)}>
-                <SortableItem
-                  id={rowId(row)}
-                  disabled={reorderDisabled}
-                  overlayHost={overlayHost}
-                  className="w-32 shrink-0 [content-visibility:auto] [contain-intrinsic-size:128px_78px] lg:w-full lg:min-w-0"
-                  handleClassName={RAIL_HANDLE}
-                >
-                  {(handle, overlay) => (
-                    <div
-                      data-active={active || undefined}
-                      // The row is the thumbnail itself, with no plate around it, so every row's edge is its ink border and the seams between rows stay even.
-                      className="group relative flex w-32 min-w-0 shrink-0 cursor-pointer items-center rounded-sm lg:w-auto lg:shrink"
-                    >
-                      <button
-                        ref={active ? selectedItem : undefined}
-                        type="button"
-                        onClick={() => onSelect(id)}
-                        aria-label={t().editor.rail.openStep(index + 1)}
-                        aria-current={active ? 'step' : undefined}
-                        className="absolute inset-0 z-0 rounded-sm outline-none focus-ring"
-                      />
-                      <RailThumbnail entry={entry} number={number} active={active} />
-                      {active && (
-                        // One 4px ring over the thumbnail's edge, drawn as a single shape: two bands meeting would leave a seam at
-                        // the curves. The border under it turns the same colour, so its anti-aliased rim never shows ink.
-                        <span
-                          aria-hidden="true"
-                          data-howbeam-selected-step-outline
-                          className="pointer-events-none absolute inset-0 z-10 rounded-sm border-4 border-selected"
-                        />
-                      )}
-                      {/* Always rendered: a hover-only handle is invisible on touch; rests dimmed to not compete with the thumbnail. */}
-                      <span className="absolute top-1.5 right-1.5 z-20 opacity-80 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                        {handle}
-                      </span>
-                      {overlay && createPortal(
-                        <div className="relative flex size-full items-center rounded-sm">
-                          <RailThumbnail entry={entry} number={number} active={active} />
-                          <span className="absolute top-1.5 right-1.5 z-20">
-                            <StaticHandle className={RAIL_HANDLE} />
-                          </span>
-                        </div>,
-                        overlay,
-                      )}
-                    </div>
-                  )}
-                </SortableItem>
-                {/* The last seam is the 接續錄製 button below the list. */}
-                {nextEntry && (onContinueRecording || onStartSection) && (
-                  <SeamActions
-                    afterStep={index + 1}
+                  <SortableItem
+                    id={rowId(row)}
                     disabled={reorderDisabled}
-                    onInsert={onContinueRecording && (() => onContinueRecording(id))}
-                    onStartSection={
-                      onStartSection && !sectionByStartId.has(entryId(nextEntry))
-                        ? () => onStartSection(entryId(nextEntry))
-                        : undefined
-                    }
-                  />
-                )}
+                    overlayHost={overlayHost}
+                    className="w-32 shrink-0 [contain-intrinsic-size:128px_78px] [content-visibility:auto] lg:w-full lg:min-w-0"
+                    handleClassName={RAIL_HANDLE}
+                  >
+                    {(handle, overlay) => (
+                      <div
+                        data-active={active || undefined}
+                        // The row is the thumbnail itself, with no plate around it, so every row's edge is its ink border and the seams between rows stay even.
+                        className="group relative flex w-32 min-w-0 shrink-0 cursor-pointer items-center rounded-sm lg:w-auto lg:shrink"
+                      >
+                        <button
+                          ref={active ? selectedItem : undefined}
+                          type="button"
+                          onClick={() => onSelect(id)}
+                          aria-label={t().editor.rail.openStep(index + 1)}
+                          aria-current={active ? 'step' : undefined}
+                          className="absolute inset-0 z-0 rounded-sm focus-ring outline-none"
+                        />
+                        <RailThumbnail entry={entry} number={number} active={active} />
+                        {active && (
+                          // One 4px ring over the thumbnail's edge, drawn as a single shape: two bands meeting would leave a seam at
+                          // the curves. The border under it turns the same colour, so its anti-aliased rim never shows ink.
+                          <span
+                            aria-hidden="true"
+                            data-howbeam-selected-step-outline
+                            className="pointer-events-none absolute inset-0 z-10 rounded-sm border-4 border-selected"
+                          />
+                        )}
+                        {/* Always rendered: a hover-only handle is invisible on touch; rests dimmed to not compete with the thumbnail. */}
+                        <span className="absolute top-1.5 right-1.5 z-20 opacity-80 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                          {handle}
+                        </span>
+                        {overlay &&
+                          createPortal(
+                            <div className="relative flex size-full items-center rounded-sm">
+                              <RailThumbnail entry={entry} number={number} active={active} />
+                              <span className="absolute top-1.5 right-1.5 z-20">
+                                <StaticHandle className={RAIL_HANDLE} />
+                              </span>
+                            </div>,
+                            overlay,
+                          )}
+                      </div>
+                    )}
+                  </SortableItem>
+                  {/* The last seam is the 接續錄製 button below the list. */}
+                  {nextEntry && (onContinueRecording || onStartSection) && (
+                    <SeamActions
+                      afterStep={index + 1}
+                      disabled={reorderDisabled}
+                      onInsert={onContinueRecording && (() => onContinueRecording(id))}
+                      onStartSection={
+                        onStartSection && !sectionByStartId.has(entryId(nextEntry))
+                          ? () => onStartSection(entryId(nextEntry))
+                          : undefined
+                      }
+                    />
+                  )}
                 </Fragment>
               );
             })}
@@ -363,9 +357,10 @@ export default function StepRail({
           type="button"
           onClick={() => onContinueRecording()}
           disabled={reorderDisabled}
-          className="col-start-2 row-start-1 mt-1.5 mr-3.5 flex h-7 shrink-0 items-center justify-center gap-1.5 px-2.5 lg:mx-2 lg:mt-1 lg:mb-2 lg:h-9 lg:px-0 rounded-md border-2 border-border bg-card text-xs leading-none font-bold text-foreground outline-none transition-colors focus-ring hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
+          className="col-start-2 row-start-1 mt-1.5 mr-3.5 flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-md border-2 border-border bg-card px-2.5 text-xs leading-none font-bold text-foreground focus-ring transition-colors outline-none hover:bg-secondary disabled:pointer-events-none disabled:opacity-40 lg:mx-2 lg:mt-1 lg:mb-2 lg:h-9 lg:px-0"
         >
-          <Video className="size-3.5" />{t().editor.rail.continueRecording}
+          <Video className="size-3.5" />
+          {t().editor.rail.continueRecording}
         </button>
       )}
     </nav>

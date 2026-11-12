@@ -80,7 +80,9 @@ function cssName(token: string): string {
 }
 
 function declarations(values: Partial<Record<string, string>>, indent: string): string {
-  return Object.entries(values).map(([token, value]) => `${indent}${cssName(token)}: ${value};`).join('\n');
+  return Object.entries(values)
+    .map(([token, value]) => `${indent}${cssName(token)}: ${value};`)
+    .join('\n');
 }
 
 /** The contents of assets/tokens.css. */

@@ -1,8 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  createHoverScheduler,
-  type HoverProbeRequest,
-} from '@/entrypoints/snapshot-shield/hover-scheduler';
+import { createHoverScheduler, type HoverProbeRequest } from '@/entrypoints/snapshot-shield/hover-scheduler';
 
 const HOVER_TIMEOUT_MS = 1_000;
 

@@ -121,23 +121,26 @@ describe('recording state normalization', () => {
     { viewport: { width: 100, height: 100, scrollX: 10_000_001, scrollY: 0 }, ratio: 1, validViewport: false },
     { viewport: { width: 100, height: 100, scrollX: 0, scrollY: 0 }, ratio: 0, validViewport: true },
     { viewport: { width: 100, height: 100, scrollX: 0, scrollY: 0 }, ratio: 33, validViewport: true },
-  ])('drops invalid snapshot geometry while preserving a valid recording identity %#', ({ viewport, ratio, validViewport }) => {
-    const normalized = normalizeRecordingState({
-      operation: 'recording',
-      isRecording: true,
-      phase: 'recording',
-      sessionId: 'session-1',
-      tabId: 2,
-      runId: 'run-1',
-      mode: 'snapshot',
-      snapshotViewport: viewport,
-      snapshotDevicePixelRatio: ratio,
-    });
+  ])(
+    'drops invalid snapshot geometry while preserving a valid recording identity %#',
+    ({ viewport, ratio, validViewport }) => {
+      const normalized = normalizeRecordingState({
+        operation: 'recording',
+        isRecording: true,
+        phase: 'recording',
+        sessionId: 'session-1',
+        tabId: 2,
+        runId: 'run-1',
+        mode: 'snapshot',
+        snapshotViewport: viewport,
+        snapshotDevicePixelRatio: ratio,
+      });
 
-    expect(normalized.operation).toBe('recording');
-    expect(normalized.snapshotViewport).toEqual(validViewport ? viewport : null);
-    expect(normalized.snapshotDevicePixelRatio).toBe(ratio === 1 ? 1 : null);
-  });
+      expect(normalized.operation).toBe('recording');
+      expect(normalized.snapshotViewport).toEqual(validViewport ? viewport : null);
+      expect(normalized.snapshotDevicePixelRatio).toBe(ratio === 1 ? 1 : null);
+    },
+  );
 
   it('keeps newProject only while its run is alive', () => {
     const liveRun = {
@@ -184,20 +187,25 @@ describe('recording state normalization', () => {
     } as const;
 
     expect(normalizeRecordingState({ recaptureResult: { ...result, completedAt: -1 } }).recaptureResult).toBeNull();
-    expect(normalizeRecordingState({
-      recaptureResult: { ...result, copy: '來源頁無法載入' as never },
-    }).recaptureResult).toBeNull();
-    expect(normalizeRecordingState({ recaptureResult: { ...result, copy: 'recaptureFlow.failed' } }).recaptureResult)
-      .toMatchObject({ copy: 'recaptureFlow.failed' });
+    expect(
+      normalizeRecordingState({
+        recaptureResult: { ...result, copy: '來源頁無法載入' as never },
+      }).recaptureResult,
+    ).toBeNull();
+    expect(
+      normalizeRecordingState({ recaptureResult: { ...result, copy: 'recaptureFlow.failed' } }).recaptureResult,
+    ).toMatchObject({ copy: 'recaptureFlow.failed' });
   });
 
   it('keeps a stored error only when it names existing copy, never stored text', () => {
     expect(normalizeRecordingState({ error: 'background.captureFailed' }).error).toBe('background.captureFailed');
     expect(normalizeRecordingState({ error: '擷取失敗' as never }).error).toBeNull();
     expect(normalizeRecordingState({ error: 'background.toString' as never }).error).toBeNull();
-    expect(normalizeRecordingState({
-      recoverableError: { code: 'CAPTURE_FAILED', copy: 'Error: boom' as never },
-    }).recoverableError).toBeNull();
+    expect(
+      normalizeRecordingState({
+        recoverableError: { code: 'CAPTURE_FAILED', copy: 'Error: boom' as never },
+      }).recoverableError,
+    ).toBeNull();
   });
 
   it('fails closed for a persisted recording count beyond the durable project limit', () => {
@@ -216,7 +224,6 @@ describe('recording state normalization', () => {
     expect(normalized.itemCount).toBe(0);
   });
 
-
   it('applies the durable identifier limit to active state identities', () => {
     const oversized = 'x'.repeat(257);
     const normalized = normalizeRecordingState({
@@ -231,5 +238,4 @@ describe('recording state normalization', () => {
     expect(normalized.operation).toBeNull();
     expect(normalized.sessionId).toBeNull();
   });
-
 });

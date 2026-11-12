@@ -10,10 +10,16 @@ vi.mock('@/lib/export/entry-render', () => ({
   compositeStepEntry: mocks.composite,
 }));
 
-vi.mock('@/lib/export/pdf/pdf-fonts', async (original) => (await import('../setup/pdf-fonts')).withDiskFonts(await original()));
+vi.mock('@/lib/export/pdf/pdf-fonts', async (original) =>
+  (await import('../setup/pdf-fonts')).withDiskFonts(await original()),
+);
 
-
-import { PROJECT_EXPORT_LIMITS, ProjectExportLimitError, projectExportFilename, type ProjectExportMetadata } from '@/lib/export/project-export-contract';
+import {
+  PROJECT_EXPORT_LIMITS,
+  ProjectExportLimitError,
+  projectExportFilename,
+  type ProjectExportMetadata,
+} from '@/lib/export/project-export-contract';
 import { generateProjectHtml as generateProjectHtmlBlob } from '@/lib/export/project-export-html';
 import { generateProjectMarkdownArchive } from '@/lib/export/project-export-markdown';
 import { generateProjectPdf } from '@/lib/export/project-export-pdf';
@@ -226,21 +232,17 @@ describe('project export', () => {
       .mockResolvedValueOnce(new Blob(['first-image'], { type: 'image/jpeg' }))
       .mockResolvedValueOnce(new Blob(['second-image'], { type: 'image/jpeg' }));
 
-    const archive = await generateProjectMarkdownArchive(
-      [entry(), groupEntry()],
-      { title: 'Bundle project', filename: '../../Bundle Project' },
-    );
+    const archive = await generateProjectMarkdownArchive([entry(), groupEntry()], {
+      title: 'Bundle project',
+      filename: '../../Bundle Project',
+    });
     const files = unzipSync(new Uint8Array(await archive.blob.arrayBuffer()));
     const markdown = strFromU8(valueAt(files, 'bundle-project.md'));
 
     expect(archive.blob.type).toBe('application/zip');
     expect(archive.markdownFilename).toBe('bundle-project.md');
     expect(archive.imageCount).toBe(2);
-    expect(Object.keys(files).sort()).toEqual([
-      'bundle-project.md',
-      'images/01.jpg',
-      'images/02.jpg',
-    ]);
+    expect(Object.keys(files).sort()).toEqual(['bundle-project.md', 'images/01.jpg', 'images/02.jpg']);
     expect(strFromU8(valueAt(files, 'images/01.jpg'))).toBe('first-image');
     expect(strFromU8(valueAt(files, 'images/02.jpg'))).toBe('second-image');
     expect(markdown).toContain('![Open settings](images/01.jpg)');
@@ -275,13 +277,10 @@ describe('project export', () => {
   });
 
   it('escapes user HTML and unsafe URLs in self-contained HTML', async () => {
-    const html = await generateProjectHtml(
-      [entry({ description: '<img src=x onerror=alert(1)>' })],
-      {
-        title: '<svg onload=alert(1)>',
-        description: '"quoted" & <b>unsafe</b>',
-      },
-    );
+    const html = await generateProjectHtml([entry({ description: '<img src=x onerror=alert(1)>' })], {
+      title: '<svg onload=alert(1)>',
+      description: '"quoted" & <b>unsafe</b>',
+    });
 
     expect(html).toContain('&lt;svg onload=alert(1)&gt;');
     expect(html).toContain('&quot;quoted&quot; &amp; &lt;b&gt;unsafe&lt;/b&gt;');
@@ -296,10 +295,10 @@ describe('project export', () => {
   });
 
   it('escapes ordered-list markers and setext underlines in Markdown text', async () => {
-    const markdown = await archiveMarkdown(
-      [entry({ description: '1. 點擊按鈕\n10. 完成設定' })],
-      { title: '版本說明', description: '總覽\n====' },
-    );
+    const markdown = await archiveMarkdown([entry({ description: '1. 點擊按鈕\n10. 完成設定' })], {
+      title: '版本說明',
+      description: '總覽\n====',
+    });
 
     expect(markdown).toContain('1\\. 點擊按鈕');
     expect(markdown).toContain('10\\. 完成設定');
@@ -330,7 +329,9 @@ describe('project export', () => {
   });
 
   it('builds the HTML as Blob parts so no document-sized string is ever assembled', async () => {
-    mocks.composite.mockImplementation(async () => new Blob([new Uint8Array(4_000_000).fill(7)], { type: 'image/jpeg' }));
+    mocks.composite.mockImplementation(
+      async () => new Blob([new Uint8Array(4_000_000).fill(7)], { type: 'image/jpeg' }),
+    );
     const blob = await generateProjectHtmlBlob([entry(), entry({ id: 'step-2', order: 2 })], { title: 'Big' });
 
     expect(blob.type).toBe('text/html;charset=utf-8');
@@ -343,18 +344,15 @@ describe('project export', () => {
   });
 
   it('renders repaired section headings in timeline order and escapes Markdown text', async () => {
-    const markdown = await archiveMarkdown(
-      [entry({ id: 'first', order: 1 }), groupEntry()],
-      {
-        title: 'Sectioned project',
-        sections: [
-          { id: 'later', title: 'Later <chapter>', startEntryId: 'anchor' },
-          { id: 'first-section', title: '# First [chapter]', startEntryId: 'first' },
-          { id: 'annotation-middle', title: 'Must not render', startEntryId: 'later' },
-          { id: 'duplicate-start', title: 'Must also not render', startEntryId: 'first' },
-        ],
-      },
-    );
+    const markdown = await archiveMarkdown([entry({ id: 'first', order: 1 }), groupEntry()], {
+      title: 'Sectioned project',
+      sections: [
+        { id: 'later', title: 'Later <chapter>', startEntryId: 'anchor' },
+        { id: 'first-section', title: '# First [chapter]', startEntryId: 'first' },
+        { id: 'annotation-middle', title: 'Must not render', startEntryId: 'later' },
+        { id: 'duplicate-start', title: 'Must also not render', startEntryId: 'first' },
+      ],
+    });
 
     const firstHeading = markdown.indexOf('## \\# First \\[chapter\\]');
     const firstImage = markdown.indexOf('![Open settings]');
@@ -405,7 +403,9 @@ describe('project export', () => {
   it('prints the step number and description as one heading above each HTML screenshot', async () => {
     const html = await generateProjectHtml([entry(), groupEntry()], { title: 'Project' });
 
-    const firstHeading = html.indexOf('<h3 class="step-title"><span class="step-number">1.</span><span>Open settings</span></h3>');
+    const firstHeading = html.indexOf(
+      '<h3 class="step-title"><span class="step-number">1.</span><span>Open settings</span></h3>',
+    );
     const firstImage = html.indexOf('<figure>');
     expect(firstHeading).toBeGreaterThan(-1);
     expect(firstHeading).toBeLessThan(firstImage);
@@ -478,9 +478,8 @@ describe('project export', () => {
   });
 
   it('rejects an excessive entry count before compositing any image', async () => {
-    const entries = Array.from(
-      { length: PROJECT_EXPORT_LIMITS.maxEntries + 1 },
-      (_, index) => entry({ id: `step-${index}`, order: index }),
+    const entries = Array.from({ length: PROJECT_EXPORT_LIMITS.maxEntries + 1 }, (_, index) =>
+      entry({ id: `step-${index}`, order: index }),
     );
 
     await expect(generateProjectHtml(entries)).rejects.toBeInstanceOf(ProjectExportLimitError);
@@ -545,29 +544,43 @@ describe('project export', () => {
   });
 
   describe('HTML marker columns', () => {
-    const listTag = async (notes: string[]) => (await generateProjectHtml([markEntry('mark', 1, notes)], { title: 'P' })).match(/<ol class="annotations"[^>]*>/)![0];
+    const listTag = async (notes: string[]) =>
+      (await generateProjectHtml([markEntry('mark', 1, notes)], { title: 'P' })).match(
+        /<ol class="annotations"[^>]*>/,
+      )![0];
 
     it('picks the columns by the PDF rule at the document width, each column only as wide as its markers need', async () => {
       // Three columns would wrap every English description to two lines; two keep each on one.
-      expect(await listTag(Array.from({ length: 16 }, () => 'Mark an area of the page'))).toBe('<ol class="annotations" data-columns style="columns: 14.8em 2">');
-      expect(await listTag(Array.from({ length: 16 }, () => '標記頁面區域'))).toBe('<ol class="annotations" data-columns style="columns: 7.5em 3">');
+      expect(await listTag(Array.from({ length: 16 }, () => 'Mark an area of the page'))).toBe(
+        '<ol class="annotations" data-columns style="columns: 14.8em 2">',
+      );
+      expect(await listTag(Array.from({ length: 16 }, () => '標記頁面區域'))).toBe(
+        '<ol class="annotations" data-columns style="columns: 7.5em 3">',
+      );
     });
 
     it('lets a longer description wrap to two lines in its column', async () => {
       const short = Array.from({ length: 7 }, () => 'Save');
-      expect(await listTag([...short, 'Open the account settings page to change the password'])).toContain('columns: 16.3em 2');
+      expect(await listTag([...short, 'Open the account settings page to change the password'])).toContain(
+        'columns: 16.3em 2',
+      );
     });
 
     it('runs a description too long for a column across the full width', async () => {
-      const long = 'Open the account settings page, choose Security, then change the password and confirm it with the code sent to your phone.';
-      const html = await generateProjectHtml([markEntry('mark', 1, [...Array.from({ length: 7 }, () => 'Save'), long])], { title: 'P' });
+      const long =
+        'Open the account settings page, choose Security, then change the password and confirm it with the code sent to your phone.';
+      const html = await generateProjectHtml(
+        [markEntry('mark', 1, [...Array.from({ length: 7 }, () => 'Save'), long])],
+        { title: 'P' },
+      );
 
       expect(html).toMatch(/<ol class="annotations" data-columns style="columns: [\d.]+em \d">/);
       expect(html).toContain(`<li data-span>${long}</li>`);
       expect(html.match(/<li data-span>/g)).toHaveLength(1);
     });
 
-    const LONG = 'Open the account settings page, choose Security, then change the password and confirm it with the code sent to your phone.';
+    const LONG =
+      'Open the account settings page, choose Security, then change the password and confirm it with the code sent to your phone.';
     const spanned = async (notes: string[]) => {
       const html = await generateProjectHtml([markEntry('mark', 1, notes)], { title: 'P' });
       return [...html.matchAll(/<li( data-span)?>/g)].map((match) => Boolean(match[1]));
@@ -575,7 +588,16 @@ describe('project export', () => {
 
     it('runs markers between long ones across the full width when they are too few for two rows of columns', async () => {
       const url = 'https://example.com/a/very/long/url/without/any/spaces/that/cannot/wrap/anywhere/at/all/really';
-      expect(await spanned(['Save', 'Menu', 'OK', url, 'Help', 'Tab', 'Back', 'Next'])).toEqual([true, true, true, true, false, false, false, false]);
+      expect(await spanned(['Save', 'Menu', 'OK', url, 'Help', 'Tab', 'Back', 'Next'])).toEqual([
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+      ]);
     });
 
     it('keeps one column when long and short descriptions alternate', async () => {
@@ -594,9 +616,13 @@ describe('project export', () => {
       const html = await generateProjectHtml(mixedProject(), { title: 'Mixed', sections: MIXED_SECTIONS });
 
       expect(html).not.toContain('（未填寫說明）');
-      expect(html).toContain('<h3 class="step-title"><span class="step-number">1.</span><span>Open settings</span></h3>');
+      expect(html).toContain(
+        '<h3 class="step-title"><span class="step-number">1.</span><span>Open settings</span></h3>',
+      );
       expect(html).toContain('<h3 class="step-title"><span class="step-number">2.</span></h3>');
-      expect(html).toContain('<h3 class="step-title"><span class="step-number">3.</span><span>Click history</span></h3>');
+      expect(html).toContain(
+        '<h3 class="step-title"><span class="step-number">3.</span><span>Click history</span></h3>',
+      );
       expect(html).toContain('<h3 class="step-title"><span class="step-number">4.</span></h3>');
       expect(html.match(/<ol class="annotations">/g)).toHaveLength(2);
       // A section may begin at a Mark entry; its heading precedes that entry.
@@ -608,7 +634,9 @@ describe('project export', () => {
     it('prints a Mark entry as a number then its annotation list in the PDF', async () => {
       mocks.composite.mockImplementation(async () => new Blob([jpegOfSize(1_200, 700)], { type: 'image/jpeg' }));
 
-      const read = await readPdf(await generateProjectPdf(mixedProject(), { title: 'Mixed', sections: MIXED_SECTIONS }));
+      const read = await readPdf(
+        await generateProjectPdf(mixedProject(), { title: 'Mixed', sections: MIXED_SECTIONS }),
+      );
       const text = read.pages.flatMap((page) => page.lines).join('\n');
 
       expect(text).not.toContain('（未填寫說明）');
@@ -631,7 +659,9 @@ describe('project export', () => {
       const html = await generateProjectHtml(unlabelled, { title: 'Marks' });
       const markdown = await archiveMarkdown(unlabelled, { title: 'Marks' });
       mocks.composite.mockImplementation(async () => new Blob([jpegOfSize(1_200, 700)], { type: 'image/jpeg' }));
-      const pdfText = (await readPdf(await generateProjectPdf(unlabelled, { title: 'Marks' }))).pages.flatMap((page) => page.lines).join('\n');
+      const pdfText = (await readPdf(await generateProjectPdf(unlabelled, { title: 'Marks' }))).pages
+        .flatMap((page) => page.lines)
+        .join('\n');
 
       expect(html).not.toContain('<ol class="annotations"');
       expect(html).not.toContain('（未填寫說明）');
@@ -644,7 +674,9 @@ describe('project export', () => {
       const html = await generateProjectHtml(blank, { title: 'Blank' });
       const markdown = await archiveMarkdown(blank, { title: 'Blank' });
       mocks.composite.mockImplementation(async () => new Blob([jpegOfSize(1_200, 700)], { type: 'image/jpeg' }));
-      const pdfText = (await readPdf(await generateProjectPdf(blank, { title: 'Blank' }))).pages.flatMap((page) => page.lines).join('\n');
+      const pdfText = (await readPdf(await generateProjectPdf(blank, { title: 'Blank' }))).pages
+        .flatMap((page) => page.lines)
+        .join('\n');
 
       expect(html).toContain('<span>（未填寫說明）</span>');
       expect(markdown).toContain('（未填寫說明）');

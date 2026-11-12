@@ -197,7 +197,11 @@ export async function commitEntries(
 
 /** Writes one entry's steps in place, without changing the timeline: the
  * entry keeps its place and its steps keep their numbers. */
-export async function putEntryInPlace(tx: ProjectWriteTransaction, record: StoredEntry, entry: StepEntry): Promise<void> {
+export async function putEntryInPlace(
+  tx: ProjectWriteTransaction,
+  record: StoredEntry,
+  entry: StepEntry,
+): Promise<void> {
   if (entryId(entry) !== record.id || entry.kind !== record.kind) {
     throw new ProjectStructureIntegrityError('An in-place edit cannot change what an entry holds.');
   }

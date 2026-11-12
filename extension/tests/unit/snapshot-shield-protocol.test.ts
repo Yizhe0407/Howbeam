@@ -41,10 +41,7 @@ describe('snapshot shield protocol', () => {
     // A pointer-down without its capture generation can never be matched to a
     // completion, so it is rejected outright.
     expect(
-      isSnapshotShieldPortMessage(
-        { type: SNAPSHOT_SHIELD_POINTER_DOWN, token, clientX: 120, clientY: 80 },
-        token,
-      ),
+      isSnapshotShieldPortMessage({ type: SNAPSHOT_SHIELD_POINTER_DOWN, token, clientX: 120, clientY: 80 }, token),
     ).toBe(false);
     expect(
       isSnapshotShieldPortMessage(
@@ -97,9 +94,7 @@ describe('snapshot shield protocol', () => {
     expect(
       isSnapshotShieldPortMessage({ type: SNAPSHOT_SHIELD_REGION_CAPTURE, token, captureId: 2, rect }, token),
     ).toBe(true);
-    expect(
-      isSnapshotShieldPortMessage({ type: SNAPSHOT_SHIELD_REGION_CAPTURE, token, rect }, token),
-    ).toBe(false);
+    expect(isSnapshotShieldPortMessage({ type: SNAPSHOT_SHIELD_REGION_CAPTURE, token, rect }, token)).toBe(false);
     expect(
       isSnapshotShieldPortMessage(
         { type: SNAPSHOT_SHIELD_REGION_CAPTURE, token: 'old-token', captureId: 2, rect },
@@ -127,17 +122,17 @@ describe('snapshot shield protocol', () => {
   it('validates preview and committed selection messages sent back to the frame', () => {
     const rect = { x: 20, y: 30, width: 100, height: 40 };
     const selection = { id: 1, rect, label: 2 };
-    expect(
-      isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_PREVIEW, token, requestId: 3, rect }, token),
-    ).toBe(true);
+    expect(isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_PREVIEW, token, requestId: 3, rect }, token)).toBe(
+      true,
+    );
     // A preview clears the highlight by carrying a null rect, so that stays
     // valid; anything without a usable request id does not.
     expect(
       isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_PREVIEW, token, requestId: 3, rect: null }, token),
     ).toBe(true);
-    expect(
-      isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_PREVIEW, token, requestId: -1, rect }, token),
-    ).toBe(false);
+    expect(isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_PREVIEW, token, requestId: -1, rect }, token)).toBe(
+      false,
+    );
     expect(
       isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_PREVIEW, token: 'old-token', requestId: 3, rect }, token),
     ).toBe(false);
@@ -151,9 +146,9 @@ describe('snapshot shield protocol', () => {
       ),
     ).toBe(true);
     // Completions must echo the capture generation they settle.
-    expect(
-      isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_CAPTURE_COMPLETE, token, selection }, token),
-    ).toBe(false);
+    expect(isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_CAPTURE_COMPLETE, token, selection }, token)).toBe(
+      false,
+    );
     expect(isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_COMMIT, token, selection }, token)).toBe(true);
     expect(
       isSnapshotShieldFrameMessage(
@@ -181,12 +176,9 @@ describe('snapshot shield protocol', () => {
       'REBUILD_INVALIDATED_SNAPSHOT',
       'DISCARD_CURRENT_RECORDING',
     ]) {
-      expect(
-        isSnapshotShieldPortMessage(
-          { type: SNAPSHOT_SHIELD_CONTROL, token, requestId: 8, action },
-          token,
-        ),
-      ).toBe(true);
+      expect(isSnapshotShieldPortMessage({ type: SNAPSHOT_SHIELD_CONTROL, token, requestId: 8, action }, token)).toBe(
+        true,
+      );
     }
     expect(
       isSnapshotShieldPortMessage(
@@ -203,9 +195,7 @@ describe('snapshot shield protocol', () => {
         token,
       ),
     ).toBe(true);
-    expect(
-      isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_CANDIDATES, token, anchors: [] }, token),
-    ).toBe(true);
+    expect(isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_CANDIDATES, token, anchors: [] }, token)).toBe(true);
     expect(
       isSnapshotShieldFrameMessage(
         { type: SNAPSHOT_SHIELD_CANDIDATES, token, anchors: [{ x: Number.NaN, y: 0, label: 'x' }] },
@@ -218,9 +208,9 @@ describe('snapshot shield protocol', () => {
         token,
       ),
     ).toBe(false);
-    expect(
-      isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_CANDIDATES, token: 'old', anchors: [] }, token),
-    ).toBe(false);
+    expect(isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_CANDIDATES, token: 'old', anchors: [] }, token)).toBe(
+      false,
+    );
   });
 
   it('builds namespaced storage keys for shield init tokens', () => {

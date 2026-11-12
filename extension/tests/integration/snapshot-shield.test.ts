@@ -95,10 +95,12 @@ describe('createSnapshotShield', () => {
     await vi.waitFor(() => expect(focusFrame).toHaveBeenCalledWith({ preventScroll: true }));
 
     const host = shadowRoot!.host as HTMLElement;
-    expect(shield.runWithoutShield(() => ({
-      host: host.style.getPropertyValue('pointer-events'),
-      frame: frame.style.getPropertyValue('pointer-events'),
-    }))).toEqual({ host: 'none', frame: 'none' });
+    expect(
+      shield.runWithoutShield(() => ({
+        host: host.style.getPropertyValue('pointer-events'),
+        frame: frame.style.getPropertyValue('pointer-events'),
+      })),
+    ).toEqual({ host: 'none', frame: 'none' });
     expect(host.style.getPropertyValue('pointer-events')).toBe('auto');
     expect(frame.style.getPropertyValue('pointer-events')).toBe('auto');
     expect(() =>
@@ -277,5 +279,4 @@ describe('createSnapshotShield', () => {
     expect(shadowRoot!.host.isConnected).toBe(false);
     framePort.close();
   });
-
 });

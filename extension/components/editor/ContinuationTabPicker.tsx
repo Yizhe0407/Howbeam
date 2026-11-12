@@ -51,7 +51,9 @@ export default function ContinuationTabPicker({ tabs, selectedTabId, onSelect, d
             )}
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13px] font-bold">{tab.title || host}</span>
-              <span className={cn('block truncate text-xs', selected ? 'text-on-accent' : 'text-muted-foreground')}>{host}</span>
+              <span className={cn('block truncate text-xs', selected ? 'text-on-accent' : 'text-muted-foreground')}>
+                {host}
+              </span>
             </span>
             {selected && <Check className="size-4 shrink-0" aria-hidden="true" />}
           </button>

@@ -55,10 +55,7 @@ export async function checkSourcePermission(
     : 'permission-required';
 }
 
-async function findOrCreateSourceTab(
-  sourceUrl: string,
-  preferredTabId?: number,
-): Promise<SourceTabAcquisition> {
+async function findOrCreateSourceTab(sourceUrl: string, preferredTabId?: number): Promise<SourceTabAcquisition> {
   if (preferredTabId != null) {
     try {
       const preferred = await browser.tabs.get(preferredTabId);
@@ -128,8 +125,7 @@ export async function openVerifiedSourceTab(
   preferredTabId: number | undefined,
   logLabel: string,
 ): Promise<
-  | { ok: true; source: SourceTabAcquisition }
-  | { ok: false; reason: 'open-failed' | 'redirected' | 'unreachable' }
+  { ok: true; source: SourceTabAcquisition } | { ok: false; reason: 'open-failed' | 'redirected' | 'unreachable' }
 > {
   let source: SourceTabAcquisition;
   try {
@@ -227,7 +223,8 @@ export async function resolveContinuationTab(
     }
     return {
       ok: false,
-      error: opened.reason === 'open-failed' ? 'background.sourceTabOpenFailed' : 'background.continuationSourceRedirected',
+      error:
+        opened.reason === 'open-failed' ? 'background.sourceTabOpenFailed' : 'background.continuationSourceRedirected',
     };
   }
   return { ok: true, tab: opened.source.tab };
@@ -247,6 +244,11 @@ export async function preflightProjectContinuation(
   }
   const sourceUrl = (await resolveProjectContinuationAnchor(message.sessionId, message.afterEntryId))?.sourceUrl;
   if (!sourceUrl) return { ok: false, code: 'SOURCE_NOT_FOUND', message: 'background.noContinuationSource' };
-  return sourcePermissionPreflightSuccess(sourceUrl)
-    ?? { ok: false, code: 'RESTRICTED_SOURCE', message: 'background.restrictedContinuationSource' };
+  return (
+    sourcePermissionPreflightSuccess(sourceUrl) ?? {
+      ok: false,
+      code: 'RESTRICTED_SOURCE',
+      message: 'background.restrictedContinuationSource',
+    }
+  );
 }

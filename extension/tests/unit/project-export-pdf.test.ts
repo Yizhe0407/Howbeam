@@ -108,7 +108,10 @@ describe('generateProjectPdf', () => {
       entry('step-3', 3, '完成後按下「儲存」，並與團隊分享。'),
     ];
 
-    const pdf = await generateProjectPdf(entries, { title: '安裝指南 Setup Project', description: '本指南示範 how mixed-script text stays text.' });
+    const pdf = await generateProjectPdf(entries, {
+      title: '安裝指南 Setup Project',
+      description: '本指南示範 how mixed-script text stays text.',
+    });
     const read = await readPdf(pdf);
 
     expect(pdf.type).toBe('application/pdf');
@@ -122,7 +125,9 @@ describe('generateProjectPdf', () => {
     expect(itemAt(read.pages, 0).lines.join('\n')).toContain('本指南示範 how mixed-script text stays text.');
     expect(itemAt(read.pages, 0).lines.join('\n')).toContain('點擊瀏覽器工具列上的擴充功能圖示，開啟設定頁面。');
     // A long English sentence wraps at word boundaries, so compare it with the line breaks folded.
-    expect(itemAt(read.pages, 1).lines.join(' ')).toContain('Open the extension settings and enable automatic capture for every tab.');
+    expect(itemAt(read.pages, 1).lines.join(' ')).toContain(
+      'Open the extension settings and enable automatic capture for every tab.',
+    );
     expect(itemAt(read.pages, 2).lines.join('\n')).toContain('完成後按下「儲存」，並與團隊分享。');
   });
 
@@ -141,7 +146,9 @@ describe('generateProjectPdf', () => {
   });
 
   it('embeds the two fonts as subsets and the screenshots untouched, so a document costs kilobytes', async () => {
-    const pdf = await generateProjectPdf([entry('step-1', 1, '設定 Settings'), entry('step-2', 2, 'Second')], { title: 'Size' });
+    const pdf = await generateProjectPdf([entry('step-1', 1, '設定 Settings'), entry('step-2', 2, 'Second')], {
+      title: 'Size',
+    });
     const bytes = Buffer.from(await pdf.arrayBuffer()).toString('latin1');
 
     expect(bytes).toMatch(/\+HowbeamSansTC-Bold/);
@@ -179,7 +186,9 @@ describe('generateProjectPdf', () => {
       ['letter', 'portrait', 612, 792],
       ['letter', 'landscape', 792, 612],
     ] as const)('lays out %s %s pages at %f x %f points', async (paper, orientation, width, height) => {
-      const read = await readPdf(await generateProjectPdf(three, { title: 'Paper' }, { settings: { paper, orientation } }));
+      const read = await readPdf(
+        await generateProjectPdf(three, { title: 'Paper' }, { settings: { paper, orientation } }),
+      );
 
       expect(read.pages).toHaveLength(3);
       for (const page of read.pages) {
@@ -190,7 +199,9 @@ describe('generateProjectPdf', () => {
 
     it('lets steps share pages in continuous layout', async () => {
       const perStep = await readPdf(await generateProjectPdf(three, { title: 'Flow' }));
-      const continuous = await readPdf(await generateProjectPdf(three, { title: 'Flow' }, { settings: { stepLayout: 'continuous' } }));
+      const continuous = await readPdf(
+        await generateProjectPdf(three, { title: 'Flow' }, { settings: { stepLayout: 'continuous' } }),
+      );
 
       expect(perStep.pages).toHaveLength(3);
       expect(continuous.pages.length).toBeLessThan(3);
@@ -198,7 +209,9 @@ describe('generateProjectPdf', () => {
     });
 
     it('drops the footer title and page number but keeps the credit', async () => {
-      const read = await readPdf(await generateProjectPdf(three, { title: 'Quiet footer' }, { settings: { showFooter: false } }));
+      const read = await readPdf(
+        await generateProjectPdf(three, { title: 'Quiet footer' }, { settings: { showFooter: false } }),
+      );
       const text = read.pages.flatMap((page) => page.lines).join('\n');
 
       expect(text).toContain('Made with Howbeam');
@@ -206,11 +219,13 @@ describe('generateProjectPdf', () => {
       // The title still opens the document; it is just no longer repeated per page.
       expect(text.match(/Quiet footer/g)).toHaveLength(1);
     });
-
   });
 
   it('prints section headings before their steps and numbers group annotations', async () => {
-    const entries = [entry('step-1', 1, '開啟設定頁面'), groupEntry('anchor-1', 2, '標記快照重點', ['點擊登入按鈕', '輸入電子郵件'])];
+    const entries = [
+      entry('step-1', 1, '開啟設定頁面'),
+      groupEntry('anchor-1', 2, '標記快照重點', ['點擊登入按鈕', '輸入電子郵件']),
+    ];
 
     const read = await readPdf(
       await generateProjectPdf(entries, {
@@ -232,12 +247,15 @@ describe('generateProjectPdf', () => {
   });
 
   describe('marker columns, measured with the real fonts', () => {
-    const LONG = 'Open the account settings page, choose Security, then change the password and confirm it with the code sent to your phone before saving.';
+    const LONG =
+      'Open the account settings page, choose Security, then change the password and confirm it with the code sent to your phone before saving.';
     const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, index) => from + index);
 
     /** Each page's marker numbers with where they sit, and every text run drawn on it. */
     async function laidOutMarkers(notes: string[]) {
-      const read = await readPdf(await generateProjectPdf([groupEntry('mark', 1, 'Mark', notes)], { title: 'Columns' }));
+      const read = await readPdf(
+        await generateProjectPdf([groupEntry('mark', 1, 'Mark', notes)], { title: 'Columns' }),
+      );
       return read.pages.map((page) => {
         // The step's own number hangs in the margin; marker numbers start at the step indent.
         const markers = page.items
@@ -247,11 +265,23 @@ describe('generateProjectPdf', () => {
       });
     }
     type Marker = Awaited<ReturnType<typeof laidOutMarkers>>[number]['markers'][number];
-    const columnsOf = (markers: Marker[], numbers: number[]) => new Set(markers.filter((marker) => numbers.includes(marker.number)).map((marker) => marker.x)).size;
+    const columnsOf = (markers: Marker[], numbers: number[]) =>
+      new Set(markers.filter((marker) => numbers.includes(marker.number)).map((marker) => marker.x)).size;
     const marker = (markers: Marker[], number: number) => markers.find((candidate) => candidate.number === number)!;
 
     it('puts mixed short descriptions in two columns without wrapping any', async () => {
-      const notes = ['Save', 'Click the blue Sign in button', 'Menu', 'Search box at the top', 'OK', 'Language switcher', 'Profile picture', 'Help', 'Close the dialog window', 'Tab'];
+      const notes = [
+        'Save',
+        'Click the blue Sign in button',
+        'Menu',
+        'Search box at the top',
+        'OK',
+        'Language switcher',
+        'Profile picture',
+        'Help',
+        'Close the dialog window',
+        'Tab',
+      ];
       const page = itemAt(await laidOutMarkers(notes), 0);
 
       expect(columnsOf(page.markers, range(1, 10))).toBe(2);
@@ -259,7 +289,18 @@ describe('generateProjectPdf', () => {
     });
 
     it('keeps a CJK description whole rather than squeezing it into a third column', async () => {
-      const notes = ['儲存', '點擊右上角的登入按鈕', 'Menu', '搜尋框', 'OK', '語言切換 Language', '個人頭像', 'Help', '關閉對話框', '分頁 Tab'];
+      const notes = [
+        '儲存',
+        '點擊右上角的登入按鈕',
+        'Menu',
+        '搜尋框',
+        'OK',
+        '語言切換 Language',
+        '個人頭像',
+        'Help',
+        '關閉對話框',
+        '分頁 Tab',
+      ];
       const page = itemAt(await laidOutMarkers(notes), 0);
 
       expect(columnsOf(page.markers, range(1, 10))).toBe(2);
@@ -267,7 +308,10 @@ describe('generateProjectPdf', () => {
     });
 
     it('runs a very long description across the full width, with columns before and after it', async () => {
-      const page = itemAt(await laidOutMarkers(['Save', 'Menu', 'OK', 'Help', 'Tab', LONG, 'Back', 'Next', 'Edit', 'Done']), 0);
+      const page = itemAt(
+        await laidOutMarkers(['Save', 'Menu', 'OK', 'Help', 'Tab', LONG, 'Back', 'Next', 'Edit', 'Done']),
+        0,
+      );
 
       expect(columnsOf(page.markers, range(1, 5))).toBe(2);
       expect(columnsOf(page.markers, range(7, 10))).toBe(2);
@@ -292,7 +336,10 @@ describe('generateProjectPdf', () => {
     });
 
     it('fits sixteen short markers under the screenshot on one page', async () => {
-      const english = await laidOutMarkers([...Array.from({ length: 15 }, () => 'Mark an area of the page'), 'asdfasdfasdf']);
+      const english = await laidOutMarkers([
+        ...Array.from({ length: 15 }, () => 'Mark an area of the page'),
+        'asdfasdfasdf',
+      ]);
       const chinese = await laidOutMarkers([...Array.from({ length: 15 }, () => '標記頁面區域'), 'asdfasdfasdf']);
 
       expect(english).toHaveLength(1);
@@ -302,11 +349,17 @@ describe('generateProjectPdf', () => {
     });
 
     it('carries columns over a page break with every marker once and in order', async () => {
-      const notes = Array.from({ length: 70 }, (_, index) => itemAt(['A', 'Go', 'Save', 'Edit it', 'Open menu', '搜尋框', 'Open the account settings page now'], index % 7));
+      const notes = Array.from({ length: 70 }, (_, index) =>
+        itemAt(['A', 'Go', 'Save', 'Edit it', 'Open menu', '搜尋框', 'Open the account settings page now'], index % 7),
+      );
       const pages = await laidOutMarkers(notes);
 
       expect(pages.length).toBeGreaterThan(1);
-      const numbers = pages.flatMap((page) => [...page.markers].sort((left, right) => left.x - right.x || left.y - right.y).map((candidate) => candidate.number));
+      const numbers = pages.flatMap((page) =>
+        [...page.markers]
+          .sort((left, right) => left.x - right.x || left.y - right.y)
+          .map((candidate) => candidate.number),
+      );
       expect(numbers).toEqual(range(1, 70));
       for (const page of pages) expect(columnsOf(page.markers, range(1, 70))).toBe(3);
     });
@@ -334,7 +387,9 @@ describe('generateProjectPdf', () => {
   });
 
   it('does not fail on characters the fonts do not cover', async () => {
-    const read = await readPdf(await generateProjectPdf([entry('step-1', 1, 'Rocket 🚀 简体字 한국어')], { title: 'T' }));
+    const read = await readPdf(
+      await generateProjectPdf([entry('step-1', 1, 'Rocket 🚀 简体字 한국어')], { title: 'T' }),
+    );
 
     expect(read.pages).toHaveLength(1);
     expect(itemAt(read.pages, 0).lines.join('\n')).toContain('Rocket');
@@ -352,10 +407,25 @@ describe('generateProjectPdf', () => {
     it('tags the document: headings, paragraphs, lists and figures in reading order', async () => {
       const read = await readPdf(await generateProjectPdf(project(), { title: '指南', description: '說明', sections }));
 
-      const [first, second, third] = read.structure.map((page) => itemAt(page, 0).children.map((node) => [node.role, node.text]));
-      expect(first).toEqual([['H1', '指南'], ['P', '說明'], ['H2', '1. 開啟設定'], ['Figure', '']]);
-      expect(second).toEqual([['H2', '第一章 開始'], ['H3', '2. Snapshot'], ['Figure', ''], ['L', '1. 點這裡2. Then here']]);
-      expect(third).toEqual([['H3', '3. 完成'], ['Figure', '']]);
+      const [first, second, third] = read.structure.map((page) =>
+        itemAt(page, 0).children.map((node) => [node.role, node.text]),
+      );
+      expect(first).toEqual([
+        ['H1', '指南'],
+        ['P', '說明'],
+        ['H2', '1. 開啟設定'],
+        ['Figure', ''],
+      ]);
+      expect(second).toEqual([
+        ['H2', '第一章 開始'],
+        ['H3', '2. Snapshot'],
+        ['Figure', ''],
+        ['L', '1. 點這裡2. Then here'],
+      ]);
+      expect(third).toEqual([
+        ['H3', '3. 完成'],
+        ['Figure', ''],
+      ]);
     });
 
     it('structures a list as items with a label and a body', async () => {
@@ -363,23 +433,45 @@ describe('generateProjectPdf', () => {
 
       const list = flat(itemAt(read.structure, 1)).find((node) => node.role === 'L')!;
       // pdf.js attaches the space after a label to whatever follows it, so compare trimmed.
-      expect(list.children.map((item) => [item.role, item.children.map((part) => [part.role, part.text.trim()])])).toEqual([
-        ['LI', [['Lbl', '1.'], ['LBody', '點這裡']]],
-        ['LI', [['Lbl', '2.'], ['LBody', 'Then here']]],
+      expect(
+        list.children.map((item) => [item.role, item.children.map((part) => [part.role, part.text.trim()])]),
+      ).toEqual([
+        [
+          'LI',
+          [
+            ['Lbl', '1.'],
+            ['LBody', '點這裡'],
+          ],
+        ],
+        [
+          'LI',
+          [
+            ['Lbl', '2.'],
+            ['LBody', 'Then here'],
+          ],
+        ],
       ]);
     });
 
     it('gives every screenshot its step description as alternative text, and a fallback when there is none', async () => {
-      const read = await readPdf(await generateProjectPdf([entry('a', 1, '開啟設定'), entry('b', 2, '')], { title: 'T' }));
+      const read = await readPdf(
+        await generateProjectPdf([entry('a', 1, '開啟設定'), entry('b', 2, '')], { title: 'T' }),
+      );
 
-      const alts = read.structure.flatMap((page) => flat(page)).filter((node) => node.role === 'Figure').map((node) => node.alt);
+      const alts = read.structure
+        .flatMap((page) => flat(page))
+        .filter((node) => node.role === 'Figure')
+        .map((node) => node.alt);
       expect(alts).toEqual(['開啟設定', t().export.imageAlt]);
     });
 
     it('keeps the running footer out of the structure: a reader skips it, a viewer still shows it', async () => {
       const read = await readPdf(await generateProjectPdf(project(), { title: 'Footer' }));
 
-      const tagged = read.structure.flatMap((page) => flat(page)).map((node) => node.text).join('');
+      const tagged = read.structure
+        .flatMap((page) => flat(page))
+        .map((node) => node.text)
+        .join('');
       expect(tagged).not.toContain('Made with Howbeam');
       expect(tagged).not.toMatch(/第 \d 頁/);
       expect(read.pages.flatMap((page) => page.lines).join('')).toContain('Made with Howbeam');
@@ -390,14 +482,25 @@ describe('generateProjectPdf', () => {
 
       expect(read.outline).toEqual([
         { title: '1. 開啟設定', items: [] },
-        { title: '第一章 開始', items: [{ title: '2. Snapshot', items: [] }, { title: '3. 完成', items: [] }] },
+        {
+          title: '第一章 開始',
+          items: [
+            { title: '2. Snapshot', items: [] },
+            { title: '3. 完成', items: [] },
+          ],
+        },
       ]);
     });
 
     it('bookmarks a project without sections as one flat list of steps', async () => {
-      const read = await readPdf(await generateProjectPdf([entry('a', 1, 'One'), entry('b', 2, 'Two')], { title: 'T' }));
+      const read = await readPdf(
+        await generateProjectPdf([entry('a', 1, 'One'), entry('b', 2, 'Two')], { title: 'T' }),
+      );
 
-      expect(read.outline).toEqual([{ title: '1. One', items: [] }, { title: '2. Two', items: [] }]);
+      expect(read.outline).toEqual([
+        { title: '1. One', items: [] },
+        { title: '2. Two', items: [] },
+      ]);
     });
 
     it('declares itself a tagged PDF/UA document that shows its title', async () => {
@@ -414,7 +517,9 @@ describe('generateProjectPdf', () => {
     it('keeps one structure for a document whose steps run over several pages', async () => {
       const many = Array.from({ length: 5 }, (_, index) => entry(`s${index}`, index + 1, `Step ${index + 1}`));
 
-      const read = await readPdf(await generateProjectPdf(many, { title: 'Long', sections: [{ id: 's', title: 'All', startEntryId: 's0' }] }));
+      const read = await readPdf(
+        await generateProjectPdf(many, { title: 'Long', sections: [{ id: 's', title: 'All', startEntryId: 's0' }] }),
+      );
 
       expect(read.pages).toHaveLength(5);
       expect(read.outline).toHaveLength(1);
@@ -454,7 +559,9 @@ describe('generateProjectPdf', () => {
         .mockResolvedValueOnce(screenshot())
         .mockResolvedValueOnce(new Blob(['not an image'], { type: 'image/jpeg' }));
 
-      const error = await generateProjectPdf([entry('a', 1, 'x'), entry('b', 2, 'y')], { title: 'T' }).catch((reason: unknown) => reason);
+      const error = await generateProjectPdf([entry('a', 1, 'x'), entry('b', 2, 'y')], { title: 'T' }).catch(
+        (reason: unknown) => reason,
+      );
 
       expect(error).toBeInstanceOf(StepImageError);
       expect((error as StepImageError).ordinal).toBe(2);
@@ -464,7 +571,9 @@ describe('generateProjectPdf', () => {
       const controller = new AbortController();
       controller.abort();
 
-      await expect(generateProjectPdf([entry('a', 1, 'x')], { title: 'T' }, { signal: controller.signal })).rejects.toThrow(/abort/i);
+      await expect(
+        generateProjectPdf([entry('a', 1, 'x')], { title: 'T' }, { signal: controller.signal }),
+      ).rejects.toThrow(/abort/i);
       expect(mocks.composite).not.toHaveBeenCalled();
     });
 
@@ -483,7 +592,9 @@ describe('generateProjectPdf', () => {
     it('reports a font that could not be loaded instead of producing a broken document', async () => {
       mocks.loadFonts.mockRejectedValue(new Error('Could not load the PDF font.'));
 
-      await expect(generateProjectPdf([entry('a', 1, 'x')], { title: 'T' })).rejects.toThrow('Could not load the PDF font.');
+      await expect(generateProjectPdf([entry('a', 1, 'x')], { title: 'T' })).rejects.toThrow(
+        'Could not load the PDF font.',
+      );
     });
   });
 });

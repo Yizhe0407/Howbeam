@@ -49,7 +49,16 @@ interface Props {
  * shifted by the crop's origin, so the thumbnails below only ever see an
  * ordinary, uncropped image.
  */
-export default function EntryThumbnail({ entry, redactions, imageEdits, crop, boxes, reviewing = false, badges = true, ...presentation }: Props) {
+export default function EntryThumbnail({
+  entry,
+  redactions,
+  imageEdits,
+  crop,
+  boxes,
+  reviewing = false,
+  badges = true,
+  ...presentation
+}: Props) {
   const privacy = getEntryPrivacyState(entry);
   const privacyReviewRequired = privacy.reviewRequired && !reviewing;
   const owner = getEntryImageOwner(entry);
@@ -63,15 +72,19 @@ export default function EntryThumbnail({ entry, redactions, imageEdits, crop, bo
   const scene = useMemo<AnnotationScene>(() => {
     const origin = { x: originX, y: originY };
     return {
-      highlight: entry.kind === 'single'
-        ? offsetBounds(boxes ? boxes[0] ?? null : getEffectiveBounds(entry.step), origin)
-        : null,
-      annotations: entry.kind === 'group'
-        ? offsetAnnotations(
-          boxes ? boxes.map((bounds, index) => ({ bounds, order: index + 1 })) : getOrderedAnnotations(entry.annotations),
-          origin,
-        )
-        : [],
+      highlight:
+        entry.kind === 'single'
+          ? offsetBounds(boxes ? (boxes[0] ?? null) : getEffectiveBounds(entry.step), origin)
+          : null,
+      annotations:
+        entry.kind === 'group'
+          ? offsetAnnotations(
+              boxes
+                ? boxes.map((bounds, index) => ({ bounds, order: index + 1 }))
+                : getOrderedAnnotations(entry.annotations),
+              origin,
+            )
+          : [],
       badges,
       imageEdits: offsetImageEdits(sourceImageEdits, origin),
       redactions: offsetRedactions(sourceRedactions, origin),

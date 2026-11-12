@@ -16,7 +16,7 @@ export function usePendingAction<K = string>() {
   const lastKey = useRef<K | null>(null);
   if (pendingKey !== null) lastKey.current = pendingKey;
 
-  const runExclusive = useCallback(async <T,>(key: K, action: () => Promise<T>): Promise<T | undefined> => {
+  const runExclusive = useCallback(async <T>(key: K, action: () => Promise<T>): Promise<T | undefined> => {
     if (inFlight.current) return undefined;
     inFlight.current = true;
     setPendingKey(key);

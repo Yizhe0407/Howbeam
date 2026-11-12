@@ -18,11 +18,14 @@ const blockClass = 'block h-1.5 rounded-[1px] bg-foreground/35';
 function PageGlyph({ orientation }: { orientation: PdfExportSettings['orientation'] }) {
   return orientation === 'portrait' ? (
     <span className={`${pageClass} h-8 w-6`}>
-      <i className={lineClass} /><i className={lineClass} /><i className={lineClass} />
+      <i className={lineClass} />
+      <i className={lineClass} />
+      <i className={lineClass} />
     </span>
   ) : (
     <span className={`${pageClass} h-6 w-8`}>
-      <i className={lineClass} /><i className={lineClass} />
+      <i className={lineClass} />
+      <i className={lineClass} />
     </span>
   );
 }
@@ -30,18 +33,27 @@ function PageGlyph({ orientation }: { orientation: PdfExportSettings['orientatio
 function LayoutGlyph({ layout }: { layout: PdfExportSettings['stepLayout'] }) {
   return layout === 'page-per-step' ? (
     <span className="flex gap-1">
-      <span className={`${pageClass} h-6 w-[18px]`}><i className={blockClass} /></span>
-      <span className={`${pageClass} h-6 w-[18px]`}><i className={blockClass} /></span>
+      <span className={`${pageClass} h-6 w-[18px]`}>
+        <i className={blockClass} />
+      </span>
+      <span className={`${pageClass} h-6 w-[18px]`}>
+        <i className={blockClass} />
+      </span>
     </span>
   ) : (
     <span className={`${pageClass} h-6 w-6`}>
-      <i className={blockClass} /><i className={blockClass} />
+      <i className={blockClass} />
+      <i className={blockClass} />
     </span>
   );
 }
 
 function GroupLabel({ id, children }: { id: string; children: ReactNode }) {
-  return <span id={id} className="mb-1.5 block text-[13px] font-bold text-muted-foreground">{children}</span>;
+  return (
+    <span id={id} className="mb-1.5 block text-[13px] font-bold text-muted-foreground">
+      {children}
+    </span>
+  );
 }
 
 function CardGroup<Value extends string>({
@@ -74,7 +86,9 @@ function CardGroup<Value extends string>({
             value={card.value}
             className="flex flex-col items-center gap-1.5 px-2 py-2.5 text-[13px] font-bold"
           >
-            <span aria-hidden="true" className="flex h-8 items-center">{card.glyph}</span>
+            <span aria-hidden="true" className="flex h-8 items-center">
+              {card.glyph}
+            </span>
             <span className="max-w-full truncate">{card.label}</span>
           </RadioGroupItem>
         ))}
@@ -96,15 +110,22 @@ function PaperRow({
   const labelId = useId();
   return (
     <div className="flex items-center gap-3">
-      <span id={labelId} className="w-14 shrink-0 text-[13px] font-bold text-muted-foreground">{copy.paper}</span>
+      <span id={labelId} className="w-14 shrink-0 text-[13px] font-bold text-muted-foreground">
+        {copy.paper}
+      </span>
       <RadioGroup
         aria-labelledby={labelId}
         value={value}
         onValueChange={(next) => onSelect(next as PdfExportSettings['paper'])}
         disabled={disabled}
-        className="min-w-0 flex-1 grid-flow-col auto-cols-fr"
+        className="min-w-0 flex-1 auto-cols-fr grid-flow-col"
       >
-        {([['a4', copy.a4], ['letter', copy.letter]] as const).map(([paper, label]) => (
+        {(
+          [
+            ['a4', copy.a4],
+            ['letter', copy.letter],
+          ] as const
+        ).map(([paper, label]) => (
           <RadioGroupItem key={paper} value={paper} className="min-w-0 truncate px-2 py-1.5 text-[13px] font-bold">
             {label}
           </RadioGroupItem>

@@ -7,7 +7,14 @@ import {
   moveBounds,
   resizeBounds,
 } from '@/lib/editor/image-edit-geometry';
-import { appendItem, itemRoom, reorderItem, splitItems, toItems, type ImageEditItem } from '@/lib/editor/image-edit-items';
+import {
+  appendItem,
+  itemRoom,
+  reorderItem,
+  splitItems,
+  toItems,
+  type ImageEditItem,
+} from '@/lib/editor/image-edit-items';
 import { itemBounds, translateItem } from '@/lib/editor/image-edit-item-geometry';
 import { isCopyable } from '@/lib/editor/image-edit-clipboard';
 import { highlightFrame } from '@/lib/media/annotation-geometry';
@@ -25,7 +32,12 @@ describe('image edit geometry', () => {
 
   it('normalises drag corners in any direction', () => {
     expect(boundsFromPoints({ x: 50, y: 60 }, { x: 10, y: 20 }, size)).toEqual({ x: 10, y: 20, width: 40, height: 40 });
-    expect(boundsFromPoints({ x: -20, y: 10 }, { x: 500, y: 30 }, size)).toEqual({ x: 0, y: 10, width: 400, height: 20 });
+    expect(boundsFromPoints({ x: -20, y: 10 }, { x: 500, y: 30 }, size)).toEqual({
+      x: 0,
+      y: 10,
+      width: 400,
+      height: 20,
+    });
   });
 
   it('treats tiny drags as unusable', () => {
@@ -53,8 +65,22 @@ describe('image edit geometry', () => {
 
 describe('image edit items', () => {
   const mask = { id: 'm', kind: 'solid' as const, bounds: { x: 1, y: 2, width: 30, height: 40 } };
-  const rect = { id: 'r', kind: 'rect' as const, bounds: { x: 5, y: 6, width: 7, height: 8 }, width: 2, fill: 'none' as const, color: '#ff4747' };
-  const arrow = { id: 'a', kind: 'arrow' as const, from: { x: 0, y: 0 }, to: { x: 9, y: 9 }, width: 4, color: '#2f6fed' };
+  const rect = {
+    id: 'r',
+    kind: 'rect' as const,
+    bounds: { x: 5, y: 6, width: 7, height: 8 },
+    width: 2,
+    fill: 'none' as const,
+    color: '#ff4747',
+  };
+  const arrow = {
+    id: 'a',
+    kind: 'arrow' as const,
+    from: { x: 0, y: 0 },
+    to: { x: 9, y: 9 },
+    width: 4,
+    color: '#2f6fed',
+  };
 
   it('round-trips both stored fields through the flat item list, masks last', () => {
     const items = toItems([mask], [rect, arrow]);
@@ -66,13 +92,24 @@ describe('image edit items', () => {
     const items = toItems([mask], [rect]);
     const added: ImageEditItem = { ...rect, id: 'r2' };
     expect(appendItem(items, added).map((item) => item.id)).toEqual(['r', 'r2', 'm']);
-    expect(appendItem(items, { id: 'm2', kind: 'redaction', bounds: mask.bounds }).map((item) => item.id)).toEqual(['r', 'm', 'm2']);
+    expect(appendItem(items, { id: 'm2', kind: 'redaction', bounds: mask.bounds }).map((item) => item.id)).toEqual([
+      'r',
+      'm',
+      'm2',
+    ]);
   });
 });
 
 describe('recorded boxes as items', () => {
   const recorded = { id: 'step', bounds: { x: 20, y: 30, width: 40, height: 20 } };
-  const rect = { id: 'r', kind: 'rect' as const, bounds: { x: 5, y: 6, width: 7, height: 8 }, width: 2, fill: 'none' as const, color: '#ff4747' };
+  const rect = {
+    id: 'r',
+    kind: 'rect' as const,
+    bounds: { x: 5, y: 6, width: 7, height: 8 },
+    width: 2,
+    fill: 'none' as const,
+    color: '#ff4747',
+  };
 
   it('sit under the drawings, round-trip on their own, and never count against the drawing limit', () => {
     const items = toItems([], [rect], null, [recorded]);

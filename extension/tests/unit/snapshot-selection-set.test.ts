@@ -92,7 +92,9 @@ describe('createSnapshotSelectionSet', () => {
     selection.add(original);
     selection.add(other);
 
-    expect(selection.match(createTarget('button:moved', { x: 200, y: 100, width: 80, height: 30 }, button))).toBe(original);
+    expect(selection.match(createTarget('button:moved', { x: 200, y: 100, width: 80, height: 30 }, button))).toBe(
+      original,
+    );
     expect(selection.match(createTarget('region:other', { x: 0, y: 0, width: 1, height: 1 }))).toBe(other);
     expect(selection.match(createTarget('region:new', { x: 500, y: 500, width: 10, height: 10 }))).toBeNull();
 

@@ -49,9 +49,7 @@ export function useEditorProjectData(sessionId: string | null) {
    * editor keeps showing what it has, read-only, since nothing can be saved. */
   const [projectDeleted, setProjectDeleted] = useState(false);
   const [canonicalSnapshot, setCanonicalSnapshot] = useState<ProjectStructureSnapshot | null>(null);
-  const [projectLoadState, setProjectLoadState] = useState<EditorProjectLoadState>(
-    sessionId ? 'loading' : 'missing',
-  );
+  const [projectLoadState, setProjectLoadState] = useState<EditorProjectLoadState>(sessionId ? 'loading' : 'missing');
   /** The Project row behind what is on screen, read synchronously by the ordering rule. */
   const shown = useRef<Project | null>(null);
   const readInFlight = useRef(false);
@@ -62,16 +60,19 @@ export function useEditorProjectData(sessionId: string | null) {
     setProject(next);
   }, []);
 
-  const show = useCallback((snapshot: ProjectStructureSnapshot) => {
-    if (shown.current && !notOlder(snapshot.project, shown.current)) return;
-    showProject(withNewestMetadata(snapshot.project, shown.current));
-    // Unchanged screenshots keep their Blob identity so a new read doesn't reload every image.
-    setCanonicalSnapshot((current) => ({
-      ...snapshot,
-      entries: retainScreenshotBlobs(current?.entries ?? [], snapshot.entries),
-    }));
-    setProjectLoadState('ready');
-  }, [showProject]);
+  const show = useCallback(
+    (snapshot: ProjectStructureSnapshot) => {
+      if (shown.current && !notOlder(snapshot.project, shown.current)) return;
+      showProject(withNewestMetadata(snapshot.project, shown.current));
+      // Unchanged screenshots keep their Blob identity so a new read doesn't reload every image.
+      setCanonicalSnapshot((current) => ({
+        ...snapshot,
+        entries: retainScreenshotBlobs(current?.entries ?? [], snapshot.entries),
+      }));
+      setProjectLoadState('ready');
+    },
+    [showProject],
+  );
 
   /** A read failed. Once the Project has been shown it stays on screen: read-only
    * when its row is gone, unchanged otherwise (the next write reads it again).
@@ -104,10 +105,13 @@ export function useEditorProjectData(sessionId: string | null) {
   /** Shows the title and description a metadata write just committed.
    * Only the metadata is taken: the row's structure revisions may already count
    * a write from elsewhere whose structure this page hasn't read yet. */
-  const adoptProject = useCallback((committed: Project) => {
-    const current = shown.current;
-    if (current) showProject(withNewestMetadata(current, committed));
-  }, [showProject]);
+  const adoptProject = useCallback(
+    (committed: Project) => {
+      const current = shown.current;
+      if (current) showProject(withNewestMetadata(current, committed));
+    },
+    [showProject],
+  );
 
   /** Reads the structure only when the Project row says it changed since what is shown;
    * a row whose only change is its title or description is taken as it is. */
@@ -133,16 +137,21 @@ export function useEditorProjectData(sessionId: string | null) {
     void (async () => {
       do {
         readAgain.current = false;
-        await reloadIfChanged().catch((error) => console.error('[howbeam] failed to read the project structure', error));
+        await reloadIfChanged().catch((error) =>
+          console.error('[howbeam] failed to read the project structure', error),
+        );
       } while (readAgain.current);
       readInFlight.current = false;
     })();
   }, [reloadIfChanged]);
 
   /** Shows the structure a write made here just committed. */
-  const adoptCommitted = useCallback((result: ProjectStructureMutationResult) => {
-    show({ project: result.project, entries: result.entries, entryIds: result.entryIds });
-  }, [show]);
+  const adoptCommitted = useCallback(
+    (result: ProjectStructureMutationResult) => {
+      show({ project: result.project, entries: result.entries, entryIds: result.entryIds });
+    },
+    [show],
+  );
 
   useEffect(() => {
     setProjectDeleted(false);

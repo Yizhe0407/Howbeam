@@ -72,7 +72,13 @@ describe('watchToolbarPin', () => {
   it('lets a change event win over an initial read still in flight', async () => {
     const event = changeEvent();
     let answer!: (settings: { isOnToolbar: boolean }) => void;
-    installAction({ getUserSettings: () => new Promise((resolve) => { answer = resolve; }), onUserSettingsChanged: event });
+    installAction({
+      getUserSettings: () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+      onUserSettingsChanged: event,
+    });
     const onChange = vi.fn();
 
     watchToolbarPin(onChange);

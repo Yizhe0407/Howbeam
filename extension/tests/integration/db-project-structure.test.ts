@@ -1,10 +1,36 @@
 import 'fake-indexeddb/auto';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
-import { ProjectContentConflictError, addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, moveProjectEntriesAtomically, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically } from '@/lib/storage/project-structure';
+import {
+  ProjectContentConflictError,
+  addProjectSectionAtomically,
+  deleteProjectAnnotationAtomically,
+  deleteProjectEntriesAtomically,
+  deleteProjectSectionAtomically,
+  getProjectStructureSnapshot,
+  moveProjectEntriesAtomically,
+  renameProjectSectionAtomically,
+  reorderProjectAnnotationsAtomically,
+  reorderProjectEntriesAtomically,
+  restoreProjectAnnotationAtomically,
+  restoreProjectEntriesAtomically,
+} from '@/lib/storage/project-structure';
 import { ProjectStructureIntegrityError, type ProjectSection, type Step } from '@/lib/storage/models';
 import { closeDatabase } from '@/lib/storage/database';
-import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
-import { addStepsAfter, discardPendingAnchor, discardPendingAnchors, getStep, getStepOutlines, getSteps } from '@/lib/storage/step-repository';
+import {
+  createProjectFromSteps,
+  deleteProjectPermanently,
+  duplicateProject,
+  getProjectSummaries,
+  updateProject,
+} from '@/lib/storage/project-repository';
+import {
+  addStepsAfter,
+  discardPendingAnchor,
+  discardPendingAnchors,
+  getStep,
+  getStepOutlines,
+  getSteps,
+} from '@/lib/storage/step-repository';
 import { pngBlob } from '../setup/raster-fixtures';
 import { itemAt } from '../setup/item-at';
 
@@ -12,10 +38,16 @@ const createdProjectIds = new Set<string>();
 
 function makeStep(overrides: Partial<Step> = {}): Step {
   return {
-    id: crypto.randomUUID(), sessionId: 'source-project', order: 0,
+    id: crypto.randomUUID(),
+    sessionId: 'source-project',
+    order: 0,
     screenshotBlob: pngBlob(),
-    bounds: { x: 1, y: 2, width: 30, height: 40 }, devicePixelRatio: 1,
-    description: '', url: 'https://example.com/path', timestamp: Date.now(), ...overrides,
+    bounds: { x: 1, y: 2, width: 30, height: 40 },
+    devicePixelRatio: 1,
+    description: '',
+    url: 'https://example.com/path',
+    timestamp: Date.now(),
+    ...overrides,
   };
 }
 
@@ -51,9 +83,15 @@ afterAll(closeDatabase);
 describe('Project entry-safe atomic structure', () => {
   it('rejects stale revisions and rolls the whole mutation back', async () => {
     const { project, snapshot } = await createTrackedProject(makeSingleSteps(3));
-    const moved = await moveProjectEntriesAtomically(project.id, [itemAt(snapshot.entryIds, 2)], 'start', snapshot.project.contentRevision);
-    await expect(deleteProjectEntriesAtomically(project.id, [itemAt(snapshot.entryIds, 0)], snapshot.project.contentRevision))
-      .rejects.toBeInstanceOf(ProjectContentConflictError);
+    const moved = await moveProjectEntriesAtomically(
+      project.id,
+      [itemAt(snapshot.entryIds, 2)],
+      'start',
+      snapshot.project.contentRevision,
+    );
+    await expect(
+      deleteProjectEntriesAtomically(project.id, [itemAt(snapshot.entryIds, 0)], snapshot.project.contentRevision),
+    ).rejects.toBeInstanceOf(ProjectContentConflictError);
     const after = await getProjectStructureSnapshot(project.id);
     expect(after.entryIds).toEqual(moved.entryIds);
     expect(after.project.contentRevision).toBe(moved.project.contentRevision);
@@ -113,21 +151,48 @@ describe('Project entry-safe atomic structure', () => {
     const { project, snapshot } = await createTrackedProject(makeMixedSteps());
     const group = snapshot.entries.find((entry) => entry.kind === 'group');
     const annotationId = group?.kind === 'group' ? itemAt(group.annotations, 0).id : '';
-    await expect(deleteProjectEntriesAtomically(project.id, [annotationId], snapshot.project.contentRevision))
-      .rejects.toBeInstanceOf(ProjectStructureIntegrityError);
-    await expect(reorderProjectEntriesAtomically(
-      project.id, [itemAt(snapshot.entryIds, 0), annotationId, itemAt(snapshot.entryIds, 2)], snapshot.project.sections, snapshot.project.contentRevision,
-    )).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
+    await expect(
+      deleteProjectEntriesAtomically(project.id, [annotationId], snapshot.project.contentRevision),
+    ).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
+    await expect(
+      reorderProjectEntriesAtomically(
+        project.id,
+        [itemAt(snapshot.entryIds, 0), annotationId, itemAt(snapshot.entryIds, 2)],
+        snapshot.project.sections,
+        snapshot.project.contentRevision,
+      ),
+    ).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
     expect((await getProjectStructureSnapshot(project.id)).entryIds).toEqual(snapshot.entryIds);
   });
 
   it('rebases a deleted section start only within its old chapter', async () => {
     const { project, snapshot } = await createTrackedProject(makeSingleSteps(5));
-    const first = await addProjectSectionAtomically(project.id, itemAt(snapshot.entryIds, 1), ' 第一章 ', snapshot.project.contentRevision);
-    const second = await addProjectSectionAtomically(project.id, itemAt(snapshot.entryIds, 3), '第二章', first.project.contentRevision);
-    const deletedStart = await deleteProjectEntriesAtomically(project.id, [itemAt(snapshot.entryIds, 1)], second.project.contentRevision);
-    expect(deletedStart.project.sections.map((s) => s.startEntryId)).toEqual([snapshot.entryIds[2], snapshot.entryIds[3]]);
-    const deletedChapter = await deleteProjectEntriesAtomically(project.id, [itemAt(snapshot.entryIds, 2)], deletedStart.project.contentRevision);
+    const first = await addProjectSectionAtomically(
+      project.id,
+      itemAt(snapshot.entryIds, 1),
+      ' 第一章 ',
+      snapshot.project.contentRevision,
+    );
+    const second = await addProjectSectionAtomically(
+      project.id,
+      itemAt(snapshot.entryIds, 3),
+      '第二章',
+      first.project.contentRevision,
+    );
+    const deletedStart = await deleteProjectEntriesAtomically(
+      project.id,
+      [itemAt(snapshot.entryIds, 1)],
+      second.project.contentRevision,
+    );
+    expect(deletedStart.project.sections.map((s) => s.startEntryId)).toEqual([
+      snapshot.entryIds[2],
+      snapshot.entryIds[3],
+    ]);
+    const deletedChapter = await deleteProjectEntriesAtomically(
+      project.id,
+      [itemAt(snapshot.entryIds, 2)],
+      deletedStart.project.contentRevision,
+    );
     expect(deletedChapter.project.sections).toEqual([
       expect.objectContaining({ title: '第二章', startEntryId: snapshot.entryIds[3] }),
     ]);
@@ -135,15 +200,27 @@ describe('Project entry-safe atomic structure', () => {
 
   it('moves entries densely while headings follow entry identity', async () => {
     const { project, snapshot } = await createTrackedProject(makeSingleSteps(4));
-    const sectioned = await addProjectSectionAtomically(project.id, itemAt(snapshot.entryIds, 1), '設定', snapshot.project.contentRevision);
-    const moved = await moveProjectEntriesAtomically(
-      project.id, [itemAt(snapshot.entryIds, 1), itemAt(snapshot.entryIds, 2)], 'end', sectioned.project.contentRevision,
+    const sectioned = await addProjectSectionAtomically(
+      project.id,
+      itemAt(snapshot.entryIds, 1),
+      '設定',
+      snapshot.project.contentRevision,
     );
-    expect(moved.entryIds).toEqual([snapshot.entryIds[0], snapshot.entryIds[3], snapshot.entryIds[1], snapshot.entryIds[2]]);
+    const moved = await moveProjectEntriesAtomically(
+      project.id,
+      [itemAt(snapshot.entryIds, 1), itemAt(snapshot.entryIds, 2)],
+      'end',
+      sectioned.project.contentRevision,
+    );
+    expect(moved.entryIds).toEqual([
+      snapshot.entryIds[0],
+      snapshot.entryIds[3],
+      snapshot.entryIds[1],
+      snapshot.entryIds[2],
+    ]);
     expect(itemAt(moved.project.sections, 0).startEntryId).toBe(snapshot.entryIds[1]);
     expect((await getSteps(project.id)).map((step) => step.order)).toEqual([0, 1, 2, 3]);
   });
-
 
   it('remaps section boundaries for import-style clone and duplicate Project', async () => {
     const source = makeMixedSteps();
@@ -162,12 +239,25 @@ describe('Project entry-safe atomic structure', () => {
 
   it('restores deleted entries, order, and sections against the post-delete revision', async () => {
     const { project, snapshot } = await createTrackedProject(makeSingleSteps(3));
-    const sectioned = await addProjectSectionAtomically(project.id, itemAt(snapshot.entryIds, 1), '可復原章節', snapshot.project.contentRevision);
+    const sectioned = await addProjectSectionAtomically(
+      project.id,
+      itemAt(snapshot.entryIds, 1),
+      '可復原章節',
+      snapshot.project.contentRevision,
+    );
     const before = await getProjectStructureSnapshot(project.id);
     const removed = itemAt(before.entries, 1);
-    const deleted = await deleteProjectEntriesAtomically(project.id, [itemAt(before.entryIds, 1)], sectioned.project.contentRevision);
+    const deleted = await deleteProjectEntriesAtomically(
+      project.id,
+      [itemAt(before.entryIds, 1)],
+      sectioned.project.contentRevision,
+    );
     const restored = await restoreProjectEntriesAtomically(
-      project.id, [removed], before.entryIds, before.project.sections, deleted.project.contentRevision,
+      project.id,
+      [removed],
+      before.entryIds,
+      before.project.sections,
+      deleted.project.contentRevision,
     );
     expect(restored.entryIds).toEqual(before.entryIds);
     expect(restored.project.sections).toEqual(before.project.sections);
@@ -176,24 +266,45 @@ describe('Project entry-safe atomic structure', () => {
   it('still restores a deletion after the Project was renamed', async () => {
     const { project, snapshot } = await createTrackedProject(makeSingleSteps(3));
     const removed = itemAt(snapshot.entries, 1);
-    const deleted = await deleteProjectEntriesAtomically(project.id, [itemAt(snapshot.entryIds, 1)], snapshot.project.contentRevision);
+    const deleted = await deleteProjectEntriesAtomically(
+      project.id,
+      [itemAt(snapshot.entryIds, 1)],
+      snapshot.project.contentRevision,
+    );
     await updateProject(project.id, { title: '改過的名稱' });
     const restored = await restoreProjectEntriesAtomically(
-      project.id, [removed], snapshot.entryIds, snapshot.project.sections, deleted.project.contentRevision,
+      project.id,
+      [removed],
+      snapshot.entryIds,
+      snapshot.project.sections,
+      deleted.project.contentRevision,
     );
     expect(restored.entryIds).toEqual(snapshot.entryIds);
   });
 
   it('sanitizes section titles and supports atomic rename/delete', async () => {
     const { project, snapshot } = await createTrackedProject(makeSingleSteps(1));
-    const added = await addProjectSectionAtomically(project.id, itemAt(snapshot.entryIds, 0), ' 章\n節 ', snapshot.project.contentRevision);
+    const added = await addProjectSectionAtomically(
+      project.id,
+      itemAt(snapshot.entryIds, 0),
+      ' 章\n節 ',
+      snapshot.project.contentRevision,
+    );
     expect(itemAt(added.project.sections, 0).title).toBe('章節');
-    const renamed = await renameProjectSectionAtomically(project.id, itemAt(added.project.sections, 0).id, ' 新名稱 ', added.project.contentRevision);
+    const renamed = await renameProjectSectionAtomically(
+      project.id,
+      itemAt(added.project.sections, 0).id,
+      ' 新名稱 ',
+      added.project.contentRevision,
+    );
     expect(itemAt(renamed.project.sections, 0).title).toBe('新名稱');
-    const removed = await deleteProjectSectionAtomically(project.id, itemAt(renamed.project.sections, 0).id, renamed.project.contentRevision);
+    const removed = await deleteProjectSectionAtomically(
+      project.id,
+      itemAt(renamed.project.sections, 0).id,
+      renamed.project.contentRevision,
+    );
     expect(removed.project.sections).toEqual([]);
   });
-
 
   it('keeps summaries on the project store without opening step rows or blobs', async () => {
     const { project } = await createTrackedProject(makeSingleSteps(1));
@@ -202,7 +313,9 @@ describe('Project entry-safe atomic structure', () => {
       const summaries = await getProjectSummaries();
       expect(summaries.find((summary) => summary.id === project.id)?.sections).toEqual([]);
       expect(indexSpy.mock.calls.some(([name]) => name === 'by-session')).toBe(false);
-    } finally { indexSpy.mockRestore(); }
+    } finally {
+      indexSpy.mockRestore();
+    }
   });
 });
 
@@ -241,7 +354,9 @@ describe('strict annotation and visual CAS mutations', () => {
 
   it('deletes the complete snapshot entry for its last annotation and deterministically rebases sections', async () => {
     const steps = makeMixedSteps().filter((step) => step.order !== 3);
-    steps.forEach((step, order) => { step.order = order; });
+    steps.forEach((step, order) => {
+      step.order = order;
+    });
     const { project, snapshot } = await createTrackedProject(steps);
     const group = itemAt(snapshot.entries, 1);
     expect(group.kind).toBe('group');
@@ -282,24 +397,31 @@ describe('strict annotation and visual CAS mutations', () => {
       snapshot.project.contentRevision,
     );
 
-    await expect(deleteProjectAnnotationAtomically(
-      project.id,
-      group.anchor.id,
-      itemAt(group.annotations, 0).id,
-      snapshot.project.contentRevision,
-    )).rejects.toBeInstanceOf(ProjectContentConflictError);
-    await expect(deleteProjectAnnotationAtomically(
-      project.id,
-      itemAt(snapshot.entryIds, 0),
-      itemAt(group.annotations, 0).id,
-      moved.project.contentRevision,
-    )).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
+    await expect(
+      deleteProjectAnnotationAtomically(
+        project.id,
+        group.anchor.id,
+        itemAt(group.annotations, 0).id,
+        snapshot.project.contentRevision,
+      ),
+    ).rejects.toBeInstanceOf(ProjectContentConflictError);
+    await expect(
+      deleteProjectAnnotationAtomically(
+        project.id,
+        itemAt(snapshot.entryIds, 0),
+        itemAt(group.annotations, 0).id,
+        moved.project.contentRevision,
+      ),
+    ).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
 
     const after = await getProjectStructureSnapshot(project.id);
     expect(after.entryIds).toEqual(moved.entryIds);
     expect(after.project.contentRevision).toBe(moved.project.contentRevision);
     expect(after.entries.find((entry) => entry.kind === 'group')).toMatchObject({
-      annotations: [expect.objectContaining({ id: itemAt(group.annotations, 0).id }), expect.objectContaining({ id: itemAt(group.annotations, 1).id })],
+      annotations: [
+        expect.objectContaining({ id: itemAt(group.annotations, 0).id }),
+        expect.objectContaining({ id: itemAt(group.annotations, 1).id }),
+      ],
     });
   });
 
@@ -339,11 +461,11 @@ describe('strict annotation and visual CAS mutations', () => {
     );
     expect((await getSteps(project.id)).map((step) => step.order)).toEqual([0, 1, 2, 3, 4]);
     expect((await getSteps(project.id)).map((step) => step.id)).toEqual(
-      snapshot.entries.flatMap((entry) => (
+      snapshot.entries.flatMap((entry) =>
         entry.kind === 'single'
           ? [entry.step.id]
-          : [entry.anchor.id, ...entry.annotations.map((annotation) => annotation.id)]
-      )),
+          : [entry.anchor.id, ...entry.annotations.map((annotation) => annotation.id)],
+      ),
     );
   });
 
@@ -365,13 +487,15 @@ describe('strict annotation and visual CAS mutations', () => {
       deleted.project.contentRevision,
     );
 
-    await expect(restoreProjectAnnotationAtomically(
-      project.id,
-      group.anchor.id,
-      deleted.deletedAnnotation,
-      deleted.previousAnnotationIds,
-      deleted.project.contentRevision,
-    )).rejects.toBeInstanceOf(ProjectContentConflictError);
+    await expect(
+      restoreProjectAnnotationAtomically(
+        project.id,
+        group.anchor.id,
+        deleted.deletedAnnotation,
+        deleted.previousAnnotationIds,
+        deleted.project.contentRevision,
+      ),
+    ).rejects.toBeInstanceOf(ProjectContentConflictError);
 
     const after = await getProjectStructureSnapshot(project.id);
     expect(after.project.contentRevision).toBe(moved.project.contentRevision);
@@ -393,27 +517,33 @@ describe('strict annotation and visual CAS mutations', () => {
     const deletedAnnotation = deleted.deletedAnnotation;
     const survivingId = itemAt(group.annotations, 1).id;
 
-    await expect(restoreProjectAnnotationAtomically(
-      project.id,
-      group.anchor.id,
-      { ...deletedAnnotation, groupId: 'another-anchor' },
-      deleted.previousAnnotationIds,
-      deleted.project.contentRevision,
-    )).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
-    await expect(restoreProjectAnnotationAtomically(
-      project.id,
-      group.anchor.id,
-      { ...deletedAnnotation, id: survivingId },
-      [survivingId, survivingId],
-      deleted.project.contentRevision,
-    )).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
-    await expect(restoreProjectAnnotationAtomically(
-      project.id,
-      group.anchor.id,
-      deletedAnnotation,
-      [survivingId, group.anchor.id],
-      deleted.project.contentRevision,
-    )).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
+    await expect(
+      restoreProjectAnnotationAtomically(
+        project.id,
+        group.anchor.id,
+        { ...deletedAnnotation, groupId: 'another-anchor' },
+        deleted.previousAnnotationIds,
+        deleted.project.contentRevision,
+      ),
+    ).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
+    await expect(
+      restoreProjectAnnotationAtomically(
+        project.id,
+        group.anchor.id,
+        { ...deletedAnnotation, id: survivingId },
+        [survivingId, survivingId],
+        deleted.project.contentRevision,
+      ),
+    ).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
+    await expect(
+      restoreProjectAnnotationAtomically(
+        project.id,
+        group.anchor.id,
+        deletedAnnotation,
+        [survivingId, group.anchor.id],
+        deleted.project.contentRevision,
+      ),
+    ).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
 
     const after = await getProjectStructureSnapshot(project.id);
     expect(after.project.contentRevision).toBe(deleted.project.contentRevision);
@@ -440,18 +570,22 @@ describe('strict annotation and visual CAS mutations', () => {
     expect(secondGroup.kind).toBe('group');
     if (firstGroup.kind !== 'group' || secondGroup.kind !== 'group') throw new Error('Expected groups.');
 
-    await expect(reorderProjectAnnotationsAtomically(
-      project.id,
-      firstGroup.anchor.id,
-      [itemAt(firstGroup.annotations, 1).id, itemAt(secondGroup.annotations, 0).id],
-      snapshot.project.contentRevision,
-    )).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
-    await expect(reorderProjectAnnotationsAtomically(
-      project.id,
-      firstGroup.anchor.id,
-      [firstGroup.anchor.id, itemAt(firstGroup.annotations, 0).id],
-      snapshot.project.contentRevision,
-    )).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
+    await expect(
+      reorderProjectAnnotationsAtomically(
+        project.id,
+        firstGroup.anchor.id,
+        [itemAt(firstGroup.annotations, 1).id, itemAt(secondGroup.annotations, 0).id],
+        snapshot.project.contentRevision,
+      ),
+    ).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
+    await expect(
+      reorderProjectAnnotationsAtomically(
+        project.id,
+        firstGroup.anchor.id,
+        [firstGroup.anchor.id, itemAt(firstGroup.annotations, 0).id],
+        snapshot.project.contentRevision,
+      ),
+    ).rejects.toBeInstanceOf(ProjectStructureIntegrityError);
 
     const result = await reorderProjectAnnotationsAtomically(
       project.id,
@@ -482,12 +616,14 @@ describe('strict annotation and visual CAS mutations', () => {
     const { project, snapshot } = await createTrackedProject(steps, { sections });
     expect(snapshot.project.sections).toHaveLength(200);
 
-    await expect(addProjectSectionAtomically(
-      project.id,
-      itemAt(snapshot.entryIds, 200),
-      'Overflow',
-      snapshot.project.contentRevision,
-    )).rejects.toThrow('Project cannot contain more than 200 sections.');
+    await expect(
+      addProjectSectionAtomically(
+        project.id,
+        itemAt(snapshot.entryIds, 200),
+        'Overflow',
+        snapshot.project.contentRevision,
+      ),
+    ).rejects.toThrow('Project cannot contain more than 200 sections.');
 
     const after = await getProjectStructureSnapshot(project.id);
     expect(after.project.contentRevision).toBe(snapshot.project.contentRevision);

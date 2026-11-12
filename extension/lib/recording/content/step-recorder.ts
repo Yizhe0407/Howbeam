@@ -14,10 +14,7 @@ import {
 } from '../../capture/step-capture';
 import { type StepGesture, createStepGestureQueue } from '../../capture/step-gesture-queue';
 import { STEP_PRESS_GATE_EVENTS, createStepPressGate, isExtensionOverlayEvent } from '../../capture/step-press-gate';
-import {
-  CAPTURE_FAILSAFE_MS,
-  STEP_LATE_CLICK_SUPPRESS_MS,
-} from '../content-script-constants';
+import { CAPTURE_FAILSAFE_MS, STEP_LATE_CLICK_SUPPRESS_MS } from '../content-script-constants';
 import {
   type RelayedStepFrameHop,
   STEP_FRAME_CLICK_FAILSAFE_MS,
@@ -30,11 +27,7 @@ import { isInScrollbarGutter, isPointInAnyScrollGutter } from '../recording-guar
 import { mountRecordingToolbar, type MountedRecordingToolbar } from '../recording-toolbar-host';
 import { waitForNextFrame } from '../snapshot-targeting';
 import { createStepHoverPreview } from '../step-hover-preview';
-import type {
-  ClickCapture,
-  StepFrameRelayClaimMessage,
-  StepFrameRelaySettleMessage,
-} from '../../runtime/messages';
+import type { ClickCapture, StepFrameRelayClaimMessage, StepFrameRelaySettleMessage } from '../../runtime/messages';
 import { t } from '@/lib/shared/i18n';
 import type { CaptureDelivery, CaptureSender } from './capture-sender';
 import type { ContentRecordingSession } from './recording-session';
@@ -196,7 +189,11 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       capture: actions.capture,
       cancelCapture: async () => {
         gesture.cancel();
-        await browser.runtime.sendMessage({ type: 'HOWBEAM_CANCEL_CAPTURE', runId: session.runId, captureId: gesture.captureId });
+        await browser.runtime.sendMessage({
+          type: 'HOWBEAM_CANCEL_CAPTURE',
+          runId: session.runId,
+          captureId: gesture.captureId,
+        });
       },
       endGesture: () => {
         releaseMotion();
@@ -251,15 +248,9 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
         // the screenshot is in flight.
         setCaptureScrollLock({ ...readRegionScrollSnapshot(rect), x: origin.x, y: origin.y });
         let timeout: ReturnType<typeof setTimeout> | undefined;
-        const { taken, delivery } = trackScreenshot((onTaken) => capture.deliverStepCapture(
-          rect,
-          'element',
-          'mark',
-          Date.now(),
-          captureId,
-          'region',
-          onTaken,
-        ));
+        const { taken, delivery } = trackScreenshot((onTaken) =>
+          capture.deliverStepCapture(rect, 'element', 'mark', Date.now(), captureId, 'region', onTaken),
+        );
         const outcome = await Promise.race([
           taken.then(() => ({ kind: 'settled' as const })),
           new Promise<{ kind: 'timeout' }>((resolve) => {
@@ -333,15 +324,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       // Pin scrolling from here until the screenshot actually lands so nothing
       // shifts the pixels out from under this rect (auto-scroll included).
       setCaptureScrollLock(readScrollSnapshot(el));
-      return await capture.deliverStepCapture(
-        rect,
-        controlKindOf(el),
-        intent,
-        now,
-        captureId,
-        'element',
-        onTaken,
-      );
+      return await capture.deliverStepCapture(rect, controlKindOf(el), intent, now, captureId, 'element', onTaken);
     } catch (err) {
       console.error('[howbeam] step capture failed', err);
       return 'skipped';
@@ -388,10 +371,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       onSkipped: () => pressGate.abandon(press),
       start: async (gesture) => {
         preview.suspend();
-        const kind = await Promise.race([
-          press.outcome,
-          gesture.cancelled.then(() => 'cancel' as const),
-        ]);
+        const kind = await Promise.race([press.outcome, gesture.cancelled.then(() => 'cancel' as const)]);
         if (kind !== 'click') {
           // A drag, selection or browser-taken gesture already went to the
           // page natively; nothing is recorded or replayed.
@@ -404,16 +384,18 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
         const outcome = await orchestrateStepCapture(
           makeStepOrchestrationHandlers(gesture, el, {
             capture: () => {
-              const tracked = trackScreenshot((onTaken) => captureElement(
-                el,
-                press.clientX,
-                press.clientY,
-                isInteractiveElement(el) ? 'click' : 'mark',
-                now,
-                gesture.captureId,
-                gesture.isCancelled,
-                onTaken,
-              ));
+              const tracked = trackScreenshot((onTaken) =>
+                captureElement(
+                  el,
+                  press.clientX,
+                  press.clientY,
+                  isInteractiveElement(el) ? 'click' : 'mark',
+                  now,
+                  gesture.captureId,
+                  gesture.isCancelled,
+                  onTaken,
+                ),
+              );
               delivery = tracked.delivery;
               return tracked.taken;
             },
@@ -502,15 +484,17 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
             // Pin the iframe's scrollable ancestor chain exactly like the
             // element path so the screenshot pixels match the relayed rect.
             setCaptureScrollLock(readScrollSnapshot(relayed.frame));
-            const tracked = trackScreenshot((onTaken) => capture.deliverStepCapture(
-              rect,
-              claimResult.target.control,
-              claimResult.target.interactive ? 'click' : 'mark',
-              now,
-              gesture.captureId,
-              'element',
-              onTaken,
-            ));
+            const tracked = trackScreenshot((onTaken) =>
+              capture.deliverStepCapture(
+                rect,
+                claimResult.target.control,
+                claimResult.target.interactive ? 'click' : 'mark',
+                now,
+                gesture.captureId,
+                'element',
+                onTaken,
+              ),
+            );
             delivery = tracked.delivery;
             return tracked.taken;
           },
@@ -524,7 +508,9 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       );
       if (!replayConfirmed) await settleRelay(false);
       if (outcome === 'timeout') {
-        console.warn('[howbeam] child-frame capture exceeded its failsafe budget; invalidated it before replaying the click');
+        console.warn(
+          '[howbeam] child-frame capture exceeded its failsafe budget; invalidated it before replaying the click',
+        );
       }
       reportStepDelivery(outcome, delivery);
     } catch (error) {

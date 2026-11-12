@@ -100,13 +100,16 @@ export function usePermissionFlow({
 
   /** Cancels a prepared grant when the selection or Project it was bound to is
    * no longer current. */
-  const syncWithSelection = useCallback((selectedEntryId: string | null, currentSessionId: string | null) => {
-    const boundEntryId = flowEntryId.current;
-    if (!boundEntryId) return;
-    if (boundEntryId !== selectedEntryId || flowSessionId.current !== currentSessionId) {
-      clearPreparedPermission();
-    }
-  }, [clearPreparedPermission]);
+  const syncWithSelection = useCallback(
+    (selectedEntryId: string | null, currentSessionId: string | null) => {
+      const boundEntryId = flowEntryId.current;
+      if (!boundEntryId) return;
+      if (boundEntryId !== selectedEntryId || flowSessionId.current !== currentSessionId) {
+        clearPreparedPermission();
+      }
+    },
+    [clearPreparedPermission],
+  );
 
   /** Whether a new flow may begin: the editor must be viewing a Project with no
    * live run and no flow already holding the lock. */
@@ -209,7 +212,12 @@ export function usePermissionFlow({
       }
       await startStepRecaptureOrThrow(sessionId, prepared.action.target);
     } catch (permissionError) {
-      failFlow(flow, '[howbeam] failed to authorize and start source recording', permissionError, t().editor.permission.sourceStartFailed);
+      failFlow(
+        flow,
+        '[howbeam] failed to authorize and start source recording',
+        permissionError,
+        t().editor.permission.sourceStartFailed,
+      );
     } finally {
       if (flow.isCurrent()) clearPreparedPermission();
     }
@@ -296,7 +304,12 @@ export function usePermissionFlow({
         insertAfterEntryId,
       });
     } catch (continueError) {
-      failFlow(flow, '[howbeam] failed to continue recording on another page', continueError, t().editor.permission.continueElsewhereFailed);
+      failFlow(
+        flow,
+        '[howbeam] failed to continue recording on another page',
+        continueError,
+        t().editor.permission.continueElsewhereFailed,
+      );
     } finally {
       if (flow.isCurrent() && !keepDialogOpen) clearPreparedPermission();
     }
@@ -315,7 +328,12 @@ export function usePermissionFlow({
       if (!flow.isCurrent()) return;
       prepared = await requestRecapturePreflight(sessionId!, target, targetEntryId);
     } catch (recaptureError) {
-      failFlow(flow, '[howbeam] failed to verify recapture source', recaptureError, t().editor.permission.recaptureSourceUnverified);
+      failFlow(
+        flow,
+        '[howbeam] failed to verify recapture source',
+        recaptureError,
+        t().editor.permission.recaptureSourceUnverified,
+      );
     } finally {
       finishPermissionPreflight(flow, prepared);
     }
@@ -335,7 +353,12 @@ export function usePermissionFlow({
       if (!flow.isCurrent()) return;
       prepared = await requestContinuationPreflight(sessionId!, afterEntryId);
     } catch (continuationError) {
-      failFlow(flow, '[howbeam] failed to verify continuation source', continuationError, t().editor.permission.continuationSourceUnverified);
+      failFlow(
+        flow,
+        '[howbeam] failed to verify continuation source',
+        continuationError,
+        t().editor.permission.continuationSourceUnverified,
+      );
     } finally {
       finishPermissionPreflight(flow, prepared);
     }

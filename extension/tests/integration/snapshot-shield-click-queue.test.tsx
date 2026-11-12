@@ -50,22 +50,26 @@ describe('snapshot shield click queue', () => {
       start: vi.fn(),
     };
     await import('@/entrypoints/snapshot-shield/main');
-    window.dispatchEvent(new MessageEvent('message', {
-      source: window,
-      data: { type: SNAPSHOT_SHIELD_INIT, token: 'test-token' },
-      ports: [port as unknown as MessagePort],
-    }));
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        source: window,
+        data: { type: SNAPSHOT_SHIELD_INIT, token: 'test-token' },
+        ports: [port as unknown as MessagePort],
+      }),
+    );
     await vi.advanceTimersByTimeAsync(0);
-    const pointerDowns = () => port.postMessage.mock.calls
-      .map(([message]) => message)
-      .filter((message) => message.type === SNAPSHOT_SHIELD_POINTER_DOWN);
-    const toolbarState = (phase: string) => port.onmessage?.({
-      data: {
-        type: SNAPSHOT_SHIELD_TOOLBAR_STATE,
-        token: 'test-token',
-        state: { runId: 'run-1', mode: 'snapshot', phase, itemCount: 0, runItemCount: 0, error: null },
-      },
-    } as MessageEvent<SnapshotShieldFrameMessage>);
+    const pointerDowns = () =>
+      port.postMessage.mock.calls
+        .map(([message]) => message)
+        .filter((message) => message.type === SNAPSHOT_SHIELD_POINTER_DOWN);
+    const toolbarState = (phase: string) =>
+      port.onmessage?.({
+        data: {
+          type: SNAPSHOT_SHIELD_TOOLBAR_STATE,
+          token: 'test-token',
+          state: { runId: 'run-1', mode: 'snapshot', phase, itemCount: 0, runItemCount: 0, error: null },
+        },
+      } as MessageEvent<SnapshotShieldFrameMessage>);
 
     // Before any recording state, and while the run is still starting.
     press(10, 10);
@@ -87,7 +91,10 @@ describe('snapshot shield click queue', () => {
         selection: null,
       },
     } as MessageEvent<SnapshotShieldFrameMessage>);
-    expect(pointerDowns().map((message) => [message.clientX, message.clientY])).toEqual([[10, 10], [20, 20]]);
+    expect(pointerDowns().map((message) => [message.clientX, message.clientY])).toEqual([
+      [10, 10],
+      [20, 20],
+    ]);
     port.onmessage?.({
       data: {
         type: SNAPSHOT_SHIELD_CAPTURE_COMPLETE,

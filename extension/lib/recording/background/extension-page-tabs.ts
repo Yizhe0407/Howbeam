@@ -119,10 +119,7 @@ export async function showExtensionPage(
   options: { url: string; navigate: boolean },
 ): Promise<void> {
   try {
-    await browser.tabs.update(
-      tab.tabId,
-      options.navigate ? { url: options.url, active: true } : { active: true },
-    );
+    await browser.tabs.update(tab.tabId, options.navigate ? { url: options.url, active: true } : { active: true });
   } catch (error) {
     // A record can outlive its tab when tabs.onRemoved is missed while the MV3
     // worker sleeps; only a rejected tabs.update proves that — a window-focus

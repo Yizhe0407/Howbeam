@@ -26,9 +26,9 @@ export function createToolbarChannel(runId: string) {
     undoToken?: string,
   ): Promise<RecordingControlResult> {
     const message: RecordingControlMessage = { type: action, runId, ...(undoToken ? { undoToken } : {}) };
-    const command = sendToBackground(message).catch((): RecordingControlResult => (
-      { ok: false, error: 'runtime.recordingChannelLost' }
-    ));
+    const command = sendToBackground(message).catch(
+      (): RecordingControlResult => ({ ok: false, error: 'runtime.recordingChannelLost' }),
+    );
     // A hung background must not wedge the in-page toolbar forever: surface
     // the channel-failure error after the shared control budget (the same
     // one the shield toolbar uses), so controls re-enable and the user sees

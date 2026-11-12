@@ -40,7 +40,9 @@ describe('step frame relay protocol', () => {
 
   it('accepts the geometry-only public hop payload', () => {
     expect(isStepFrameHopPayload(validPayload, messageType)).toBe(true);
-    expect(isStepFrameHopPayload({ ...validPayload, rect: { x: -2.5, y: 0.25, width: 1, height: 2 } }, messageType)).toBe(true);
+    expect(
+      isStepFrameHopPayload({ ...validPayload, rect: { x: -2.5, y: 0.25, width: 1, height: 2 } }, messageType),
+    ).toBe(true);
   });
 
   it('rejects malformed public ids, tokens and rects', () => {
@@ -84,7 +86,9 @@ describe('step frame relay protocol', () => {
     expect(isStepFrameRelayClaimResult({ ok: false })).toBe(true);
     expect(isStepFrameRelayClaimResult({ ...valid, settleToken: '' })).toBe(false);
     expect(isStepFrameRelayClaimResult({ ...valid, settleToken: 'x'.repeat(129) })).toBe(false);
-    expect(isStepFrameRelayClaimResult({ ...valid, target: { ...valid.target, control: 'Submit order 8842' } })).toBe(false);
+    expect(isStepFrameRelayClaimResult({ ...valid, target: { ...valid.target, control: 'Submit order 8842' } })).toBe(
+      false,
+    );
     expect(isStepFrameRelayClaimResult({ ...valid, target: { interactive: true } })).toBe(false);
     expect(isStepFrameRelayClaimResult({ ...valid, target: { ...valid.target, interactive: 'yes' } })).toBe(false);
     expect(isStepFrameRelayClaimResult({ ok: false, settleToken: 'unexpected' })).toBe(false);
@@ -125,7 +129,11 @@ describe('isThirdPartyFrame', () => {
 
   it('treats another origin, or a top it cannot read, as third-party', () => {
     expect(isThirdPartyFrame(frame({ location: { origin: 'https://widget.example' } }))).toBe(true);
-    const unreadable = { get location(): Location { throw new DOMException('Blocked', 'SecurityError'); } };
+    const unreadable = {
+      get location(): Location {
+        throw new DOMException('Blocked', 'SecurityError');
+      },
+    };
     expect(isThirdPartyFrame(frame(unreadable))).toBe(true);
   });
 });

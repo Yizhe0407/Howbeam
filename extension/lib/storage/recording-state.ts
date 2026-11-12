@@ -119,7 +119,6 @@ export interface RecordingState {
   recaptureResult: StepRecaptureResult | null;
 }
 
-
 export const RECORDING_STATE_KEY = 'howbeam:recordingState';
 
 const DEFAULT_STATE: RecordingState = {

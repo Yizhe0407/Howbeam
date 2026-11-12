@@ -4,12 +4,7 @@ import { getSteps } from '../storage/step-repository';
 import type { ProjectSummary } from '../storage/models';
 import { queryBackupPermission } from './directory-handle';
 import { runBackup, type BackupResult } from './backup-runner';
-import {
-  getBackupConfig,
-  getBackupManifest,
-  putBackupManifestEntry,
-  saveBackupLastRun,
-} from './backup-store';
+import { getBackupConfig, getBackupManifest, putBackupManifestEntry, saveBackupLastRun } from './backup-store';
 
 const LOCK_NAME = 'howbeam-folder-backup';
 

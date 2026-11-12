@@ -16,13 +16,16 @@ vi.mock('@/lib/storage/storage', () => ({
 const { createCaptureSender } = await import('@/lib/recording/content/capture-sender');
 
 const rect = { x: 1, y: 2, width: 3, height: 4 };
-const deliver = () =>
-  createCaptureSender('run-1').deliverStepCapture(rect, 'button', 'click', 1, 'capture-1');
+const deliver = () => createCaptureSender('run-1').deliverStepCapture(rect, 'button', 'click', 1, 'capture-1');
 
 beforeEach(() => {
   mocks.sendMessage.mockReset();
   mocks.getRecordingState.mockReset();
-  mocks.getRecordingState.mockResolvedValue({ operation: 'recording', runId: 'run-1', lastCommittedCaptureId: 'capture-0' });
+  mocks.getRecordingState.mockResolvedValue({
+    operation: 'recording',
+    runId: 'run-1',
+    lastCommittedCaptureId: 'capture-0',
+  });
   vi.stubGlobal('window', { devicePixelRatio: 1, innerWidth: 800, innerHeight: 600, scrollX: 0, scrollY: 0 });
   vi.stubGlobal('location', { href: 'https://example.test/' });
 });
@@ -30,9 +33,11 @@ beforeEach(() => {
 describe('deliverStepCapture', () => {
   it('reports the screenshot as taken while the step is still being stored', async () => {
     let answer!: (result: unknown) => void;
-    mocks.sendMessage.mockReturnValue(new Promise((resolve) => {
-      answer = resolve;
-    }));
+    mocks.sendMessage.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
     const sender = createCaptureSender('run-1');
     const onTaken = vi.fn();
     const delivery = sender.deliverStepCapture(rect, 'button', 'click', 1, 'capture-1', 'element', onTaken);
@@ -85,7 +90,11 @@ describe('deliverStepCapture', () => {
 
   it('reconciles a lost answer against the durably committed capture id', async () => {
     silenceIntentionalErrorLogs();
-    mocks.getRecordingState.mockResolvedValue({ operation: 'recording', runId: 'run-1', lastCommittedCaptureId: 'capture-1' });
+    mocks.getRecordingState.mockResolvedValue({
+      operation: 'recording',
+      runId: 'run-1',
+      lastCommittedCaptureId: 'capture-1',
+    });
     mocks.sendMessage.mockResolvedValue(undefined);
     await expect(deliver()).resolves.toBe('saved');
   });

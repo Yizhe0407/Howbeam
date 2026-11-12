@@ -21,15 +21,17 @@ describe('isTrustedRecordedPageSender', () => {
   it('accepts a same-origin sender even when the path differs from the message URL', () => {
     // Regression: SPA pushState navigation leaves sender.url/tab.url briefly
     // behind location.href — must not reject an otherwise-legitimate click.
+    expect(isTrustedRecordedPageSender('https://example.com/page', validSender, 7)).toBe(true);
     expect(
-      isTrustedRecordedPageSender('https://example.com/page', validSender, 7),
-    ).toBe(true);
-    expect(
-      isTrustedRecordedPageSender('https://example.com/page/conversation-42', {
-        ...validSender,
-        url: 'https://example.com/page',
-        tab: { id: 7, url: 'https://example.com/page' },
-      }, 7),
+      isTrustedRecordedPageSender(
+        'https://example.com/page/conversation-42',
+        {
+          ...validSender,
+          url: 'https://example.com/page',
+          tab: { id: 7, url: 'https://example.com/page' },
+        },
+        7,
+      ),
     ).toBe(true);
   });
 
@@ -37,16 +39,24 @@ describe('isTrustedRecordedPageSender', () => {
     expect(isTrustedRecordedPageSender('https://example.com/page', validSender, 8)).toBe(false);
     expect(isTrustedRecordedPageSender('https://example.com/page', { ...validSender, frameId: 1 }, 7)).toBe(false);
     expect(
-      isTrustedRecordedPageSender('https://example.com/page', {
-        ...validSender,
-        url: 'https://evil.example/page',
-      }, 7),
+      isTrustedRecordedPageSender(
+        'https://example.com/page',
+        {
+          ...validSender,
+          url: 'https://evil.example/page',
+        },
+        7,
+      ),
     ).toBe(false);
     expect(
-      isTrustedRecordedPageSender('https://example.com/page', {
-        ...validSender,
-        tab: { id: 7, url: 'https://evil.example/page' },
-      }, 7),
+      isTrustedRecordedPageSender(
+        'https://example.com/page',
+        {
+          ...validSender,
+          tab: { id: 7, url: 'https://evil.example/page' },
+        },
+        7,
+      ),
     ).toBe(false);
     expect(isTrustedRecordedPageSender('https://example.com/page', { frameId: 0 }, 7)).toBe(false);
   });

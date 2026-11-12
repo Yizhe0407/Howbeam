@@ -1,30 +1,66 @@
 <!doctype html>
 <html lang="zh-Hant">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="data:,">
-  <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; }
-    body { padding: 24px; font-family: system-ui, sans-serif; background: #f8fafc; color: #172033; }
-    .frame-card { padding: 18px; border: 1px solid #d5dce8; border-radius: 12px; background: white; }
-    button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 15px; border: 0; border-radius: 9px; background: #315efb; color: white; font: inherit; font-weight: 700; cursor: pointer; }
-  </style>
-</head>
-<body>
-  <div class="frame-card">
-    <p id="frame-label">Embedded checkout surface</p>
-    <button id="frame-action"><span id="frame-action-icon">✓</span><span id="frame-action-label">Confirm order</span></button>
-  </div>
-  <script>
-    const events = Object.create(null);
-    const note = (key) => { events[key] = (events[key] || 0) + 1; };
-    document.querySelector('#frame-action').addEventListener('click', () => note('frame-action'));
-    window.frameBenchmarkProbe = {
-      resetEvents() { for (const key of Object.keys(events)) delete events[key]; },
-      readEvents() { return { ...events }; },
-    };
-  </script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+      body {
+        padding: 24px;
+        font-family: system-ui, sans-serif;
+        background: #f8fafc;
+        color: #172033;
+      }
+      .frame-card {
+        padding: 18px;
+        border: 1px solid #d5dce8;
+        border-radius: 12px;
+        background: white;
+      }
+      button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 15px;
+        border: 0;
+        border-radius: 9px;
+        background: #315efb;
+        color: white;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame-card">
+      <p id="frame-label">Embedded checkout surface</p>
+      <button id="frame-action">
+        <span id="frame-action-icon">✓</span><span id="frame-action-label">Confirm order</span>
+      </button>
+    </div>
+    <script>
+      const events = Object.create(null);
+      const note = (key) => {
+        events[key] = (events[key] || 0) + 1;
+      };
+      document.querySelector('#frame-action').addEventListener('click', () => note('frame-action'));
+      window.frameBenchmarkProbe = {
+        resetEvents() {
+          for (const key of Object.keys(events)) delete events[key];
+        },
+        readEvents() {
+          return { ...events };
+        },
+      };
+    </script>
+  </body>
 </html>

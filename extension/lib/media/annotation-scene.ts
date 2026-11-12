@@ -1,7 +1,23 @@
 import type { Bounds, ImageEdit, Redaction } from '../storage/models';
 import { drawImageEdits, type Canvas2D } from './image-edit-render';
 import { isPositiveRect } from '../shared/geometry';
-import { BADGE_FONT_FAMILY, BADGE_RADIUS, BADGE_TEXT_COLOR, HIGHLIGHT_COLOR, HIGHLIGHT_FILL_COLOR, HIGHLIGHT_LINE_WIDTH, HIGHLIGHT_RADIUS, LEADER_LINE_WIDTH, MARKER_INNER_RADIUS, MARKER_RADIUS, MARKER_RING_WIDTH, REDACTION_COLOR, REDACTION_EXPANSION, isDrawableHighlightFrame, type Annotation } from './annotation-contract';
+import {
+  BADGE_FONT_FAMILY,
+  BADGE_RADIUS,
+  BADGE_TEXT_COLOR,
+  HIGHLIGHT_COLOR,
+  HIGHLIGHT_FILL_COLOR,
+  HIGHLIGHT_LINE_WIDTH,
+  HIGHLIGHT_RADIUS,
+  LEADER_LINE_WIDTH,
+  MARKER_INNER_RADIUS,
+  MARKER_RADIUS,
+  MARKER_RING_WIDTH,
+  REDACTION_COLOR,
+  REDACTION_EXPANSION,
+  isDrawableHighlightFrame,
+  type Annotation,
+} from './annotation-contract';
 import { fitHighlightFrame, getBadgeFontSize } from './annotation-geometry';
 import { layoutAnnotations } from './annotation-layout';
 import type { Point } from '@/lib/shared/geometry';
@@ -47,7 +63,13 @@ export function getExpandedRedactionBounds(
   viewportWidth: number,
   viewportHeight: number,
 ): Bounds | null {
-  if (!isPositiveRect(bounds) || !Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight) || viewportWidth <= 0 || viewportHeight <= 0) {
+  if (
+    !isPositiveRect(bounds) ||
+    !Number.isFinite(viewportWidth) ||
+    !Number.isFinite(viewportHeight) ||
+    viewportWidth <= 0 ||
+    viewportHeight <= 0
+  ) {
     return null;
   }
   const left = Math.max(0, bounds.x - REDACTION_EXPANSION);
@@ -203,6 +225,11 @@ export function drawAnnotationScene(ctx: Canvas2D, scene: AnnotationScene, surfa
 
 /** Whether drawing the scene would change any pixel. */
 export function isEmptyScene(scene: AnnotationScene): boolean {
-  return !scene.privacyBlock && !scene.highlight && scene.annotations.length === 0
-    && scene.imageEdits.length === 0 && scene.redactions.length === 0;
+  return (
+    !scene.privacyBlock &&
+    !scene.highlight &&
+    scene.annotations.length === 0 &&
+    scene.imageEdits.length === 0 &&
+    scene.redactions.length === 0
+  );
 }

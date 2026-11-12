@@ -22,13 +22,7 @@ interface Props {
 }
 
 /** Recapture takes over the source tab, so a modal blocks editing and keeps only two exits — return to the source tab, or cancel. */
-export default function RecaptureProgressDialog({
-  open,
-  phase,
-  error,
-  onFocusSource,
-  onCancel,
-}: Props) {
+export default function RecaptureProgressDialog({ open, phase, error, onFocusSource, onCancel }: Props) {
   const capturing = phase === 'capturing';
 
   return (
@@ -47,9 +41,7 @@ export default function RecaptureProgressDialog({
             {capturing ? t().editor.recapture.capturing : t().editor.recapture.inProgress}
           </DialogTitle>
           <DialogDescription className="leading-6">
-            {capturing
-              ? t().editor.recapture.capturingBody
-              : t().editor.recapture.awaitingBody}
+            {capturing ? t().editor.recapture.capturingBody : t().editor.recapture.awaitingBody}
           </DialogDescription>
         </DialogHeader>
 
@@ -57,10 +49,12 @@ export default function RecaptureProgressDialog({
 
         <DialogFooter className="mt-6">
           <Button type="button" variant="ghost" onClick={onCancel}>
-            <X />{t().editor.recapture.cancel}
+            <X />
+            {t().editor.recapture.cancel}
           </Button>
           <Button type="button" variant="outline" onClick={onFocusSource}>
-            <ExternalLink />{t().editor.recapture.returnToSource}
+            <ExternalLink />
+            {t().editor.recapture.returnToSource}
           </Button>
         </DialogFooter>
       </DialogContent>

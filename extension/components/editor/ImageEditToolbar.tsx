@@ -39,7 +39,13 @@ interface HeaderProps {
 const iconButtonClass =
   'flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors focus-ring hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40';
 
-function IconButton({ label, onClick, disabled, tooltip = true, children }: {
+function IconButton({
+  label,
+  onClick,
+  disabled,
+  tooltip = true,
+  children,
+}: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
@@ -86,8 +92,10 @@ export default function ImageEditToolbar({ tool, onToolChange, room = { masks: t
                 onClick={() => onToolChange(entry.id)}
                 disabled={full}
                 className={cn(
-                  'flex size-10 items-center justify-center rounded-sm outline-none transition-colors focus-ring disabled:pointer-events-none disabled:opacity-40',
-                  active ? 'bg-selected text-on-accent' : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                  'flex size-10 items-center justify-center rounded-sm focus-ring transition-colors outline-none disabled:pointer-events-none disabled:opacity-40',
+                  active
+                    ? 'bg-selected text-on-accent'
+                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
                 )}
               >
                 <Icon className="size-5" />
@@ -95,7 +103,9 @@ export default function ImageEditToolbar({ tool, onToolChange, room = { masks: t
             </TooltipTrigger>
             <TooltipContent side="right">
               {entry.label()}
-              <kbd className="ml-2 rounded-sm border border-border-soft px-1 text-[11px] font-bold">{entry.shortcut.toUpperCase()}</kbd>
+              <kbd className="ml-2 rounded-sm border border-border-soft px-1 text-[11px] font-bold">
+                {entry.shortcut.toUpperCase()}
+              </kbd>
             </TooltipContent>
           </Tooltip>
         );
@@ -114,35 +124,44 @@ export function ImageEditHeaderActions(props: HeaderProps) {
           so the line never stands empty and its height stays put as tools change. */}
       <div className="order-last flex basis-full flex-wrap items-center gap-2 xl:order-none xl:basis-auto">
         <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5">
-          <IconButton label={copy.undo} onClick={props.onUndo} disabled={!props.canUndo}><Undo2 className="size-4" /></IconButton>
-          <IconButton label={copy.redo} onClick={props.onRedo} disabled={!props.canRedo}><Redo2 className="size-4" /></IconButton>
+          <IconButton label={copy.undo} onClick={props.onUndo} disabled={!props.canUndo}>
+            <Undo2 className="size-4" />
+          </IconButton>
+          <IconButton label={copy.redo} onClick={props.onRedo} disabled={!props.canRedo}>
+            <Redo2 className="size-4" />
+          </IconButton>
         </div>
 
         <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5">
-          <IconButton tooltip={false} label={copy.zoomOut} onClick={props.onZoomOut} disabled={!props.canZoomOut}><ZoomOut className="size-4" /></IconButton>
+          <IconButton tooltip={false} label={copy.zoomOut} onClick={props.onZoomOut} disabled={!props.canZoomOut}>
+            <ZoomOut className="size-4" />
+          </IconButton>
           <span className="min-w-12 text-center text-xs font-bold text-foreground tabular-nums" aria-live="polite">
             {copy.zoomLevel(Math.round(props.nativeZoom * 100))}
           </span>
-          <IconButton tooltip={false} label={copy.zoomIn} onClick={props.onZoomIn} disabled={!props.canZoomIn}><ZoomIn className="size-4" /></IconButton>
-          <IconButton tooltip={false} label={copy.zoomFit} onClick={props.onZoomFit} disabled={props.zoom === 1}><Maximize className="size-4" /></IconButton>
+          <IconButton tooltip={false} label={copy.zoomIn} onClick={props.onZoomIn} disabled={!props.canZoomIn}>
+            <ZoomIn className="size-4" />
+          </IconButton>
+          <IconButton tooltip={false} label={copy.zoomFit} onClick={props.onZoomFit} disabled={props.zoom === 1}>
+            <Maximize className="size-4" />
+          </IconButton>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          {props.children}
-        </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">{props.children}</div>
       </div>
 
       <div className="ml-auto flex items-center gap-3">
         {savingShown && (
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground" role="status">
-            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />{copy.saving}
+            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            {copy.saving}
           </span>
         )}
         <button
           type="button"
           onClick={props.onDone}
           disabled={props.doneDisabled}
-          className="flex h-9 items-center gap-1.5 rounded-md border-2 border-border bg-primary px-3 text-xs font-bold text-primary-foreground outline-none transition-colors focus-ring hover:opacity-90 disabled:opacity-50"
+          className="flex h-9 items-center gap-1.5 rounded-md border-2 border-border bg-primary px-3 text-xs font-bold text-primary-foreground focus-ring transition-colors outline-none hover:opacity-90 disabled:opacity-50"
         >
           <Check className="size-4" />
           {props.doneLabel ?? copy.done}

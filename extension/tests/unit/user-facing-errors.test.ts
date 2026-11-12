@@ -5,13 +5,17 @@ const FALLBACK = 'background.captureFailed';
 
 describe('userFacingErrorCopy', () => {
   it('names the copy a UserFacingError carries', () => {
-    expect(userFacingErrorCopy(new UserFacingError('background.stepSkippedPageChanged'), FALLBACK))
-      .toBe('background.stepSkippedPageChanged');
+    expect(userFacingErrorCopy(new UserFacingError('background.stepSkippedPageChanged'), FALLBACK)).toBe(
+      'background.stepSkippedPageChanged',
+    );
   });
 
   it.each([
     ["Either the '<all_urls>' or 'activeTab' permission is required.", 'background.errorSiteAccessLost'],
-    ['Cannot access contents of the page. Extension manifest must request permission to access the respective host.', 'background.errorSiteAccessLost'],
+    [
+      'Cannot access contents of the page. Extension manifest must request permission to access the respective host.',
+      'background.errorSiteAccessLost',
+    ],
     ['Missing host permission for the tab', 'background.errorSiteAccessLost'],
     ['This request exceeds the MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND quota.', 'background.errorCaptureTooFast'],
     ['Tabs cannot be edited right now (user may be dragging a tab).', 'background.errorBrowserBusy'],

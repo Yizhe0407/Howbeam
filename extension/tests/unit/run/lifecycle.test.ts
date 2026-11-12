@@ -5,10 +5,21 @@ import type { StartRecordingMessage } from '@/lib/runtime/messages';
 import { makeRecordingState } from '../../setup/recording-state';
 import { EXTENSION_ORIGIN, fakeActor, fakePorts, flush, tab } from './fakes';
 
-const START: StartRecordingMessage = { type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-1' }, mode: 'steps' };
+const START: StartRecordingMessage = {
+  type: 'START_RECORDING',
+  target: { kind: 'project', projectId: 'project-1' },
+  mode: 'steps',
+};
 const liveRun = makeRecordingState({
-  operation: 'recording', isRecording: true, phase: 'recording', sessionId: 'project-1', tabId: 4, runId: 'run-1',
-  itemCount: 1, runItemCount: 1, newProject: true,
+  operation: 'recording',
+  isRecording: true,
+  phase: 'recording',
+  sessionId: 'project-1',
+  tabId: 4,
+  runId: 'run-1',
+  itemCount: 1,
+  runItemCount: 1,
+  newProject: true,
 });
 
 function setup(stored = makeRecordingState()) {
@@ -19,7 +30,11 @@ function setup(stored = makeRecordingState()) {
     ports,
     gate,
     extensionOrigin: EXTENSION_ORIGIN,
-    captureAnchor: vi.fn(async () => ({ id: 'anchor-1', viewport: { width: 800, height: 600, scrollX: 0, scrollY: 0 }, devicePixelRatio: 1 })),
+    captureAnchor: vi.fn(async () => ({
+      id: 'anchor-1',
+      viewport: { width: 800, height: 600, scrollX: 0, scrollY: 0 },
+      devicePixelRatio: 1,
+    })),
     discardUndo: vi.fn(),
     isRecaptureStarting: vi.fn(() => false),
     resolveContinuationTab: vi.fn(async () => ({ ok: true as const, tab: tab({ id: 9 }) })),
@@ -30,24 +45,52 @@ function setup(stored = makeRecordingState()) {
   ports.recorder.inject.mockImplementation(async (tabId: number) => {
     queueMicrotask(() => {
       const op = actor.state().operation;
-      if (op.kind === 'recording') gate.signal(op.runId, tabId, ports.recorder.inject.mock.calls.length ? readyReport.current : {});
+      if (op.kind === 'recording')
+        gate.signal(op.runId, tabId, ports.recorder.inject.mock.calls.length ? readyReport.current : {});
     });
   });
   const readyReport: { current: Record<string, unknown> } = { current: {} };
-  return { lifecycle, ports, steps, actor, saved, gate, deps, readyReport, state: () => toRecordingState(actor.state()) };
+  return {
+    lifecycle,
+    ports,
+    steps,
+    actor,
+    saved,
+    gate,
+    deps,
+    readyReport,
+    state: () => toRecordingState(actor.state()),
+  };
 }
 
 describe('starting a recording', () => {
   it('injects the recorder, waits for it, and goes live', async () => {
     const { lifecycle, ports, state } = setup();
-    await expect(lifecycle.startRecording(START, {})).resolves.toEqual({ ok: true, sessionId: 'project-1', runId: 'id-1' });
+    await expect(lifecycle.startRecording(START, {})).resolves.toEqual({
+      ok: true,
+      sessionId: 'project-1',
+      runId: 'id-1',
+    });
     expect(ports.recorder.inject).toHaveBeenCalledWith(4);
-    expect(state()).toMatchObject({ operation: 'recording', phase: 'recording', runId: 'id-1', tabId: 4, targetProjectTitle: '教學' });
+    expect(state()).toMatchObject({
+      operation: 'recording',
+      phase: 'recording',
+      runId: 'id-1',
+      tabId: 4,
+      targetProjectTitle: '教學',
+    });
   });
 
   it('captures the base image before a snapshot run goes live', async () => {
     const { lifecycle, deps, state, readyReport } = setup();
-    readyReport.current = { snapshotContext: { viewport: { width: 800, height: 600, scrollX: 0, scrollY: 0 }, devicePixelRatio: 1, url: 'https://site.example/page', timestamp: 1 } };
+    readyReport.current = {
+      snapshotContext: {
+        viewport: { width: 800, height: 600, scrollX: 0, scrollY: 0 },
+        devicePixelRatio: 1,
+        url: 'https://site.example/page',
+        timestamp: 1,
+      },
+    };
     await lifecycle.startRecording({ ...START, mode: 'snapshot' }, {});
     expect(deps.captureAnchor).toHaveBeenCalledOnce();
     expect(state()).toMatchObject({ phase: 'recording', groupAnchorId: 'anchor-1', snapshotDevicePixelRatio: 1 });
@@ -55,8 +98,9 @@ describe('starting a recording', () => {
 
   it('records into a Project of its own without creating it yet', async () => {
     const { lifecycle, ports, state } = setup();
-    await expect(lifecycle.startRecording({ type: 'START_RECORDING', target: { kind: 'new' }, mode: 'steps' }, {}))
-      .resolves.toEqual({ ok: true, sessionId: 'id-1', runId: 'id-2' });
+    await expect(
+      lifecycle.startRecording({ type: 'START_RECORDING', target: { kind: 'new' }, mode: 'steps' }, {}),
+    ).resolves.toEqual({ ok: true, sessionId: 'id-1', runId: 'id-2' });
     expect(state()).toMatchObject({ sessionId: 'id-1', newProject: true, targetProjectTitle: null });
     expect(ports.projects.ensure).not.toHaveBeenCalled();
     expect(ports.pendingStart.discard).toHaveBeenCalled();
@@ -64,10 +108,16 @@ describe('starting a recording', () => {
 
   it('refuses while another operation runs, or for a Project that is gone', async () => {
     const busy = setup(liveRun);
-    await expect(busy.lifecycle.startRecording(START, {})).resolves.toEqual({ ok: false, error: 'recaptureFlow.activeOperation' });
+    await expect(busy.lifecycle.startRecording(START, {})).resolves.toEqual({
+      ok: false,
+      error: 'recaptureFlow.activeOperation',
+    });
     const missing = setup();
     missing.ports.projects.get.mockResolvedValue(undefined);
-    await expect(missing.lifecycle.startRecording(START, {})).resolves.toEqual({ ok: false, error: 'background.recordTargetMissing' });
+    await expect(missing.lifecycle.startRecording(START, {})).resolves.toEqual({
+      ok: false,
+      error: 'background.recordTargetMissing',
+    });
   });
 
   it.each([
@@ -121,10 +171,23 @@ describe('controls of a live run', () => {
     await expect(lifecycle.pause('run-0')).resolves.toEqual({ ok: false, error: 'background.cannotPause' });
   });
 
-  it('finishes at the run\'s last entry and opens the editor there', async () => {
+  it("finishes at the run's last entry and opens the editor there", async () => {
     const { lifecycle, ports, steps, state } = setup(liveRun);
-    steps.push({ id: 's1', sessionId: 'project-1', runId: 'run-1', order: 0, bounds: { x: 0, y: 0, width: 1, height: 1 }, devicePixelRatio: 1, description: '', url: 'https://site.example/', timestamp: 1 });
-    await expect(lifecycle.finish('run-1')).resolves.toEqual({ ok: true, finish: { sessionId: 'project-1', entryId: 's1', itemCount: 1 } });
+    steps.push({
+      id: 's1',
+      sessionId: 'project-1',
+      runId: 'run-1',
+      order: 0,
+      bounds: { x: 0, y: 0, width: 1, height: 1 },
+      devicePixelRatio: 1,
+      description: '',
+      url: 'https://site.example/',
+      timestamp: 1,
+    });
+    await expect(lifecycle.finish('run-1')).resolves.toEqual({
+      ok: true,
+      finish: { sessionId: 'project-1', entryId: 's1', itemCount: 1 },
+    });
     expect(state()).toMatchObject({ isRecording: false, phase: 'idle', sessionId: 'project-1', error: null });
     expect(ports.recorder.stop).toHaveBeenCalledWith(4);
     expect(ports.editor.open).toHaveBeenCalledWith({ sessionId: 'project-1', entryId: 's1' });
@@ -148,7 +211,7 @@ describe('controls of a live run', () => {
     expect(state()).toMatchObject({ isRecording: false, phase: 'idle' });
   });
 
-  it('discards only the run\'s steps from an existing Project', async () => {
+  it("discards only the run's steps from an existing Project", async () => {
     const { lifecycle, ports } = setup({ ...liveRun, newProject: false });
     await expect(lifecycle.discard('run-1')).resolves.toEqual({ ok: true });
     expect(ports.steps.deleteForRun).toHaveBeenCalledWith('project-1', 'run-1');
@@ -166,10 +229,14 @@ describe('controls of a live run', () => {
   it('ends a run whose tab closed and that cannot follow anywhere, keeping its Project', async () => {
     const { lifecycle, state } = setup(liveRun);
     await lifecycle.recordedTabGone(4);
-    expect(state()).toMatchObject({ phase: 'error', sessionId: 'project-1', recoverableError: { code: 'RECORDED_TAB_CLOSED' } });
+    expect(state()).toMatchObject({
+      phase: 'error',
+      sessionId: 'project-1',
+      recoverableError: { code: 'RECORDED_TAB_CLOSED' },
+    });
   });
 
-  it('trusts extension pages and the recorded tab\'s top frame only', () => {
+  it("trusts extension pages and the recorded tab's top frame only", () => {
     const { lifecycle, actor } = setup(liveRun);
     return actor.ready().then(() => {
       expect(lifecycle.isTrustedControlSender('run-1', { url: `${EXTENSION_ORIGIN}popup.html` })).toBe(true);

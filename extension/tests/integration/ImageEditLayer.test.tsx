@@ -8,22 +8,67 @@ import { IMAGE_EDIT_LIMITS } from '@/lib/storage/image-edit-model';
 
 const size = { width: 400, height: 200 };
 const mask: ImageEditItem = { id: 'mask-1', kind: 'redaction', bounds: { x: 100, y: 50, width: 80, height: 40 } };
-const rect: ImageEditItem = { id: 'rect-1', kind: 'rect', bounds: { x: 20, y: 20, width: 60, height: 30 }, width: 2, fill: 'none' as const, color: '#ff4747' };
-const text: ImageEditItem = { id: 'text-1', kind: 'text', bounds: { x: 200, y: 100, width: 100, height: 30 }, text: 'Hello', fontSize: 24, look: 'plain' as const, color: '#111111' };
-const arrow: ImageEditItem = { id: 'arrow-1', kind: 'arrow', from: { x: 10, y: 150 }, to: { x: 110, y: 190 }, width: 4, color: '#2f6fed' };
+const rect: ImageEditItem = {
+  id: 'rect-1',
+  kind: 'rect',
+  bounds: { x: 20, y: 20, width: 60, height: 30 },
+  width: 2,
+  fill: 'none' as const,
+  color: '#ff4747',
+};
+const text: ImageEditItem = {
+  id: 'text-1',
+  kind: 'text',
+  bounds: { x: 200, y: 100, width: 100, height: 30 },
+  text: 'Hello',
+  fontSize: 24,
+  look: 'plain' as const,
+  color: '#111111',
+};
+const arrow: ImageEditItem = {
+  id: 'arrow-1',
+  kind: 'arrow',
+  from: { x: 10, y: 150 },
+  to: { x: 110, y: 190 },
+  width: 4,
+  color: '#2f6fed',
+};
 
 beforeAll(() => {
   // jsdom has no layout or pointer capture: 1 CSS px of image == 1 client px.
-  Element.prototype.getBoundingClientRect = () => ({ left: 0, top: 0, width: 400, height: 200, right: 400, bottom: 200, x: 0, y: 0, toJSON: () => ({}) });
+  Element.prototype.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    width: 400,
+    height: 200,
+    right: 400,
+    bottom: 200,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  });
   Element.prototype.setPointerCapture = () => undefined;
-  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} unobserve() {} });
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    },
+  );
 });
 afterEach(cleanup);
 
 function setup(overrides: Partial<React.ComponentProps<typeof ImageEditLayer>> = {}) {
   const handlers = {
-    onSelect: vi.fn(), onCreate: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onDraft: vi.fn(),
-    onStartTextEdit: vi.fn(), onFinishTextEdit: vi.fn(), onPanStart: vi.fn(),
+    onSelect: vi.fn(),
+    onCreate: vi.fn(),
+    onUpdate: vi.fn(),
+    onDelete: vi.fn(),
+    onDraft: vi.fn(),
+    onStartTextEdit: vi.fn(),
+    onFinishTextEdit: vi.fn(),
+    onPanStart: vi.fn(),
   };
   const view = render(
     <ImageEditLayer
@@ -49,9 +94,13 @@ describe('ImageEditLayer creating', () => {
     const { layer, onCreate, onDraft } = setup();
     fireEvent.pointerDown(layer, { clientX: 10, clientY: 10, button: 0 });
     fireEvent.pointerMove(layer, { clientX: 60, clientY: 40 });
-    expect(onDraft).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'redaction', bounds: { x: 10, y: 10, width: 50, height: 30 } }));
+    expect(onDraft).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: 'redaction', bounds: { x: 10, y: 10, width: 50, height: 30 } }),
+    );
     fireEvent.pointerUp(layer, { clientX: 60, clientY: 40 });
-    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ kind: 'redaction', bounds: { x: 10, y: 10, width: 50, height: 30 } }));
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'redaction', bounds: { x: 10, y: 10, width: 50, height: 30 } }),
+    );
     expect(onDraft).toHaveBeenLastCalledWith(null);
   });
 
@@ -61,14 +110,18 @@ describe('ImageEditLayer creating', () => {
     fireEvent.pointerDown(box.layer, { clientX: 10, clientY: 10, button: 0 });
     fireEvent.pointerMove(box.layer, { clientX: 60, clientY: 40 });
     fireEvent.pointerUp(box.layer, { clientX: 60, clientY: 40 });
-    expect(box.onCreate).toHaveBeenCalledWith(expect.objectContaining({ kind: 'rect', fill: 'none' as const, color: '#22a559', width: 6 }));
+    expect(box.onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'rect', fill: 'none' as const, color: '#22a559', width: 6 }),
+    );
     cleanup();
 
     const line = setup({ tool: 'arrow' });
     fireEvent.pointerDown(line.layer, { clientX: 10, clientY: 10, button: 0 });
     fireEvent.pointerMove(line.layer, { clientX: 110, clientY: 90 });
     fireEvent.pointerUp(line.layer, { clientX: 110, clientY: 90 });
-    expect(line.onCreate).toHaveBeenCalledWith(expect.objectContaining({ kind: 'arrow', from: { x: 10, y: 10 }, to: { x: 110, y: 90 } }));
+    expect(line.onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'arrow', from: { x: 10, y: 10 }, to: { x: 110, y: 90 } }),
+    );
   });
 
   it('starts a text box from a plain click with the text tool', () => {
@@ -106,7 +159,9 @@ describe('ImageEditLayer drawing over existing items', () => {
     fireEvent.pointerUp(layer, { clientX: 170, clientY: 85 });
     expect(onUpdate).not.toHaveBeenCalled();
     expect(onSelect).not.toHaveBeenCalledWith('mask-1');
-    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ kind: 'rect', bounds: { x: 120, y: 60, width: 50, height: 25 } }));
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'rect', bounds: { x: 120, y: 60, width: 50, height: 25 } }),
+    );
   });
 
   it('draws a new mask over a mask, and does not grab outlines while drawing', () => {
@@ -116,7 +171,9 @@ describe('ImageEditLayer drawing over existing items', () => {
     fireEvent.pointerMove(masking.layer, { clientX: 150, clientY: 75 });
     fireEvent.pointerUp(masking.layer, { clientX: 150, clientY: 75 });
     expect(masking.onUpdate).not.toHaveBeenCalled();
-    expect(masking.onCreate).toHaveBeenCalledWith(expect.objectContaining({ kind: 'redaction', bounds: { x: 110, y: 55, width: 40, height: 20 } }));
+    expect(masking.onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'redaction', bounds: { x: 110, y: 55, width: 40, height: 20 } }),
+    );
   });
 
   it('keeps the handles of the selected item usable while drawing', () => {
@@ -126,7 +183,9 @@ describe('ImageEditLayer drawing over existing items', () => {
     fireEvent.pointerMove(layer, { clientX: 200, clientY: 100 });
     fireEvent.pointerUp(layer, { clientX: 200, clientY: 100 });
     expect(onCreate).not.toHaveBeenCalled();
-    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ id: 'mask-1', bounds: { x: 100, y: 50, width: 100, height: 50 } }));
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'mask-1', bounds: { x: 100, y: 50, width: 100, height: 50 } }),
+    );
   });
 });
 
@@ -138,7 +197,9 @@ describe('ImageEditLayer moving and resizing', () => {
     fireEvent.pointerUp(layer, { clientX: 150, clientY: 80 });
     expect(onSelect).toHaveBeenCalledWith('mask-1');
     expect(onUpdate).toHaveBeenCalledTimes(1);
-    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ id: 'mask-1', bounds: { x: 130, y: 70, width: 80, height: 40 } }));
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'mask-1', bounds: { x: 130, y: 70, width: 80, height: 40 } }),
+    );
   });
 
   it('grabs a rectangle by its outline stroke, not its inside', () => {
@@ -147,7 +208,9 @@ describe('ImageEditLayer moving and resizing', () => {
     fireEvent.pointerDown(stroke, { clientX: 20, clientY: 30, button: 0 });
     fireEvent.pointerMove(layer, { clientX: 40, clientY: 40 });
     fireEvent.pointerUp(layer, { clientX: 40, clientY: 40 });
-    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ id: 'rect-1', bounds: { x: 40, y: 30, width: 60, height: 30 } }));
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'rect-1', bounds: { x: 40, y: 30, width: 60, height: 30 } }),
+    );
     // The inside of the box is not a hit target of its own: its chrome ignores the pointer.
     expect(chrome(container, 'rect-1').className).toContain('pointer-events-none');
   });
@@ -158,7 +221,9 @@ describe('ImageEditLayer moving and resizing', () => {
     fireEvent.pointerDown(handle, { clientX: 180, clientY: 90, button: 0 });
     fireEvent.pointerMove(layer, { clientX: 200, clientY: 100 });
     fireEvent.pointerUp(layer, { clientX: 200, clientY: 100 });
-    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ bounds: { x: 100, y: 50, width: 100, height: 50 } }));
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ bounds: { x: 100, y: 50, width: 100, height: 50 } }),
+    );
   });
 
   it('moves one end of an arrow with its end handle', () => {
@@ -172,7 +237,9 @@ describe('ImageEditLayer moving and resizing', () => {
 
   it('only offers width handles on text', () => {
     const { container } = setup({ items: [text], selectedId: 'text-1', tool: 'select' });
-    const handles = [...container.querySelectorAll('[data-howbeam-edit-handle]')].map((element) => element.getAttribute('data-howbeam-edit-handle'));
+    const handles = [...container.querySelectorAll('[data-howbeam-edit-handle]')].map((element) =>
+      element.getAttribute('data-howbeam-edit-handle'),
+    );
     expect(handles.sort()).toEqual(['e', 'w']);
   });
 });
@@ -231,7 +298,9 @@ describe('ImageEditLayer keyboard and disabled state', () => {
   it('nudges a focused item', () => {
     const { container, onUpdate } = setup({ selectedId: 'mask-1' });
     fireEvent.keyDown(chrome(container, 'mask-1'), { key: 'ArrowRight', shiftKey: true });
-    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ bounds: { x: 110, y: 50, width: 80, height: 40 } }));
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ bounds: { x: 110, y: 50, width: 80, height: 40 } }),
+    );
   });
 
   it('is inert while disabled', () => {
@@ -254,7 +323,11 @@ describe('ImageEditLayer crop', () => {
     fireEvent.pointerDown(layer, { clientX: 20, clientY: 20, button: 0 });
     fireEvent.pointerMove(layer, { clientX: 220, clientY: 120 });
     fireEvent.pointerUp(layer, { clientX: 220, clientY: 120 });
-    expect(onCreate).toHaveBeenCalledWith({ id: 'crop', kind: 'crop', bounds: { x: 20, y: 20, width: 200, height: 100 } });
+    expect(onCreate).toHaveBeenCalledWith({
+      id: 'crop',
+      kind: 'crop',
+      bounds: { x: 20, y: 20, width: 200, height: 100 },
+    });
   });
 
   it('dims outside the crop at all times, but only lets the crop tool touch it', () => {
@@ -276,7 +349,8 @@ describe('ImageEditLayer crop', () => {
     fireEvent.pointerDown(handle, { clientX: 300, clientY: 140, button: 0 });
     fireEvent.pointerMove(layer, { clientX: 350, clientY: 160 });
     fireEvent.pointerUp(layer, { clientX: 350, clientY: 160 });
-    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ id: 'crop', bounds: { x: 100, y: 40, width: 250, height: 120 } }));
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'crop', bounds: { x: 100, y: 40, width: 250, height: 120 } }),
+    );
   });
 });
-

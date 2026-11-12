@@ -46,7 +46,9 @@ function project(id: string) {
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => { resolve = done; });
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
   return { promise, resolve };
 }
 
@@ -107,7 +109,6 @@ describe('Project UI selection', () => {
     });
   });
 
-
   it('reports a missing background response instead of dereferencing undefined', async () => {
     mocks.getProject.mockResolvedValue(project('project-a'));
     mocks.sendMessage.mockResolvedValue(undefined);
@@ -137,7 +138,11 @@ describe('popup start (startRecording)', () => {
   it('asks the background to record into a Project of its own', async () => {
     mocks.sendMessage.mockResolvedValue({ ok: true, sessionId: 'project-new', runId: 'run-1' });
     await startRecording('snapshot');
-    expect(mocks.sendMessage).toHaveBeenCalledWith({ type: 'START_RECORDING', target: { kind: 'new' }, mode: 'snapshot' });
+    expect(mocks.sendMessage).toHaveBeenCalledWith({
+      type: 'START_RECORDING',
+      target: { kind: 'new' },
+      mode: 'snapshot',
+    });
     // The background owns the whole start: nothing is created or selected here.
     expect(mocks.setActiveProjectId).not.toHaveBeenCalled();
   });
@@ -145,10 +150,14 @@ describe('popup start (startRecording)', () => {
   it('appends to an existing Project when one is picked', async () => {
     mocks.sendMessage.mockResolvedValue({ ok: true, sessionId: 'project-a', runId: 'run-1' });
     await startRecording('steps', 'project-a');
-    expect(mocks.sendMessage).toHaveBeenCalledWith({ type: 'START_RECORDING', target: { kind: 'project', projectId: 'project-a' }, mode: 'steps' });
+    expect(mocks.sendMessage).toHaveBeenCalledWith({
+      type: 'START_RECORDING',
+      target: { kind: 'project', projectId: 'project-a' },
+      mode: 'steps',
+    });
   });
 
-  it('reports why the background refused, in the reader\'s language', async () => {
+  it("reports why the background refused, in the reader's language", async () => {
     mocks.sendMessage.mockResolvedValue({ ok: false, error: 'background.cannotStartHere' });
     await expect(startRecording('steps')).rejects.toThrow(t().background.cannotStartHere);
   });

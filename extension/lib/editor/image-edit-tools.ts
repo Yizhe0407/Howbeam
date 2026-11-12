@@ -120,11 +120,10 @@ export const IMAGE_EDIT_TOOLS: readonly [ImageEditTool, ...ImageEditTool[]] = [
     shortcut: 'a',
     creates: 'arrow',
     constraint: 'angle',
-    create: ({ from, to, style }) => (
+    create: ({ from, to, style }) =>
       Math.hypot(to.x - from.x, to.y - from.y) < MIN_ARROW_LENGTH
         ? null
-        : { id: newItemId(), kind: 'arrow', from, to, width: style.strokeWidth, color: style.color }
-    ),
+        : { id: newItemId(), kind: 'arrow', from, to, width: style.strokeWidth, color: style.color },
     styleFields: STYLE_FIELDS.arrow,
   },
   {
@@ -138,7 +137,14 @@ export const IMAGE_EDIT_TOOLS: readonly [ImageEditTool, ...ImageEditTool[]] = [
     create: (input) => {
       const bounds = boxFromDrag(input);
       return bounds
-        ? { id: newItemId(), kind: 'rect', bounds, width: input.style.strokeWidth, color: input.style.color, fill: input.style.fill }
+        ? {
+            id: newItemId(),
+            kind: 'rect',
+            bounds,
+            width: input.style.strokeWidth,
+            color: input.style.color,
+            fill: input.style.fill,
+          }
         : null;
     },
     styleFields: STYLE_FIELDS.rect,
@@ -154,7 +160,14 @@ export const IMAGE_EDIT_TOOLS: readonly [ImageEditTool, ...ImageEditTool[]] = [
     create: (input) => {
       const bounds = boxFromDrag(input);
       return bounds
-        ? { id: newItemId(), kind: 'ellipse', bounds, width: input.style.strokeWidth, color: input.style.color, fill: input.style.fill }
+        ? {
+            id: newItemId(),
+            kind: 'ellipse',
+            bounds,
+            width: input.style.strokeWidth,
+            color: input.style.color,
+            fill: input.style.fill,
+          }
         : null;
     },
     styleFields: STYLE_FIELDS.ellipse,

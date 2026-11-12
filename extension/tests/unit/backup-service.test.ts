@@ -58,9 +58,12 @@ describe('runFolderBackup', () => {
   it('runs again after the lock is released when a change arrives mid-run', async () => {
     let releaseFirst!: () => void;
     mocks.runBackup
-      .mockImplementationOnce(() => new Promise((resolve) => {
-        releaseFirst = () => resolve({ written: 1, skipped: 0, failed: 0, error: null, failedTitles: [] });
-      }))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseFirst = () => resolve({ written: 1, skipped: 0, failed: 0, error: null, failedTitles: [] });
+          }),
+      )
       .mockResolvedValue({ written: 1, skipped: 0, failed: 0, error: null, failedTitles: [] });
     const { runFolderBackup } = await import('@/lib/backup/backup-service');
 

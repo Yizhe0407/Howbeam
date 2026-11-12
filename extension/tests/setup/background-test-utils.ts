@@ -17,7 +17,11 @@ export function makeBackgroundMocks() {
     tabActivatedListener: null as null | ((info: { tabId: number; windowId: number }) => void),
     tabUpdatedListener: null as
       | null
-      | ((tabId: number, changeInfo: { status?: string; url?: string }, tab: { id?: number; url?: string; active?: boolean }) => void),
+      | ((
+          tabId: number,
+          changeInfo: { status?: string; url?: string },
+          tab: { id?: number; url?: string; active?: boolean },
+        ) => void),
     windowFocusListener: null as null | ((windowId: number) => void),
     tabRemovedListener: null as null | ((tabId: number) => void),
     getProject: vi.fn(),
@@ -69,10 +73,7 @@ export type BackgroundMocks = ReturnType<typeof makeBackgroundMocks>;
 /** Factory body for vi.mock('wxt/browser'): the full background surface wired
  * to the shared mock table. Wiring is a superset — suites that never touch an
  * API simply leave its mock untouched. `extraHandles` may override any entry. */
-export async function mockWxtBrowserModule(
-  mocks: BackgroundMocks,
-  extraHandles: BackgroundBrowserMockHandles = {},
-) {
+export async function mockWxtBrowserModule(mocks: BackgroundMocks, extraHandles: BackgroundBrowserMockHandles = {}) {
   const { makeBackgroundBrowserMock } = await import('./browser-mocks');
   return {
     browser: makeBackgroundBrowserMock({

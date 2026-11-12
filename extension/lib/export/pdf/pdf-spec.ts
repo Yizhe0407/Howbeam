@@ -28,7 +28,6 @@ export function pdfPageSize(paper: PdfPaper, orientation: PdfOrientation): PdfPa
   };
 }
 
-
 /**
  * The page's visual specification. Every length is in page pixels at ~150dpi
  * (an A4 page is 1240 x 1754), the unit the document has always been designed
@@ -88,9 +87,30 @@ export interface PdfTextStyle {
 
 export const PDF_TEXT = Object.freeze({
   title: { fontSize: 52, lineHeight: 68, color: PDF_COLORS.text, weight: 'bold', gapBefore: 0, gapAfter: 18 },
-  description: { fontSize: 28, lineHeight: 48, color: PDF_COLORS.secondary, weight: 'regular', gapBefore: 0, gapAfter: 12 },
+  description: {
+    fontSize: 28,
+    lineHeight: 48,
+    color: PDF_COLORS.secondary,
+    weight: 'regular',
+    gapBefore: 0,
+    gapAfter: 12,
+  },
   section: { fontSize: 36, lineHeight: 56, color: PDF_COLORS.text, weight: 'bold', gapBefore: 0, gapAfter: 10 },
   stepTitle: { fontSize: 30, lineHeight: 52, color: PDF_COLORS.text, weight: 'bold', gapBefore: 0, gapAfter: 22 },
-  annotation: { fontSize: 28, lineHeight: 48, color: PDF_COLORS.secondary, weight: 'regular', gapBefore: 6, gapAfter: 6 },
-  footer: { fontSize: PDF_SPEC.footerFontSize, lineHeight: PDF_SPEC.footerLineHeight, color: PDF_COLORS.muted, weight: 'regular', gapBefore: 0, gapAfter: 0 },
+  annotation: {
+    fontSize: 28,
+    lineHeight: 48,
+    color: PDF_COLORS.secondary,
+    weight: 'regular',
+    gapBefore: 6,
+    gapAfter: 6,
+  },
+  footer: {
+    fontSize: PDF_SPEC.footerFontSize,
+    lineHeight: PDF_SPEC.footerLineHeight,
+    color: PDF_COLORS.muted,
+    weight: 'regular',
+    gapBefore: 0,
+    gapAfter: 0,
+  },
 } satisfies Record<string, PdfTextStyle>);

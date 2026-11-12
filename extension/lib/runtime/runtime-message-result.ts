@@ -50,7 +50,6 @@ function isErrorMessage(value: unknown): value is string {
   return isBoundedString(value, RUNTIME_ERROR_LIMIT);
 }
 
-
 function isSafeNonNegativeInteger(value: unknown, maximum = Number.MAX_SAFE_INTEGER): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0 && (value as number) <= maximum;
 }
@@ -59,9 +58,7 @@ function isOneOf<T extends string>(value: unknown, allowed: readonly T[]): value
   return typeof value === 'string' && allowed.includes(value as T);
 }
 
-function isSourcePermissionPreflightSuccess(
-  value: Record<string, unknown>,
-): boolean {
+function isSourcePermissionPreflightSuccess(value: Record<string, unknown>): boolean {
   return (
     value.ok === true &&
     hasOnlyKeys(value, ['ok', 'sourceUrl', 'sourceOrigin', 'permissionPattern']) &&
@@ -134,13 +131,9 @@ export function isRecordingControlResult(value: unknown): value is RecordingCont
   );
 }
 
-
 /** Both preflights share one success shape and differ only in the error codes
  * they may report, so the validator is parameterized by that code set. */
-function isSourcePermissionPreflightResult(
-  value: unknown,
-  codes: readonly string[],
-): boolean {
+function isSourcePermissionPreflightResult(value: unknown, codes: readonly string[]): boolean {
   if (!isRecord(value)) return false;
   if (value.ok === true) return isSourcePermissionPreflightSuccess(value);
   return (
@@ -188,10 +181,7 @@ export function isFocusStepRecaptureSourceResult(value: unknown): value is Focus
 export function isCancelStepRecaptureResult(value: unknown): value is CancelStepRecaptureResult {
   if (!isRecord(value)) return false;
   if (value.ok === true) {
-    return (
-      hasOnlyKeys(value, ['ok', 'status']) &&
-      isOneOf(value.status, ['cancelled', 'already-completed'] as const)
-    );
+    return hasOnlyKeys(value, ['ok', 'status']) && isOneOf(value.status, ['cancelled', 'already-completed'] as const);
   }
   return isFailureResult(value);
 }
@@ -199,10 +189,12 @@ export function isCancelStepRecaptureResult(value: unknown): value is CancelStep
 export function isClickCaptureResult(value: unknown): value is ClickCaptureResult {
   if (!isRecord(value)) return false;
   if (value.ok === true) return hasOnlyKeys(value, ['ok']);
-  return value.ok === false
-    && hasOnlyKeys(value, ['ok', 'error', 'reported'])
-    && isErrorMessage(value.error)
-    && (value.reported === undefined || value.reported === true);
+  return (
+    value.ok === false &&
+    hasOnlyKeys(value, ['ok', 'error', 'reported']) &&
+    isErrorMessage(value.error) &&
+    (value.reported === undefined || value.reported === true)
+  );
 }
 
 export function isStepRecaptureTargetResult(value: unknown): value is StepRecaptureTargetResult {

@@ -20,29 +20,43 @@ function readStored(value: unknown): StoredCollapse | null {
  * to one run: a new recording always starts expanded. `ready` turns true once the saved choice has been read, so
  * the toolbar is never drawn in the wrong shape first.
  */
-export function useToolbarCollapsed(runId: string): { collapsed: boolean; setCollapsed: (next: boolean) => void; ready: boolean } {
+export function useToolbarCollapsed(runId: string): {
+  collapsed: boolean;
+  setCollapsed: (next: boolean) => void;
+  ready: boolean;
+} {
   const [collapsed, setLocal] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let disposed = false;
-    void browser.storage.local.get(RECORDING_TOOLBAR_COLLAPSED_KEY).then((stored) => {
-      if (disposed) return;
-      const saved = readStored(stored?.[RECORDING_TOOLBAR_COLLAPSED_KEY]);
-      setLocal(saved?.runId === runId && saved.collapsed);
-      setReady(true);
-    }).catch(() => {
-      if (!disposed) setReady(true);
-    });
-    return () => { disposed = true; };
+    void browser.storage.local
+      .get(RECORDING_TOOLBAR_COLLAPSED_KEY)
+      .then((stored) => {
+        if (disposed) return;
+        const saved = readStored(stored?.[RECORDING_TOOLBAR_COLLAPSED_KEY]);
+        setLocal(saved?.runId === runId && saved.collapsed);
+        setReady(true);
+      })
+      .catch(() => {
+        if (!disposed) setReady(true);
+      });
+    return () => {
+      disposed = true;
+    };
   }, [runId]);
 
-  const setCollapsed = useCallback((next: boolean) => {
-    setLocal(next);
-    void browser.storage.local.set({ [RECORDING_TOOLBAR_COLLAPSED_KEY]: { runId, collapsed: next } }).catch((error) => {
-      console.warn('[howbeam] failed to save the toolbar collapse state', error);
-    });
-  }, [runId]);
+  const setCollapsed = useCallback(
+    (next: boolean) => {
+      setLocal(next);
+      void browser.storage.local
+        .set({ [RECORDING_TOOLBAR_COLLAPSED_KEY]: { runId, collapsed: next } })
+        .catch((error) => {
+          console.warn('[howbeam] failed to save the toolbar collapse state', error);
+        });
+    },
+    [runId],
+  );
 
   return { collapsed, setCollapsed, ready };
 }

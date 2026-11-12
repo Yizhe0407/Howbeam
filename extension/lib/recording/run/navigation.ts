@@ -53,7 +53,11 @@ export function createNavigation(deps: { actor: RunActor; ports: RunPorts; lifec
     }
   }
 
-  async function commitLive(ctx: OperationContext, runId: string, change: (recording: Recording) => Recording): Promise<void> {
+  async function commitLive(
+    ctx: OperationContext,
+    runId: string,
+    change: (recording: Recording) => Recording,
+  ): Promise<void> {
     const live = liveRecording(ctx.state(), runId);
     if (live) await ctx.commit((state) => withRecording(state, change(live)));
   }
@@ -125,9 +129,11 @@ export function createNavigation(deps: { actor: RunActor; ports: RunPorts; lifec
     if (followTimer != null) clearTimeout(followTimer);
     followTimer = setTimeout(() => {
       followTimer = null;
-      void actor.run((ctx) => followTo(ctx, tabId)).catch((error) => {
-        if (!isSuperseded(error)) console.error('[howbeam] failed to follow the activated tab', error);
-      });
+      void actor
+        .run((ctx) => followTo(ctx, tabId))
+        .catch((error) => {
+          if (!isSuperseded(error)) console.error('[howbeam] failed to follow the activated tab', error);
+        });
     }, FOLLOW_DEBOUNCE_MS);
   }
 
@@ -137,11 +143,14 @@ export function createNavigation(deps: { actor: RunActor; ports: RunPorts; lifec
    */
   function followLoadedTab(tabId: number, recording: Recording): void {
     if (!canFollow(recording) || recording.tabId === tabId) return;
-    void ports.tabs.activeInFocusedWindow().then((focused) => {
-      if (focused?.id === tabId) scheduleFollow(tabId);
-    }).catch((error) => {
-      console.warn('[howbeam] failed to inspect the focused window', error);
-    });
+    void ports.tabs
+      .activeInFocusedWindow()
+      .then((focused) => {
+        if (focused?.id === tabId) scheduleFollow(tabId);
+      })
+      .catch((error) => {
+        console.warn('[howbeam] failed to inspect the focused window', error);
+      });
   }
 
   /**
@@ -183,9 +192,14 @@ export function createNavigation(deps: { actor: RunActor; ports: RunPorts; lifec
         await commitLive(ctx, runId, (live) => withNotice(live, notice('CAPTURE_FAILED', copy)));
         return;
       }
-      const restored = await inject(tabId, '[howbeam] failed to restore snapshot preparation toolbar after navigation:');
+      const restored = await inject(
+        tabId,
+        '[howbeam] failed to restore snapshot preparation toolbar after navigation:',
+      );
       if (restored === 'failed' || restored === 'error-page') {
-        await commitLive(ctx, runId, (live) => withNotice(live, notice('CAPTURE_FAILED', 'background.controlsUnavailableHere')));
+        await commitLive(ctx, runId, (live) =>
+          withNotice(live, notice('CAPTURE_FAILED', 'background.controlsUnavailableHere')),
+        );
       }
       return;
     }
@@ -193,7 +207,11 @@ export function createNavigation(deps: { actor: RunActor; ports: RunPorts; lifec
     const action = getRecordingTabUpdateAction(recording.mode, changeInfo);
     // A captured snapshot belongs to one document: it ends as soon as the page navigates.
     if (action === 'stop-snapshot') {
-      await lifecycle.endWithError(ctx, recording, notice('RECORDING_STOPPED', 'background.stoppedSnapshotPageChanged'));
+      await lifecycle.endWithError(
+        ctx,
+        recording,
+        notice('RECORDING_STOPPED', 'background.stoppedSnapshotPageChanged'),
+      );
       return;
     }
     if (action !== 'reinject') return;
@@ -211,50 +229,63 @@ export function createNavigation(deps: { actor: RunActor; ports: RunPorts; lifec
       await commitLive(ctx, runId, (live) => waiting(live, 'page-failed'));
     } else if (outcome === 'failed') {
       const live = liveRecording(ctx.state(), runId);
-      if (live) await lifecycle.endWithError(ctx, live, notice('RECORDING_STOPPED', 'background.stoppedRecorderUnavailable'));
+      if (live)
+        await lifecycle.endWithError(ctx, live, notice('RECORDING_STOPPED', 'background.stoppedRecorderUnavailable'));
     }
   }
 
   /** tabs.onUpdated, for every tab but a recapture's source tab. */
-  async function handleTabUpdated(tabId: number, changeInfo: Browser.tabs.OnUpdatedInfo, tab: Browser.tabs.Tab): Promise<void> {
+  async function handleTabUpdated(
+    tabId: number,
+    changeInfo: Browser.tabs.OnUpdatedInfo,
+    tab: Browser.tabs.Tab,
+  ): Promise<void> {
     if (changeInfo.status !== 'loading' && changeInfo.status !== 'complete' && !changeInfo.url) return;
     await actor.ready();
-    await actor.run(async (ctx) => {
-      const recording = ctx.state().operation;
-      if (recording.kind !== 'recording') return;
-      if (recording.tabId !== tabId) {
-        if (changeInfo.status === 'complete' && tab.active && isRecordableTabUrl(tab.url)) followLoadedTab(tabId, recording);
-        return;
-      }
-      await onRecordedTabUpdated(ctx, recording, changeInfo, tab);
-    }).catch((error) => {
-      if (!isSuperseded(error)) throw error;
-    });
+    await actor
+      .run(async (ctx) => {
+        const recording = ctx.state().operation;
+        if (recording.kind !== 'recording') return;
+        if (recording.tabId !== tabId) {
+          if (changeInfo.status === 'complete' && tab.active && isRecordableTabUrl(tab.url))
+            followLoadedTab(tabId, recording);
+          return;
+        }
+        await onRecordedTabUpdated(ctx, recording, changeInfo, tab);
+      })
+      .catch((error) => {
+        if (!isSuperseded(error)) throw error;
+      });
   }
 
   /** The all-sites grant arrived: a run waiting for site access may record its page now. */
   async function resumeAfterSiteAccess(): Promise<void> {
     await actor.ready();
-    await actor.run(async (ctx) => {
-      const recording = ctx.state().operation;
-      if (recording.kind !== 'recording' || recording.wait !== 'site-access') return;
-      let url: string | undefined;
-      try {
-        url = (await ports.tabs.get(recording.tabId)).url;
-      } catch {
-        return; // Gone: tabs.onRemoved handles the run.
-      }
-      const reason = await unrecordableReason(url);
-      if (reason) {
-        await commitLive(ctx, recording.runId, (live) => waiting(live, reason));
-        return;
-      }
-      await commitLive(ctx, recording.runId, waitLifted);
-      const outcome = await inject(recording.tabId, '[howbeam] failed to resume the recorder after the permission grant:');
-      if (outcome === 'error-page') await commitLive(ctx, recording.runId, (live) => waiting(live, 'page-failed'));
-    }).catch((error) => {
-      if (!isSuperseded(error)) throw error;
-    });
+    await actor
+      .run(async (ctx) => {
+        const recording = ctx.state().operation;
+        if (recording.kind !== 'recording' || recording.wait !== 'site-access') return;
+        let url: string | undefined;
+        try {
+          url = (await ports.tabs.get(recording.tabId)).url;
+        } catch {
+          return; // Gone: tabs.onRemoved handles the run.
+        }
+        const reason = await unrecordableReason(url);
+        if (reason) {
+          await commitLive(ctx, recording.runId, (live) => waiting(live, reason));
+          return;
+        }
+        await commitLive(ctx, recording.runId, waitLifted);
+        const outcome = await inject(
+          recording.tabId,
+          '[howbeam] failed to resume the recorder after the permission grant:',
+        );
+        if (outcome === 'error-page') await commitLive(ctx, recording.runId, (live) => waiting(live, 'page-failed'));
+      })
+      .catch((error) => {
+        if (!isSuperseded(error)) throw error;
+      });
   }
 
   return {

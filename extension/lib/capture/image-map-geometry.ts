@@ -103,7 +103,7 @@ function pointInPolygon(x: number, y: number, points: Array<readonly [number, nu
   for (const end of points) {
     if (pointOnSegment(x, y, start, end)) return true;
 
-    const crossesScanline = (start[1] > y) !== (end[1] > y);
+    const crossesScanline = start[1] > y !== end[1] > y;
     if (crossesScanline) {
       const intersectionX = start[0] + ((y - start[1]) * (end[0] - start[0])) / (end[1] - start[1]);
       if (x < intersectionX) inside = !inside;
@@ -200,20 +200,11 @@ export function findMapForImage(image: HTMLImageElement): HTMLMapElement | null 
 }
 
 function containsBoundsPoint(bounds: Bounds, x: number, y: number): boolean {
-  return (
-    x >= bounds.x &&
-    y >= bounds.y &&
-    x <= bounds.x + bounds.width &&
-    y <= bounds.y + bounds.height
-  );
+  return x >= bounds.x && y >= bounds.y && x <= bounds.x + bounds.width && y <= bounds.y + bounds.height;
 }
 
 /** Finds an image that actually resolves to the area element's containing map. */
-export function findImageForArea(
-  area: HTMLAreaElement,
-  clientX?: number,
-  clientY?: number,
-): HTMLImageElement | null {
+export function findImageForArea(area: HTMLAreaElement, clientX?: number, clientY?: number): HTMLImageElement | null {
   const map = area.closest('map');
   if (!(map instanceof HTMLMapElement)) return null;
   const images = queryTree(area, 'img').filter(

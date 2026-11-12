@@ -31,7 +31,9 @@ const storage = vi.hoisted(() => {
       listener = next;
       return vi.fn();
     }),
-    emit(state: any) { listener?.(state); },
+    emit(state: any) {
+      listener?.(state);
+    },
   };
 });
 const changes = vi.hoisted(() => ({ listeners: new Set<() => void>() }));
@@ -107,8 +109,12 @@ afterEach(() => {
 describe('專案庫', () => {
   it('永久刪除成功後才 compare-and-clear UI selection', async () => {
     const order: string[] = [];
-    database.deleteProjectPermanently.mockImplementation(async () => { order.push('delete'); });
-    projectActions.clearSelectedProject.mockImplementation(async () => { order.push('clear'); });
+    database.deleteProjectPermanently.mockImplementation(async () => {
+      order.push('delete');
+    });
+    projectActions.clearSelectedProject.mockImplementation(async () => {
+      order.push('clear');
+    });
     render(<LibraryApp />);
 
     fireEvent.click(await screen.findByRole('button', { name: '刪除' }));
@@ -137,15 +143,21 @@ describe('專案庫', () => {
 
   it('初次確認錄製狀態前停用匯入操作', async () => {
     let resolveState!: (state: { operation: null; isRecording: false }) => void;
-    storage.getRecordingState.mockReturnValueOnce(new Promise((resolve) => {
-      resolveState = resolve;
-    }));
+    storage.getRecordingState.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveState = resolve;
+      }),
+    );
     render(<LibraryApp />);
 
     expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(true);
 
-    await act(async () => { resolveState({ operation: null, isRecording: false }); });
-    await waitFor(() => expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false));
+    await act(async () => {
+      resolveState({ operation: null, isRecording: false });
+    });
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false),
+    );
   });
 
   it('專案庫只顯示必要的專案資訊', async () => {
@@ -182,7 +194,7 @@ describe('專案庫', () => {
 
   it('即時訂閱全域 operation lock，避免錄製中修改專案庫', async () => {
     render(<LibraryApp />);
-    const deleteButton = await screen.findByRole('button', { name: '刪除' }) as HTMLButtonElement;
+    const deleteButton = (await screen.findByRole('button', { name: '刪除' })) as HTMLButtonElement;
     expect(deleteButton.disabled).toBe(false);
 
     storage.emit({ operation: 'recording', isRecording: true });
@@ -192,13 +204,11 @@ describe('專案庫', () => {
   });
 
   it('複製後在背景更新清單，不以載入畫面取代現有卡片', async () => {
-    let resolveRefresh!: (projects: typeof project[]) => void;
-    const pendingRefresh = new Promise<typeof project[]>((resolve) => {
+    let resolveRefresh!: (projects: (typeof project)[]) => void;
+    const pendingRefresh = new Promise<(typeof project)[]>((resolve) => {
       resolveRefresh = resolve;
     });
-    database.getProjectSummaries
-      .mockResolvedValueOnce([project])
-      .mockReturnValueOnce(pendingRefresh);
+    database.getProjectSummaries.mockResolvedValueOnce([project]).mockReturnValueOnce(pendingRefresh);
     render(<LibraryApp />);
 
     fireEvent.click(await screen.findByRole('button', { name: '建立副本' }));
@@ -207,7 +217,9 @@ describe('專案庫', () => {
     expect(screen.getByText(project.title)).toBeTruthy();
     expect(screen.queryByText('讀取專案庫…')).toBeNull();
 
-    await act(async () => { resolveRefresh([]); });
+    await act(async () => {
+      resolveRefresh([]);
+    });
     await waitFor(() => expect(screen.queryByText(project.title)).toBeNull());
   });
 
@@ -216,7 +228,9 @@ describe('專案庫', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '安全教學' }));
 
-    await waitFor(() => expect(projectActions.openSelectedProjectInEditor).toHaveBeenCalledWith('project-1', { inPlace: true }));
+    await waitFor(() =>
+      expect(projectActions.openSelectedProjectInEditor).toHaveBeenCalledWith('project-1', { inPlace: true }),
+    );
     expect(database.updateProject).not.toHaveBeenCalled();
   });
 
@@ -243,13 +257,15 @@ describe('專案庫', () => {
     expect(screen.getByText('可再匯入 Howbeam 繼續編輯。含未遮罩的原始截圖，請勿公開分享。')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '下載 .howbeam' }));
 
-    await waitFor(() => expect(archive.exportProjectArchive).toHaveBeenCalledWith(steps, {
-      metadata: {
-        title: project.title,
-        description: project.description,
-        sections: project.sections,
-      },
-    }));
+    await waitFor(() =>
+      expect(archive.exportProjectArchive).toHaveBeenCalledWith(steps, {
+        metadata: {
+          title: project.title,
+          description: project.description,
+          sections: project.sections,
+        },
+      }),
+    );
     expect(downloads.download).toHaveBeenCalledWith({
       url: 'blob:archive',
       filename: '安全教學.howbeam',
@@ -282,7 +298,9 @@ describe('專案庫', () => {
     render(<LibraryApp />);
 
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');
-    await waitFor(() => expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false));
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false),
+    );
     fireEvent.change(input!, {
       target: { files: [new File(['broken'], 'broken.howbeam')] },
     });
@@ -301,7 +319,9 @@ describe('專案庫', () => {
     render(<LibraryApp />);
 
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');
-    await waitFor(() => expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false));
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false),
+    );
     fireEvent.change(input!, { target: { files: [new File(['broken'], 'broken.howbeam')] } });
 
     const alert = (await screen.findByRole('alert')).textContent ?? '';
@@ -332,9 +352,11 @@ describe('專案庫', () => {
 
   it('同一事件迴圈內不會啟動兩個重疊的專案庫寫入', async () => {
     let resolveDuplicate!: () => void;
-    database.duplicateProject.mockReturnValue(new Promise<void>((resolve) => {
-      resolveDuplicate = resolve;
-    }));
+    database.duplicateProject.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveDuplicate = resolve;
+      }),
+    );
     render(<LibraryApp />);
 
     const duplicate = await screen.findByRole('button', { name: '建立副本' });
@@ -342,7 +364,9 @@ describe('專案庫', () => {
     fireEvent.click(duplicate);
 
     expect(database.duplicateProject).toHaveBeenCalledOnce();
-    await act(async () => { resolveDuplicate(); });
+    await act(async () => {
+      resolveDuplicate();
+    });
   });
 
   it('匯入 v2 可編輯檔案時由 DB 用同一份 ID map 複製章節 boundary', async () => {
@@ -361,7 +385,9 @@ describe('專案庫', () => {
 
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');
     expect(input).toBeTruthy();
-    await waitFor(() => expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false));
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: '匯入' }) as HTMLButtonElement).disabled).toBe(false),
+    );
     const file = new File(['archive'], 'fallback.howbeam', { type: 'application/vnd.howbeam.project+zip' });
     fireEvent.change(input!, { target: { files: [file] } });
 
@@ -373,5 +399,4 @@ describe('專案庫', () => {
     );
     expect(projectActions.openSelectedProjectInEditor).toHaveBeenCalledWith('imported-project', { inPlace: true });
   });
-
 });

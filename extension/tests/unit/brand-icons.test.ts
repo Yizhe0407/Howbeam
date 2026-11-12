@@ -1,11 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import {
-  ACTION_ICON_SIZES,
-  BRAND_ICONS,
-  MANIFEST_ICON_SIZES,
-  actionIconPaths,
-} from '@/lib/shared/brand-icons';
+import { ACTION_ICON_SIZES, BRAND_ICONS, MANIFEST_ICON_SIZES, actionIconPaths } from '@/lib/shared/brand-icons';
 import { composeBrandIcon, loadBrandArtwork, renderBrandIcon } from '@/modules/brand-icons';
 import { firstItems, itemAt } from '../setup/item-at';
 
@@ -15,7 +10,6 @@ function pngSize(png: Uint8Array): { width: number; height: number } {
   const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
   return { width: view.getUint32(16), height: view.getUint32(20) };
 }
-
 
 describe('brand icon table', () => {
   it('covers every manifest size and the toolbar recording variants exactly once', () => {
@@ -46,7 +40,12 @@ describe('brand icon rendering', () => {
     const store = BRAND_ICONS.find((icon) => icon.size === 128)!;
     const svg = composeBrandIcon(store, artwork);
     // 40 artwork units fill 96px, so the 128px canvas spans 40 × 128 / 96 units.
-    const [x, y, width, height] = firstItems(itemAt(/viewBox="([^"]+)"/.exec(svg)!, 1).split(' ').map(Number), 4);
+    const [x, y, width, height] = firstItems(
+      itemAt(/viewBox="([^"]+)"/.exec(svg)!, 1)
+        .split(' ')
+        .map(Number),
+      4,
+    );
     expect(width).toBeCloseTo((40 * 128) / 96);
     expect(height).toBeCloseTo((40 * 128) / 96);
     // Centred: the margin is split evenly on both sides.
@@ -61,7 +60,8 @@ describe('brand icon rendering', () => {
   });
 
   it('renders each icon as a PNG of its declared size', () => {
-    for (const icon of BRAND_ICONS) expect(pngSize(renderBrandIcon(icon, artwork))).toEqual({ width: icon.size, height: icon.size });
+    for (const icon of BRAND_ICONS)
+      expect(pngSize(renderBrandIcon(icon, artwork))).toEqual({ width: icon.size, height: icon.size });
   });
 
   it('rejects artwork drawn on a different canvas instead of silently misplacing it', () => {

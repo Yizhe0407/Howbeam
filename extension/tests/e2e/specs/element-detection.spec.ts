@@ -70,9 +70,7 @@ async function clickRect(page: AppPage, rect: ProbeRect): Promise<void> {
 }
 
 async function expectTopHit(page: AppPage, rect: ProbeRect, id: string): Promise<void> {
-  await expect
-    .poll(() => page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.id, centerOf(rect)))
-    .toBe(id);
+  await expect.poll(() => page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.id, centerOf(rect))).toBe(id);
 }
 
 function expectBoundsNear(bounds: ProbeRect | null, expected: ProbeRect): void {
@@ -85,14 +83,8 @@ function expectBoundsNear(bounds: ProbeRect | null, expected: ProbeRect): void {
 function fitSnapshotPreviewBounds(bounds: ProbeRect, viewport: ProbeRect): ProbeRect {
   const left = Math.max(viewport.x, bounds.x - SNAPSHOT_PREVIEW_PADDING);
   const top = Math.max(viewport.y, bounds.y - SNAPSHOT_PREVIEW_PADDING);
-  const right = Math.min(
-    viewport.x + viewport.width,
-    bounds.x + bounds.width + SNAPSHOT_PREVIEW_PADDING,
-  );
-  const bottom = Math.min(
-    viewport.y + viewport.height,
-    bounds.y + bounds.height + SNAPSHOT_PREVIEW_PADDING,
-  );
+  const right = Math.min(viewport.x + viewport.width, bounds.x + bounds.width + SNAPSHOT_PREVIEW_PADDING);
+  const bottom = Math.min(viewport.y + viewport.height, bounds.y + bounds.height + SNAPSHOT_PREVIEW_PADDING);
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
@@ -172,10 +164,12 @@ test.describe('element detection', () => {
     await clickRect(appPage, area);
 
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
-    await expect.poll(() => readCounters(appPage)).toEqual({
-      ...ZERO_COUNTERS,
-      imageMapClicks: 1,
-    });
+    await expect
+      .poll(() => readCounters(appPage))
+      .toEqual({
+        ...ZERO_COUNTERS,
+        imageMapClicks: 1,
+      });
     const step = itemAt(await readSteps(popupPage), 0);
     expect(step.description).toBe('開啟連結');
     expectBoundsNear(step.bounds, area);
@@ -228,10 +222,12 @@ test.describe('element detection', () => {
     await clickRect(appPage, coveredButton);
 
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
-    await expect.poll(() => readCounters(appPage)).toEqual({
-      ...ZERO_COUNTERS,
-      activationOverlayClicks: 1,
-    });
+    await expect
+      .poll(() => readCounters(appPage))
+      .toEqual({
+        ...ZERO_COUNTERS,
+        activationOverlayClicks: 1,
+      });
     const step = itemAt(await readSteps(popupPage), 0);
     expect(step.description).toBe('點擊互動元素');
     expectBoundsNear(step.bounds, overlay);
@@ -447,10 +443,12 @@ test.describe('element detection', () => {
     await clickRect(appPage, coveredButton);
 
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
-    await expect.poll(() => readCounters(appPage)).toEqual({
-      ...ZERO_COUNTERS,
-      paintedBackdropClicks: 1,
-    });
+    await expect
+      .poll(() => readCounters(appPage))
+      .toEqual({
+        ...ZERO_COUNTERS,
+        paintedBackdropClicks: 1,
+      });
     const step = itemAt(await readSteps(popupPage), 0);
     expect(step.description).toBe('標記頁面區域');
     expectBoundsNear(step.bounds, backdrop);

@@ -15,9 +15,7 @@ describe('injectRecorderScript', () => {
 
   it('falls back to the top frame when a child frame rejects injection', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const execute = vi.fn()
-      .mockRejectedValueOnce(new Error('missing child host permission'))
-      .mockResolvedValueOnce([]);
+    const execute = vi.fn().mockRejectedValueOnce(new Error('missing child host permission')).mockResolvedValueOnce([]);
 
     await injectRecorderScript(execute, 7, true);
 

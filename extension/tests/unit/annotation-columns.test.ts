@@ -23,10 +23,14 @@ describe('balancedColumnHeight', () => {
 
 describe('chooseAnnotationColumns', () => {
   /** `lengths` in characters, wrapped into columns of 30, 14 and 9 characters. */
-  const layout = (lengths: number[]) => chooseAnnotationColumns(
-    (columns) => lengths.map((length) => Array.from({ length: Math.max(1, Math.ceil(length / itemAt([30, 14, 9], columns - 1))) }, () => 'line')),
-    (lines) => lines,
-  );
+  const layout = (lengths: number[]) =>
+    chooseAnnotationColumns(
+      (columns) =>
+        lengths.map((length) =>
+          Array.from({ length: Math.max(1, Math.ceil(length / itemAt([30, 14, 9], columns - 1))) }, () => 'line'),
+        ),
+      (lines) => lines,
+    );
   const choose = (lengths: number[]) => layout(lengths).columns;
   const short = (count: number) => Array.from({ length: count }, () => 4);
 

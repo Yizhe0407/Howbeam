@@ -113,7 +113,9 @@ test.describe('snapshot recording', () => {
 
     await shield.locator('body').hover({ position: point });
     await expect.poll(() => shield.evaluate(() => document.hasFocus())).toBe(true);
-    await expect.poll(() => appPage.evaluate(() => document.activeElement?.hasAttribute('data-howbeam-snapshot-shield'))).toBe(true);
+    await expect
+      .poll(() => appPage.evaluate(() => document.activeElement?.hasAttribute('data-howbeam-snapshot-shield')))
+      .toBe(true);
     await expect(shield.locator('.snapshot-box--preview')).toBeVisible();
 
     await clickSnapshotTarget(appPage, point);
@@ -201,7 +203,7 @@ test.describe('snapshot recording', () => {
     await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(1);
 
     // The undo-last-capture keyboard shortcut reaches the background the same way.
-    const undone = await sendRecordingControl(popupPage, 'UNDO_LAST_CAPTURE') as { ok: boolean; undoToken?: string };
+    const undone = (await sendRecordingControl(popupPage, 'UNDO_LAST_CAPTURE')) as { ok: boolean; undoToken?: string };
     expect(undone.ok).toBe(true);
     await expect(shield.locator('.snapshot-annotation__frame')).toHaveCount(0);
     await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(0);
@@ -228,13 +230,16 @@ test.describe('snapshot recording', () => {
     const shield = await getSnapshotFrame(appPage);
     await clickSnapshotTarget(appPage, await targetCenter(appPage, '#plain-text'));
     await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(1);
-    const readToolbarCorner = () => popupPage.evaluate(async () => {
-      const extensionApi = (globalThis as unknown as {
-        chrome: { storage: { local: { get(key: string): Promise<Record<string, unknown>> } } };
-      }).chrome;
-      const result = await extensionApi.storage.local.get('howbeam:recordingToolbarCorner');
-      return result['howbeam:recordingToolbarCorner'];
-    });
+    const readToolbarCorner = () =>
+      popupPage.evaluate(async () => {
+        const extensionApi = (
+          globalThis as unknown as {
+            chrome: { storage: { local: { get(key: string): Promise<Record<string, unknown>> } } };
+          }
+        ).chrome;
+        const result = await extensionApi.storage.local.get('howbeam:recordingToolbarCorner');
+        return result['howbeam:recordingToolbarCorner'];
+      });
 
     const positionControl = shield.getByRole('button', { name: /拖曳移動/ });
     const handle = await positionControl.boundingBox();
@@ -244,13 +249,17 @@ test.describe('snapshot recording', () => {
     await appPage.mouse.down();
     await appPage.mouse.move(40, viewportHeight - 40, { steps: 6 });
     await appPage.mouse.up();
-    await expect.poll(() => shield.locator('.hb-toolbar').evaluate((element) => {
-      const rect = element.getBoundingClientRect();
-      return {
-        left: Math.round(rect.left),
-        bottom: Math.round(window.innerHeight - rect.bottom),
-      };
-    })).toEqual({ left: 16, bottom: 16 });
+    await expect
+      .poll(() =>
+        shield.locator('.hb-toolbar').evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            left: Math.round(rect.left),
+            bottom: Math.round(window.innerHeight - rect.bottom),
+          };
+        }),
+      )
+      .toEqual({ left: 16, bottom: 16 });
     await expect.poll(readToolbarCorner).toBe('bottom-left');
 
     await shield.getByRole('button', { name: '放棄這次錄製' }).click();
@@ -291,10 +300,7 @@ test.describe('snapshot recording', () => {
     await expect.poll(async () => (await readRecordingState(popupPage)).phase).toBe('recording');
 
     const secondShield = await getSnapshotFrame(appPage);
-    await clickSnapshotTarget(
-      appPage,
-      await targetCenter(appPage, 'h1'),
-    );
+    await clickSnapshotTarget(appPage, await targetCenter(appPage, 'h1'));
     await expect.poll(async () => (await readRecordingState(popupPage)).itemCount).toBe(1);
 
     const steps = await readSteps(popupPage);

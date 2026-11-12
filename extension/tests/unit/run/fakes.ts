@@ -11,13 +11,38 @@ export const PAGE_URL = 'https://site.example/page';
 export const EXTENSION_ORIGIN = 'chrome-extension://howbeam/';
 
 export function tab(overrides: Partial<Browser.tabs.Tab> = {}): Browser.tabs.Tab {
-  return { id: 4, windowId: 1, url: PAGE_URL, active: true, index: 0, pinned: false, highlighted: true, incognito: false, selected: true, discarded: false, autoDiscardable: true, groupId: -1, frozen: false, ...overrides } as Browser.tabs.Tab;
+  return {
+    id: 4,
+    windowId: 1,
+    url: PAGE_URL,
+    active: true,
+    index: 0,
+    pinned: false,
+    highlighted: true,
+    incognito: false,
+    selected: true,
+    discarded: false,
+    autoDiscardable: true,
+    groupId: -1,
+    frozen: false,
+    ...overrides,
+  } as Browser.tabs.Tab;
 }
 
 export function project(overrides: Partial<Project> = {}): Project {
   return {
-    id: 'project-1', title: '教學', description: '', sections: [], createdAt: 0, updatedAt: 0,
-    contentRevision: 0, stepEditRevision: 0, metadataRevision: 0, stepCount: 0, entryCount: 0, storageBytes: 0,
+    id: 'project-1',
+    title: '教學',
+    description: '',
+    sections: [],
+    createdAt: 0,
+    updatedAt: 0,
+    contentRevision: 0,
+    stepEditRevision: 0,
+    metadataRevision: 0,
+    stepCount: 0,
+    entryCount: 0,
+    storageBytes: 0,
     ...overrides,
   };
 }
@@ -55,7 +80,8 @@ export function fakePorts() {
         if (index !== -1) steps.splice(index, 1);
       }),
       deleteForRun: vi.fn(async (_sessionId: string, runId: string) => {
-        for (let index = steps.length - 1; index >= 0; index -= 1) if (steps[index]!.runId === runId) steps.splice(index, 1);
+        for (let index = steps.length - 1; index >= 0; index -= 1)
+          if (steps[index]!.runId === runId) steps.splice(index, 1);
       }),
       discardPendingAnchor: vi.fn<RunPorts['steps']['discardPendingAnchor']>(async () => false),
     },
@@ -82,7 +108,12 @@ export function fakePorts() {
 
 export function fakeActor(stored: RecordingState = makeRecordingState()) {
   const saved: RecordingState[] = [];
-  const actor = createRunActor({ load: async () => stored, save: async (state) => { saved.push(state); } });
+  const actor = createRunActor({
+    load: async () => stored,
+    save: async (state) => {
+      saved.push(state);
+    },
+  });
   return { actor, saved, gate: createRecorderGate(50) };
 }
 
@@ -128,5 +159,18 @@ export async function wiredRun(stored: RecordingState = makeRecordingState()) {
       });
     });
   }
-  return { lifecycle, capture, undo, snapshot, navigation, recorderReports, ports, steps, actor, saved, gate, state: () => toRecordingState(actor.state()) };
+  return {
+    lifecycle,
+    capture,
+    undo,
+    snapshot,
+    navigation,
+    recorderReports,
+    ports,
+    steps,
+    actor,
+    saved,
+    gate,
+    state: () => toRecordingState(actor.state()),
+  };
 }

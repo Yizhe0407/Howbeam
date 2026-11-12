@@ -1,5 +1,11 @@
 import type { Bounds } from '../storage/models';
-import { BADGE_RADIUS, CALLOUT_SPACING, MARKER_RADIUS, type Annotation, type AnnotationLayout } from './annotation-contract';
+import {
+  BADGE_RADIUS,
+  CALLOUT_SPACING,
+  MARKER_RADIUS,
+  type Annotation,
+  type AnnotationLayout,
+} from './annotation-contract';
 import {
   coincident,
   fitBoundsInViewport,
@@ -96,9 +102,14 @@ export function layoutWithProvisional(
       join(representative, item);
     }
   }
-  forEachNearbyPair(representatives, (item) => item.annotation.bounds, 0, (a, b) => {
-    if (coincident(a.annotation.bounds, b.annotation.bounds)) join(a, b);
-  });
+  forEachNearbyPair(
+    representatives,
+    (item) => item.annotation.bounds,
+    0,
+    (a, b) => {
+      if (coincident(a.annotation.bounds, b.annotation.bounds)) join(a, b);
+    },
+  );
 
   // Map order follows each group's first member, so singles and groups come
   // out in input order and the output stays deterministic.
@@ -197,9 +208,7 @@ export function layoutWithProvisional(
       // order (and with it crossing-freeness) survives.
       const crossExtent = laneIsVertical ? viewportWidth : viewportHeight;
       const clusterStart = laneIsVertical ? groupBounds.x : groupBounds.y;
-      const clusterEnd = laneIsVertical
-        ? groupBounds.x + groupBounds.width
-        : groupBounds.y + groupBounds.height;
+      const clusterEnd = laneIsVertical ? groupBounds.x + groupBounds.width : groupBounds.y + groupBounds.height;
       const laneOutward = crossExtent - clusterEnd >= clusterStart;
       const laneBase = laneOutward
         ? Math.min(crossExtent - BADGE_RADIUS, clusterEnd + CALLOUT_GAP + BADGE_RADIUS)
@@ -209,10 +218,7 @@ export function layoutWithProvisional(
           laneIsVertical ? { x: cross, y: coordinate } : { x: coordinate, y: cross },
         );
       const collisions = (points: Point[]) =>
-        points.reduce(
-          (sum, point) => sum + (badgeOverlaps(point, badgeIndex, obstacleIndex, ownMarkers) ? 1 : 0),
-          0,
-        );
+        points.reduce((sum, point) => sum + (badgeOverlaps(point, badgeIndex, obstacleIndex, ownMarkers) ? 1 : 0), 0);
       slots = toPoints(laneBase);
       let bestCollisions = collisions(slots);
       for (let attempt = 1; attempt <= LANE_NUDGE_ATTEMPTS && bestCollisions > 0; attempt++) {

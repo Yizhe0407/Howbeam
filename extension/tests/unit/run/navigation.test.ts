@@ -4,7 +4,12 @@ import { makeRecordingState } from '../../setup/recording-state';
 import { tab, wiredRun } from './fakes';
 
 const stepsRun = makeRecordingState({
-  operation: 'recording', isRecording: true, phase: 'recording', sessionId: 'project-1', tabId: 4, runId: 'run-1',
+  operation: 'recording',
+  isRecording: true,
+  phase: 'recording',
+  sessionId: 'project-1',
+  tabId: 4,
+  runId: 'run-1',
 });
 const loaded = { status: 'complete' as const };
 
@@ -23,7 +28,10 @@ describe('a navigation in the recorded tab', () => {
   it('waits out a browser page and resumes on the next web page', async () => {
     const run = await wiredRun(stepsRun);
     await run.navigation.handleTabUpdated(4, loaded, tab({ url: 'chrome://newtab/' }));
-    expect(run.state()).toMatchObject({ isRecording: true, recoverableError: { code: 'RECORDING_WAITING_RESTRICTED_PAGE' } });
+    expect(run.state()).toMatchObject({
+      isRecording: true,
+      recoverableError: { code: 'RECORDING_WAITING_RESTRICTED_PAGE' },
+    });
     expect(run.ports.recorder.inject).not.toHaveBeenCalled();
     await run.navigation.handleTabUpdated(4, loaded, tab());
     expect(run.state()).toMatchObject({ error: null, recoverableError: null });
@@ -50,9 +58,19 @@ describe('a navigation in the recorded tab', () => {
   });
 
   it('ends a captured snapshot as soon as its page starts to navigate', async () => {
-    const run = await wiredRun({ ...stepsRun, mode: 'snapshot', groupAnchorId: 'a', snapshotViewport: { width: 1, height: 1, scrollX: 0, scrollY: 0 }, snapshotDevicePixelRatio: 1 });
+    const run = await wiredRun({
+      ...stepsRun,
+      mode: 'snapshot',
+      groupAnchorId: 'a',
+      snapshotViewport: { width: 1, height: 1, scrollX: 0, scrollY: 0 },
+      snapshotDevicePixelRatio: 1,
+    });
     await run.navigation.handleTabUpdated(4, { status: 'loading' }, tab());
-    expect(run.state()).toMatchObject({ isRecording: false, phase: 'error', error: 'background.stoppedSnapshotPageChanged' });
+    expect(run.state()).toMatchObject({
+      isRecording: false,
+      phase: 'error',
+      error: 'background.stoppedSnapshotPageChanged',
+    });
   });
 });
 
@@ -99,4 +117,3 @@ describe('following the user', () => {
     expect(run.state()).toMatchObject({ isRecording: false, recoverableError: { code: 'RECORDED_TAB_CLOSED' } });
   });
 });
-

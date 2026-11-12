@@ -5,7 +5,21 @@ import {
   type PendingUndoAction,
   type UndoAction,
 } from '@/lib/editor/editor-app-model';
-import { addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, ProjectContentConflictError, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically, type ProjectStructureMutationResult, type ProjectStructureSnapshot } from '@/lib/storage/project-structure';
+import {
+  addProjectSectionAtomically,
+  deleteProjectAnnotationAtomically,
+  deleteProjectEntriesAtomically,
+  deleteProjectSectionAtomically,
+  getProjectStructureSnapshot,
+  ProjectContentConflictError,
+  renameProjectSectionAtomically,
+  reorderProjectAnnotationsAtomically,
+  reorderProjectEntriesAtomically,
+  restoreProjectAnnotationAtomically,
+  restoreProjectEntriesAtomically,
+  type ProjectStructureMutationResult,
+  type ProjectStructureSnapshot,
+} from '@/lib/storage/project-structure';
 import { entryId, type Project, type Step, type StepEntry } from '@/lib/storage/models';
 import { sectionsInRows, type ProjectSection, type RailRow } from '@/lib/storage/project-sections';
 import { t, type Messages } from '@/lib/shared/i18n';
@@ -50,7 +64,8 @@ interface UseProjectMutationsOptions {
 /** Puts items in the order of `ids`; items it doesn't name keep their relative place at the end. */
 function inOrder<T>(ids: readonly string[], idOf: (item: T) => string): (items: T[]) => T[] {
   const rank = new Map(ids.map((id, index) => [id, index]));
-  return (items) => [...items].sort((left, right) => (rank.get(idOf(left)) ?? ids.length) - (rank.get(idOf(right)) ?? ids.length));
+  return (items) =>
+    [...items].sort((left, right) => (rank.get(idOf(left)) ?? ids.length) - (rank.get(idOf(right)) ?? ids.length));
 }
 
 /**
@@ -166,8 +181,8 @@ export function useProjectMutations({
       }),
       mutate: async (snapshot, projectId) => {
         if (
-          !equalIds(snapshot.entryIds, previousEntryIds)
-          || !equalIds(snapshot.project.sections.map((section) => section.id).sort(), previousSectionIds)
+          !equalIds(snapshot.entryIds, previousEntryIds) ||
+          !equalIds(snapshot.project.sections.map((section) => section.id).sort(), previousSectionIds)
         ) {
           throw new ProjectContentConflictError(projectId, expectedRevision, snapshot.project.contentRevision);
         }
@@ -182,12 +197,13 @@ export function useProjectMutations({
         return {
           message: t().editor.mutations.reorderSteps.done,
           expectedRevision: result.project.contentRevision,
-          restore: () => reorderProjectEntriesAtomically(
-            projectId,
-            result.previousEntryIds,
-            result.previousSections,
-            result.project.contentRevision,
-          ),
+          restore: () =>
+            reorderProjectEntriesAtomically(
+              projectId,
+              result.previousEntryIds,
+              result.previousSections,
+              result.project.contentRevision,
+            ),
         };
       },
     });
@@ -203,19 +219,30 @@ export function useProjectMutations({
     await runProjectMutation({
       operation: 'reorderAnnotations',
       optimistic: (shown) => {
-        const order = inOrder(reordered.map((annotation) => annotation.id), (annotation: Step) => annotation.id);
+        const order = inOrder(
+          reordered.map((annotation) => annotation.id),
+          (annotation: Step) => annotation.id,
+        );
         return {
           ...shown,
-          entries: shown.entries.map((entry) => (
-            entry.kind === 'group' && entry.anchor.id === anchorId ? { ...entry, annotations: order(entry.annotations) } : entry
-          )),
+          entries: shown.entries.map((entry) =>
+            entry.kind === 'group' && entry.anchor.id === anchorId
+              ? { ...entry, annotations: order(entry.annotations) }
+              : entry,
+          ),
         };
       },
       mutate: async (snapshot, projectId) => {
         const freshGroup = snapshot.entries.find(
           (entry): entry is GroupEntry => entry.kind === 'group' && entry.anchor.id === anchorId,
         );
-        if (!freshGroup || !equalIds(freshGroup.annotations.map((annotation) => annotation.id), previousAnnotationIds)) {
+        if (
+          !freshGroup ||
+          !equalIds(
+            freshGroup.annotations.map((annotation) => annotation.id),
+            previousAnnotationIds,
+          )
+        ) {
           throw new ProjectContentConflictError(
             projectId,
             project?.contentRevision ?? snapshot.project.contentRevision,
@@ -233,12 +260,13 @@ export function useProjectMutations({
           message: t().editor.mutations.reorderAnnotations.done,
           expectedRevision: result.project.contentRevision,
           restoreSelectionId: anchorId,
-          restore: () => reorderProjectAnnotationsAtomically(
-            projectId,
-            anchorId,
-            result.previousAnnotationIds,
-            result.project.contentRevision,
-          ),
+          restore: () =>
+            reorderProjectAnnotationsAtomically(
+              projectId,
+              anchorId,
+              result.previousAnnotationIds,
+              result.project.contentRevision,
+            ),
         };
       },
     });
@@ -263,13 +291,14 @@ export function useProjectMutations({
           message: t().editor.mutations.deleteStep.done(deletingIndex + 1),
           expectedRevision: result.project.contentRevision,
           restoreSelectionId: currentEntryId,
-          restore: () => restoreProjectEntriesAtomically(
-            projectId,
-            [deletingEntry],
-            snapshot.entryIds,
-            snapshot.project.sections,
-            result.project.contentRevision,
-          ),
+          restore: () =>
+            restoreProjectEntriesAtomically(
+              projectId,
+              [deletingEntry],
+              snapshot.entryIds,
+              snapshot.project.sections,
+              result.project.contentRevision,
+            ),
         };
       },
     });
@@ -281,11 +310,12 @@ export function useProjectMutations({
     const groupId = step.groupId;
     if (!groupId) return;
     const annotationIndex = currentEntry.annotations.findIndex((annotation) => annotation.id === step.id);
-    const withoutMarker = (shown: StepEntry[]) => shown.flatMap((entry) => {
-      if (entry.kind !== 'group' || entry.anchor.id !== groupId) return [entry];
-      const remaining = entry.annotations.filter((annotation) => annotation.id !== step.id);
-      return remaining.length === 0 ? [] : [{ ...entry, annotations: remaining }];
-    });
+    const withoutMarker = (shown: StepEntry[]) =>
+      shown.flatMap((entry) => {
+        if (entry.kind !== 'group' || entry.anchor.id !== groupId) return [entry];
+        const remaining = entry.annotations.filter((annotation) => annotation.id !== step.id);
+        return remaining.length === 0 ? [] : [{ ...entry, annotations: remaining }];
+      });
     await runProjectMutation({
       operation: 'deleteAnnotation',
       optimistic: (shown) => ({ ...shown, entries: withoutMarker(shown.entries) }),
@@ -306,24 +336,28 @@ export function useProjectMutations({
         const { deletedAnnotation, deletedEntry } = result;
         const restoredIndex = result.previousAnnotationIds.indexOf(step.id);
         return {
-          message: t().editor.mutations.deleteAnnotation.done((restoredIndex >= 0 ? restoredIndex : annotationIndex) + 1),
+          message: t().editor.mutations.deleteAnnotation.done(
+            (restoredIndex >= 0 ? restoredIndex : annotationIndex) + 1,
+          ),
           expectedRevision: result.project.contentRevision,
           restoreSelectionId: groupId,
           restore: deletedEntry
-            ? () => restoreProjectEntriesAtomically(
-                projectId,
-                [deletedEntry],
-                result.previousEntryIds,
-                result.previousSections,
-                result.project.contentRevision,
-              )
-            : () => restoreProjectAnnotationAtomically(
-                projectId,
-                groupId,
-                deletedAnnotation,
-                result.previousAnnotationIds,
-                result.project.contentRevision,
-              ),
+            ? () =>
+                restoreProjectEntriesAtomically(
+                  projectId,
+                  [deletedEntry],
+                  result.previousEntryIds,
+                  result.previousSections,
+                  result.project.contentRevision,
+                )
+            : () =>
+                restoreProjectAnnotationAtomically(
+                  projectId,
+                  groupId,
+                  deletedAnnotation,
+                  result.previousAnnotationIds,
+                  result.project.contentRevision,
+                ),
         };
       },
     });
@@ -346,11 +380,7 @@ export function useProjectMutations({
         return {
           message: t().editor.mutations.addSection.done(added.title),
           expectedRevision: result.project.contentRevision,
-          restore: () => deleteProjectSectionAtomically(
-            projectId,
-            added.id,
-            result.project.contentRevision,
-          ),
+          restore: () => deleteProjectSectionAtomically(projectId, added.id, result.project.contentRevision),
         };
       },
     });
@@ -361,12 +391,9 @@ export function useProjectMutations({
       operation: 'renameSection',
       rethrow: true,
       mutate: async (snapshot, projectId) => {
-        adoptCommitted(await renameProjectSectionAtomically(
-          projectId,
-          sectionId,
-          title,
-          snapshot.project.contentRevision,
-        ));
+        adoptCommitted(
+          await renameProjectSectionAtomically(projectId, sectionId, title, snapshot.project.contentRevision),
+        );
       },
     });
   }
@@ -376,11 +403,7 @@ export function useProjectMutations({
       operation: 'deleteSection',
       mutate: async (snapshot, projectId) => {
         const deletedSection = snapshot.project.sections.find((section) => section.id === sectionId);
-        const result = await deleteProjectSectionAtomically(
-          projectId,
-          sectionId,
-          snapshot.project.contentRevision,
-        );
+        const result = await deleteProjectSectionAtomically(projectId, sectionId, snapshot.project.contentRevision);
         adoptCommitted(result);
         if (!deletedSection) return;
         // A section's display position derives from its start entry, so re-creating it with the
@@ -388,12 +411,13 @@ export function useProjectMutations({
         return {
           message: t().editor.mutations.deleteSection.done(deletedSection.title),
           expectedRevision: result.project.contentRevision,
-          restore: () => addProjectSectionAtomically(
-            projectId,
-            deletedSection.startEntryId,
-            deletedSection.title,
-            result.project.contentRevision,
-          ),
+          restore: () =>
+            addProjectSectionAtomically(
+              projectId,
+              deletedSection.startEntryId,
+              deletedSection.title,
+              result.project.contentRevision,
+            ),
         };
       },
     });
@@ -427,9 +451,7 @@ export function useProjectMutations({
         console.error('[howbeam] failed to undo editor operation', undoError);
         clearUndo();
         setOperationError(
-          undoError instanceof ProjectContentConflictError
-            ? t().editor.undo.conflict
-            : t().editor.undo.failed,
+          undoError instanceof ProjectContentConflictError ? t().editor.undo.conflict : t().editor.undo.failed,
         );
       }
     });

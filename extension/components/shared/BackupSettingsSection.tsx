@@ -10,7 +10,10 @@ const MAX_NAMED_FAILURES = 3;
 /** The failed projects' titles, capped so one broken folder cannot fill the card. */
 function failedNames(run: { failedTitles?: string[] }): string {
   const titles = run.failedTitles ?? [];
-  const shown = titles.slice(0, MAX_NAMED_FAILURES).map((title) => `“${title}”`).join(', ');
+  const shown = titles
+    .slice(0, MAX_NAMED_FAILURES)
+    .map((title) => `“${title}”`)
+    .join(', ');
   return titles.length > MAX_NAMED_FAILURES ? `${shown}…` : shown;
 }
 
@@ -31,9 +34,14 @@ export default function BackupSettingsSection() {
       : copy.lastRun(lastRunTime, lastRun.written);
 
   return (
-    <section aria-labelledby="settings-backup" className="flex flex-col gap-4 rounded-md border-2 border-border bg-card p-5">
+    <section
+      aria-labelledby="settings-backup"
+      className="flex flex-col gap-4 rounded-md border-2 border-border bg-card p-5"
+    >
       <div className="flex min-w-0 flex-col gap-1">
-        <h2 id="settings-backup" className="text-base font-bold">{copy.title}</h2>
+        <h2 id="settings-backup" className="text-base font-bold">
+          {copy.title}
+        </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{copy.description}</p>
       </div>
 
@@ -42,7 +50,8 @@ export default function BackupSettingsSection() {
       ) : backup.loading ? null : !enabled ? (
         <div>
           <Button variant="outline" onClick={() => void backup.choose()} disabled={backup.busyShown}>
-            {backup.busyShown ? <Loader2 className="animate-spin" /> : <FolderOpen />}{copy.choose}
+            {backup.busyShown ? <Loader2 className="animate-spin" /> : <FolderOpen />}
+            {copy.choose}
           </Button>
         </div>
       ) : (
@@ -59,22 +68,34 @@ export default function BackupSettingsSection() {
           <div className="flex flex-wrap gap-2">
             {availability === 'needs-permission' ? (
               <Button onClick={() => void backup.reauthorize()} disabled={backup.busyShown}>
-                {backup.busyShown ? <Loader2 className="animate-spin" /> : <ShieldAlert />}{copy.reauthorize}
+                {backup.busyShown ? <Loader2 className="animate-spin" /> : <ShieldAlert />}
+                {copy.reauthorize}
               </Button>
             ) : (
               <Button variant="outline" onClick={() => void backup.backUpNow()} disabled={backup.busyShown}>
-                {backup.busyShown ? <Loader2 className="animate-spin" /> : <RefreshCw />}{copy.backUpNow}
+                {backup.busyShown ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+                {copy.backUpNow}
               </Button>
             )}
-            <Button variant="outline" onClick={() => void backup.choose()} disabled={backup.busyShown}>{copy.change}</Button>
-            <Button variant="outline" onClick={() => setConfirmOff(true)} disabled={backup.busyShown}>{copy.turnOff}</Button>
+            <Button variant="outline" onClick={() => void backup.choose()} disabled={backup.busyShown}>
+              {copy.change}
+            </Button>
+            <Button variant="outline" onClick={() => setConfirmOff(true)} disabled={backup.busyShown}>
+              {copy.turnOff}
+            </Button>
           </div>
         </div>
       )}
 
-      {backup.error && <p role="alert" className="text-sm text-danger">{copy.failed}</p>}
+      {backup.error && (
+        <p role="alert" className="text-sm text-danger">
+          {copy.failed}
+        </p>
+      )}
       {backup.lastRun && backup.lastRun.failed > 0 && !backup.error && (
-        <p role="alert" className="text-sm text-danger">{copy.someFailed(backup.lastRun.failed, failedNames(backup.lastRun))}</p>
+        <p role="alert" className="text-sm text-danger">
+          {copy.someFailed(backup.lastRun.failed, failedNames(backup.lastRun))}
+        </p>
       )}
       <ConfirmationDialog
         open={confirmOff}

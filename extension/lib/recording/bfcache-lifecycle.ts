@@ -25,14 +25,17 @@ export function installBfcacheLifecycle(options: BfcacheLifecycleOptions): () =>
   };
   const onPageShow = (event: Event) => {
     if (!(event as PageTransitionEvent).persisted) return;
-    void options.isRunCurrent().then((current) => {
-      if (current) options.resume();
-      else options.teardown();
-    }).catch(() => {
-      // State was unreadable, which says nothing about the run: resume and let
-      // the background's keep-alive rejection remain the authoritative backstop.
-      options.resume();
-    });
+    void options
+      .isRunCurrent()
+      .then((current) => {
+        if (current) options.resume();
+        else options.teardown();
+      })
+      .catch(() => {
+        // State was unreadable, which says nothing about the run: resume and let
+        // the background's keep-alive rejection remain the authoritative backstop.
+        options.resume();
+      });
   };
   options.target.addEventListener('pagehide', onPageHide);
   options.target.addEventListener('pageshow', onPageShow);

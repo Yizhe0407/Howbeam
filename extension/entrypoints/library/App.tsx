@@ -1,14 +1,12 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Archive, ArchiveRestore, CopyPlus, Loader2, Search, Trash2 } from 'lucide-react';
 import {
-  Archive,
-  ArchiveRestore,
-  CopyPlus,
-  Loader2,
-  Search,
-  Trash2,
-} from 'lucide-react';
-import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries } from '@/lib/storage/project-repository';
+  createProjectFromSteps,
+  deleteProjectPermanently,
+  duplicateProject,
+  getProjectSummaries,
+} from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
 import { projectDisplayTitle, type ProjectSummary } from '@/lib/storage/models';
 import { clearSelectedProject, openSelectedProjectInEditor } from '@/lib/project/project-actions';
@@ -47,7 +45,10 @@ export default function App() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
-  const editedAt = useMemo(() => new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' }), []);
+  const editedAt = useMemo(
+    () => new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' }),
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const loadingShown = useDeferredBusy(loading);
   const { pendingKey: pendingId, shownKey: shownId, runExclusive } = usePendingAction<string>();
@@ -101,7 +102,12 @@ export default function App() {
   const visibleProjects = useMemo(() => {
     const normalized = deferredQuery.trim().toLocaleLowerCase(intlLocale());
     return projects.filter((project) => {
-      return !normalized || `${projectDisplayTitle(project.title)}\n${project.description}`.toLocaleLowerCase(intlLocale()).includes(normalized);
+      return (
+        !normalized ||
+        `${projectDisplayTitle(project.title)}\n${project.description}`
+          .toLocaleLowerCase(intlLocale())
+          .includes(normalized)
+      );
     });
   }, [deferredQuery, projects]);
 
@@ -118,7 +124,9 @@ export default function App() {
       } catch (operationError) {
         const reason = reportError('[howbeam] library operation failed', operationError, t().library.operationFailed);
         // Archive diagnostics are English; show the localized copy for their code.
-        setError(operationError instanceof ProjectArchiveError ? t().library.archiveErrors[operationError.code] : reason);
+        setError(
+          operationError instanceof ProjectArchiveError ? t().library.archiveErrors[operationError.code] : reason,
+        );
         return false;
       }
     });
@@ -126,19 +134,23 @@ export default function App() {
   }
 
   async function exportProject(project: ProjectSummary) {
-    await run(project.id, async () => {
-      const blob = await exportProjectArchive(await getSteps(project.id), {
-        metadata: {
-          title: project.title,
-          description: project.description,
-          sections: project.sections,
-        },
-      });
-      // Keeps the object URL alive until the download settles; a download that
-      // never starts rejects into the page-level alert below.
-      await downloadBlobViaBrowser(blob, exportFilename(projectDisplayTitle(project.title)));
-      toast.success(t().library.exportStarted(project.title));
-    }, { refreshAfter: false });
+    await run(
+      project.id,
+      async () => {
+        const blob = await exportProjectArchive(await getSteps(project.id), {
+          metadata: {
+            title: project.title,
+            description: project.description,
+            sections: project.sections,
+          },
+        });
+        // Keeps the object URL alive until the download settles; a download that
+        // never starts rejects into the page-level alert below.
+        await downloadBlobViaBrowser(blob, exportFilename(projectDisplayTitle(project.title)));
+        toast.success(t().library.exportStarted(project.title));
+      },
+      { refreshAfter: false },
+    );
     // A failed export reports through the page-level live alert. Close the
     // modal so it does not aria-hide that alert from assistive technology.
     setExportTarget(null);
@@ -178,7 +190,7 @@ export default function App() {
 
   return (
     // The page's layout numbers, read by its content and by the notices: the content gutter and the room kept clear for notices.
-    <div className="min-h-screen bg-background text-foreground [--content-gutter:1rem] sm:[--content-gutter:2rem] [--notice-lane:5rem]">
+    <div className="min-h-screen bg-background text-foreground [--content-gutter:1rem] [--notice-lane:5rem] sm:[--content-gutter:2rem]">
       <AppToaster />
       <AppHeader
         actions={
@@ -225,26 +237,36 @@ export default function App() {
           </Alert>
         )}
         {error && (
-          <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
-          {/* The field draws the outline, so focus is shown on the whole box. */}
-          <div className="mb-6 flex h-11 min-w-0 items-center gap-2.5 rounded-md border-2 border-border bg-card px-3.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus">
-            <Search className="size-[18px] shrink-0 text-muted-foreground" aria-hidden="true" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={t().library.searchPlaceholder}
-              aria-label={t().library.searchLabel}
-              maxLength={120}
-              className="min-w-0 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-            />
-          </div>
+        {/* The field draws the outline, so focus is shown on the whole box. */}
+        <div className="mb-6 flex h-11 min-w-0 items-center gap-2.5 rounded-md border-2 border-border bg-card px-3.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus">
+          <Search className="size-[18px] shrink-0 text-muted-foreground" aria-hidden="true" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t().library.searchPlaceholder}
+            aria-label={t().library.searchLabel}
+            maxLength={120}
+            className="w-full min-w-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+        </div>
 
         {loading ? (
           // A quick first read shows nothing here rather than a spinner that is gone at once.
-          <div role={loadingShown ? 'status' : undefined} className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
-            {loadingShown && <><Loader2 className="mr-2 size-5 animate-spin" />{t().library.loading}</>}
+          <div
+            role={loadingShown ? 'status' : undefined}
+            className="flex min-h-64 items-center justify-center text-sm text-muted-foreground"
+          >
+            {loadingShown && (
+              <>
+                <Loader2 className="mr-2 size-5 animate-spin" />
+                {t().library.loading}
+              </>
+            )}
           </div>
         ) : visibleProjects.length === 0 ? (
           <div className="relative flex min-h-72 flex-col items-center justify-center gap-2 rounded-md bg-card px-6 py-10 text-center">
@@ -273,7 +295,9 @@ export default function App() {
                     type="button"
                     tabIndex={-1}
                     aria-hidden="true"
-                    onClick={() => void run(project.id, () => openSelectedProjectInEditor(project.id, { inPlace: true }))}
+                    onClick={() =>
+                      void run(project.id, () => openSelectedProjectInEditor(project.id, { inPlace: true }))
+                    }
                     disabled={actionsLocked}
                     className="cursor-pointer disabled:cursor-default"
                   >
@@ -283,7 +307,9 @@ export default function App() {
                     <button
                       type="button"
                       title={projectDisplayTitle(project.title)}
-                      onClick={() => void run(project.id, () => openSelectedProjectInEditor(project.id, { inPlace: true }))}
+                      onClick={() =>
+                        void run(project.id, () => openSelectedProjectInEditor(project.id, { inPlace: true }))
+                      }
                       disabled={actionsLocked}
                       className="-ml-1.5 w-full cursor-pointer rounded-md border-2 border-transparent px-1 py-0.5 text-left text-base leading-snug font-bold text-foreground focus-ring hover:underline disabled:cursor-default disabled:no-underline disabled:opacity-70"
                     >
@@ -302,10 +328,13 @@ export default function App() {
                       <Button
                         size="sm"
                         className="min-w-0 flex-1"
-                        onClick={() => void run(project.id, () => openSelectedProjectInEditor(project.id, { inPlace: true }))}
+                        onClick={() =>
+                          void run(project.id, () => openSelectedProjectInEditor(project.id, { inPlace: true }))
+                        }
                         disabled={actionsLocked}
                       >
-                        {pending && <Loader2 className="animate-spin" />}{t().common.open}
+                        {pending && <Loader2 className="animate-spin" />}
+                        {t().common.open}
                       </Button>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -314,7 +343,11 @@ export default function App() {
                             variant="ghost"
                             className="size-8 shrink-0"
                             aria-label={t().common.duplicate}
-                            onClick={() => void run(project.id, async () => { await duplicateProject(project.id); })}
+                            onClick={() =>
+                              void run(project.id, async () => {
+                                await duplicateProject(project.id);
+                              })
+                            }
                             disabled={actionsLocked}
                           >
                             <CopyPlus />
@@ -369,8 +402,12 @@ export default function App() {
         confirmVariant="default"
         pendingLabel={t().library.exportDialogPending}
         pending={exportTarget ? pendingId === exportTarget.id : false}
-        onOpenChange={(open) => { if (!open) setExportTarget(null); }}
-        onConfirm={() => { if (exportTarget) void exportProject(exportTarget); }}
+        onOpenChange={(open) => {
+          if (!open) setExportTarget(null);
+        }}
+        onConfirm={() => {
+          if (exportTarget) void exportProject(exportTarget);
+        }}
       />
 
       <ConfirmationDialog
@@ -379,8 +416,12 @@ export default function App() {
         description={t().library.deleteDialogDescription}
         confirmLabel={t().library.deleteDialogConfirm}
         pending={deleteTarget ? pendingId === deleteTarget.id : false}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
-        onConfirm={() => { if (deleteTarget) void deleteProject(deleteTarget); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        onConfirm={() => {
+          if (deleteTarget) void deleteProject(deleteTarget);
+        }}
       />
     </div>
   );

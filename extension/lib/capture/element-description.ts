@@ -83,15 +83,20 @@ export function replayElementClick(el: Element, options: ReplayClickOptions = {}
 }
 
 /** Fires the dblclick that follows the second click of a replayed double click. */
-export function replayElementDoubleClick(el: Element, options: Pick<ReplayClickOptions, 'clientX' | 'clientY'> = {}): void {
+export function replayElementDoubleClick(
+  el: Element,
+  options: Pick<ReplayClickOptions, 'clientX' | 'clientY'> = {},
+): void {
   if (isElementInteractionDisabled(el)) return;
-  el.dispatchEvent(new MouseEvent('dblclick', {
-    bubbles: true,
-    cancelable: true,
-    composed: true,
-    button: 0,
-    detail: 2,
-    clientX: options.clientX ?? 0,
-    clientY: options.clientY ?? 0,
-  }));
+  el.dispatchEvent(
+    new MouseEvent('dblclick', {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      button: 0,
+      detail: 2,
+      clientX: options.clientX ?? 0,
+      clientY: options.clientY ?? 0,
+    }),
+  );
 }

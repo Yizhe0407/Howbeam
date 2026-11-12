@@ -8,11 +8,7 @@ import { vi, type Mock } from 'vitest';
  * above the test file body.
  */
 
-type RuntimeOnMessageListener = (
-  message: unknown,
-  sender: unknown,
-  sendResponse: (value?: unknown) => void,
-) => unknown;
+type RuntimeOnMessageListener = (message: unknown, sender: unknown, sendResponse: (value?: unknown) => void) => unknown;
 
 /**
  * Emulates Chrome's runtime.onMessage dispatch: a listener returning `true`
@@ -70,7 +66,11 @@ export interface BackgroundBrowserMockHandles {
   onMessage?: (listener: (message: unknown, sender: unknown) => unknown) => void;
   onTabActivated?: (listener: (info: { tabId: number; windowId: number }) => void) => void;
   onTabUpdated?: (
-    listener: (tabId: number, changeInfo: { status?: string; url?: string }, tab: { id?: number; url?: string; active?: boolean }) => void,
+    listener: (
+      tabId: number,
+      changeInfo: { status?: string; url?: string },
+      tab: { id?: number; url?: string; active?: boolean },
+    ) => void,
   ) => void;
   onWindowFocusChanged?: (listener: (windowId: number) => void) => void;
   /** Captures the background's tabs.onRemoved listener. */

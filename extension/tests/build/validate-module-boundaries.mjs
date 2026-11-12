@@ -17,7 +17,7 @@ async function collectFiles(directory) {
   for (const entry of entries) {
     if (ignoredDirectories.has(entry.name)) continue;
     const fullPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...await collectFiles(fullPath));
+    if (entry.isDirectory()) files.push(...(await collectFiles(fullPath)));
     else if (sourceExtensions.has(path.extname(entry.name))) files.push(fullPath);
   }
   return files;
@@ -101,12 +101,15 @@ function boundaryViolation(from, target) {
     case 'shared-lib':
       return target.startsWith('lib/shared/') ? null : 'lib/shared may only import lib/shared modules';
     case 'ui-component':
-      return target.startsWith('components/ui/') || target.startsWith('components/shared/') || target.startsWith('lib/shared/')
+      return target.startsWith('components/ui/') ||
+        target.startsWith('components/shared/') ||
+        target.startsWith('lib/shared/')
         ? null
         : 'components/ui may not depend on feature components or lib domains';
     case 'storage-models':
-      return target.startsWith('lib/storage/')
-        && !storageModelModules.has(target) && !storageModelModules.has(`${target}.ts`)
+      return target.startsWith('lib/storage/') &&
+        !storageModelModules.has(target) &&
+        !storageModelModules.has(`${target}.ts`)
         ? 'storage/models must stay independent of repositories and the database'
         : null;
     case 'domain-lib':
@@ -129,8 +132,17 @@ function resolveModule(from, specifier) {
   if (specifier.startsWith('@/')) base = path.join(root, specifier.slice(2));
   else if (specifier.startsWith('.')) base = path.resolve(path.dirname(from), specifier);
   else return null;
-  return [base, `${base}.ts`, `${base}.tsx`, `${base}.js`, `${base}.mjs`, path.join(base, 'index.ts'), path.join(base, 'index.tsx')]
-    .find((candidate) => knownFiles.has(candidate)) ?? null;
+  return (
+    [
+      base,
+      `${base}.ts`,
+      `${base}.tsx`,
+      `${base}.js`,
+      `${base}.mjs`,
+      path.join(base, 'index.ts'),
+      path.join(base, 'index.tsx'),
+    ].find((candidate) => knownFiles.has(candidate)) ?? null
+  );
 }
 
 const knownRelativePaths = new Set(files.map(normalized));
@@ -138,7 +150,7 @@ const missingStorageModelModules = [...storageModelModules].filter((module) => !
 if (missingStorageModelModules.length > 0) {
   throw new Error(
     'storageModelModules lists files that no longer exist (renamed or removed?); update the list:\n' +
-    missingStorageModelModules.map((module) => `- ${module}`).join('\n'),
+      missingStorageModelModules.map((module) => `- ${module}`).join('\n'),
   );
 }
 
@@ -180,7 +192,8 @@ for (const file of files) visit(file);
 
 if (violations.length || cycles.size) {
   const sections = [];
-  if (violations.length) sections.push(`Import-boundary violations:\n${violations.map((line) => `- ${line}`).join('\n')}`);
+  if (violations.length)
+    sections.push(`Import-boundary violations:\n${violations.map((line) => `- ${line}`).join('\n')}`);
   if (cycles.size) sections.push(`Dependency cycles:\n${[...cycles].map((line) => `- ${line}`).join('\n')}`);
   throw new Error(sections.join('\n\n'));
 }

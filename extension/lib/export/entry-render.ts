@@ -1,7 +1,20 @@
 import { compositeHighlight, compositeMultiHighlight } from '../media/annotation-composite';
-import { getEffectiveBounds, getEntryCrop, getEntryImageEdits, getEntryPrivacyState, getOrderedAnnotations, type StepEntry } from '../storage/models';
+import {
+  getEffectiveBounds,
+  getEntryCrop,
+  getEntryImageEdits,
+  getEntryPrivacyState,
+  getOrderedAnnotations,
+  type StepEntry,
+} from '../storage/models';
 import { getCroppedImage } from '../media/crop-image';
-import { NO_CROP_ORIGIN, offsetAnnotations, offsetBounds, offsetImageEdits, offsetRedactions } from '../media/crop-offset';
+import {
+  NO_CROP_ORIGIN,
+  offsetAnnotations,
+  offsetBounds,
+  offsetImageEdits,
+  offsetRedactions,
+} from '../media/crop-offset';
 import { getValidScreenshotScale } from '../media/image-utils';
 
 export type CompositeImageFormat = 'image/jpeg' | 'image/png';

@@ -5,11 +5,32 @@
     <link rel="icon" href="data:," />
     <title>Howbeam 自動完成測試</title>
     <style>
-      body { margin: 0; padding: 40px; font-family: Arial, sans-serif; }
-      #search { width: 320px; height: 36px; font-size: 16px; }
-      #menu { width: 320px; margin: 0; padding: 0; list-style: none; border: 1px solid #a8a29e; }
-      #menu[hidden] { display: none; }
-      #menu a { display: block; padding: 10px 12px; color: #1c1917; text-decoration: none; }
+      body {
+        margin: 0;
+        padding: 40px;
+        font-family: Arial, sans-serif;
+      }
+      #search {
+        width: 320px;
+        height: 36px;
+        font-size: 16px;
+      }
+      #menu {
+        width: 320px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        border: 1px solid #a8a29e;
+      }
+      #menu[hidden] {
+        display: none;
+      }
+      #menu a {
+        display: block;
+        padding: 10px 12px;
+        color: #1c1917;
+        text-decoration: none;
+      }
     </style>
   </head>
   <body>
@@ -24,7 +45,9 @@
       const search = document.querySelector('#search');
       const menu = document.querySelector('#menu');
       window.autocompleteProbe = { blurs: 0 };
-      search.addEventListener('input', () => { menu.hidden = search.value === ''; });
+      search.addEventListener('input', () => {
+        menu.hidden = search.value === '';
+      });
       search.addEventListener('blur', () => {
         window.autocompleteProbe.blurs += 1;
         menu.hidden = true;

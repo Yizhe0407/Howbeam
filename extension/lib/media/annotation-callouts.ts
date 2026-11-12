@@ -37,13 +37,24 @@ export function placeOrderedSlots(targets: number[], spacing: number, lo: number
 function perimeterCandidates(frame: Bounds): [Point, ...Point[]] {
   const { x, y, width: w, height: h } = frame;
   return [
-    { x: x + w, y }, { x: x + w, y: y + h / 2 }, { x, y: y + h / 2 }, { x, y },
-    { x: x + w, y: y + h }, { x, y: y + h }, { x: x + w / 2, y }, { x: x + w / 2, y: y + h },
+    { x: x + w, y },
+    { x: x + w, y: y + h / 2 },
+    { x, y: y + h / 2 },
+    { x, y },
+    { x: x + w, y: y + h },
+    { x, y: y + h },
+    { x: x + w / 2, y },
+    { x: x + w / 2, y: y + h },
   ];
 }
 
 function fitsInViewport(point: Point, viewportWidth: number, viewportHeight: number): boolean {
-  return point.x - BADGE_RADIUS >= 0 && point.x + BADGE_RADIUS <= viewportWidth && point.y - BADGE_RADIUS >= 0 && point.y + BADGE_RADIUS <= viewportHeight;
+  return (
+    point.x - BADGE_RADIUS >= 0 &&
+    point.x + BADGE_RADIUS <= viewportWidth &&
+    point.y - BADGE_RADIUS >= 0 &&
+    point.y + BADGE_RADIUS <= viewportHeight
+  );
 }
 
 function clampToViewport(point: Point, viewportWidth: number, viewportHeight: number): Point {
@@ -57,7 +68,11 @@ export class BoundsSpatialIndex {
   private readonly rows: number;
   private static readonly MAX_CELLS_PER_RECT = 256;
 
-  constructor(private readonly width: number, private readonly height: number, private readonly cellSize = 64) {
+  constructor(
+    private readonly width: number,
+    private readonly height: number,
+    private readonly cellSize = 64,
+  ) {
     this.columns = Math.max(1, Math.ceil(Math.max(width, 0) / cellSize));
     this.rows = Math.max(1, Math.ceil(Math.max(height, 0) / cellSize));
   }
@@ -73,7 +88,10 @@ export class BoundsSpatialIndex {
     const minRow = this.cell(top, this.rows);
     const maxRow = this.cell(bottom, this.rows);
     const coveredCells = (maxColumn - minColumn + 1) * (maxRow - minRow + 1);
-    if (coveredCells > BoundsSpatialIndex.MAX_CELLS_PER_RECT) { this.oversized.add(rect); return; }
+    if (coveredCells > BoundsSpatialIndex.MAX_CELLS_PER_RECT) {
+      this.oversized.add(rect);
+      return;
+    }
     for (let row = minRow; row <= maxRow; row++) {
       for (let column = minColumn; column <= maxColumn; column++) {
         const key = `${column}:${row}`;
@@ -91,7 +109,13 @@ export class BoundsSpatialIndex {
     const maxRow = this.cell(point.y + radius, this.rows);
     const matches = new Set<Bounds>();
     for (const rect of this.oversized) {
-      if (rect.x <= point.x + radius && rect.x + rect.width >= point.x - radius && rect.y <= point.y + radius && rect.y + rect.height >= point.y - radius) matches.add(rect);
+      if (
+        rect.x <= point.x + radius &&
+        rect.x + rect.width >= point.x - radius &&
+        rect.y <= point.y + radius &&
+        rect.y + rect.height >= point.y - radius
+      )
+        matches.add(rect);
     }
     for (let row = minRow; row <= maxRow; row++) {
       for (let column = minColumn; column <= maxColumn; column++) {
@@ -101,7 +125,9 @@ export class BoundsSpatialIndex {
     return [...matches];
   }
 
-  private cell(value: number, count: number): number { return Math.max(0, Math.min(count - 1, Math.floor(value / this.cellSize))); }
+  private cell(value: number, count: number): number {
+    return Math.max(0, Math.min(count - 1, Math.floor(value / this.cellSize)));
+  }
 }
 
 export class PointSpatialIndex {
@@ -110,7 +136,8 @@ export class PointSpatialIndex {
   add(point: Point): void {
     const key = this.key(point.x, point.y);
     const entries = this.cells.get(key);
-    if (entries) entries.push(point); else this.cells.set(key, [point]);
+    if (entries) entries.push(point);
+    else this.cells.set(key, [point]);
   }
   near(point: Point, radius: number): Point[] {
     const minX = Math.floor((point.x - radius) / this.cellSize);
@@ -118,28 +145,55 @@ export class PointSpatialIndex {
     const minY = Math.floor((point.y - radius) / this.cellSize);
     const maxY = Math.floor((point.y + radius) / this.cellSize);
     const matches: Point[] = [];
-    for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) matches.push(...(this.cells.get(`${x}:${y}`) ?? []));
+    for (let y = minY; y <= maxY; y++)
+      for (let x = minX; x <= maxX; x++) matches.push(...(this.cells.get(`${x}:${y}`) ?? []));
     return matches;
   }
-  private key(x: number, y: number): string { return `${Math.floor(x / this.cellSize)}:${Math.floor(y / this.cellSize)}`; }
+  private key(x: number, y: number): string {
+    return `${Math.floor(x / this.cellSize)}:${Math.floor(y / this.cellSize)}`;
+  }
 }
 
-export function badgeOverlaps(point: Point, badges: PointSpatialIndex, rects: BoundsSpatialIndex, ignoredRects?: Set<Bounds>): boolean {
+export function badgeOverlaps(
+  point: Point,
+  badges: PointSpatialIndex,
+  rects: BoundsSpatialIndex,
+  ignoredRects?: Set<Bounds>,
+): boolean {
   const badgeDistance = BADGE_RADIUS * 2 + BADGE_CLEARANCE;
-  if (badges.near(point, badgeDistance).some((badge) => Math.hypot(point.x - badge.x, point.y - badge.y) < badgeDistance)) return true;
+  if (
+    badges.near(point, badgeDistance).some((badge) => Math.hypot(point.x - badge.x, point.y - badge.y) < badgeDistance)
+  )
+    return true;
   const rectDistance = BADGE_RADIUS + BADGE_CLEARANCE;
-  return rects.near(point, rectDistance).some((rect) => !ignoredRects?.has(rect) && distanceToBounds(point, rect) < rectDistance);
+  return rects
+    .near(point, rectDistance)
+    .some((rect) => !ignoredRects?.has(rect) && distanceToBounds(point, rect) < rectDistance);
 }
 
-function calloutAxes(preferredX: number, preferredStartY: number, count: number, viewportWidth: number, viewportHeight: number, laneOnRight: boolean): { xs: number[]; ys: number[] } {
+function calloutAxes(
+  preferredX: number,
+  preferredStartY: number,
+  count: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  laneOnRight: boolean,
+): { xs: number[]; ys: number[] } {
   const clamped = clampToViewport({ x: preferredX, y: preferredStartY }, viewportWidth, viewportHeight);
-  if (viewportWidth <= BADGE_RADIUS * 2 || viewportHeight <= BADGE_RADIUS * 2) return { xs: [clamped.x], ys: [clamped.y] };
+  if (viewportWidth <= BADGE_RADIUS * 2 || viewportHeight <= BADGE_RADIUS * 2)
+    return { xs: [clamped.x], ys: [clamped.y] };
   const minX = BADGE_RADIUS;
   const maxX = viewportWidth - BADGE_RADIUS;
   const xs = [clamped.x];
   const preferredDirection = laneOnRight ? 1 : -1;
-  for (let distance = CALLOUT_SPACING; distance <= viewportWidth + CALLOUT_SPACING; distance += CALLOUT_SPACING) { const x = clamped.x + distance * preferredDirection; if (x >= minX && x <= maxX) xs.push(x); }
-  for (let distance = CALLOUT_SPACING; distance <= viewportWidth + CALLOUT_SPACING; distance += CALLOUT_SPACING) { const x = clamped.x - distance * preferredDirection; if (x >= minX && x <= maxX) xs.push(x); }
+  for (let distance = CALLOUT_SPACING; distance <= viewportWidth + CALLOUT_SPACING; distance += CALLOUT_SPACING) {
+    const x = clamped.x + distance * preferredDirection;
+    if (x >= minX && x <= maxX) xs.push(x);
+  }
+  for (let distance = CALLOUT_SPACING; distance <= viewportWidth + CALLOUT_SPACING; distance += CALLOUT_SPACING) {
+    const x = clamped.x - distance * preferredDirection;
+    if (x >= minX && x <= maxX) xs.push(x);
+  }
   const minY = BADGE_RADIUS;
   const maxY = viewportHeight - BADGE_RADIUS;
   const rowCapacity = Math.floor((maxY - minY) / CALLOUT_SPACING) + 1;
@@ -150,7 +204,17 @@ function calloutAxes(preferredX: number, preferredStartY: number, count: number,
   return { xs, ys };
 }
 
-export function placeGroupCallouts(count: number, preferredX: number, preferredStartY: number, laneOnRight: boolean, obstacleRects: BoundsSpatialIndex, placedBadges: PointSpatialIndex, ignoredRects: Set<Bounds>, viewportWidth: number, viewportHeight: number): Point[] {
+export function placeGroupCallouts(
+  count: number,
+  preferredX: number,
+  preferredStartY: number,
+  laneOnRight: boolean,
+  obstacleRects: BoundsSpatialIndex,
+  placedBadges: PointSpatialIndex,
+  ignoredRects: Set<Bounds>,
+  viewportWidth: number,
+  viewportHeight: number,
+): Point[] {
   const { xs, ys } = calloutAxes(preferredX, preferredStartY, count, viewportWidth, viewportHeight, laneOnRight);
   const candidateCount = xs.length * ys.length;
   const candidateAt = (index: number): Point | undefined => {
@@ -163,7 +227,10 @@ export function placeGroupCallouts(count: number, preferredX: number, preferredS
   let candidateIndex = 0;
   for (let position = 0; position < count; position++) {
     let candidate = candidateAt(candidateIndex);
-    while (candidate && badgeOverlaps(candidate, placedBadges, obstacleRects, ignoredRects)) { candidateIndex++; candidate = candidateAt(candidateIndex); }
+    while (candidate && badgeOverlaps(candidate, placedBadges, obstacleRects, ignoredRects)) {
+      candidateIndex++;
+      candidate = candidateAt(candidateIndex);
+    }
     const slot = candidate ?? candidateAt(candidateCount > 0 ? position % candidateCount : -1) ?? { x: 0, y: 0 };
     if (candidate) candidateIndex++;
     slots.push(slot);
@@ -172,7 +239,13 @@ export function placeGroupCallouts(count: number, preferredX: number, preferredS
   return slots;
 }
 
-export function pickPerimeterBadge(frame: Bounds, obstacleRects: BoundsSpatialIndex, placedBadges: PointSpatialIndex, viewportWidth: number, viewportHeight: number): Point {
+export function pickPerimeterBadge(
+  frame: Bounds,
+  obstacleRects: BoundsSpatialIndex,
+  placedBadges: PointSpatialIndex,
+  viewportWidth: number,
+  viewportHeight: number,
+): Point {
   const candidates = perimeterCandidates(frame).filter((point) => fitsInViewport(point, viewportWidth, viewportHeight));
   const ignored = new Set([frame]);
   for (const point of candidates) if (!badgeOverlaps(point, placedBadges, obstacleRects, ignored)) return point;

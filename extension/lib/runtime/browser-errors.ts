@@ -10,9 +10,7 @@ export function describeBrowserError(error: unknown, fallback = 'Unknown browser
   }
   if (typeof error === 'string' && error.trim()) return error;
   const rendered = String(error);
-  return rendered && rendered !== '[object Object]' && rendered !== '[object DOMException]'
-    ? rendered
-    : fallback;
+  return rendered && rendered !== '[object Object]' && rendered !== '[object DOMException]' ? rendered : fallback;
 }
 
 /** The scripting API refused a frame because the browser shows its own error

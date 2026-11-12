@@ -1,11 +1,4 @@
-import {
-  useEffect,
-  useLayoutEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from 'react';
+import { useEffect, useLayoutEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   ArrowRight,
   Camera,
@@ -57,7 +50,9 @@ function RunStatus({ paused, count, small }: { paused: boolean; count: number; s
   return (
     <>
       <span className="hb-dot" data-tone={tone} aria-hidden="true" />
-      <span className="hb-count-badge" data-tone={tone} data-size={small ? 'small' : undefined}>{count}</span>
+      <span className="hb-count-badge" data-tone={tone} data-size={small ? 'small' : undefined}>
+        {count}
+      </span>
     </>
   );
 }
@@ -231,12 +226,12 @@ export default function RecordingToolbar({
   const statusLabel = regionCaptureActive
     ? t().toolbar.regionCapturing
     : preparingNext
-    ? t().toolbar.statusWaiting
-    : state.mode === 'snapshot'
-      ? t().toolbar.statusAnnotating(state.itemCount)
-      : paused
-        ? t().toolbar.statusPaused(state.runItemCount)
-        : t().toolbar.statusRecording(state.runItemCount);
+      ? t().toolbar.statusWaiting
+      : state.mode === 'snapshot'
+        ? t().toolbar.statusAnnotating(state.itemCount)
+        : paused
+          ? t().toolbar.statusPaused(state.runItemCount)
+          : t().toolbar.statusRecording(state.runItemCount);
   const hint = regionCaptureActive
     ? null
     : preparingNext
@@ -244,7 +239,9 @@ export default function RecordingToolbar({
       : paused
         ? t().common.paused
         : state.phase === 'recording' && state.itemCount === 0
-          ? (state.mode === 'snapshot' ? t().toolbar.hintAnnotating : t().toolbar.hintRecording)
+          ? state.mode === 'snapshot'
+            ? t().toolbar.hintAnnotating
+            : t().toolbar.hintRecording
           : null;
   const invalidated = state.mode === 'snapshot' && state.phase === 'invalidated';
   const busy = pending !== null || state.phase === 'finishing';
@@ -286,11 +283,14 @@ export default function RecordingToolbar({
         >
           {(message || (state.error && !invalidated) || notice) && (
             <div className="hb-message" data-kind="error" role="alert">
-              {message ?? ((state.error && !invalidated) ? copyText(state.error) : notice)}
+              {message ?? (state.error && !invalidated ? copyText(state.error) : notice)}
             </div>
           )}
           {!message && !state.error && !notice && showSuccess && (
-            <div className="hb-message" role="status"><Check className="hb-success" />{t().toolbar.recorded}</div>
+            <div className="hb-message" role="status">
+              <Check className="hb-success" />
+              {t().toolbar.recorded}
+            </div>
           )}
           {hint && !collapsed && !message && !state.error && !notice && !showSuccess && !undo && !confirmDiscard && (
             <div className="hb-hint">{hint}</div>
@@ -298,7 +298,9 @@ export default function RecordingToolbar({
           {undo && (
             <div className="hb-snackbar" role="status">
               <span>{modeCopy.itemRemoved(undo.itemNumber)}</span>
-              <button type="button" onClick={handleRestore} disabled={busy}>{t().common.restore}</button>
+              <button type="button" onClick={handleRestore} disabled={busy}>
+                {t().common.restore}
+              </button>
             </div>
           )}
           {confirmDiscard && (
@@ -310,7 +312,9 @@ export default function RecordingToolbar({
               aria-describedby={confirmDescriptionId}
               onKeyDown={handleConfirmKeyDown}
             >
-              <h2 className="hb-confirm-title" id={confirmTitleId}>{t().toolbar.discardTitle}</h2>
+              <h2 className="hb-confirm-title" id={confirmTitleId}>
+                {t().toolbar.discardTitle}
+              </h2>
               <p className="hb-confirm-copy" id={confirmDescriptionId}>
                 {t().toolbar.discardBody}
               </p>
@@ -337,7 +341,9 @@ export default function RecordingToolbar({
 
           {collapsed && !invalidated ? (
             <button
-              ref={(element) => { floatingRef.current = element; }}
+              ref={(element) => {
+                floatingRef.current = element;
+              }}
               type="button"
               className="hb-collapsed"
               data-howbeam-toolbar-position=""
@@ -357,12 +363,25 @@ export default function RecordingToolbar({
             >
               <RunStatus paused={paused} count={state.runItemCount} small />
               <span className="hb-collapsed-expand">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                </svg>
               </span>
             </button>
           ) : (
             <div
-              ref={(element) => { floatingRef.current = element; }}
+              ref={(element) => {
+                floatingRef.current = element;
+              }}
               className={`hb-toolbar${invalidated ? ' hb-toolbar--invalidated' : ''}`}
               inert={confirmDiscard}
               role="toolbar"
@@ -415,9 +434,15 @@ export default function RecordingToolbar({
                     type="button"
                     className="hb-status"
                     data-howbeam-toolbar-position=""
-                    aria-label={t().toolbar.moveLabel(statusLabel)
-                      + (state.projectTitle ? `; ${t().toolbar.appendingTo(state.projectTitle)}` : '')}
-                    data-tooltip={state.projectTitle ? `${statusLabel}；${t().toolbar.appendingTo(state.projectTitle)}` : t().toolbar.moveLabel(statusLabel)}
+                    aria-label={
+                      t().toolbar.moveLabel(statusLabel) +
+                      (state.projectTitle ? `; ${t().toolbar.appendingTo(state.projectTitle)}` : '')
+                    }
+                    data-tooltip={
+                      state.projectTitle
+                        ? `${statusLabel}；${t().toolbar.appendingTo(state.projectTitle)}`
+                        : t().toolbar.moveLabel(statusLabel)
+                    }
                     onPointerDown={handlePositionPointerDown}
                     onPointerMove={handlePositionPointerMove}
                     onPointerUp={finishPositionDrag}
@@ -481,9 +506,13 @@ export default function RecordingToolbar({
                           disabled={busy}
                           onClick={() => void run(paused ? 'RESUME_RECORDING' : 'PAUSE_RECORDING')}
                         >
-                          {pending === 'PAUSE_RECORDING' || pending === 'RESUME_RECORDING'
-                            ? <Loader2 />
-                            : paused ? <Play size={16} /> : <Pause size={16} />}
+                          {pending === 'PAUSE_RECORDING' || pending === 'RESUME_RECORDING' ? (
+                            <Loader2 />
+                          ) : paused ? (
+                            <Play size={16} />
+                          ) : (
+                            <Pause size={16} />
+                          )}
                         </button>
                       )}
                       <button
@@ -548,7 +577,9 @@ export default function RecordingToolbar({
             </div>
           )}
         </div>
-        <div className="hb-sr-only" aria-live="polite" aria-atomic="true">{announcement}</div>
+        <div className="hb-sr-only" aria-live="polite" aria-atomic="true">
+          {announcement}
+        </div>
       </div>
     </>
   );

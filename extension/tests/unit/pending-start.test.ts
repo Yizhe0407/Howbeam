@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const values = vi.hoisted(() => ({} as Record<string, unknown>));
+const values = vi.hoisted(() => ({}) as Record<string, unknown>);
 
 vi.mock('wxt/browser', () => ({
   browser: {

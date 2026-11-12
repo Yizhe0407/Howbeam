@@ -12,7 +12,11 @@ function newLayouter(settings: Partial<PdfExportSettings> = {}, signal?: AbortSi
     settings: { ...DEFAULT_PDF_EXPORT_SETTINGS, ...settings },
     measure,
     footerTitle: 'My project',
-    labels: { pageNumber: (page) => `Page ${page}`, credit: 'Made with Howbeam', missingDescription: '(No description)' },
+    labels: {
+      pageNumber: (page) => `Page ${page}`,
+      credit: 'Made with Howbeam',
+      missingDescription: '(No description)',
+    },
     signal,
   });
 }
@@ -34,15 +38,23 @@ function laidOut(layouter: PdfLayouter): PdfPage[] {
 }
 
 type Kind = PdfBlock['kind'];
-const ofKind = <K extends Kind>(page: PdfPage, kind: K) => page.blocks.filter((block): block is Extract<PdfBlock, { kind: K }> => block.kind === kind);
-const headings = (page: PdfPage, level?: 1 | 2 | 3) => ofKind(page, 'heading').filter((block) => !level || block.level === level);
-const headingTexts = (page: PdfPage, level?: 1 | 2 | 3) => headings(page, level).flatMap((block) => block.lines.map((line) => line.text));
-const paragraphTexts = (page: PdfPage) => ofKind(page, 'paragraph').flatMap((block) => block.lines.map((line) => line.text));
+const ofKind = <K extends Kind>(page: PdfPage, kind: K) =>
+  page.blocks.filter((block): block is Extract<PdfBlock, { kind: K }> => block.kind === kind);
+const headings = (page: PdfPage, level?: 1 | 2 | 3) =>
+  ofKind(page, 'heading').filter((block) => !level || block.level === level);
+const headingTexts = (page: PdfPage, level?: 1 | 2 | 3) =>
+  headings(page, level).flatMap((block) => block.lines.map((line) => line.text));
+const paragraphTexts = (page: PdfPage) =>
+  ofKind(page, 'paragraph').flatMap((block) => block.lines.map((line) => line.text));
 const listTexts = (page: PdfPage) =>
-  ofKind(page, 'list').flatMap((block) => block.items.flatMap((item) => [...(item.label ? [item.label.text] : []), ...item.lines.map((line) => line.text)]));
+  ofKind(page, 'list').flatMap((block) =>
+    block.items.flatMap((item) => [...(item.label ? [item.label.text] : []), ...item.lines.map((line) => line.text)]),
+  );
 const artifacts = (page: PdfPage) => ofKind(page, 'artifact');
 const artifactTexts = (page: PdfPage, role?: 'layout' | 'pagination') =>
-  artifacts(page).filter((block) => !role || block.role === role).flatMap((block) => block.texts.map((text) => text.text));
+  artifacts(page)
+    .filter((block) => !role || block.role === role)
+    .flatMap((block) => block.texts.map((text) => text.text));
 const artifactRules = (page: PdfPage) => artifacts(page).flatMap((block) => block.rules);
 const figures = (page: PdfPage) => ofKind(page, 'figure');
 const images = (page: PdfPage) => figures(page).map((figure) => figure.image);
@@ -111,9 +123,7 @@ describe('PdfLayouter', () => {
       const page = itemAt(laidOut(layouter), 0);
 
       const [first, second] = firstItems(images(page), 2);
-      expect(second.y - (first.y + first.height)).toBe(
-        PDF_SPEC.imageGapAfter + PDF_SPEC.continuousStepGap + 52 + 22,
-      );
+      expect(second.y - (first.y + first.height)).toBe(PDF_SPEC.imageGapAfter + PDF_SPEC.continuousStepGap + 52 + 22);
     });
 
     it('does not squeeze a tall screenshot into the leftover strip of a page', () => {
@@ -136,7 +146,7 @@ describe('PdfLayouter', () => {
 
       expect(pages).toHaveLength(1);
       const image = itemAt(images(itemAt(pages, 0)), 0);
-      const preferred = Math.ceil((1_650 - PDF_SPEC.margin * 2 - PDF_SPEC.stepIndent) / 1_600 * 900);
+      const preferred = Math.ceil(((1_650 - PDF_SPEC.margin * 2 - PDF_SPEC.stepIndent) / 1_600) * 900);
       expect(image.height).toBeLessThan(preferred);
       expect(image.height).toBeGreaterThanOrEqual(preferred * PDF_SPEC.continuousImageMinShare);
       expect(image.width / image.height).toBeCloseTo(1_600 / 900);
@@ -218,7 +228,9 @@ describe('PdfLayouter', () => {
       layouter.addStep(step(1, { heading: 'Open settings' }));
       layouter.addStep(step(2, { heading: 'Sign in', section: { title: 'Chapter one' } }));
       layouter.addStep(step(3, { heading: '' }));
-      const outline = laidOut(layouter).flatMap((page) => headings(page).flatMap((block) => (block.outline ? [block.outline] : [])));
+      const outline = laidOut(layouter).flatMap((page) =>
+        headings(page).flatMap((block) => (block.outline ? [block.outline] : [])),
+      );
 
       expect(outline).toEqual([
         { level: 1, title: '1. Open settings' },
@@ -277,14 +289,18 @@ describe('PdfLayouter', () => {
 
     it('starts a fresh list on the next page when the annotations run past the foot of a page', () => {
       const layouter = newLayouter();
-      const annotations = Array.from({ length: 8 }, (_, index) => ({ description: `Annotation ${index + 1} ${'word '.repeat(60)}` }));
+      const annotations = Array.from({ length: 8 }, (_, index) => ({
+        description: `Annotation ${index + 1} ${'word '.repeat(60)}`,
+      }));
       layouter.addStep(step(1, { annotations }, { width: 1_000, height: 700 }));
       const pages = laidOut(layouter);
 
       expect(pages.length).toBeGreaterThan(1);
       for (const page of pages.slice(1)) expect(ofKind(page, 'list').length).toBeGreaterThan(0);
       // Every annotation still appears exactly once, labelled where it begins.
-      const labels = pages.flatMap((page) => ofKind(page, 'list').flatMap((list) => list.items.flatMap((item) => (item.label ? [item.label.text] : []))));
+      const labels = pages.flatMap((page) =>
+        ofKind(page, 'list').flatMap((list) => list.items.flatMap((item) => (item.label ? [item.label.text] : []))),
+      );
       expect(labels).toEqual(Array.from({ length: 8 }, (_, index) => `${index + 1}. `));
     });
 
@@ -321,7 +337,10 @@ describe('PdfLayouter', () => {
 
     it('lets a longer description wrap to two lines inside its column', () => {
       const layouter = newLayouter();
-      const annotations = [...Array.from({ length: 7 }, () => ({ description: 'Short' })), { description: 'word '.repeat(10) }];
+      const annotations = [
+        ...Array.from({ length: 7 }, () => ({ description: 'Short' })),
+        { description: 'word '.repeat(10) },
+      ];
       layouter.addStep(step(1, { annotations }));
       const page = itemAt(laidOut(layouter), 0);
 
@@ -346,14 +365,17 @@ describe('PdfLayouter', () => {
       expect(long.lines.length).toBeGreaterThan(2);
       expect(Math.max(...long.lines.map((line) => measure(line.text)))).toBeGreaterThan(page.size.widthPixels / 2);
       // Markers 1–4 sit in two columns above it, 6–9 in two columns below it.
-      for (const group of [items.slice(0, 4), items.slice(5)]) expect(new Set(group.map((item) => item.label!.x)).size).toBe(2);
+      for (const group of [items.slice(0, 4), items.slice(5)])
+        expect(new Set(group.map((item) => item.label!.x)).size).toBe(2);
       expect(itemAt(items, 3).label!.top).toBeLessThan(long.label!.top);
       expect(itemAt(items, 5).label!.top).toBeGreaterThan(long.lines.at(-1)!.top);
     });
 
     it('keeps one column for a list too short to fill two rows of columns', () => {
       const layouter = newLayouter();
-      layouter.addStep(step(1, { annotations: [{ description: 'One' }, { description: 'Two' }, { description: 'Three' }] }));
+      layouter.addStep(
+        step(1, { annotations: [{ description: 'One' }, { description: 'Two' }, { description: 'Three' }] }),
+      );
       const page = itemAt(laidOut(layouter), 0);
 
       expect(new Set(listItems(page).map((item) => item.label!.x)).size).toBe(1);

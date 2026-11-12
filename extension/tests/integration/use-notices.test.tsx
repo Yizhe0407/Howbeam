@@ -12,15 +12,19 @@ import { BUSY_DELAY_MS, BUSY_MIN_SHOWN_MS } from '@/lib/shared/use-deferred-busy
 import { itemAt } from '../setup/item-at';
 
 const action = (overrides: Partial<UndoAction> = {}) =>
-  ({ id: 1, message: '已刪除步驟 1', projectId: 'p1', expectedRevision: 2, restore: vi.fn(), ...overrides }) as UndoAction;
+  ({
+    id: 1,
+    message: '已刪除步驟 1',
+    projectId: 'p1',
+    expectedRevision: 2,
+    restore: vi.fn(),
+    ...overrides,
+  }) as UndoAction;
 
 type Props = { action: UndoAction | null; pending: boolean };
 
 function renderUndoNotice(initial: Props, onUndo = vi.fn(), onDismiss = vi.fn()) {
-  const view = renderHook(
-    (props: Props) => useUndoNotice({ ...props, onUndo, onDismiss }),
-    { initialProps: initial },
-  );
+  const view = renderHook((props: Props) => useUndoNotice({ ...props, onUndo, onDismiss }), { initialProps: initial });
   return { ...view, onUndo, onDismiss };
 }
 
@@ -124,9 +128,10 @@ describe('useUndoNotice', () => {
 });
 
 describe('useBusyNotice', () => {
-  const renderBusy = () => renderHook(({ label }: { label: string | null }) => useBusyNotice(label), {
-    initialProps: { label: null as string | null },
-  });
+  const renderBusy = () =>
+    renderHook(({ label }: { label: string | null }) => useBusyNotice(label), {
+      initialProps: { label: null as string | null },
+    });
 
   it('shows the label once work proves slow and removes it when done', () => {
     const { rerender } = renderBusy();

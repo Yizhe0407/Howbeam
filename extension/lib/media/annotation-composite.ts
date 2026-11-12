@@ -43,7 +43,9 @@ export async function compositeScene(
     closeBitmap();
     const dpr = getValidScreenshotScale(screenshotScale);
     drawAnnotationScene(ctx, scene, { dpr, viewportWidth: width / dpr, viewportHeight: height / dpr });
-    return canvas.convertToBlob(format === 'image/jpeg' ? { type: format, quality: JPEG_EXPORT_QUALITY } : { type: format });
+    return canvas.convertToBlob(
+      format === 'image/jpeg' ? { type: format, quality: JPEG_EXPORT_QUALITY } : { type: format },
+    );
   } finally {
     closeBitmap();
   }
@@ -59,14 +61,19 @@ export function compositeHighlight(
   privacyBlockRequired = false,
   imageEdits: readonly ImageEdit[] = [],
 ): Promise<Blob> {
-  return compositeScene(screenshot, {
-    highlight: bounds,
-    annotations: [],
-    badges: true,
-    imageEdits,
-    redactions,
-    privacyBlock: privacyBlockRequired,
-  }, screenshotScale, format);
+  return compositeScene(
+    screenshot,
+    {
+      highlight: bounds,
+      annotations: [],
+      badges: true,
+      imageEdits,
+      redactions,
+      privacyBlock: privacyBlockRequired,
+    },
+    screenshotScale,
+    format,
+  );
 }
 
 /** A snapshot's screenshot with every numbered mark, drawings and masks. */
@@ -79,12 +86,17 @@ export function compositeMultiHighlight(
   privacyBlockRequired = false,
   imageEdits: readonly ImageEdit[] = [],
 ): Promise<Blob> {
-  return compositeScene(screenshot, {
-    highlight: null,
-    annotations,
-    badges: true,
-    imageEdits,
-    redactions,
-    privacyBlock: privacyBlockRequired,
-  }, screenshotScale, format);
+  return compositeScene(
+    screenshot,
+    {
+      highlight: null,
+      annotations,
+      badges: true,
+      imageEdits,
+      redactions,
+      privacyBlock: privacyBlockRequired,
+    },
+    screenshotScale,
+    format,
+  );
 }

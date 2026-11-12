@@ -19,15 +19,20 @@ vi.mock('wxt/browser', async () =>
       extra.storageListeners.push(listener);
     },
     actionSetIcon: extra.setIcon,
-  }));
+  }),
+);
 vi.mock('@/lib/storage/step-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStepRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/project-repository', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockProjectRepositoryModule(mocks, importOriginal),
+);
 vi.mock('@/lib/storage/storage', async (importOriginal) =>
-  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal));
+  (await import('../setup/background-test-utils')).mockStorageModule(mocks, importOriginal),
+);
 vi.mock('@/lib/recording/background/pending-undo-store', async () =>
-  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks));
+  (await import('../setup/background-test-utils')).mockPendingUndoStoreModule(mocks),
+);
 
 const IDLE_ICON = { 16: '/icon/16.png', 32: '/icon/32.png' };
 const RECORDING_ICON = { 16: '/icon/recording-16.png', 32: '/icon/recording-32.png' };
@@ -65,7 +70,10 @@ describe('first run', () => {
     extra.installedListener?.({ reason: 'install' });
     await flushAsyncWork();
 
-    expect(mocks.tabsCreate).toHaveBeenCalledWith({ url: 'chrome-extension://extension-id/welcome.html', active: true });
+    expect(mocks.tabsCreate).toHaveBeenCalledWith({
+      url: 'chrome-extension://extension-id/welcome.html',
+      active: true,
+    });
   });
 
   it.each(['update', 'chrome_update', 'shared_module_update'])('stays quiet on %s', async (reason) => {
@@ -74,7 +82,9 @@ describe('first run', () => {
     extra.installedListener?.({ reason });
     await flushAsyncWork();
 
-    expect(mocks.tabsCreate).not.toHaveBeenCalledWith(expect.objectContaining({ url: expect.stringContaining('welcome') }));
+    expect(mocks.tabsCreate).not.toHaveBeenCalledWith(
+      expect.objectContaining({ url: expect.stringContaining('welcome') }),
+    );
   });
 });
 
@@ -91,12 +101,30 @@ describe('toolbar icon', () => {
     await flushAsyncWork();
     extra.setIcon.mockClear();
 
-    publishState(makeRecordingState({ operation: 'recording', isRecording: true, phase: 'recording', sessionId: 'g', runId: 'r', tabId: 4 }));
+    publishState(
+      makeRecordingState({
+        operation: 'recording',
+        isRecording: true,
+        phase: 'recording',
+        sessionId: 'g',
+        runId: 'r',
+        tabId: 4,
+      }),
+    );
     await flushAsyncWork();
     expect(extra.setIcon).toHaveBeenLastCalledWith({ path: RECORDING_ICON });
 
     // Pausing or counting items keeps the run live: no redundant icon swap.
-    publishState(makeRecordingState({ operation: 'recording', isRecording: true, phase: 'paused', sessionId: 'g', runId: 'r', tabId: 4 }));
+    publishState(
+      makeRecordingState({
+        operation: 'recording',
+        isRecording: true,
+        phase: 'paused',
+        sessionId: 'g',
+        runId: 'r',
+        tabId: 4,
+      }),
+    );
     await flushAsyncWork();
     expect(extra.setIcon).toHaveBeenCalledOnce();
 
@@ -106,7 +134,14 @@ describe('toolbar icon', () => {
   });
 
   it('restores the recording dot when the worker wakes mid-run', async () => {
-    storedState = makeRecordingState({ operation: 'recording', isRecording: true, phase: 'recording', sessionId: 'g', runId: 'r', tabId: 4 });
+    storedState = makeRecordingState({
+      operation: 'recording',
+      isRecording: true,
+      phase: 'recording',
+      sessionId: 'g',
+      runId: 'r',
+      tabId: 4,
+    });
     mocks.tabsGet.mockResolvedValue({ id: 4, windowId: 1, url: 'https://example.com' });
 
     await importBackground();

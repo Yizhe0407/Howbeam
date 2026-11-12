@@ -47,19 +47,19 @@ describe('buildCompleteStepEntries', () => {
     const ordinary = makeStep({ order: 3 });
     const pending = makeGroup(2)[0];
 
-    expect(() => buildCompleteStepEntries([anchor, first, pending, ordinary], 'project'))
-      .toThrow('A snapshot group has no complete annotation.');
+    expect(() => buildCompleteStepEntries([anchor, first, pending, ordinary], 'project')).toThrow(
+      'A snapshot group has no complete annotation.',
+    );
   });
 
   it.each(['ordinary step', 'another snapshot group'])('rejects a snapshot group split by %s', (separator) => {
     const [anchor, first, second] = makeGroup();
-    const middle = separator === 'ordinary step'
-      ? makeStep({ order: 2 })
-      : makeGroup(2)[0];
+    const middle = separator === 'ordinary step' ? makeStep({ order: 2 }) : makeGroup(2)[0];
     second.order = 3;
 
-    expect(() => buildCompleteStepEntries([anchor, first, middle, second], 'project'))
-      .toThrow(ProjectStructureIntegrityError);
+    expect(() => buildCompleteStepEntries([anchor, first, middle, second], 'project')).toThrow(
+      ProjectStructureIntegrityError,
+    );
   });
 });
 

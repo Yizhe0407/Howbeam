@@ -51,7 +51,10 @@ function parseColor(style: string): number[] {
 
 class PixelCanvas {
   readonly pixels: number[][];
-  constructor(readonly width: number, readonly height: number) {
+  constructor(
+    readonly width: number,
+    readonly height: number,
+  ) {
     this.pixels = Array.from({ length: width * height }, () => [0, 0, 0]);
   }
   getContext() {
@@ -65,28 +68,33 @@ class PixelCanvas {
 /** drawImage and fillRect paint pixels; every other drawing call (strokes, text) is ignored. */
 function pixelContext(canvas: { width: number; height: number; pixels: number[][] }) {
   const painter = {
-      fillStyle: '#000000' as string,
-      drawImage(bitmap: Raster) {
-        for (let y = 0; y < Math.min(bitmap.height, canvas.height); y++) {
-          for (let x = 0; x < Math.min(bitmap.width, canvas.width); x++) {
-            canvas.pixels[y * canvas.width + x] = [...itemAt(bitmap.pixels, y * bitmap.width + x)];
-          }
+    fillStyle: '#000000' as string,
+    drawImage(bitmap: Raster) {
+      for (let y = 0; y < Math.min(bitmap.height, canvas.height); y++) {
+        for (let x = 0; x < Math.min(bitmap.width, canvas.width); x++) {
+          canvas.pixels[y * canvas.width + x] = [...itemAt(bitmap.pixels, y * bitmap.width + x)];
         }
-      },
-      fillRect(left: number, top: number, width: number, height: number) {
-        const color = parseColor(this.fillStyle);
-        const x0 = Math.max(0, Math.floor(left));
-        const y0 = Math.max(0, Math.floor(top));
-        const x1 = Math.min(canvas.width, Math.ceil(left + width));
-        const y1 = Math.min(canvas.height, Math.ceil(top + height));
-        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) canvas.pixels[y * canvas.width + x] = [...color];
-      },
-      clearRect() {
-        canvas.pixels.forEach((_, index) => { canvas.pixels[index] = [255, 255, 255]; });
-      },
+      }
+    },
+    fillRect(left: number, top: number, width: number, height: number) {
+      const color = parseColor(this.fillStyle);
+      const x0 = Math.max(0, Math.floor(left));
+      const y0 = Math.max(0, Math.floor(top));
+      const x1 = Math.min(canvas.width, Math.ceil(left + width));
+      const y1 = Math.min(canvas.height, Math.ceil(top + height));
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) canvas.pixels[y * canvas.width + x] = [...color];
+    },
+    clearRect() {
+      canvas.pixels.forEach((_, index) => {
+        canvas.pixels[index] = [255, 255, 255];
+      });
+    },
   };
   return new Proxy(painter, {
-    get: (target, key) => (key in target ? target[key as keyof typeof target] : () => ({ width: 0, actualBoundingBoxAscent: 0, actualBoundingBoxDescent: 0 })),
+    get: (target, key) =>
+      key in target
+        ? target[key as keyof typeof target]
+        : () => ({ width: 0, actualBoundingBoxAscent: 0, actualBoundingBoxDescent: 0 }),
     set: (target, key, value) => {
       (target as Record<string | symbol, unknown>)[key] = value;
       return true;
@@ -101,7 +109,11 @@ function installPreviewCanvas() {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function getContext(this: HTMLCanvasElement) {
     let store = previewPixels.get(this);
     if (!store || store.width !== this.width || store.height !== this.height) {
-      store = { width: this.width, height: this.height, pixels: Array.from({ length: this.width * this.height }, () => [255, 255, 255]) };
+      store = {
+        width: this.width,
+        height: this.height,
+        pixels: Array.from({ length: this.width * this.height }, () => [255, 255, 255]),
+      };
       previewPixels.set(this, store);
     }
     return pixelContext(store) as unknown as CanvasRenderingContext2D;
@@ -114,7 +126,8 @@ function installRasterFakes() {
     const full = await decode(blob);
     if (sx === undefined || sy === undefined || sw === undefined || sh === undefined) return { ...full, close() {} };
     const pixels: number[][] = [];
-    for (let y = sy; y < sy + sh; y++) for (let x = sx; x < sx + sw; x++) pixels.push(itemAt(full.pixels, y * full.width + x));
+    for (let y = sy; y < sy + sh; y++)
+      for (let x = sx; x < sx + sw; x++) pixels.push(itemAt(full.pixels, y * full.width + x));
     return { width: sw, height: sh, pixels, close() {} };
   });
 }
@@ -137,13 +150,19 @@ function makeStep(changes: Partial<Step> = {}): Step {
 const mask: Redaction = { id: 'mask-1', kind: 'solid', bounds: { x: 4, y: 3, width: 2, height: 1 } };
 
 function singleEntry(source: Blob, changes: Partial<ScreenshotStep> = {}): StepEntry {
-  return { kind: 'single', step: { ...makeStep({ redactions: [mask] }), screenshotBlob: source, ...changes } as ScreenshotStep };
+  return {
+    kind: 'single',
+    step: { ...makeStep({ redactions: [mask] }), screenshotBlob: source, ...changes } as ScreenshotStep,
+  };
 }
 
 function groupEntry(source: Blob): StepEntry {
   return {
     kind: 'group',
-    anchor: { ...makeStep({ id: 'group-1', groupId: 'group-1', bounds: null, redactions: [mask] }), screenshotBlob: source } as ScreenshotStep,
+    anchor: {
+      ...makeStep({ id: 'group-1', groupId: 'group-1', bounds: null, redactions: [mask] }),
+      screenshotBlob: source,
+    } as ScreenshotStep,
     annotations: [makeStep({ id: 'annotation-1', groupId: 'group-1', order: 1 })],
   };
 }
@@ -182,7 +201,12 @@ describe('preview masking', () => {
 
     const raster = shownRaster(view.container);
     expect([raster.width, raster.height]).toEqual([12, 8]);
-    for (const [x, y] of [[2, 1], [4, 3], [7, 5]] as const) expect(pixelAt(raster, x, y), `masked ${x},${y}`).toEqual([0, 0, 0]);
+    for (const [x, y] of [
+      [2, 1],
+      [4, 3],
+      [7, 5],
+    ] as const)
+      expect(pixelAt(raster, x, y), `masked ${x},${y}`).toEqual([0, 0, 0]);
     expect(pixelAt(raster, 8, 3)).toEqual([18, 13, 200]);
     expect(pixelAt(raster, 0, 0)).toEqual([10, 10, 200]);
   });
@@ -200,7 +224,11 @@ describe('preview masking', () => {
   it('masks the cropped image with the mask shifted by the crop', async () => {
     const source = screenshot(12, 8);
     const view = render(
-      <EntryThumbnail entry={singleEntry(source, { crop: { x: 3, y: 2, width: 8, height: 5 } })} alt="cropped" fit="contain" />,
+      <EntryThumbnail
+        entry={singleEntry(source, { crop: { x: 3, y: 2, width: 8, height: 5 } })}
+        alt="cropped"
+        fit="contain"
+      />,
     );
     await settle();
 
@@ -215,7 +243,11 @@ describe('preview masking', () => {
   it('draws only black pixels while privacy review is pending', async () => {
     const source = screenshot(12, 8);
     const view = render(
-      <EntryThumbnail entry={singleEntry(source, { redactions: [], redactionReviewRequired: true })} alt="review" fit="contain" />,
+      <EntryThumbnail
+        entry={singleEntry(source, { redactions: [], redactionReviewRequired: true })}
+        alt="review"
+        fit="contain"
+      />,
     );
     await settle();
 
@@ -243,7 +275,9 @@ describe('preview masking', () => {
     const view = render(<EntryThumbnail entry={singleEntry(source)} alt="step" fit="contain" />);
     await settle();
 
-    view.rerender(<EntryThumbnail entry={singleEntry(source, { redactions: [mask, second] })} alt="step" fit="contain" />);
+    view.rerender(
+      <EntryThumbnail entry={singleEntry(source, { redactions: [mask, second] })} alt="step" fit="contain" />,
+    );
     expect(pixelAt(shownRaster(view.container), 10, 6)).toEqual([0, 0, 0]);
 
     view.rerender(<EntryThumbnail entry={singleEntry(source, { redactions: [second] })} alt="step" fit="contain" />);
@@ -255,7 +289,13 @@ describe('preview masking', () => {
   it('lets the image editor show the pixels under review, with the masks still drawn', async () => {
     const source = screenshot(12, 8);
     const view = render(
-      <EntryThumbnail entry={singleEntry(source, { redactionReviewRequired: true })} crop={null} reviewing alt="editor" fit="contain" />,
+      <EntryThumbnail
+        entry={singleEntry(source, { redactionReviewRequired: true })}
+        crop={null}
+        reviewing
+        alt="editor"
+        fit="contain"
+      />,
     );
     await settle();
 

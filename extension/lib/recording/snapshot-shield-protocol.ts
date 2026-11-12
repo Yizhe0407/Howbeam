@@ -1,4 +1,8 @@
-import { RECORDING_CONTROL_TYPES, type RecordingControlMessage, type RecordingControlResult } from '../runtime/messages';
+import {
+  RECORDING_CONTROL_TYPES,
+  type RecordingControlMessage,
+  type RecordingControlResult,
+} from '../runtime/messages';
 import type { RecordingMode, RecordingPhase } from '../storage/recording-state';
 import { REGION_CAPTURE_MIN_SIZE, isRegionRectLargeEnough } from '../capture/region-capture';
 import { isFiniteRect } from '../shared/validation';
@@ -29,9 +33,7 @@ export const SNAPSHOT_REGION_COORDINATE_LIMIT = 1_000_000;
  * between the two sides of the channel.
  */
 export function snapshotRectKey(rect: Rect): string {
-  return [rect.x, rect.y, rect.width, rect.height]
-    .map((value) => Math.round(value * 2))
-    .join(':');
+  return [rect.x, rect.y, rect.width, rect.height].map((value) => Math.round(value * 2)).join(':');
 }
 
 export interface SnapshotShieldSelection {
@@ -214,7 +216,9 @@ function isSelection(value: unknown): value is SnapshotShieldSelection & { id: n
   return (
     isRequestId(selection.id) &&
     isRect(selection.rect) &&
-    label !== undefined && Number.isSafeInteger(label) && label > 0
+    label !== undefined &&
+    Number.isSafeInteger(label) &&
+    label > 0
   );
 }
 
@@ -297,9 +301,7 @@ export function isSnapshotShieldPortMessage(value: unknown, token: string): valu
   if (message.type === SNAPSHOT_SHIELD_POINTER_DOWN) {
     return hasPoint && isRequestId(message.captureId);
   }
-  return (
-    message.type === SNAPSHOT_SHIELD_POINTER_MOVE && hasPoint && isRequestId(message.requestId)
-  );
+  return message.type === SNAPSHOT_SHIELD_POINTER_MOVE && hasPoint && isRequestId(message.requestId);
 }
 
 export function isSnapshotShieldFrameMessage(value: unknown, token: string): value is SnapshotShieldFrameMessage {

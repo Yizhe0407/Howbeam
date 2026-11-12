@@ -100,10 +100,7 @@ async function buildManifest(
 
 /** Creates a self-contained project file: a ZIP holding the manifest and
  * every distinct screenshot once, as its original bytes. */
-export async function exportProjectArchive(
-  steps: readonly Step[],
-  options: ProjectArchiveOptions = {},
-): Promise<Blob> {
+export async function exportProjectArchive(steps: readonly Step[], options: ProjectArchiveOptions = {}): Promise<Blob> {
   const { manifest, files } = await buildManifest(steps, options);
   const zip = await buildZipBlob((addFile) => {
     addFile(ARCHIVE_MANIFEST_PATH, new TextEncoder().encode(JSON.stringify(manifest)));

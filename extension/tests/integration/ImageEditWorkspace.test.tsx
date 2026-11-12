@@ -23,7 +23,9 @@ vi.mock('@/lib/editor/save-entry-image-edits', () => ({
 vi.mock('@/lib/storage/change-notifier', () => ({
   subscribeProjectsChanged: (listener: () => void) => {
     storage.listeners.push(listener);
-    return () => { storage.listeners = storage.listeners.filter((candidate) => candidate !== listener); };
+    return () => {
+      storage.listeners = storage.listeners.filter((candidate) => candidate !== listener);
+    };
   },
 }));
 vi.mock('@/lib/editor/use-image-css-size', () => ({ useImageCssSize: () => ({ width: 400, height: 200 }) }));
@@ -36,9 +38,26 @@ import { itemAt } from '../setup/item-at';
 
 beforeAll(() => {
   // jsdom has no layout: 1 CSS px of image == 1 client px.
-  Element.prototype.getBoundingClientRect = () => ({ left: 0, top: 0, width: 400, height: 200, right: 400, bottom: 200, x: 0, y: 0, toJSON: () => ({}) });
+  Element.prototype.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    width: 400,
+    height: 200,
+    right: 400,
+    bottom: 200,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  });
   Element.prototype.setPointerCapture = () => undefined;
-  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} unobserve() {} });
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    },
+  );
 });
 
 beforeEach(() => {
@@ -68,7 +87,14 @@ function entry(changes: Partial<ScreenshotStep> = {}): StepEntry {
 }
 
 const mask = (id: string) => ({ id, kind: 'solid' as const, bounds: { x: 100, y: 50, width: 80, height: 40 } });
-const box = (id: string): ImageEdit => ({ id, kind: 'rect', bounds: { x: 5, y: 5, width: 30, height: 30 }, width: 2, color: '#ff4747', fill: 'none' });
+const box = (id: string): ImageEdit => ({
+  id,
+  kind: 'rect',
+  bounds: { x: 5, y: 5, width: 30, height: 30 },
+  width: 2,
+  color: '#ff4747',
+  fill: 'none',
+});
 
 function open(opened: StepEntry) {
   const onClose = vi.fn();
@@ -101,7 +127,11 @@ describe('ImageEditWorkspace and outside changes', () => {
     expect(await screen.findByText(/這張圖片剛被其他操作（例如重拍）修改/)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
     expect(editItem('their-mask')).toBeTruthy();
-    expect(storage.save).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ imageEditRevision: 0, confirmReview: false }));
+    expect(storage.save).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ imageEditRevision: 0, confirmReview: false }),
+    );
 
     // The next save builds on what the other tab stored.
     storage.save.mockResolvedValue(2);
@@ -118,7 +148,9 @@ describe('ImageEditWorkspace and outside changes', () => {
     storage.loadLatest.mockResolvedValue(entry({ redactions: [mask('their-mask')], imageEditRevision: 3 }));
     open(entry());
 
-    await act(async () => { storage.listeners.forEach((listener) => listener()); });
+    await act(async () => {
+      storage.listeners.forEach((listener) => listener());
+    });
 
     expect(await screen.findByText('已載入這張圖片最新儲存的編輯。')).toBeTruthy();
     expect(editItem('their-mask')).toBeTruthy();
@@ -150,18 +182,22 @@ describe('ImageEditWorkspace limits', () => {
     const full = Array.from({ length: IMAGE_ITEM_LIMITS.maxEdits }, (_, index) => box(`box-${index}`));
     open(entry({ imageEdits: full }));
 
-    expect(screen.getByText(`已達每張圖片 ${IMAGE_ITEM_LIMITS.maxEdits} 個編輯項目的上限，請先刪除部分項目再新增。`)).toBeTruthy();
-    expect((toolButton('外框')).disabled).toBe(true);
+    expect(
+      screen.getByText(`已達每張圖片 ${IMAGE_ITEM_LIMITS.maxEdits} 個編輯項目的上限，請先刪除部分項目再新增。`),
+    ).toBeTruthy();
+    expect(toolButton('外框').disabled).toBe(true);
     // Masks have their own limit, so they can still be added.
-    expect((toolButton('遮罩')).disabled).toBe(false);
+    expect(toolButton('遮罩').disabled).toBe(false);
   });
 
   it('stops adding masks at the storage limit', () => {
     const masks = Array.from({ length: IMAGE_ITEM_LIMITS.maxMasks }, (_, index) => mask(`mask-${index}`));
     open(entry({ redactions: masks }));
 
-    expect(screen.getByText(`已達每張圖片 ${IMAGE_ITEM_LIMITS.maxMasks} 個遮罩的上限，請先刪除部分遮罩再新增。`)).toBeTruthy();
-    expect((toolButton('遮罩')).disabled).toBe(true);
+    expect(
+      screen.getByText(`已達每張圖片 ${IMAGE_ITEM_LIMITS.maxMasks} 個遮罩的上限，請先刪除部分遮罩再新增。`),
+    ).toBeTruthy();
+    expect(toolButton('遮罩').disabled).toBe(true);
     fireEvent.keyDown(layer(), { key: 'm' });
     expect(toolButton('遮罩').getAttribute('aria-pressed')).toBe('false');
   });
@@ -173,8 +209,15 @@ describe('ImageEditWorkspace recorded boxes', () => {
 
   function snapshot(count: number): StepEntry {
     const step = (id: string, order: number) => ({
-      id, sessionId: 'session-1', groupId: 'anchor', order, bounds: { ...recorded, x: order * 100 },
-      devicePixelRatio: 1, description: '', url: 'https://example.test', timestamp: 0,
+      id,
+      sessionId: 'session-1',
+      groupId: 'anchor',
+      order,
+      bounds: { ...recorded, x: order * 100 },
+      devicePixelRatio: 1,
+      description: '',
+      url: 'https://example.test',
+      timestamp: 0,
     });
     return {
       kind: 'group',
@@ -183,7 +226,7 @@ describe('ImageEditWorkspace recorded boxes', () => {
     };
   }
 
-  it('moves an ordinary step\'s box with the pointer tool', async () => {
+  it("moves an ordinary step's box with the pointer tool", async () => {
     storage.save.mockResolvedValue(1);
     const { onClose } = open(entry({ bounds: recorded }));
 
@@ -198,7 +241,7 @@ describe('ImageEditWorkspace recorded boxes', () => {
     expect(savedBoxes()).toEqual([{ id: 'step-1', bounds: { ...recorded, x: 130, y: 70 } }]);
   });
 
-  it('deletes an ordinary step\'s box, but not by copying it', async () => {
+  it("deletes an ordinary step's box, but not by copying it", async () => {
     storage.save.mockResolvedValue(1);
     const { onClose } = open(entry({ bounds: recorded }));
 
@@ -212,7 +255,7 @@ describe('ImageEditWorkspace recorded boxes', () => {
     expect(savedBoxes()).toEqual([]);
   });
 
-  it('deletes a snapshot annotation\'s box, but keeps the last one', async () => {
+  it("deletes a snapshot annotation's box, but keeps the last one", async () => {
     storage.save.mockResolvedValue(1);
     const { onClose } = open(snapshot(2));
 

@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { controlKindOf, generateActionDescription, isControlKind, type ControlKind } from '@/lib/capture/action-description';
+import {
+  controlKindOf,
+  generateActionDescription,
+  isControlKind,
+  type ControlKind,
+} from '@/lib/capture/action-description';
 import { t } from '@/lib/shared/i18n';
 
 function element(html: string, selector = '[data-target]'): Element {

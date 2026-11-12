@@ -81,7 +81,12 @@ export default function SourcePermissionDialog({
   const sourceUnavailable = sourceUnavailableReason !== null;
   const pickerOpen = continuationTabs !== null;
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next && !anyPending) onCancel(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !anyPending) onCancel();
+      }}
+    >
       <DialogContent
         showClose={false}
         onEscapeKeyDown={(event) => anyPending && event.preventDefault()}
@@ -95,7 +100,11 @@ export default function SourcePermissionDialog({
             ) : (
               <ShieldCheck className="size-5 text-brand-text" aria-hidden="true" />
             )}
-            {pickerOpen ? t().editor.permission.pickTab : sourceUnavailable ? actionLabel : t().editor.permission.needsAccess(actionLabel)}
+            {pickerOpen
+              ? t().editor.permission.pickTab
+              : sourceUnavailable
+                ? actionLabel
+                : t().editor.permission.needsAccess(actionLabel)}
           </DialogTitle>
           <DialogDescription className="leading-6">
             {pickerOpen
@@ -107,14 +116,16 @@ export default function SourcePermissionDialog({
         </DialogHeader>
 
         {!pickerOpen && !sourceUnavailable && (
-          <p className="mt-2 text-sm font-bold break-all text-foreground">
-            {sourceOrigin}
-          </p>
+          <p className="mt-2 text-sm font-bold break-all text-foreground">{sourceOrigin}</p>
         )}
 
         {continuationMode !== undefined && onContinuationModeChange && (
           // 2px outline + 2px padding puts each option exactly 4px inside, as `rounded-sm` expects.
-          <div role="radiogroup" aria-label={t().common.recordingMode} className="mt-4 flex gap-0.5 rounded-md border-2 border-border bg-secondary p-0.5">
+          <div
+            role="radiogroup"
+            aria-label={t().common.recordingMode}
+            className="mt-4 flex gap-0.5 rounded-md border-2 border-border bg-secondary p-0.5"
+          >
             {MODE_OPTIONS.map((mode) => (
               <button
                 key={mode}
@@ -124,7 +135,7 @@ export default function SourcePermissionDialog({
                 disabled={anyShown}
                 onClick={() => !anyPending && onContinuationModeChange(mode)}
                 className={cn(
-                  'flex h-9 flex-1 items-center justify-center rounded-sm border-2 text-sm font-bold outline-none transition-colors focus-ring disabled:pointer-events-none disabled:opacity-50',
+                  'flex h-9 flex-1 items-center justify-center rounded-sm border-2 text-sm font-bold focus-ring transition-colors outline-none disabled:pointer-events-none disabled:opacity-50',
                   continuationMode === mode
                     ? 'border-border bg-selected text-on-accent'
                     : 'border-transparent text-muted-foreground hover:text-foreground',
@@ -151,9 +162,7 @@ export default function SourcePermissionDialog({
           </p>
         )}
 
-        {continueElsewhereError && (
-          <InlineAlert className="mt-3">{continueElsewhereError}</InlineAlert>
-        )}
+        {continueElsewhereError && <InlineAlert className="mt-3">{continueElsewhereError}</InlineAlert>}
 
         <DialogFooter className="mt-6">
           <Button type="button" variant="outline" disabled={anyShown} onClick={() => !anyPending && onCancel()}>

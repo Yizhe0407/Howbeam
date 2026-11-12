@@ -47,12 +47,13 @@ export default function Lightbox({ entries, index, onClose, onNavigate }: Props)
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent showClose={false} className="fixed inset-0 z-50 flex max-h-none max-w-none translate-x-0 translate-y-0 items-center justify-center rounded-none border-none bg-[rgb(26_23_20/0.92)] p-0 focus:outline-none">
+      <DialogContent
+        showClose={false}
+        className="fixed inset-0 z-50 flex max-h-none max-w-none translate-x-0 translate-y-0 items-center justify-center rounded-none border-none bg-[rgb(26_23_20/0.92)] p-0 focus:outline-none"
+      >
         <DialogTitle className="sr-only">{t().editor.lightbox.title(index + 1)}</DialogTitle>
         <DialogDescription className="sr-only">
-          {privacy.reviewRequired
-            ? t().editor.privacyReviewRequiredHidden
-            : t().editor.lightbox.navigationHint}
+          {privacy.reviewRequired ? t().editor.privacyReviewRequiredHidden : t().editor.lightbox.navigationHint}
         </DialogDescription>
 
         <Button

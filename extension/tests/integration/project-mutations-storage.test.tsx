@@ -54,7 +54,8 @@ function snapshot(anchorId: string, order: number, annotationIds: string[]): Ste
   return [
     single(anchorId, order, { groupId: anchorId, bounds: null }),
     ...annotationIds.map((id, index) =>
-      single(id, order + 1 + index, { groupId: anchorId, screenshotBlob: undefined })),
+      single(id, order + 1 + index, { groupId: anchorId, screenshotBlob: undefined }),
+    ),
   ];
 }
 
@@ -76,47 +77,49 @@ function createEditor() {
     const fresh = await getProjectStructureSnapshot(sessionId);
     const entries = view ?? fresh.entries;
     const project: Project = fresh.project;
-    const { result } = renderHook(() => useProjectMutations({
-      sessionId,
-      project,
-      entries,
-      sections: project.sections,
-      runOperation: (_label, operation) => operation(),
-      editingBlocked: () => false,
-      showOptimistic: () => () => undefined,
-      flushDescriptions: async () => undefined,
-      adoptCommitted: () => undefined,
-      requireSelectedEntry: (expected?: string) => {
-        const wanted = expected ?? editor.selectedEntryId;
-        const entry = entries.find((candidate) => entryId(candidate) === wanted);
-        if (!entry) throw new Error(`no entry ${wanted}`);
-        return entry;
-      },
-      setSelectedEntryId: (next) => {
-        editor.selectedEntryId = typeof next === 'function' ? next(editor.selectedEntryId) : next;
-      },
-      setZoomOpen: () => undefined,
-      setOperationError: (message) => {
-        editor.operationError = message;
-      },
-      undoAction: undo,
-      offeredUndo: () => undo,
-      offerUndo: (pending: PendingUndoAction, projectId: string) => {
-        undo = { ...pending, id: ++undoIds, projectId };
-      },
-      takeUndo: () => {
-        const taken = undo;
-        undo = null;
-        return taken;
-      },
-      returnUndo: (taken) => {
-        undo = taken;
-      },
-      finalizeUndo: () => undefined,
-      clearUndo: () => {
-        undo = null;
-      },
-    }));
+    const { result } = renderHook(() =>
+      useProjectMutations({
+        sessionId,
+        project,
+        entries,
+        sections: project.sections,
+        runOperation: (_label, operation) => operation(),
+        editingBlocked: () => false,
+        showOptimistic: () => () => undefined,
+        flushDescriptions: async () => undefined,
+        adoptCommitted: () => undefined,
+        requireSelectedEntry: (expected?: string) => {
+          const wanted = expected ?? editor.selectedEntryId;
+          const entry = entries.find((candidate) => entryId(candidate) === wanted);
+          if (!entry) throw new Error(`no entry ${wanted}`);
+          return entry;
+        },
+        setSelectedEntryId: (next) => {
+          editor.selectedEntryId = typeof next === 'function' ? next(editor.selectedEntryId) : next;
+        },
+        setZoomOpen: () => undefined,
+        setOperationError: (message) => {
+          editor.operationError = message;
+        },
+        undoAction: undo,
+        offeredUndo: () => undo,
+        offerUndo: (pending: PendingUndoAction, projectId: string) => {
+          undo = { ...pending, id: ++undoIds, projectId };
+        },
+        takeUndo: () => {
+          const taken = undo;
+          undo = null;
+          return taken;
+        },
+        returnUndo: (taken) => {
+          undo = taken;
+        },
+        finalizeUndo: () => undefined,
+        clearUndo: () => {
+          undo = null;
+        },
+      }),
+    );
     await act(() => action(result.current));
   }
 
@@ -127,7 +130,8 @@ function createEditor() {
 async function layout(): Promise<unknown[]> {
   const { entries } = await getProjectStructureSnapshot(sessionId);
   return entries.map((entry) =>
-    entry.kind === 'single' ? entry.step.id : [entry.anchor.id, entry.annotations.map((annotation) => annotation.id)]);
+    entry.kind === 'single' ? entry.step.id : [entry.anchor.id, entry.annotations.map((annotation) => annotation.id)],
+  );
 }
 
 /** Rail rows: `#name` is the section titled name, anything else an entry. */
@@ -152,11 +156,7 @@ async function addSection(startEntryId: string, title: string) {
 beforeEach(async () => {
   sessionId = crypto.randomUUID();
   await ensureProject(sessionId);
-  await seedSteps([
-    single(uid('a'), 0),
-    ...snapshot(uid('g'), 1, [uid('g1'), uid('g2')]),
-    single(uid('c'), 4),
-  ]);
+  await seedSteps([single(uid('a'), 0), ...snapshot(uid('g'), 1, [uid('g1'), uid('g2')]), single(uid('c'), 4)]);
 });
 
 describe('delete step', () => {
@@ -255,7 +255,12 @@ describe('reorder', () => {
     // The hook still shows the old title when the queued rename lands ahead of the drop.
     await run(async (mutations) => {
       const project = await getProject(sessionId);
-      await renameProjectSectionAtomically(sessionId, itemAt(project!.sections, 0).id, 'Renamed', project!.contentRevision);
+      await renameProjectSectionAtomically(
+        sessionId,
+        itemAt(project!.sections, 0).id,
+        'Renamed',
+        project!.contentRevision,
+      );
       await mutations.handleReorderEntries(dropped);
     });
 
@@ -268,7 +273,9 @@ describe('reorder', () => {
     const steps = await getSteps(sessionId);
     const annotation = (id: string) => steps.find((step) => step.id === id)!;
 
-    await run((mutations) => mutations.handleReorderAnnotations(uid('g'), [annotation(uid('g2')), annotation(uid('g1'))]));
+    await run((mutations) =>
+      mutations.handleReorderAnnotations(uid('g'), [annotation(uid('g2')), annotation(uid('g1'))]),
+    );
 
     expect(await layout()).toEqual([uid('a'), [uid('g'), [uid('g2'), uid('g1')]], uid('c')]);
 

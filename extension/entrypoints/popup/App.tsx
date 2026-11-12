@@ -52,13 +52,14 @@ function App() {
     try {
       // Recovery must return to the operation owner; normal navigation resolves the
       // current UI selection afresh so an idle popup never opens a project-less editor.
-      const targetSessionId = editorRecovery
-        ? sessionId
-        : (await ensureSelectedProject()).id;
-      const result = await sendToBackground({
-        type: 'OPEN_EDITOR',
-        sessionId: targetSessionId ?? undefined,
-      }, t().popup.editorServiceUnavailable);
+      const targetSessionId = editorRecovery ? sessionId : (await ensureSelectedProject()).id;
+      const result = await sendToBackground(
+        {
+          type: 'OPEN_EDITOR',
+          sessionId: targetSessionId ?? undefined,
+        },
+        t().popup.editorServiceUnavailable,
+      );
       if (!result.ok) {
         setEditorOpenError(copyText(result.error));
         return;
@@ -117,14 +118,16 @@ function App() {
         onTargetProjectChange={setTargetProjectId}
       />
 
-      {!editorRecovery && !isRecording && <div className="h-0.5 w-full rounded-full bg-border-soft" aria-hidden="true" />}
+      {!editorRecovery && !isRecording && (
+        <div className="h-0.5 w-full rounded-full bg-border-soft" aria-hidden="true" />
+      )}
 
       {!editorRecovery && !isRecording && (
         <Button variant="outline" onClick={() => void openLibraryView()} className="w-full">
-          <Library />{t().common.library}
+          <Library />
+          {t().common.library}
         </Button>
       )}
-
     </main>
   );
 }

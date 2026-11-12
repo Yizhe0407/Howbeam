@@ -158,7 +158,12 @@ describe('step hover preview', () => {
     document.body.append(overlayHost);
     const hiddenBefore = stepPreview.hidden;
 
-    preview.handlers.onPointerMove({ clientX: 500, clientY: 500, buttons: 1, target: overlayHost } as unknown as PointerEvent);
+    preview.handlers.onPointerMove({
+      clientX: 500,
+      clientY: 500,
+      buttons: 1,
+      target: overlayHost,
+    } as unknown as PointerEvent);
     await nextFrame();
 
     expect(stepPreview.hidden).toBeGreaterThan(hiddenBefore);

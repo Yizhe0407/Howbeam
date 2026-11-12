@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type PointerEvent,
-} from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
 import {
   anchorAt,
   clampZoom,
@@ -43,37 +36,30 @@ export function useImageEditViewport(imageSize: Size | null) {
   // scrollbar appearing would change the fit and with it the scrollbar.
   useLayoutEffect(() => {
     if (!frame) return undefined;
-    const measure = () =>
-      setFrameSize({ width: frame.clientWidth, height: frame.clientHeight });
+    const measure = () => setFrameSize({ width: frame.clientWidth, height: frame.clientHeight });
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(frame);
     return () => observer.disconnect();
   }, [frame]);
 
-  const fit =
-    imageSize && frameSize ? fitSize(frameSize, imageSize, FIT_MARGIN) : null;
+  const fit = imageSize && frameSize ? fitSize(frameSize, imageSize, FIT_MARGIN) : null;
   const maxZoom = maxZoomFor(fit, imageSize);
   const maxZoomRef = useRef(maxZoom);
   maxZoomRef.current = maxZoom;
 
-  const zoomTo = useCallback(
-    (nextZoom: number, client: { x: number; y: number } | null) => {
-      const clamped = clampZoom(nextZoom, maxZoomRef.current);
-      if (clamped === zoomRef.current) return;
-      const canvas = canvasRef.current?.getBoundingClientRect();
-      anchorRef.current = client && canvas ? anchorAt(client, canvas) : null;
-      zoomRef.current = clamped;
-      setZoom(clamped);
-    },
-    [],
-  );
+  const zoomTo = useCallback((nextZoom: number, client: { x: number; y: number } | null) => {
+    const clamped = clampZoom(nextZoom, maxZoomRef.current);
+    if (clamped === zoomRef.current) return;
+    const canvas = canvasRef.current?.getBoundingClientRect();
+    anchorRef.current = client && canvas ? anchorAt(client, canvas) : null;
+    zoomRef.current = clamped;
+    setZoom(clamped);
+  }, []);
 
   const frameCenter = useCallback(() => {
     const rect = frame?.getBoundingClientRect();
-    return rect
-      ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-      : null;
+    return rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null;
   }, [frame]);
 
   // After the zoom is laid out, scroll so the image point under the pointer stays under it.
@@ -129,8 +115,7 @@ export function useImageEditViewport(imageSize: Size | null) {
 
   useEffect(() => {
     const isTypingTarget = (target: EventTarget | null) =>
-      target instanceof HTMLButtonElement ||
-      target instanceof HTMLTextAreaElement;
+      target instanceof HTMLButtonElement || target instanceof HTMLTextAreaElement;
     const down = (event: KeyboardEvent) => {
       if (event.code !== 'Space' || isTypingTarget(event.target)) return;
       event.preventDefault();

@@ -91,7 +91,12 @@ export async function updateProject(id: string, changes: ProjectMetadataChanges)
     const patch: Partial<Project> = {};
     if (changes.title !== undefined) patch.title = changes.title;
     if (changes.description !== undefined) patch.description = changes.description;
-    const updated = sanitizeProject({ ...existing, ...patch, updatedAt: Math.max(existing.updatedAt, Date.now()), metadataRevision: existing.metadataRevision + 1 });
+    const updated = sanitizeProject({
+      ...existing,
+      ...patch,
+      updatedAt: Math.max(existing.updatedAt, Date.now()),
+      metadataRevision: existing.metadataRevision + 1,
+    });
     await tx.store.put(updated);
     await tx.done;
     notifyProjectsChanged();
@@ -101,8 +106,9 @@ export async function updateProject(id: string, changes: ProjectMetadataChanges)
 
 /** Reads only denormalized project rows; no step cursor or screenshot Blob is opened. */
 export async function getProjectSummaries(): Promise<ProjectSummary[]> {
-  const projects = (await runWithDatabase((db) => db.getAllFromIndex('projects', 'by-updated-at')))
-    .map(sanitizeProject);
+  const projects = (await runWithDatabase((db) => db.getAllFromIndex('projects', 'by-updated-at'))).map(
+    sanitizeProject,
+  );
   return projects.sort((first, second) => second.updatedAt - first.updatedAt);
 }
 
@@ -162,7 +168,8 @@ function prepareProjectClone(
 async function storePreparedProject(tx: ProjectWriteTransaction, prepared: PreparedProjectClone): Promise<Project> {
   await tx.objectStore('projects').add(prepared.project);
   if (prepared.entries.length === 0) return prepared.project;
-  return (await commitEntries(tx, prepared.project, [], prepared.entries, { timestamp: prepared.project.updatedAt })).project;
+  return (await commitEntries(tx, prepared.project, [], prepared.entries, { timestamp: prepared.project.updatedAt }))
+    .project;
 }
 
 export async function createProjectFromSteps(
@@ -182,10 +189,14 @@ export async function createProjectFromSteps(
 export async function duplicateProject(sourceId: string, title?: string): Promise<Project> {
   return runProjectWrite(async (tx) => {
     const source = await requireProject(tx, sourceId);
-    const prepared = prepareProjectClone(await readEntries(tx, sourceId), {
-      title: title ?? t().common.duplicateTitle(source.title),
-      description: source.description,
-    }, { sections: source.sections });
+    const prepared = prepareProjectClone(
+      await readEntries(tx, sourceId),
+      {
+        title: title ?? t().common.duplicateTitle(source.title),
+        description: source.description,
+      },
+      { sections: source.sections },
+    );
     return storePreparedProject(tx, prepared);
   });
 }

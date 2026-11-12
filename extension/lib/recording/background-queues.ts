@@ -13,7 +13,10 @@ export function queueCapture<T>(task: () => Promise<T>): Promise<T> {
     return task();
   };
   const result = captureChain.then(run, run);
-  captureChain = result.then(() => undefined, () => undefined);
+  captureChain = result.then(
+    () => undefined,
+    () => undefined,
+  );
   return result;
 }
 

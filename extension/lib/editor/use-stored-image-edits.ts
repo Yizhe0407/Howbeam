@@ -8,10 +8,7 @@ import {
   type Step,
   type StepEntry,
 } from '@/lib/storage/models';
-import {
-  StepImageEditConflictError,
-  StepUpdateConflictError,
-} from '@/lib/storage/step-repository';
+import { StepImageEditConflictError, StepUpdateConflictError } from '@/lib/storage/step-repository';
 import { subscribeProjectsChanged } from '@/lib/storage/change-notifier';
 import { splitItems, toItems, type Highlight, type ImageEditItem } from './image-edit-items';
 import { ImageEditSessionConflict, useImageEditSession } from './image-edit-session';
@@ -40,10 +37,8 @@ function itemsOf(entry: StepEntry): ImageEditItem[] {
 const annotationsOf = (entry: StepEntry): Step[] => (entry.kind === 'group' ? entry.annotations : []);
 const annotationIdsOf = (entry: StepEntry): string[] => annotationsOf(entry).map((annotation) => annotation.id);
 
-const imageEditRevisionOf = (entry: StepEntry): number =>
-  getEntryImageOwner(entry).imageEditRevision ?? 0;
-const captureRevisionOf = (entry: StepEntry): number =>
-  getEntryImageOwner(entry).captureRevision ?? 0;
+const imageEditRevisionOf = (entry: StepEntry): number => getEntryImageOwner(entry).imageEditRevision ?? 0;
+const captureRevisionOf = (entry: StepEntry): number => getEntryImageOwner(entry).captureRevision ?? 0;
 
 /**
  * The image editor's draft and its stored copy: edits live in a session draft
@@ -66,9 +61,7 @@ export function useStoredImageEdits(
   const [knownAnnotations] = useState(() => new Map(annotationsOf(openedEntry).map((step) => [step.id, step])));
   const [initialItems] = useState(() => itemsOf(openedEntry));
   /** The masks still wait for the person to confirm them (after a retake, or repaired metadata). */
-  const [reviewRequired, setReviewRequired] = useState(
-    () => getEntryPrivacyState(openedEntry).reviewRequired,
-  );
+  const [reviewRequired, setReviewRequired] = useState(() => getEntryPrivacyState(openedEntry).reviewRequired);
   /** Set only while a confirming save runs: that save also confirms the masks. */
   const confirmReviewRef = useRef(false);
   /** Another tab's saved edits were loaded into an untouched editor. */
@@ -76,14 +69,17 @@ export function useStoredImageEdits(
   const onAdoptedElsewhereRef = useRef(onAdoptedElsewhere);
   onAdoptedElsewhereRef.current = onAdoptedElsewhere;
 
-  const adoptEntry = useCallback((next: StepEntry) => {
-    entryRef.current = next;
-    revisionRef.current = imageEditRevisionOf(next);
-    annotationIdsRef.current = annotationIdsOf(next);
-    for (const step of annotationsOf(next)) knownAnnotations.set(step.id, step);
-    setEntry(next);
-    setReviewRequired(getEntryPrivacyState(next).reviewRequired);
-  }, [knownAnnotations]);
+  const adoptEntry = useCallback(
+    (next: StepEntry) => {
+      entryRef.current = next;
+      revisionRef.current = imageEditRevisionOf(next);
+      annotationIdsRef.current = annotationIdsOf(next);
+      for (const step of annotationsOf(next)) knownAnnotations.set(step.id, step);
+      setEntry(next);
+      setReviewRequired(getEntryPrivacyState(next).reviewRequired);
+    },
+    [knownAnnotations],
+  );
 
   const session = useImageEditSession({
     initialItems,
@@ -91,24 +87,16 @@ export function useStoredImageEdits(
       const confirmReview = confirmReviewRef.current;
       const split = splitItems(items);
       try {
-        revisionRef.current = await saveEntryImageEdits(
-          entryRef.current,
-          split,
-          {
-            imageEditRevision: revisionRef.current,
-            annotationIds: annotationIdsRef.current,
-            removed: knownAnnotations,
-            confirmReview,
-          },
-        );
+        revisionRef.current = await saveEntryImageEdits(entryRef.current, split, {
+          imageEditRevision: revisionRef.current,
+          annotationIds: annotationIdsRef.current,
+          removed: knownAnnotations,
+          confirmReview,
+        });
         if (entryRef.current.kind === 'group') annotationIdsRef.current = split.highlights.map((box) => box.id);
         if (confirmReview) setReviewRequired(false);
       } catch (error) {
-        if (
-          !(error instanceof StepImageEditConflictError) &&
-          !(error instanceof StepUpdateConflictError)
-        )
-          throw error;
+        if (!(error instanceof StepImageEditConflictError) && !(error instanceof StepUpdateConflictError)) throw error;
         // Saving over what another tab stored would delete its masks: show that instead.
         const latest = await loadLatestEntry(entryRef.current);
         if (!latest) throw error;

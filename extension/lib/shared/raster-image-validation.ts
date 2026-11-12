@@ -186,11 +186,12 @@ export async function validateRasterImageBlob(blob: Blob): Promise<RasterImageDi
   if (mediaType !== 'image/png' && mediaType !== 'image/jpeg' && mediaType !== 'image/webp') {
     invalid(`Unsupported raster image media type ${JSON.stringify(blob.type)}.`);
   }
-  const dimensions = mediaType === 'image/png'
-    ? pngDimensions(await readPrefix(blob, HEADER_PREFIX_BYTES))
-    : mediaType === 'image/webp'
-      ? webpDimensions(await readPrefix(blob, HEADER_PREFIX_BYTES), blob.size)
-      : await jpegBlobDimensions(blob);
+  const dimensions =
+    mediaType === 'image/png'
+      ? pngDimensions(await readPrefix(blob, HEADER_PREFIX_BYTES))
+      : mediaType === 'image/webp'
+        ? webpDimensions(await readPrefix(blob, HEADER_PREFIX_BYTES), blob.size)
+        : await jpegBlobDimensions(blob);
   validateDimensions(dimensions.width, dimensions.height);
   return { ...dimensions, mediaType };
 }

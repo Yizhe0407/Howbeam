@@ -6,16 +6,33 @@ import { PAGE_URL, tab, wiredRun } from './fakes';
 const sender = { frameId: 0, url: PAGE_URL, tab: tab({ id: 4, windowId: 1 }) };
 const viewport = { width: 800, height: 600, scrollX: 0, scrollY: 0 };
 const stepsRun = makeRecordingState({
-  operation: 'recording', isRecording: true, phase: 'recording', sessionId: 'project-1', tabId: 4, runId: 'run-1',
+  operation: 'recording',
+  isRecording: true,
+  phase: 'recording',
+  sessionId: 'project-1',
+  tabId: 4,
+  runId: 'run-1',
 });
 const snapshotRun = makeRecordingState({
-  ...stepsRun, mode: 'snapshot', groupAnchorId: 'anchor-1', snapshotViewport: viewport, snapshotDevicePixelRatio: 1,
+  ...stepsRun,
+  mode: 'snapshot',
+  groupAnchorId: 'anchor-1',
+  snapshotViewport: viewport,
+  snapshotDevicePixelRatio: 1,
 });
 
 function click(overrides: Partial<ClickCapture> = {}): ClickCapture {
   return {
-    type: 'HOWBEAM_CLICK', captureId: `c-${Math.random()}`, runId: 'run-1', rect: { x: 1, y: 2, width: 30, height: 20 },
-    devicePixelRatio: 1, viewport, control: 'button', intent: 'click', url: PAGE_URL, timestamp: 5,
+    type: 'HOWBEAM_CLICK',
+    captureId: `c-${Math.random()}`,
+    runId: 'run-1',
+    rect: { x: 1, y: 2, width: 30, height: 20 },
+    devicePixelRatio: 1,
+    viewport,
+    control: 'button',
+    intent: 'click',
+    url: PAGE_URL,
+    timestamp: 5,
     ...overrides,
   };
 }
@@ -25,18 +42,31 @@ describe('a click in a steps run', () => {
     const run = await wiredRun(stepsRun);
     const message = click();
     await expect(run.capture.handleClick(message, sender)).resolves.toEqual({ ok: true });
-    expect(run.ports.tabs.send).toHaveBeenCalledWith(4, { type: 'HOWBEAM_CAPTURE_TAKEN', runId: 'run-1', captureId: message.captureId });
-    expect(run.steps).toEqual([expect.objectContaining({ sessionId: 'project-1', runId: 'run-1', bounds: message.rect, description: expect.any(String) })]);
+    expect(run.ports.tabs.send).toHaveBeenCalledWith(4, {
+      type: 'HOWBEAM_CAPTURE_TAKEN',
+      runId: 'run-1',
+      captureId: message.captureId,
+    });
+    expect(run.steps).toEqual([
+      expect.objectContaining({
+        sessionId: 'project-1',
+        runId: 'run-1',
+        bounds: message.rect,
+        description: expect.any(String),
+      }),
+    ]);
     expect(run.state()).toMatchObject({ itemCount: 1, runItemCount: 1, lastCommittedCaptureId: message.captureId });
   });
 
-  it('creates and selects the run\'s own Project when its first step is stored, once', async () => {
+  it("creates and selects the run's own Project when its first step is stored, once", async () => {
     const run = await wiredRun({ ...stepsRun, newProject: true });
     await run.capture.handleClick(click(), sender);
     await run.capture.handleClick(click(), sender);
     expect(run.ports.projects.ensure).toHaveBeenCalledExactlyOnceWith('project-1');
     expect(run.ports.projects.select).toHaveBeenCalledWith('project-1');
-    expect(run.ports.projects.ensure.mock.invocationCallOrder[0]).toBeLessThan(run.ports.steps.add.mock.invocationCallOrder[0]!);
+    expect(run.ports.projects.ensure.mock.invocationCallOrder[0]).toBeLessThan(
+      run.ports.steps.add.mock.invocationCallOrder[0]!,
+    );
   });
 
   it.each([
@@ -53,8 +83,14 @@ describe('a click in a steps run', () => {
 
   it('turns down clicks from another tab, another run, or a paused run', async () => {
     const run = await wiredRun(stepsRun);
-    await expect(run.capture.handleClick(click(), { ...sender, tab: tab({ id: 5 }) })).resolves.toMatchObject({ ok: false, error: 'untrusted-sender' });
-    await expect(run.capture.handleClick(click({ runId: 'run-0' }), sender)).resolves.toMatchObject({ ok: false, error: 'not-recording' });
+    await expect(run.capture.handleClick(click(), { ...sender, tab: tab({ id: 5 }) })).resolves.toMatchObject({
+      ok: false,
+      error: 'untrusted-sender',
+    });
+    await expect(run.capture.handleClick(click({ runId: 'run-0' }), sender)).resolves.toMatchObject({
+      ok: false,
+      error: 'not-recording',
+    });
     await run.lifecycle.pause('run-1');
     await expect(run.capture.handleClick(click(), sender)).resolves.toMatchObject({ ok: false, error: 'wrong-phase' });
   });
@@ -63,7 +99,10 @@ describe('a click in a steps run', () => {
     const run = await wiredRun(stepsRun);
     const message = click();
     run.ports.capture.mockImplementationOnce(async (_request, guard) => {
-      await run.capture.handleCancelCapture({ type: 'HOWBEAM_CANCEL_CAPTURE', runId: 'run-1', captureId: message.captureId }, sender);
+      await run.capture.handleCancelCapture(
+        { type: 'HOWBEAM_CANCEL_CAPTURE', runId: 'run-1', captureId: message.captureId },
+        sender,
+      );
       await guard();
       return { blob: new Blob(['x']), scale: 1 };
     });
@@ -76,7 +115,20 @@ describe('a click in a steps run', () => {
 describe('a click in a snapshot run', () => {
   async function withAnchor(state = snapshotRun) {
     const run = await wiredRun(state);
-    run.steps.push({ id: 'anchor-1', sessionId: 'project-1', runId: 'run-1', order: 0, bounds: null, devicePixelRatio: 1, screenshotScale: 2, screenshotBlob: new Blob(['a']), description: '', url: PAGE_URL, timestamp: 1, groupId: 'anchor-1' });
+    run.steps.push({
+      id: 'anchor-1',
+      sessionId: 'project-1',
+      runId: 'run-1',
+      order: 0,
+      bounds: null,
+      devicePixelRatio: 1,
+      screenshotScale: 2,
+      screenshotBlob: new Blob(['a']),
+      description: '',
+      url: PAGE_URL,
+      timestamp: 1,
+      groupId: 'anchor-1',
+    });
     return run;
   }
 
@@ -90,30 +142,52 @@ describe('a click in a snapshot run', () => {
 
   it('invalidates the snapshot when the viewport no longer matches', async () => {
     const run = await withAnchor();
-    await expect(run.capture.handleClick(click({ viewport: { ...viewport, scrollY: 300 } }), sender))
-      .resolves.toMatchObject({ ok: false, reported: true, error: 'snapshot-viewport-changed' });
-    expect(run.state()).toMatchObject({ phase: 'invalidated', recoverableError: { code: 'SNAPSHOT_VIEWPORT_CHANGED' } });
+    await expect(
+      run.capture.handleClick(click({ viewport: { ...viewport, scrollY: 300 } }), sender),
+    ).resolves.toMatchObject({ ok: false, reported: true, error: 'snapshot-viewport-changed' });
+    expect(run.state()).toMatchObject({
+      phase: 'invalidated',
+      recoverableError: { code: 'SNAPSHOT_VIEWPORT_CHANGED' },
+    });
   });
 
   it('ends the run once when the base image is gone', async () => {
     const run = await wiredRun(snapshotRun);
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    await expect(run.capture.handleClick(click(), sender)).resolves.toMatchObject({ reported: true, error: 'snapshot-anchor-missing' });
-    expect(run.state()).toMatchObject({ isRecording: false, phase: 'error', recoverableError: { code: 'SNAPSHOT_ANCHOR_MISSING' } });
+    await expect(run.capture.handleClick(click(), sender)).resolves.toMatchObject({
+      reported: true,
+      error: 'snapshot-anchor-missing',
+    });
+    expect(run.state()).toMatchObject({
+      isRecording: false,
+      phase: 'error',
+      recoverableError: { code: 'SNAPSHOT_ANCHOR_MISSING' },
+    });
   });
 });
 
 describe('the recorder reporting in', () => {
   it('keeps a recorder re-injected into a live run, and turns away anything else', async () => {
     const run = await wiredRun(stepsRun);
-    await expect(run.capture.handleRecorderReady({ type: 'HOWBEAM_READY', runId: 'run-1' }, sender)).resolves.toBe(true);
-    await expect(run.capture.handleRecorderReady({ type: 'HOWBEAM_READY', runId: 'run-0' }, sender)).resolves.toBe(false);
-    await expect(run.capture.handleRecorderReady({ type: 'HOWBEAM_READY', runId: 'run-1' }, { ...sender, frameId: 3 })).resolves.toBe(false);
+    await expect(run.capture.handleRecorderReady({ type: 'HOWBEAM_READY', runId: 'run-1' }, sender)).resolves.toBe(
+      true,
+    );
+    await expect(run.capture.handleRecorderReady({ type: 'HOWBEAM_READY', runId: 'run-0' }, sender)).resolves.toBe(
+      false,
+    );
+    await expect(
+      run.capture.handleRecorderReady({ type: 'HOWBEAM_READY', runId: 'run-1' }, { ...sender, frameId: 3 }),
+    ).resolves.toBe(false);
   });
 
   it('ends a snapshot run whose shield broke', async () => {
     const run = await wiredRun(snapshotRun);
-    await expect(run.capture.handleSnapshotRecorderFailure({ type: 'SNAPSHOT_RECORDER_FAILED', runId: 'run-1', reason: 'shield-channel' }, sender)).resolves.toBe(true);
+    await expect(
+      run.capture.handleSnapshotRecorderFailure(
+        { type: 'SNAPSHOT_RECORDER_FAILED', runId: 'run-1', reason: 'shield-channel' },
+        sender,
+      ),
+    ).resolves.toBe(true);
     expect(run.state()).toMatchObject({ phase: 'error', recoverableError: { code: 'SNAPSHOT_SHIELD_FAILED' } });
   });
 });
@@ -128,7 +202,10 @@ describe('undo and restore', () => {
     expect(run.state()).toMatchObject({ itemCount: 0 });
     await expect(run.undo.restore('run-1', 'wrong')).resolves.toEqual({ ok: false, error: 'background.cannotRestore' });
     // A refused restore closes the window.
-    await expect(run.undo.restore('run-1', undone.ok ? undone.undoToken : '')).resolves.toEqual({ ok: false, error: 'background.cannotRestore' });
+    await expect(run.undo.restore('run-1', undone.ok ? undone.undoToken : '')).resolves.toEqual({
+      ok: false,
+      error: 'background.cannotRestore',
+    });
   });
 
   it('restores once, and a new click closes the window', async () => {

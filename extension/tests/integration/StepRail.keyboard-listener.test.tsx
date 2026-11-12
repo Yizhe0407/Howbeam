@@ -94,7 +94,17 @@ describe('StepRail arrow-key listener stability', () => {
       const row = this.closest('li');
       const index = row ? Array.from(row.parentElement?.children ?? []).indexOf(row) : 0;
       const top = index * 100;
-      return { x: 0, y: top, top, bottom: top + 90, left: 0, right: 200, width: 200, height: 90, toJSON: () => ({}) } as DOMRect;
+      return {
+        x: 0,
+        y: top,
+        top,
+        bottom: top + 90,
+        left: 0,
+        right: 200,
+        width: 200,
+        height: 90,
+        toJSON: () => ({}),
+      } as DOMRect;
     });
     const onSelect = vi.fn();
     const onReorder = vi.fn().mockResolvedValue(undefined);

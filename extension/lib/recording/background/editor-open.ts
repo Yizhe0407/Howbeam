@@ -105,7 +105,10 @@ export function createEditorOpen(deps: { recovery: EditorRecovery }) {
    * message, and returning from a recapture all come through here, so the
    * product keeps exactly one editor tab.
    */
-  async function openEditor(target: EditorTarget = {}, placement: EditorPlacement = NEW_TAB): Promise<OpenEditorResult> {
+  async function openEditor(
+    target: EditorTarget = {},
+    placement: EditorPlacement = NEW_TAB,
+  ): Promise<OpenEditorResult> {
     const url = editorUrl(target);
     const existing = await findExtensionPage('editor');
     if (!existing) {
@@ -159,8 +162,7 @@ export function createEditorOpen(deps: { recovery: EditorRecovery }) {
       // project at its first entry — deriving the target from the newest capture
       // made every "open editor" land on the last step.
       const resumesInterruptedRun = state.sessionId === targetSessionId && state.needsRecovery;
-      const entryId =
-        message.entryId ?? (resumesInterruptedRun ? await latestEntryId(targetSessionId) : null);
+      const entryId = message.entryId ?? (resumesInterruptedRun ? await latestEntryId(targetSessionId) : null);
       const result = await openEditor({ sessionId: targetSessionId, entryId }, placement);
       if (state.sessionId === targetSessionId) await deps.recovery.settle(targetSessionId, 'opened');
       return result;
@@ -183,6 +185,5 @@ export function createEditorOpen(deps: { recovery: EditorRecovery }) {
 
   return { openEditor, openEditorForStoredSession };
 }
-
 
 export type EditorOpen = ReturnType<typeof createEditorOpen>;

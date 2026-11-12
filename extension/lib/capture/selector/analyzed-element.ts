@@ -1,4 +1,8 @@
-import { hasComputedVisibilityUnavailable, hasOwnInteractionDisabledState, hasOwnSubtreeVisualUnavailableState } from './element-availability';
+import {
+  hasComputedVisibilityUnavailable,
+  hasOwnInteractionDisabledState,
+  hasOwnSubtreeVisualUnavailableState,
+} from './element-availability';
 import { type Bounds } from '../../storage/models';
 import { type InteractionKind, interactionKind } from './interactive-element';
 
@@ -39,11 +43,10 @@ export function analyzeElements(nodes: Iterable<unknown>): AnalyzedElement[] {
       interactionUnavailable,
       // Image-map areas intentionally inherit their rendered state from the
       // associated image rather than their non-rendered <map> ancestry.
-      visuallyUnavailable: element instanceof HTMLAreaElement
-        ? false
-        : subtreeVisuallyUnavailable ||
-          hasComputedVisibilityUnavailable(style) ||
-          style.display === 'contents',
+      visuallyUnavailable:
+        element instanceof HTMLAreaElement
+          ? false
+          : subtreeVisuallyUnavailable || hasComputedVisibilityUnavailable(style) || style.display === 'contents',
     });
   }
   return entries.reverse();

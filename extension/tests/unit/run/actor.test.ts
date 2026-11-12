@@ -22,10 +22,12 @@ function deferred<T = void>() {
   return { promise, resolve };
 }
 
-const withSession = (sessionId: string) => (current: RunState): RunState => ({
-  ...current,
-  operation: { ...current.operation, sessionId } as RunState['operation'],
-});
+const withSession =
+  (sessionId: string) =>
+  (current: RunState): RunState => ({
+    ...current,
+    operation: { ...current.operation, sessionId } as RunState['operation'],
+  });
 
 describe('run actor', () => {
   it('reads the stored state once, before the first operation', async () => {
@@ -94,7 +96,12 @@ describe('run actor', () => {
 
   it('starts idle when the stored state cannot be read', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const actor = createRunActor({ load: async () => { throw new Error('boom'); }, save: async () => {} });
+    const actor = createRunActor({
+      load: async () => {
+        throw new Error('boom');
+      },
+      save: async () => {},
+    });
     await expect(actor.run(async (ctx) => ctx.state().operation.kind)).resolves.toBe('idle');
   });
 });
