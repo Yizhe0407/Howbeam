@@ -3,6 +3,7 @@ import type { StepGestureQueue } from '../../capture/step-gesture-queue';
 import type { MountedRecordingToolbar } from '../recording-toolbar-host';
 import type { SnapshotShield } from '../snapshot-shield';
 import type { StepHoverPreview } from '../step-hover-preview';
+import type { BackgroundTransport } from '../../runtime/background-client';
 
 /**
  * Mutable handles one content-script recording run shares between the
@@ -13,6 +14,8 @@ import type { StepHoverPreview } from '../step-hover-preview';
  */
 export interface ContentRecordingSession {
   readonly runId: string;
+  /** Requests to the background, over the recorder's connection. */
+  readonly send: BackgroundTransport;
   /** True while the run is paused; recorders read it to drop input. */
   paused: boolean;
   shield: SnapshotShield | null;
@@ -22,9 +25,14 @@ export interface ContentRecordingSession {
   gestureQueue: StepGestureQueue | null;
 }
 
-export function createContentRecordingSession(options: { runId: string; paused: boolean }): ContentRecordingSession {
+export function createContentRecordingSession(options: {
+  runId: string;
+  paused: boolean;
+  send: BackgroundTransport;
+}): ContentRecordingSession {
   return {
     runId: options.runId,
+    send: options.send,
     paused: options.paused,
     shield: null,
     regionCapture: null,

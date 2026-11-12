@@ -2,6 +2,7 @@ import { browser } from 'wxt/browser';
 import { startKeepAlive } from '../runtime/keep-alive';
 import { installBfcacheLifecycle } from './bfcache-lifecycle';
 import { CONTENT_KEEPALIVE_INTERVAL_MS, CONTENT_KEEPALIVE_PORT_NAME } from './content-script-constants';
+import type { BackgroundTransport } from '../runtime/background-client';
 
 export interface RecorderLifecycleOptions {
   /** Re-reads the authoritative recording state; true when this recorder's
@@ -14,6 +15,8 @@ export interface RecorderLifecycleOptions {
 }
 
 export interface RecorderLifecycle {
+  /** Sends a request to the background over the connection; fails at once when it closes. */
+  send: BackgroundTransport;
   /** Uninstalls the bfcache hooks and stops the keep-alive port. Safe to call
    * from within the cleanup passed in the options. */
   stop(): void;
@@ -42,6 +45,7 @@ export function installRecorderLifecycle(options: RecorderLifecycleOptions): Rec
     teardown: () => options.cleanup(),
   });
   return {
+    send: (message) => keepAlive.request(message),
     stop() {
       uninstallBfcacheLifecycle();
       keepAlive.stop();

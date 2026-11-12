@@ -16,7 +16,8 @@ vi.mock('@/lib/storage/storage', () => ({
 const { createCaptureSender } = await import('@/lib/recording/content/capture-sender');
 
 const rect = { x: 1, y: 2, width: 3, height: 4 };
-const deliver = () => createCaptureSender('run-1').deliverStepCapture(rect, 'button', 'click', 1, 'capture-1');
+const deliver = () =>
+  createCaptureSender('run-1', mocks.sendMessage).deliverStepCapture(rect, 'button', 'click', 1, 'capture-1');
 
 beforeEach(() => {
   mocks.sendMessage.mockReset();
@@ -38,7 +39,7 @@ describe('deliverStepCapture', () => {
         answer = resolve;
       }),
     );
-    const sender = createCaptureSender('run-1');
+    const sender = createCaptureSender('run-1', mocks.sendMessage);
     const onTaken = vi.fn();
     const delivery = sender.deliverStepCapture(rect, 'button', 'click', 1, 'capture-1', 'element', onTaken);
 

@@ -36,7 +36,8 @@ vi.mock('@/lib/runtime/keep-alive', () => ({
   KEEPALIVE_PORT_NAME: 'howbeam-keepalive',
   startKeepAlive: vi.fn((_runtime: unknown, options: { onPush?: (message: unknown) => unknown }) => {
     mocks.stateListeners.push((state) => options.onPush?.({ type: 'HOWBEAM_RECORDING_STATE', state }));
-    return { stop: mocks.keepAliveStop };
+    // Requests travel over the connection too.
+    return { stop: mocks.keepAliveStop, request: (message: unknown) => mocks.sendMessage(message) };
   }),
 }));
 vi.mock('@/lib/storage/storage', () => ({

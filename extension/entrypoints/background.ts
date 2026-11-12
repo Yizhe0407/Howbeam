@@ -371,6 +371,17 @@ export default defineBackground(() => {
     },
     onDisconnected: recorderConnections.disconnected,
     onReply: recorderConnections.replied,
+    // A recorder's requests take the same validated route as runtime messages,
+    // with the connection's own sender. A recorder is never an extension page.
+    onRequest: async (port, message) => {
+      if (!isBackgroundMessage(message)) return undefined;
+      const sender = port.sender as Browser.runtime.MessageSender | undefined;
+      if (!sender || isExtensionPageOnlyMessage(message)) {
+        console.warn('[howbeam] rejected a recorder request', isBackgroundMessage(message) ? message.type : undefined);
+        return undefined;
+      }
+      return routeBackgroundMessage(message, sender);
+    },
   });
   browser.runtime.onConnect.addListener(handleKeepAlivePort);
 

@@ -31,6 +31,44 @@ function isRecorderPush(message: unknown): message is RecorderPush {
   return typeof message === 'object' && message !== null && (message as { type?: unknown }).type === 'push';
 }
 
+/** A request from the recorder to the background, answered by a RecorderResponse with the same id. */
+export interface RecorderRequest {
+  type: 'request';
+  id: number;
+  message: unknown;
+}
+
+export interface RecorderResponse {
+  type: 'response';
+  id: number;
+  value: unknown;
+}
+
+/** The connection closed (worker restart, refusal, navigation) before the background answered. */
+export class RecorderConnectionLostError extends Error {
+  constructor() {
+    super('The connection to the background closed before it answered.');
+    this.name = 'RecorderConnectionLostError';
+  }
+}
+
+function hasId(message: unknown, type: string): boolean {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    (message as { type?: unknown }).type === type &&
+    Number.isSafeInteger((message as { id?: unknown }).id)
+  );
+}
+
+export function isRecorderRequest(message: unknown): message is RecorderRequest {
+  return hasId(message, 'request');
+}
+
+function isRecorderResponse(message: unknown): message is RecorderResponse {
+  return hasId(message, 'response');
+}
+
 export function isRecorderReply(message: unknown): message is RecorderReply {
   return (
     typeof message === 'object' &&
@@ -67,6 +105,8 @@ export interface KeepAlivePortHandlerDeps<TSender, TState> {
   onDisconnected?(port: KeepAliveServerPortLike<TSender>): void;
   /** The recorder answered a push. */
   onReply?(port: KeepAliveServerPortLike<TSender>, reply: RecorderReply): void;
+  /** A request from the recorder; what it resolves to goes back as the response. */
+  onRequest?(port: KeepAliveServerPortLike<TSender>, message: unknown): Promise<unknown>;
 }
 
 /** 驗證 keep-alive port，並明確拒絕孤立 client，避免無限喚醒 worker。 */
@@ -118,6 +158,25 @@ export function createKeepAlivePortHandler<TSender, TState>(
         if (!disconnected) deps.onReply?.(port, message);
         return;
       }
+      if (isRecorderRequest(message)) {
+        if (disconnected) return;
+        const { id } = message;
+        // Every request is answered, if only with nothing, so none can hang.
+        void (deps.onRequest?.(port, message.message) ?? Promise.resolve(undefined))
+          .catch((error) => {
+            console.error('[howbeam] a recorder request failed', error);
+            return undefined;
+          })
+          .then((value) => {
+            if (disconnected) return;
+            try {
+              port.postMessage({ type: 'response', id, value } satisfies RecorderResponse);
+            } catch {
+              // The recorder went away; it fails the request on its own disconnect.
+            }
+          });
+        return;
+      }
       if (!isKeepAliveHeartbeat(message)) {
         reject();
         return;
@@ -148,6 +207,9 @@ export interface KeepAliveOptions {
 
 export interface KeepAliveHandle {
   stop(): void;
+  /** Sends a request to the background over the connection. Rejects with
+   * RecorderConnectionLostError the moment the connection closes unanswered. */
+  request(message: unknown): Promise<unknown>;
   /** bfcache 凍結文件前交還 port，且不計為失敗。 */
   suspend(): void;
   /** suspend 後重連並重設 backoff，因 bfcache 無法反映 worker 狀態。 */
@@ -169,6 +231,19 @@ export function startKeepAlive(runtime: KeepAliveRuntimeLike, options: KeepAlive
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectAttempt = 0;
+  let nextRequestId = 1;
+  const pendingRequests = new Map<
+    number,
+    { port: KeepAlivePortLike; resolve(value: unknown): void; reject(error: Error): void }
+  >();
+
+  const failPendingRequests = (closed: KeepAlivePortLike | null) => {
+    for (const [id, entry] of pendingRequests) {
+      if (closed && entry.port !== closed) continue;
+      pendingRequests.delete(id);
+      entry.reject(new RecorderConnectionLostError());
+    }
+  };
 
   const clearHeartbeat = () => {
     if (heartbeatTimer !== null) {
@@ -210,6 +285,7 @@ export function startKeepAlive(runtime: KeepAliveRuntimeLike, options: KeepAlive
   };
 
   const disconnectCurrent = (expectedPort: KeepAlivePortLike) => {
+    failPendingRequests(expectedPort);
     if (port !== expectedPort) return;
     port = null;
     clearHeartbeat();
@@ -260,6 +336,13 @@ export function startKeepAlive(runtime: KeepAliveRuntimeLike, options: KeepAlive
         return;
       }
       if (isRecorderPush(message)) deliverPush(nextPort, message);
+      else if (isRecorderResponse(message)) {
+        const entry = pendingRequests.get(message.id);
+        if (entry?.port === nextPort) {
+          pendingRequests.delete(message.id);
+          entry.resolve(message.value);
+        }
+      }
     });
 
     const heartbeat = () => {
@@ -283,6 +366,7 @@ export function startKeepAlive(runtime: KeepAliveRuntimeLike, options: KeepAlive
   const closeCurrentPort = () => {
     const current = port;
     port = null;
+    failPendingRequests(current);
     if (current) {
       try {
         current.disconnect();
@@ -317,6 +401,27 @@ export function startKeepAlive(runtime: KeepAliveRuntimeLike, options: KeepAlive
     connect();
   };
 
+  const request = (message: unknown): Promise<unknown> => {
+    // Between a lost connection and its scheduled reconnect, a request
+    // reconnects at once: connecting wakes a stopped worker, as a message would.
+    if (!port && !stopped && !suspended) {
+      clearReconnect();
+      connect();
+    }
+    const current = port;
+    if (stopped || !current) return Promise.reject(new RecorderConnectionLostError());
+    const id = nextRequestId++;
+    const answer = new Promise<unknown>((resolve, reject) =>
+      pendingRequests.set(id, { port: current, resolve, reject }),
+    );
+    try {
+      current.postMessage({ type: 'request', id, message } satisfies RecorderRequest);
+    } catch {
+      disconnectCurrent(current);
+    }
+    return answer;
+  };
+
   connect();
-  return { stop, suspend, resume };
+  return { stop, suspend, resume, request };
 }

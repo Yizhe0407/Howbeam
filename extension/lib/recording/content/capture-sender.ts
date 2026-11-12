@@ -1,4 +1,4 @@
-import { sendToBackground } from '../../runtime/background-client';
+import { sendToBackground, type BackgroundTransport } from '../../runtime/background-client';
 import { getRecordingState } from '../../storage/storage';
 import type { ClickCapture, ClickCaptureResult } from '../../runtime/messages';
 import type { ControlKind } from '../../capture/action-description';
@@ -23,7 +23,7 @@ const CAPTURE_REQUEST_FAILED = 'capture-request-failed';
 
 /** The run's capture channel to the background, plus the annotation counting
  * both snapshot commit paths reconcile against. */
-export function createCaptureSender(runId: string) {
+export function createCaptureSender(runId: string, send: BackgroundTransport) {
   /** Step captures waiting for the background to say their screenshot exists. */
   const takenListeners = new Map<string, () => void>();
 
@@ -67,7 +67,7 @@ export function createCaptureSender(runId: string) {
       url: location.href,
       timestamp: now,
     };
-    return await sendToBackground(payload, t().runtime.captureResponseInvalid);
+    return await sendToBackground(payload, t().runtime.captureResponseInvalid, send);
   }
 
   /**

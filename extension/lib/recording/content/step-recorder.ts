@@ -192,7 +192,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       capture: actions.capture,
       cancelCapture: async () => {
         gesture.cancel();
-        await browser.runtime.sendMessage({
+        await session.send({
           type: 'HOWBEAM_CANCEL_CAPTURE',
           runId: session.runId,
           captureId: gesture.captureId,
@@ -269,7 +269,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
         }
         console.warn('[howbeam] region capture exceeded its failsafe budget and was cancelled');
         try {
-          await browser.runtime.sendMessage({ type: 'HOWBEAM_CANCEL_CAPTURE', runId: session.runId, captureId });
+          await session.send({ type: 'HOWBEAM_CANCEL_CAPTURE', runId: session.runId, captureId });
         } catch {
           // A dead background cannot store the region either.
         }
@@ -279,7 +279,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       },
       onCancel: async () => {
         if (!captureSent) return;
-        await browser.runtime.sendMessage({ type: 'HOWBEAM_CANCEL_CAPTURE', runId: session.runId, captureId });
+        await session.send({ type: 'HOWBEAM_CANCEL_CAPTURE', runId: session.runId, captureId });
       },
       onClose: () => {
         if (session.regionCapture === controller) session.regionCapture = null;
@@ -383,7 +383,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
   const runRelayedFrameGesture = async (gesture: StepGesture, relayed: RelayedStepFrameHop): Promise<void> => {
     let claimResult: unknown;
     try {
-      claimResult = await browser.runtime.sendMessage({
+      claimResult = await session.send({
         type: 'HOWBEAM_STEP_FRAME_CLAIM',
         runId: session.runId,
         captureId: relayed.payload.captureId,
@@ -406,7 +406,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       if (settlementStarted) return;
       settlementStarted = true;
       try {
-        const result: unknown = await browser.runtime.sendMessage({
+        const result: unknown = await session.send({
           type: 'HOWBEAM_STEP_FRAME_SETTLE',
           runId: session.runId,
           captureId: relayed.payload.captureId,

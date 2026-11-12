@@ -74,8 +74,8 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     }
     invalidationSent = true;
     interactionsActive = false;
-    void browser.runtime
-      .sendMessage({
+    void session
+      .send({
         type: 'SNAPSHOT_INVALIDATED',
         runId: session.runId,
         viewport,

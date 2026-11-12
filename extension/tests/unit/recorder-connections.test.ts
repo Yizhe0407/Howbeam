@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRecorderConnections, RecorderUnreachableError } from '@/lib/recording/background/recorder-connections';
-import { startKeepAlive, type KeepAlivePortLike } from '@/lib/runtime/keep-alive';
+import {
+  RecorderConnectionLostError,
+  createKeepAlivePortHandler,
+  startKeepAlive,
+  type KeepAlivePortLike,
+} from '@/lib/runtime/keep-alive';
 
 function serverPort(tabId: number, frameId = 0) {
   return {
@@ -105,5 +110,58 @@ describe('the recorder side of the connection', () => {
     expect(port.postMessage).toHaveBeenCalledWith({ type: 'reply', id: 9, value: true });
     expect(port.postMessage).toHaveBeenCalledTimes(1);
     handle.stop();
+  });
+});
+
+describe('requests over the connection', () => {
+  function clientPort() {
+    let onMessage: ((message: unknown) => void) | undefined;
+    let onDisconnect: (() => void) | undefined;
+    const port = {
+      postMessage: vi.fn(),
+      disconnect: vi.fn(),
+      onMessage: { addListener: (listener: (message: unknown) => void) => (onMessage = listener) },
+      onDisconnect: { addListener: (listener: () => void) => (onDisconnect = listener) },
+    } satisfies KeepAlivePortLike;
+    return { port, emit: (message: unknown) => onMessage?.(message), drop: () => onDisconnect?.() };
+  }
+
+  it('resolves a request with the background’s response', async () => {
+    const { port, emit } = clientPort();
+    const handle = startKeepAlive({ connect: () => port }, { name: 'howbeam-keepalive', intervalMs: 60_000 });
+
+    const answer = handle.request({ type: 'HOWBEAM_CLICK' });
+    const sent = port.postMessage.mock.calls.at(-1)![0] as { type: string; id: number };
+    expect(sent).toMatchObject({ type: 'request', message: { type: 'HOWBEAM_CLICK' } });
+    emit({ type: 'response', id: sent.id, value: { ok: true } });
+
+    await expect(answer).resolves.toEqual({ ok: true });
+    handle.stop();
+  });
+
+  it('fails a request the moment the connection drops, instead of waiting', async () => {
+    const { port, drop } = clientPort();
+    const handle = startKeepAlive({ connect: () => port }, { name: 'howbeam-keepalive', intervalMs: 60_000 });
+
+    const answer = handle.request({ type: 'STOP_RECORDING' });
+    drop();
+
+    await expect(answer).rejects.toBeInstanceOf(RecorderConnectionLostError);
+    handle.stop();
+  });
+
+  it('answers every request on the background side, with nothing when no handler is set', async () => {
+    const port = { ...serverPort(4), onMessage: { addListener: vi.fn() } };
+    createKeepAlivePortHandler<{ tab?: { id?: number }; frameId?: number }, object>({
+      getRecordingState: async () => ({}),
+      isTrustedKeepAliveSender: () => true,
+      acknowledgeDisconnect: () => {},
+    })(port);
+    const listener = port.onMessage.addListener.mock.calls[0]![0] as (message: unknown) => void;
+
+    listener({ type: 'request', id: 5, message: { type: 'HOWBEAM_READY' } });
+    await vi.waitFor(() =>
+      expect(port.postMessage).toHaveBeenCalledWith({ type: 'response', id: 5, value: undefined }),
+    );
   });
 });

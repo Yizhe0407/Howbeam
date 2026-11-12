@@ -1,4 +1,3 @@
-import { browser } from 'wxt/browser';
 import { sendToBackground } from '../runtime/background-client';
 import { resolveSnapshotTargetAtPoint } from './snapshot-targeting';
 import { installRecorderLifecycle } from './recorder-lifecycle';
@@ -105,7 +104,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
 
   const cancelWorkflow = () => {
     if (removed) return;
-    void browser.runtime.sendMessage({ type: 'CANCEL_STEP_RECAPTURE', runId }).catch((error) => {
+    void lifecycle.send({ type: 'CANCEL_STEP_RECAPTURE', runId }).catch((error) => {
       console.error('[howbeam] failed to cancel recapture', error);
     });
   };
@@ -179,7 +178,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
         timestamp: Date.now(),
       };
       try {
-        const result = await sendToBackground(payload, t().runtime.recaptureResponseInvalid);
+        const result = await sendToBackground(payload, t().runtime.recaptureResponseInvalid, lifecycle.send);
         if (!result.ok && result.status === 'rejected' && !removed) {
           busy = false;
           preview.show(target.rect);
@@ -254,6 +253,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
         url: location.href,
       },
       t().runtime.recaptureResponseInvalid,
+      lifecycle.send,
     );
   } catch (error) {
     console.error('[howbeam] recapture readiness check failed', error);

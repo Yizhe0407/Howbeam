@@ -1,5 +1,4 @@
-import { sendToBackground } from '../../runtime/background-client';
-import { RECORDING_CONTROL_TIMEOUT_MS } from '../content-script-constants';
+import { sendToBackground, type BackgroundTransport } from '../../runtime/background-client';
 import type { RecordingControlMessage, RecordingControlResult } from '../../runtime/messages';
 import type { RecordingState } from '../../storage/recording-state';
 
@@ -8,7 +7,7 @@ export type ToolbarChannel = ReturnType<typeof createToolbarChannel>;
 /** The in-page toolbar's view of the run, and its control channel to the
  * background. Shared by the floating step toolbar and the shield toolbar so
  * their state and command handling cannot drift apart. */
-export function createToolbarChannel(runId: string) {
+export function createToolbarChannel(runId: string, send: BackgroundTransport) {
   function toToolbarState(state: RecordingState) {
     return {
       runId,
@@ -21,34 +20,17 @@ export function createToolbarChannel(runId: string) {
     };
   }
 
+  /** Sends a toolbar command over the recorder's connection. A worker that
+   * stops or restarts closes it, which fails the command at once, so no timer
+   * stands guard any more. */
   async function sendCommand(
     action: RecordingControlMessage['type'],
     undoToken?: string,
   ): Promise<RecordingControlResult> {
     const message: RecordingControlMessage = { type: action, runId, ...(undoToken ? { undoToken } : {}) };
-    const command = sendToBackground(message).catch(
+    return sendToBackground(message, undefined, send).catch(
       (): RecordingControlResult => ({ ok: false, error: 'runtime.recordingChannelLost' }),
     );
-    // A hung background must not wedge the in-page toolbar forever: surface
-    // the channel-failure error after the shared control budget (the same
-    // one the shield toolbar uses), so controls re-enable and the user sees
-    // what went wrong.
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    try {
-      return await Promise.race([
-        command,
-        new Promise<RecordingControlResult>((resolve) => {
-          timeout = setTimeout(
-            () => resolve({ ok: false, error: 'runtime.recordingChannelLost' }),
-            RECORDING_CONTROL_TIMEOUT_MS,
-          );
-        }),
-      ]);
-    } finally {
-      if (timeout) clearTimeout(timeout);
-      // A late settlement after the timeout must not surface as unhandled.
-      command.catch(() => undefined);
-    }
   }
 
   return { toToolbarState, sendCommand };

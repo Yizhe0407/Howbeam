@@ -1,4 +1,3 @@
-import { browser } from 'wxt/browser';
 import { sendToBackground } from '../../runtime/background-client';
 import { collectKeyboardCandidateAnchors, waitForNextFrame } from '../snapshot-targeting';
 import { installRecorderLifecycle } from '../recorder-lifecycle';
@@ -65,12 +64,26 @@ export async function mountTopRecorder({
   };
   const snapshotDevicePixelRatioContract = recordingState.snapshotDevicePixelRatio ?? window.devicePixelRatio;
 
+  // Navigating away freezes this document in bfcache with recorder listeners
+  // intact; the shared lifecycle hands back the keep-alive port before the
+  // freeze and only resumes if this run is still live.
+  const recorderLifecycle = installRecorderLifecycle({
+    isRunCurrent: async () => {
+      const state = await getRecordingState();
+      return state.operation === 'recording' && state.isRecording && state.runId === runId;
+    },
+    cleanup: () => cleanup(),
+    onPush: (message) => onPush(message as RecorderPushMessage),
+  });
+
+  const send = recorderLifecycle.send;
   const session = createContentRecordingSession({
     runId,
     paused: recordingState.phase === 'paused',
+    send,
   });
-  const capture = createCaptureSender(runId);
-  const toolbar = createToolbarChannel(runId);
+  const capture = createCaptureSender(runId, send);
+  const toolbar = createToolbarChannel(runId, send);
   const snapshot = createSnapshotRecorder({
     session,
     capture,
@@ -128,18 +141,6 @@ export async function mountTopRecorder({
     session.shield?.updateToolbar(toolbar.toToolbarState(state));
   };
 
-  // Navigating away freezes this document in bfcache with recorder listeners
-  // intact; the shared lifecycle hands back the keep-alive port before the
-  // freeze and only resumes if this run is still live.
-  const recorderLifecycle = installRecorderLifecycle({
-    isRunCurrent: async () => {
-      const state = await getRecordingState();
-      return state.operation === 'recording' && state.isRecording && state.runId === runId;
-    },
-    cleanup: () => cleanup(),
-    onPush: (message) => onPush(message as RecorderPushMessage),
-  });
-
   /** What the background pushes over the connection; only stop and snapshot activation are answered. */
   const onPush = (message: RecorderPushMessage) => {
     if (message?.type === 'HOWBEAM_STOP') {
@@ -189,9 +190,9 @@ export async function mountTopRecorder({
       snapshot.handlers.onRegion,
       async () => {
         snapshot.setInteractionsActive(false);
-        cleanup();
+        // Reported before the cleanup closes the connection it travels on.
         try {
-          await browser.runtime.sendMessage({
+          await send({
             type: 'SNAPSHOT_RECORDER_FAILED',
             runId,
             reason: 'shield-channel',
@@ -199,6 +200,7 @@ export async function mountTopRecorder({
         } catch (error) {
           console.error('[howbeam] failed to report snapshot shield failure', error);
         }
+        cleanup();
       },
     );
     try {
@@ -247,7 +249,7 @@ export async function mountTopRecorder({
           }
         : {}),
     };
-    isCurrentRecordedTab = await sendToBackground(readyMessage, t().runtime.recordingResponseInvalid);
+    isCurrentRecordedTab = await sendToBackground(readyMessage, t().runtime.recordingResponseInvalid, send);
   } catch (err) {
     console.error('[howbeam] recorder readiness check failed', err);
   }
