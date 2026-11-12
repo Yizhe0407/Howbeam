@@ -14,7 +14,7 @@ import {
 import { createLateClickSuppressor } from '../capture/step-capture';
 import { createStepGestureQueue, type StepGesture } from '../capture/step-gesture-queue';
 import { STEP_PRESS_GATE_EVENTS, createStepPressGate, type StepPress } from '../capture/step-press-gate';
-import { describeElement } from '../capture/element-description';
+import { controlKindOf } from '../capture/action-description';
 import {
   isInScrollbarGutter,
   isPointInAnyScrollGutter,
@@ -297,8 +297,7 @@ export function installStepFrameRecorder(
             runId,
             captureId,
             rect,
-            text: describeElement(el),
-            tagName: el.tagName.toLowerCase(),
+            control: controlKindOf(el),
             interactive: isInteractiveElement(el),
           } satisfies StepFrameRelayBeginMessage);
         } catch {

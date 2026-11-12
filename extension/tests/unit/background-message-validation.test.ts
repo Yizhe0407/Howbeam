@@ -14,8 +14,7 @@ const validClick = {
   rect: { x: 10.5, y: -2, width: 40, height: 20 },
   viewport: { width: 1280, height: 720, scrollX: 0, scrollY: 100 },
   devicePixelRatio: 2,
-  text: 'Settings',
-  tagName: 'BUTTON',
+  control: 'button',
   intent: 'click',
   url: 'https://example.com/page',
   timestamp: 123,
@@ -26,8 +25,7 @@ const validStepFrameBegin = {
   runId: 'run-1',
   captureId: 'capture-1',
   rect: { x: -10.5, y: 20, width: 120.25, height: 48 },
-  text: 'Open settings',
-  tagName: 'BUTTON',
+  control: 'button',
   interactive: true,
 } as const;
 
@@ -113,7 +111,7 @@ describe('background runtime message validation', () => {
     { ...validClick, viewport: { ...validClick.viewport, height: -1 } },
     { ...validClick, devicePixelRatio: 0 },
     { ...validClick, devicePixelRatio: 33 },
-    { ...validClick, text: 'x'.repeat(10_001) },
+    { ...validClick, control: 'Account 8842' },
     { ...validClick, url: 'javascript:alert(1)' },
     { ...validClick, url: 'https://user:secret@example.com/' },
     { ...validClick, timestamp: 1.5 },
@@ -178,20 +176,12 @@ describe('step frame relay runtime payload validation', () => {
       message: { ...validStepFrameBegin, rect: { ...validStepFrameBegin.rect, x: 10_000_001 } },
     },
     {
-      name: 'begin with overlong text',
-      message: { ...validStepFrameBegin, text: 'x'.repeat(201) },
+      name: 'begin with page text in place of a control kind',
+      message: { ...validStepFrameBegin, control: 'Open settings' },
     },
     {
-      name: 'begin with non-string text',
-      message: { ...validStepFrameBegin, text: 42 },
-    },
-    {
-      name: 'begin with an empty tag name',
-      message: { ...validStepFrameBegin, tagName: '' },
-    },
-    {
-      name: 'begin with an overlong tag name',
-      message: { ...validStepFrameBegin, tagName: 'T'.repeat(101) },
+      name: 'begin without a control kind',
+      message: { ...validStepFrameBegin, control: undefined },
     },
     {
       name: 'begin with a non-boolean interactive flag',

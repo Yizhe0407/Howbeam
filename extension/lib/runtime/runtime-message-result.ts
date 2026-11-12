@@ -29,6 +29,7 @@ import { isBoundedString, isRecord } from '../shared/validation';
 import { t } from '@/lib/shared/i18n';
 import { isCopyKey, type CopyKey } from '@/lib/shared/i18n/copy';
 import { UserMessageError } from '../shared/user-message-error';
+import { isControlKind } from './control-kind';
 
 export type RuntimeMessageResultGuard<T> = (value: unknown) => value is T;
 
@@ -236,9 +237,8 @@ export function isStepFrameRelayClaimResult(value: unknown): value is StepFrameR
     hasOnlyKeys(value, ['ok', 'settleToken', 'target']) &&
     isRelayToken(value.settleToken) &&
     isRecord(target) &&
-    typeof target.text === 'string' &&
-    target.text.length <= STEP_FRAME_LIMITS.maxTextLength &&
-    isBoundedString(target.tagName, STEP_FRAME_LIMITS.maxTagLength) &&
+    hasOnlyKeys(target, ['control', 'interactive']) &&
+    isControlKind(target.control) &&
     typeof target.interactive === 'boolean'
   );
 }

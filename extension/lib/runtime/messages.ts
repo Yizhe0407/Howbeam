@@ -1,6 +1,7 @@
 import type { RecordingMode, StepRecaptureTarget, Viewport } from '../storage/recording-state';
 import type { CopyKey } from '../shared/i18n/copy';
 import type { Rect } from '@/lib/shared/geometry';
+import type { ControlKind } from './control-kind';
 
 type CaptureIntent = 'click' | 'mark';
 
@@ -15,8 +16,8 @@ export interface ClickCapture {
   devicePixelRatio: number;
   /** CSS viewport occupied by the screenshot, used to derive its real pixel scale. */
   viewport: Viewport;
-  text: string;
-  tagName: string;
+  /** The kind of control clicked, for the step's description; never page text. */
+  control: ControlKind;
   intent: CaptureIntent;
   url: string;
   timestamp: number;
@@ -202,8 +203,6 @@ export type ClickCaptureResult = { ok: true } | { ok: false; error: string; repo
  * larger requests and the frames refuse larger replies. */
 export const STEP_FRAME_LIMITS = Object.freeze({
   maxTokenLength: 128,
-  maxTextLength: 200,
-  maxTagLength: 100,
 });
 
 /**
@@ -217,8 +216,7 @@ export interface StepFrameRelayBeginMessage {
   captureId: string;
   /** Target rect in the originating child frame's viewport coordinates. */
   rect: Rect;
-  text: string;
-  tagName: string;
+  control: ControlKind;
   interactive: boolean;
 }
 
@@ -238,7 +236,7 @@ export type StepFrameRelayClaimResult =
   | {
       ok: true;
       settleToken: string;
-      target: { text: string; tagName: string; interactive: boolean };
+      target: { control: ControlKind; interactive: boolean };
     }
   | { ok: false };
 

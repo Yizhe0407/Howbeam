@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { describeElement } from '../../capture/element-description';
+import { controlKindOf } from '../../capture/action-description';
 import { pauseMotion } from '../../capture/page-motion';
 import { createRegionCapture } from '../../capture/region-capture';
 import { isOutOfViewport, readRegionScrollSnapshot, readScrollSnapshot } from '../../capture/scroll-snapshot';
@@ -253,7 +253,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
         let timeout: ReturnType<typeof setTimeout> | undefined;
         const { taken, delivery } = trackScreenshot((onTaken) => capture.deliverStepCapture(
           rect,
-          { text: '', tagName: 'region' },
+          'element',
           'mark',
           Date.now(),
           captureId,
@@ -335,7 +335,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
       setCaptureScrollLock(readScrollSnapshot(el));
       return await capture.deliverStepCapture(
         rect,
-        { text: describeElement(el), tagName: el.tagName.toLowerCase() },
+        controlKindOf(el),
         intent,
         now,
         captureId,
@@ -504,7 +504,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
             setCaptureScrollLock(readScrollSnapshot(relayed.frame));
             const tracked = trackScreenshot((onTaken) => capture.deliverStepCapture(
               rect,
-              { text: claimResult.target.text, tagName: claimResult.target.tagName },
+              claimResult.target.control,
               claimResult.target.interactive ? 'click' : 'mark',
               now,
               gesture.captureId,

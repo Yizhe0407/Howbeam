@@ -120,7 +120,7 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     if (!interactionsActive || !target) return null;
     const matched = selection.match(target);
     if (matched) return { duplicateOf: matched.rect };
-    const label = await capture.commitSnapshotAnnotation(target.rect, target, 'element', now);
+    const label = await capture.commitSnapshotAnnotation(target.rect, 'element', now);
     if (label === null) return null;
     selection.add(target);
     return {
@@ -143,7 +143,7 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
       text: '',
       tagName: 'region',
     };
-    const label = await capture.commitSnapshotAnnotation(message.rect, target, 'region', Date.now());
+    const label = await capture.commitSnapshotAnnotation(message.rect, 'region', Date.now());
     if (label === null) return null;
     if (!interactionsActive) return null;
     selection.add(target);

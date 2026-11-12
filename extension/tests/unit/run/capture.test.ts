@@ -15,7 +15,7 @@ const snapshotRun = makeRecordingState({
 function click(overrides: Partial<ClickCapture> = {}): ClickCapture {
   return {
     type: 'HOWBEAM_CLICK', captureId: `c-${Math.random()}`, runId: 'run-1', rect: { x: 1, y: 2, width: 30, height: 20 },
-    devicePixelRatio: 1, viewport, text: '設定', tagName: 'button', intent: 'click', url: PAGE_URL, timestamp: 5,
+    devicePixelRatio: 1, viewport, control: 'button', intent: 'click', url: PAGE_URL, timestamp: 5,
     ...overrides,
   };
 }

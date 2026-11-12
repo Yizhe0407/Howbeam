@@ -1,7 +1,7 @@
 import { sendToBackground } from '../../runtime/background-client';
 import { getRecordingState } from '../../storage/storage';
 import type { ClickCapture, ClickCaptureResult } from '../../runtime/messages';
-import type { ResolvedSnapshotTarget } from '../snapshot-targeting';
+import type { ControlKind } from '../../capture/action-description';
 import { t } from '@/lib/shared/i18n';
 import type { Rect } from '@/lib/shared/geometry';
 
@@ -29,13 +29,13 @@ export function createCaptureSender(runId: string) {
 
   async function sendCapture(
     rect: Rect,
-    target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
+    control: ControlKind,
     intent: ClickCapture['intent'],
     now: number,
     captureId: string = crypto.randomUUID(),
     captureKind: ClickCapture['captureKind'] = 'element',
   ): Promise<boolean> {
-    const result = await requestCapture(rect, target, intent, now, captureId, captureKind);
+    const result = await requestCapture(rect, control, intent, now, captureId, captureKind);
     if (result.ok) return true;
     console.warn('[howbeam] step was not captured:', result.error);
     return false;
@@ -43,7 +43,7 @@ export function createCaptureSender(runId: string) {
 
   async function requestCapture(
     rect: Rect,
-    target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
+    control: ControlKind,
     intent: ClickCapture['intent'],
     now: number,
     captureId: string,
@@ -62,8 +62,7 @@ export function createCaptureSender(runId: string) {
         scrollX: window.scrollX,
         scrollY: window.scrollY,
       },
-      text: target.text,
-      tagName: target.tagName,
+      control,
       intent,
       url: location.href,
       timestamp: now,
@@ -81,7 +80,7 @@ export function createCaptureSender(runId: string) {
    */
   async function deliverStepCapture(
     rect: Rect,
-    target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
+    control: ControlKind,
     intent: ClickCapture['intent'],
     now: number,
     captureId: string,
@@ -90,7 +89,7 @@ export function createCaptureSender(runId: string) {
   ): Promise<CaptureDelivery> {
     if (onTaken) takenListeners.set(captureId, onTaken);
     try {
-      return await requestStepCapture(rect, target, intent, now, captureId, captureKind);
+      return await requestStepCapture(rect, control, intent, now, captureId, captureKind);
     } finally {
       takenListeners.delete(captureId);
     }
@@ -98,7 +97,7 @@ export function createCaptureSender(runId: string) {
 
   async function requestStepCapture(
     rect: Rect,
-    target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
+    control: ControlKind,
     intent: ClickCapture['intent'],
     now: number,
     captureId: string,
@@ -106,7 +105,7 @@ export function createCaptureSender(runId: string) {
   ): Promise<CaptureDelivery> {
     let failure: unknown;
     try {
-      const result = await requestCapture(rect, target, intent, now, captureId, captureKind);
+      const result = await requestCapture(rect, control, intent, now, captureId, captureKind);
       if (result.ok) return 'saved';
       if (result.error !== CAPTURE_REQUEST_FAILED) {
         console.warn('[howbeam] step was not captured:', result.error);
@@ -150,13 +149,12 @@ export function createCaptureSender(runId: string) {
   /** 回傳已提交標註的權威 1-based 編號。 */
   async function commitSnapshotAnnotation(
     rect: Rect,
-    target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
     captureKind: ClickCapture['captureKind'],
     now: number,
   ): Promise<number | null> {
     const before = (await readAuthoritativeAnnotationCount()) ?? 0;
     try {
-      if (!(await sendCapture(rect, target, 'mark', now, crypto.randomUUID(), captureKind))) return null;
+      if (!(await sendCapture(rect, 'element', 'mark', now, crypto.randomUUID(), captureKind))) return null;
       return (await readAuthoritativeAnnotationCount()) ?? before + 1;
     } catch (error) {
       // The response was lost after the background may already have

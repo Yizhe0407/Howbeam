@@ -9,6 +9,7 @@ import type {
   StepFrameRelayRejectMessage,
   StepFrameRelaySettleMessage,
 } from '../../runtime/messages';
+import type { ControlKind } from '../../capture/action-description';
 
 const STEP_FRAME_RELAY_AUTH_TTL_MS = 10_000;
 const STEP_FRAME_RELAY_MAX_PENDING_PER_TAB = 32;
@@ -25,7 +26,7 @@ interface PendingStepFrameRelay {
   originFrameId: number;
   relayToken: string;
   settleToken: string | null;
-  target: { text: string; tagName: string; interactive: boolean };
+  target: { control: ControlKind; interactive: boolean };
   expiresAt: number;
 }
 
@@ -118,8 +119,7 @@ export function createStepFrameRelayBroker(
         relayToken,
         settleToken: null,
         target: {
-          text: message.text,
-          tagName: message.tagName,
+          control: message.control,
           interactive: message.interactive,
         },
         expiresAt: now() + STEP_FRAME_RELAY_AUTH_TTL_MS,

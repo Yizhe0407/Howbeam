@@ -78,15 +78,14 @@ describe('step frame relay protocol', () => {
     const valid = {
       ok: true,
       settleToken: 'settle-token',
-      target: { text: 'Submit', tagName: 'button', interactive: true },
+      target: { control: 'submit', interactive: true },
     };
     expect(isStepFrameRelayClaimResult(valid)).toBe(true);
     expect(isStepFrameRelayClaimResult({ ok: false })).toBe(true);
     expect(isStepFrameRelayClaimResult({ ...valid, settleToken: '' })).toBe(false);
     expect(isStepFrameRelayClaimResult({ ...valid, settleToken: 'x'.repeat(129) })).toBe(false);
-    expect(isStepFrameRelayClaimResult({ ...valid, target: { ...valid.target, text: 'x'.repeat(201) } })).toBe(false);
-    expect(isStepFrameRelayClaimResult({ ...valid, target: { ...valid.target, tagName: '' } })).toBe(false);
-    expect(isStepFrameRelayClaimResult({ ...valid, target: { ...valid.target, tagName: 'x'.repeat(101) } })).toBe(false);
+    expect(isStepFrameRelayClaimResult({ ...valid, target: { ...valid.target, control: 'Submit order 8842' } })).toBe(false);
+    expect(isStepFrameRelayClaimResult({ ...valid, target: { interactive: true } })).toBe(false);
     expect(isStepFrameRelayClaimResult({ ...valid, target: { ...valid.target, interactive: 'yes' } })).toBe(false);
     expect(isStepFrameRelayClaimResult({ ok: false, settleToken: 'unexpected' })).toBe(false);
   });

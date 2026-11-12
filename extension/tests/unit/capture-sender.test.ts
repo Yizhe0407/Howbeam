@@ -17,7 +17,7 @@ const { createCaptureSender } = await import('@/lib/recording/content/capture-se
 
 const rect = { x: 1, y: 2, width: 3, height: 4 };
 const deliver = () =>
-  createCaptureSender('run-1').deliverStepCapture(rect, { text: 'Save', tagName: 'button' }, 'click', 1, 'capture-1');
+  createCaptureSender('run-1').deliverStepCapture(rect, 'button', 'click', 1, 'capture-1');
 
 beforeEach(() => {
   mocks.sendMessage.mockReset();
@@ -35,7 +35,7 @@ describe('deliverStepCapture', () => {
     }));
     const sender = createCaptureSender('run-1');
     const onTaken = vi.fn();
-    const delivery = sender.deliverStepCapture(rect, { text: 'Save', tagName: 'button' }, 'click', 1, 'capture-1', 'element', onTaken);
+    const delivery = sender.deliverStepCapture(rect, 'button', 'click', 1, 'capture-1', 'element', onTaken);
 
     sender.markCaptureTaken('capture-2');
     expect(onTaken).not.toHaveBeenCalled();

@@ -14,8 +14,7 @@ const beginMessage: StepFrameRelayBeginMessage = {
   runId: 'run-1',
   captureId: 'capture-1',
   rect: { x: 12.5, y: -4, width: 160, height: 48 },
-  text: 'Open settings',
-  tagName: 'BUTTON',
+  control: 'button',
   interactive: true,
 };
 
@@ -101,8 +100,7 @@ describe('step frame relay broker', () => {
       ok: true,
       settleToken: 'settle-token',
       target: {
-        text: beginMessage.text,
-        tagName: beginMessage.tagName,
+        control: beginMessage.control,
         interactive: beginMessage.interactive,
       },
     });

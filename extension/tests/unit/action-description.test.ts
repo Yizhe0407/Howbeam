@@ -1,92 +1,64 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { generateActionDescription, type ActionDescriptionCapture } from '@/lib/capture/action-description';
+import { controlKindOf, generateActionDescription, isControlKind, type ControlKind } from '@/lib/capture/action-description';
+import { t } from '@/lib/shared/i18n';
 
-function capture(overrides: Partial<ActionDescriptionCapture> = {}): ActionDescriptionCapture {
-  return {
-    intent: 'click',
-    tagName: 'div',
-    text: '',
-    ...overrides,
-  };
+function element(html: string, selector = '[data-target]'): Element {
+  document.body.innerHTML = html;
+  return document.querySelector(selector)!;
 }
 
+describe('controlKindOf', () => {
+  it.each<[string, ControlKind]>([
+    ['<a data-target href="/x">Account 8842</a>', 'link'],
+    ['<a data-target href="/x" target="_blank">Open</a>', 'link-new-tab'],
+    ['<select data-target><option>a</option></select>', 'select'],
+    ['<textarea data-target></textarea>', 'text-field'],
+    ['<input data-target type="email">', 'text-field'],
+    ['<input data-target type="checkbox">', 'checkbox'],
+    ['<input data-target type="radio">', 'radio'],
+    ['<input data-target type="submit">', 'submit'],
+    ['<input data-target type="range">', 'input'],
+    ['<form><button data-target>Send</button></form>', 'submit'],
+    ['<button data-target>Send</button>', 'button'],
+    ['<form><button data-target type="button">Help</button></form>', 'button'],
+    ['<details><summary data-target>More</summary></details>', 'disclosure'],
+    ['<label data-target><input type="checkbox"> Remember me</label>', 'checkbox'],
+    ['<label data-target for="name">Name</label><input id="name">', 'label'],
+    ['<div data-target role="switch">Dark mode</div>', 'checkbox'],
+    ['<div data-target role="button">Go</div>', 'button'],
+    ['<span data-target role="link">Docs</span>', 'link'],
+    ['<div data-target contenteditable="true">Notes</div>', 'text-field'],
+    ['<div data-target>Submit form</div>', 'element'],
+  ])('reads %s as %s from the element, not its text', (html, expected) => {
+    expect(controlKindOf(element(html))).toBe(expected);
+  });
+});
+
 describe('generateActionDescription', () => {
-  it('describes marks without persisting selected page content', () => {
-    const sensitiveText = 'Account 8842 has a balance of $9,999';
-
-    const description = generateActionDescription(capture({
-      intent: 'mark',
-      tagName: 'section',
-      text: sensitiveText,
-    }));
-
-    expect(description).toBe('標記頁面區域');
-    expect(description).not.toContain(sensitiveText);
+  it('describes a mark as a marked region, whatever was under it', () => {
+    expect(generateActionDescription({ intent: 'mark', control: 'link' })).toBe(t().capture.markRegion);
   });
 
-  it.each([
-    ['button', 'Customer secret', '點擊按鈕'],
-    ['textarea', 'typed medical notes', '在文字欄位中輸入'],
-    ['select', 'Private selection', '選擇選項'],
-    ['option', 'Private selection', '選擇選項'],
-    ['summary', 'Private heading', '展開或收合區段'],
-    ['label', 'Private field name', '點擊欄位標籤'],
-  ])('uses the <%s> semantic without copying its text', (tagName, text, expected) => {
-    const description = generateActionDescription(capture({ tagName, text }));
-
-    expect(description).toBe(expected);
-    expect(description).not.toContain(text);
+  it.each<[ControlKind, string]>([
+    ['link', t().capture.openLink],
+    ['link-new-tab', t().capture.openNewTab],
+    ['select', t().capture.selectOption],
+    ['text-field', t().capture.typeInField],
+    ['checkbox', t().capture.toggleCheckbox],
+    ['radio', t().capture.selectRadio],
+    ['submit', t().capture.submitForm],
+    ['button', t().capture.clickButton],
+    ['input', t().capture.useInput],
+    ['disclosure', t().capture.toggleDisclosure],
+    ['label', t().capture.clickLabel],
+    ['element', t().capture.clickElement],
+  ])('describes a %s click', (control, expected) => {
+    expect(generateActionDescription({ intent: 'click', control })).toBe(expected);
   });
 
-  it('describes links and only claims a new tab when the label explicitly says so', () => {
-    expect(generateActionDescription(capture({
-      tagName: 'a',
-      text: 'Private customer portal',
-    }))).toBe('開啟連結');
-
-    expect(generateActionDescription(capture({
-      tagName: 'A',
-      text: 'Open in a new tab',
-    }))).toBe('開啟新分頁');
-  });
-
-  it('prefers reliable native tag semantics over incidental words in a label', () => {
-    expect(generateActionDescription(capture({
-      tagName: 'a',
-      text: 'Checkbox documentation',
-    }))).toBe('開啟連結');
-
-    expect(generateActionDescription(capture({
-      tagName: 'button',
-      text: 'Radio settings',
-    }))).toBe('點擊按鈕');
-  });
-
-  it.each([
-    ['button', 'Submit', '提交表單'],
-    ['input', '核取方塊', '切換核取方塊'],
-    ['label', 'Radio button', '選取單選按鈕'],
-    ['x-checkbox', 'Enable private feature', '切換核取方塊'],
-  ])('recognizes an explicit fixed action hint for <%s>', (tagName, text, expected) => {
-    expect(generateActionDescription(capture({ tagName, text }))).toBe(expected);
-  });
-
-  it('keeps a plain input generic because ClickCapture has no input type', () => {
-    const typedValue = 'alice@example.com';
-    const description = generateActionDescription(capture({ tagName: 'input', text: typedValue }));
-
-    expect(description).toBe('操作輸入欄位');
-    expect(description).not.toContain(typedValue);
-  });
-
-  it('falls back conservatively for custom controls whose role is not captured', () => {
-    const sensitiveText = 'Transfer $5,000 to savings';
-    const description = generateActionDescription(capture({
-      tagName: 'div',
-      text: sensitiveText,
-    }));
-
-    expect(description).toBe('點擊互動元素');
-    expect(description).not.toContain(sensitiveText);
+  it('accepts only known control kinds from a message', () => {
+    expect(isControlKind('checkbox')).toBe(true);
+    expect(isControlKind('Account 8842')).toBe(false);
   });
 });

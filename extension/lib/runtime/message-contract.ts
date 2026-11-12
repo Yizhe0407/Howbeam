@@ -6,7 +6,6 @@
  * are all read from BACKGROUND_CONTRACTS, so they cannot drift apart.
  */
 import {
-  STEP_FRAME_LIMITS,
   type BackgroundMessage,
   type BackgroundMessageType,
   type BackgroundResponse,
@@ -40,10 +39,10 @@ import {
   isRecord,
   isSafeId,
 } from '../shared/validation';
+import { isControlKind } from './control-kind';
 
 const MAX_ID_LENGTH = PERSISTED_STEP_LIMITS.maxIdLength;
 const MAX_URL_LENGTH = 8_192;
-const MAX_TEXT_LENGTH = 10_000;
 const MAX_COORDINATE_MAGNITUDE = 10_000_000;
 const MAX_DEVICE_PIXEL_RATIO = 32;
 
@@ -299,8 +298,7 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
       isRect(value.rect) &&
       isDevicePixelRatio(value.devicePixelRatio) &&
       isViewport(value.viewport) &&
-      typeof value.text === 'string' && value.text.length <= MAX_TEXT_LENGTH &&
-      isString(value.tagName, 128) &&
+      isControlKind(value.control) &&
       (value.intent === 'click' || value.intent === 'mark') &&
       isHttpUrl(value.url) &&
       isTimestamp(value.timestamp)
@@ -334,8 +332,7 @@ export const BACKGROUND_CONTRACTS: { [K in BackgroundMessageType]: MessageContra
       isString(value.runId) &&
       isString(value.captureId) &&
       isRect(value.rect) &&
-      typeof value.text === 'string' && value.text.length <= STEP_FRAME_LIMITS.maxTextLength &&
-      isString(value.tagName, STEP_FRAME_LIMITS.maxTagLength) &&
+      isControlKind(value.control) &&
       typeof value.interactive === 'boolean'
     ),
     isResponse: isStepFrameRelayBeginResult,
