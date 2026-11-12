@@ -3,22 +3,11 @@ import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from './overlay-layers
 import { createViewportOverlayHost } from './viewport-overlay-host';
 import { OVERLAY_FONT_STACK } from './overlay-font';
 import { t } from '@/lib/shared/i18n';
+import type { Rect, Point } from '@/lib/shared/geometry';
 
 export const REGION_CAPTURE_MIN_SIZE = 8;
 
-export interface RegionPoint {
-  x: number;
-  y: number;
-}
-
 export interface RegionViewport {
-  width: number;
-  height: number;
-}
-
-export interface RegionRect {
-  x: number;
-  y: number;
   width: number;
   height: number;
 }
@@ -26,7 +15,7 @@ export interface RegionRect {
 type RegionCaptureCancelReason = 'user' | 'escape' | 'viewport' | 'removed';
 
 export interface RegionCaptureOptions {
-  onCapture(rect: RegionRect): void | Promise<void>;
+  onCapture(rect: Rect): void | Promise<void>;
   onCancel?(reason: RegionCaptureCancelReason): void | Promise<void>;
   onClose?(): void;
   minSize?: number;
@@ -45,7 +34,7 @@ export interface RegionCapture {
   remove(): void;
 }
 
-function clipRegionPoint(point: RegionPoint, viewport: RegionViewport): RegionPoint {
+function clipRegionPoint(point: Point, viewport: RegionViewport): Point {
   const width = Number.isFinite(viewport.width) ? Math.max(0, viewport.width) : 0;
   const height = Number.isFinite(viewport.height) ? Math.max(0, viewport.height) : 0;
   const x = Number.isFinite(point.x) ? point.x : 0;
@@ -57,10 +46,10 @@ function clipRegionPoint(point: RegionPoint, viewport: RegionViewport): RegionPo
 }
 
 export function normalizeRegionRect(
-  start: RegionPoint,
-  end: RegionPoint,
+  start: Point,
+  end: Point,
   viewport: RegionViewport,
-): RegionRect {
+): Rect {
   const clippedStart = clipRegionPoint(start, viewport);
   const clippedEnd = clipRegionPoint(end, viewport);
   const x = Math.min(clippedStart.x, clippedEnd.x);
@@ -74,7 +63,7 @@ export function normalizeRegionRect(
 }
 
 export function isRegionRectLargeEnough(
-  rect: RegionRect,
+  rect: Rect,
   minSize = REGION_CAPTURE_MIN_SIZE,
 ): boolean {
   return (
@@ -92,7 +81,7 @@ export function isRegionRectLargeEnough(
 }
 
 export function isRegionRectInsideViewport(
-  rect: RegionRect,
+  rect: Rect,
   viewport: RegionViewport,
   minSize = REGION_CAPTURE_MIN_SIZE,
 ): boolean {
@@ -111,7 +100,7 @@ export type RegionHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 const REGION_HANDLES: readonly RegionHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 
 /** Moves a region by (dx, dy), keeping it whole inside the viewport. */
-export function moveRegionRect(rect: RegionRect, dx: number, dy: number, viewport: RegionViewport): RegionRect {
+export function moveRegionRect(rect: Rect, dx: number, dy: number, viewport: RegionViewport): Rect {
   const x = Math.min(Math.max(rect.x + dx, 0), Math.max(viewport.width - rect.width, 0));
   const y = Math.min(Math.max(rect.y + dy, 0), Math.max(viewport.height - rect.height, 0));
   return { x, y, width: rect.width, height: rect.height };
@@ -119,13 +108,13 @@ export function moveRegionRect(rect: RegionRect, dx: number, dy: number, viewpor
 
 /** Drags one handle of a region by (dx, dy): the edges it owns follow the pointer, clipped to the viewport and never closer than `minSize`. */
 export function resizeRegionRect(
-  rect: RegionRect,
+  rect: Rect,
   handle: RegionHandle,
   dx: number,
   dy: number,
   viewport: RegionViewport,
   minSize = REGION_CAPTURE_MIN_SIZE,
-): RegionRect {
+): Rect {
   let left = rect.x;
   let top = rect.y;
   let right = rect.x + rect.width;
@@ -146,10 +135,10 @@ const ACTIONS_GAP = 8;
  * inside the viewport, so it never covers the area being selected unless there is nowhere else to go.
  */
 export function placeRegionActions(
-  rect: RegionRect,
+  rect: Rect,
   viewport: RegionViewport,
   size: { width: number; height: number },
-): RegionPoint {
+): Point {
   const x = Math.min(Math.max(rect.x + rect.width - size.width, ACTIONS_GAP), Math.max(viewport.width - size.width - ACTIONS_GAP, ACTIONS_GAP));
   const below = rect.y + rect.height + ACTIONS_GAP;
   if (below + size.height <= viewport.height - ACTIONS_GAP) return { x, y: below };
@@ -281,9 +270,9 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
   let closed = false;
   let capturing = false;
   /** The gesture in progress: drawing a new box, moving the current one, or dragging one of its handles. */
-  let drag: { pointerId: number; mode: 'draw' | 'move' | RegionHandle; origin: RegionPoint; base: RegionRect | null } | null = null;
+  let drag: { pointerId: number; mode: 'draw' | 'move' | RegionHandle; origin: Point; base: Rect | null } | null = null;
   /** The box waiting to be adjusted and confirmed. */
-  let pending: RegionRect | null = null;
+  let pending: Rect | null = null;
   let cancelNotified = false;
 
   const consume = (event: Event) => {
@@ -292,7 +281,7 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
   };
 
   /** Keeps the action bar attached to the box while it is being adjusted. */
-  const placeActions = (rect: RegionRect) => {
+  const placeActions = (rect: Rect) => {
     if (actions.dataset.visible !== 'true') return;
     const measured = actions.getBoundingClientRect();
     const size = { width: measured.width || 150, height: measured.height || 44 };
@@ -301,7 +290,7 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
     actions.style.top = `${at.y}px`;
   };
 
-  const renderRect = (rect: RegionRect | null) => {
+  const renderRect = (rect: Rect | null) => {
     if (!rect || rect.width === 0 || rect.height === 0) {
       selection.dataset.visible = 'false';
       return;
@@ -336,7 +325,7 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
     close();
   };
 
-  const setPending = (rect: RegionRect | null) => {
+  const setPending = (rect: Rect | null) => {
     pending = rect;
     renderRect(rect);
     selection.dataset.interactive = rect ? 'true' : 'false';
@@ -364,7 +353,7 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
     })();
   };
 
-  const pointOf = (event: PointerEvent): RegionPoint => clipRegionPoint({ x: event.clientX, y: event.clientY }, readViewport());
+  const pointOf = (event: PointerEvent): Point => clipRegionPoint({ x: event.clientX, y: event.clientY }, readViewport());
 
   const onPointerDown = (event: PointerEvent) => {
     // The action bar's own buttons are not part of the drawing surface: pressing one must not start a box
@@ -394,7 +383,7 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
     blocker.setPointerCapture?.(event.pointerId);
   };
 
-  const rectForDrag = (event: PointerEvent): RegionRect | null => {
+  const rectForDrag = (event: PointerEvent): Rect | null => {
     if (!drag) return null;
     const point = pointOf(event);
     const viewport = readViewport();

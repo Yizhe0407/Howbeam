@@ -9,17 +9,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { t } from '@/lib/shared/i18n';
-import {
-  boundsFromPoints,
-  constrainToSquare,
-  isUsableItemBounds,
-  snapToAngle,
-  type ImageCssSize,
-  type Point,
-} from './image-edit-geometry';
+import { boundsFromPoints, constrainToSquare, isUsableItemBounds, snapToAngle } from './image-edit-geometry';
 import { fitTextHeight, MIN_ARROW_LENGTH, MIN_TEXT_WIDTH } from './image-edit-item-geometry';
 import { CROP_ITEM_ID, newItemId, type ImageEditItem, type ImageEditItemKind } from './image-edit-items';
 import { STYLE_FIELDS, type ImageEditStyle, type StyleField } from './image-edit-style';
+import type { Point, Size } from '@/lib/shared/geometry';
 
 // A solid bar, drawn the way a redaction renders in the export.
 const RedactIcon = createLucideIcon('Redact', [
@@ -40,7 +34,7 @@ const DEFAULT_TEXT_WIDTH = 240;
 interface CreateInput {
   from: Point;
   to: Point;
-  size: ImageCssSize;
+  size: Size;
   style: ImageEditStyle;
   /** The number a new marker would take. */
   nextNumber: number;
@@ -91,7 +85,7 @@ function textFromDrag(input: CreateInput): ImageEditItem {
 }
 
 /** Applies Shift to a drag end point for tools that have a constraint. */
-export function constrainDragEnd(tool: ImageEditTool, from: Point, to: Point, size: ImageCssSize): Point {
+export function constrainDragEnd(tool: ImageEditTool, from: Point, to: Point, size: Size): Point {
   if (tool.constraint === 'square') return constrainToSquare(from, to, size);
   if (tool.constraint === 'angle') return snapToAngle(from, to, size);
   return to;

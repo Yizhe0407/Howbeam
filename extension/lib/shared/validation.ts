@@ -1,3 +1,4 @@
+import type { Rect } from '@/lib/shared/geometry';
 /**
  * Pure validation primitives shared across trust boundaries: runtime messages,
  * cross-frame relays, and persisted state all revalidate structurally because
@@ -31,11 +32,21 @@ export function isSafeId(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0;
 }
 
-export interface FiniteRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+/** C0 and C1 control characters: never part of an identifier or a URL. */
+export const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f]/u;
+
+/** The longest identifier anywhere (steps, projects, sections, masks, edits). */
+export const MAX_IDENTIFIER_LENGTH = 256;
+
+/** The one identifier rule: non-empty, bounded, no surrounding space, no control characters. */
+export function isIdentifier(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= MAX_IDENTIFIER_LENGTH &&
+    value.trim() === value &&
+    !CONTROL_CHARACTERS.test(value)
+  );
 }
 
 export interface FiniteRectOptions {
@@ -52,7 +63,7 @@ export interface FiniteRectOptions {
  * bounded by magnitude, and dimensions strictly positive unless the caller
  * asks for a larger minimum size.
  */
-export function isFiniteRect(value: unknown, opts: FiniteRectOptions): value is FiniteRect {
+export function isFiniteRect(value: unknown, opts: FiniteRectOptions): value is Rect {
   if (!isRecord(value)) return false;
   const { maxMagnitude, minSize } = opts;
   const { x, y, width, height } = value;

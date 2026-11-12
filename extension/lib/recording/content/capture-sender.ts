@@ -2,8 +2,8 @@ import { sendToBackground } from '../../runtime/background-client';
 import { getRecordingState } from '../../storage/storage';
 import type { ClickCapture, ClickCaptureResult } from '../../runtime/messages';
 import type { ResolvedSnapshotTarget } from '../snapshot-targeting';
-import type { SnapshotShieldRect } from '../snapshot-shield-protocol';
 import { t } from '@/lib/shared/i18n';
+import type { Rect } from '@/lib/shared/geometry';
 
 export type CaptureSender = ReturnType<typeof createCaptureSender>;
 
@@ -28,7 +28,7 @@ export function createCaptureSender(runId: string) {
   const takenListeners = new Map<string, () => void>();
 
   async function sendCapture(
-    rect: SnapshotShieldRect,
+    rect: Rect,
     target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
     intent: ClickCapture['intent'],
     now: number,
@@ -42,7 +42,7 @@ export function createCaptureSender(runId: string) {
   }
 
   async function requestCapture(
-    rect: SnapshotShieldRect,
+    rect: Rect,
     target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
     intent: ClickCapture['intent'],
     now: number,
@@ -80,7 +80,7 @@ export function createCaptureSender(runId: string) {
    * stored.
    */
   async function deliverStepCapture(
-    rect: SnapshotShieldRect,
+    rect: Rect,
     target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
     intent: ClickCapture['intent'],
     now: number,
@@ -97,7 +97,7 @@ export function createCaptureSender(runId: string) {
   }
 
   async function requestStepCapture(
-    rect: SnapshotShieldRect,
+    rect: Rect,
     target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
     intent: ClickCapture['intent'],
     now: number,
@@ -149,7 +149,7 @@ export function createCaptureSender(runId: string) {
 
   /** 回傳已提交標註的權威 1-based 編號。 */
   async function commitSnapshotAnnotation(
-    rect: SnapshotShieldRect,
+    rect: Rect,
     target: Pick<ResolvedSnapshotTarget, 'text' | 'tagName'>,
     captureKind: ClickCapture['captureKind'],
     now: number,

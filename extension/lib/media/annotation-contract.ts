@@ -1,5 +1,6 @@
 import type { Bounds } from '../storage/models';
 import { palette } from '../shared/design-tokens';
+import type { Point } from '@/lib/shared/geometry';
 
 export const HIGHLIGHT_PADDING = 8;
 export const HIGHLIGHT_RADIUS = 8;
@@ -34,11 +35,6 @@ export function isDrawableHighlightFrame(frame: { width: number; height: number 
   return frame.width >= HIGHLIGHT_LINE_WIDTH && frame.height >= HIGHLIGHT_LINE_WIDTH;
 }
 
-export interface AnnotationPoint {
-  x: number;
-  y: number;
-}
-
 export interface Annotation {
   bounds: Bounds;
   /** 1-based order number shown in the badge when numbered=true. */
@@ -48,9 +44,9 @@ export interface Annotation {
 export interface AnnotationLayout {
   order: number;
   frame: Bounds;
-  anchor: AnnotationPoint;
+  anchor: Point;
   markerOnly: boolean;
-  badgeAnchor: AnnotationPoint;
-  callout: AnnotationPoint | null;
-  leader: AnnotationPoint[];
+  badgeAnchor: Point;
+  callout: Point | null;
+  leader: Point[];
 }

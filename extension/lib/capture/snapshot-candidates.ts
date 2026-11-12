@@ -1,3 +1,4 @@
+import { clamp } from '../shared/geometry';
 /**
  * Pure ordering/dedup logic for snapshot-mode keyboard candidate traversal
  * (UX_PLAN §9.5). The DOM-dependent collection lives in the content script;
@@ -25,10 +26,6 @@ export const KEYBOARD_CANDIDATE_LIMIT = 150;
 
 /** Same-row tolerance (px) so a ragged baseline still reads left-to-right. */
 const ROW_BAND = 12;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(value, max));
-}
 
 /**
  * Orders candidates in reading order (top-to-bottom, then left-to-right),

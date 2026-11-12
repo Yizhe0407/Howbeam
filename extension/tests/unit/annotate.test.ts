@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/lib/capture/raster-image-validation', () => ({
+vi.mock('@/lib/media/raster-image-validation', () => ({
   validateRasterImageBlob: vi.fn().mockResolvedValue({ width: 100, height: 100, mediaType: 'image/png' }),
 }));
 import { BADGE_RADIUS, HIGHLIGHT_PADDING, LEADER_LINE_WIDTH, MARKER_RADIUS, REDACTION_COLOR, REDACTION_EXPANSION, type AnnotationLayout } from '@/lib/media/annotation-contract';

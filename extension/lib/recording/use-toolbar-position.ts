@@ -7,17 +7,9 @@ import {
   type RefObject,
 } from 'react';
 import { browser } from 'wxt/browser';
-import {
-  clampToolbarPosition,
-  isRecordingToolbarCorner,
-  positionForToolbarCorner,
-  RECORDING_TOOLBAR_CORNER_KEY,
-  snapToolbarCorner,
-  toolbarCornerLabel,
-  type RecordingToolbarCorner,
-  type ToolbarPoint,
-} from './recording-toolbar-position';
+import { clampToolbarPosition, isRecordingToolbarCorner, positionForToolbarCorner, RECORDING_TOOLBAR_CORNER_KEY, snapToolbarCorner, toolbarCornerLabel, type RecordingToolbarCorner } from './recording-toolbar-position';
 import { t } from '@/lib/shared/i18n';
+import type { Point } from '@/lib/shared/geometry';
 
 interface UseToolbarPositionOptions {
   /** The floating element being positioned (toolbar or its collapsed pill). */
@@ -44,7 +36,7 @@ export function useToolbarPosition({
   announce,
 }: UseToolbarPositionOptions) {
   const [corner, setCorner] = useState<RecordingToolbarCorner>('bottom-right');
-  const [position, setPosition] = useState<ToolbarPoint | null>(null);
+  const [position, setPosition] = useState<Point | null>(null);
   /** True once the saved corner has been read (or failed to), so the toolbar is not drawn in the default corner first. */
   const [ready, setReady] = useState(false);
   /** Set when a drag actually moved the element, so the click that ends the
@@ -54,8 +46,8 @@ export function useToolbarPosition({
     pointerId: number;
     startClientX: number;
     startClientY: number;
-    startPosition: ToolbarPoint;
-    position: ToolbarPoint;
+    startPosition: Point;
+    position: Point;
     moved: boolean;
   } | null>(null);
 

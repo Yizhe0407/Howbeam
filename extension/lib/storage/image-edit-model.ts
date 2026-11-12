@@ -1,5 +1,7 @@
+import { isIdentifier } from '../shared/validation';
 import { PERSISTED_STEP_LIMITS } from './persistence-limits';
 import { isStoredText } from './stored-text';
+import type { Rect, Point } from '@/lib/shared/geometry';
 
 /**
  * Things a person draws onto a screenshot in the image editor: text, arrows,
@@ -45,23 +47,11 @@ export const IMAGE_EDIT_LIMITS = Object.freeze({
   maxIdLength: PERSISTED_STEP_LIMITS.maxIdLength,
 });
 
-export interface EditPoint {
-  x: number;
-  y: number;
-}
-
-export interface EditBounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 export interface TextEdit {
   id: string;
   kind: 'text';
   /** The text box: `width` is the wrap width, `height` the laid-out height at save time. */
-  bounds: EditBounds;
+  bounds: Rect;
   text: string;
   fontSize: number;
   color: ImageEditColor;
@@ -71,9 +61,9 @@ export interface TextEdit {
 export interface ArrowEdit {
   id: string;
   kind: 'arrow';
-  from: EditPoint;
+  from: Point;
   /** The arrow head is drawn here. */
-  to: EditPoint;
+  to: Point;
   width: number;
   color: ImageEditColor;
 }
@@ -81,7 +71,7 @@ export interface ArrowEdit {
 export interface RectEdit {
   id: string;
   kind: 'rect';
-  bounds: EditBounds;
+  bounds: Rect;
   width: number;
   color: ImageEditColor;
   fill: ShapeFill;
@@ -91,7 +81,7 @@ export interface EllipseEdit {
   id: string;
   kind: 'ellipse';
   /** The ellipse is inscribed in this box. */
-  bounds: EditBounds;
+  bounds: Rect;
   width: number;
   color: ImageEditColor;
   fill: ShapeFill;
@@ -101,7 +91,7 @@ export interface EllipseEdit {
 export interface StepMarkerEdit {
   id: string;
   kind: 'step';
-  center: EditPoint;
+  center: Point;
   radius: number;
   number: number;
   color: ImageEditColor;
@@ -118,7 +108,7 @@ const isCoordinate = (value: unknown): value is number =>
 const isDimension = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= IMAGE_EDIT_LIMITS.maxBoundsDimension;
 
-function isEditBounds(value: unknown): value is EditBounds {
+function isEditBounds(value: unknown): value is Rect {
   return isRecord(value)
     && isCoordinate(value.x) && isCoordinate(value.y)
     && isDimension(value.width) && isDimension(value.height)
@@ -126,7 +116,7 @@ function isEditBounds(value: unknown): value is EditBounds {
     && isCoordinate((value.y as number) + (value.height as number));
 }
 
-const isEditPoint = (value: unknown): value is EditPoint =>
+const isEditPoint = (value: unknown): value is Point =>
   isRecord(value) && isCoordinate(value.x) && isCoordinate(value.y);
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/;
@@ -143,12 +133,7 @@ const isStrokeWidth = (value: unknown): value is number =>
 const isFontSize = (value: unknown): value is number =>
   inRange(value, IMAGE_EDIT_LIMITS.minFontSize, IMAGE_EDIT_LIMITS.maxFontSize);
 
-const isEditId = (value: unknown): value is string =>
-  typeof value === 'string'
-  && value.length > 0
-  && value.length <= IMAGE_EDIT_LIMITS.maxIdLength
-  && value.trim() === value
-  && !/[\u0000-\u001f\u007f-\u009f]/u.test(value);
+const isEditId = isIdentifier;
 
 export const isTextLook = (value: unknown): value is TextLook =>
   typeof value === 'string' && (TEXT_LOOKS as readonly string[]).includes(value);

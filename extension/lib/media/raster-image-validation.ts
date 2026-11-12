@@ -162,6 +162,13 @@ async function readPrefix(blob: Blob, byteLength: number): Promise<Uint8Array> {
 /** Reads progressively larger prefixes until the SOF scan either finds the
  * frame header or has seen the complete blob, so multi-MB screenshots are
  * never buffered whole just to sniff their dimensions. */
+/** A whole JPEG's pixel size, read from its frame header without decoding it. */
+export function readJpegSize(bytes: Uint8Array): { width: number; height: number } {
+  const dimensions = jpegDimensions(bytes)!;
+  if (dimensions.width <= 0 || dimensions.height <= 0) invalid('The raster image has invalid dimensions.');
+  return dimensions;
+}
+
 async function jpegBlobDimensions(blob: Blob): Promise<{ width: number; height: number }> {
   let prefixLength = Math.min(JPEG_SCAN_INITIAL_BYTES, blob.size);
   for (;;) {

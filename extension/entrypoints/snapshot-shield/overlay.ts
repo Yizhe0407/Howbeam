@@ -1,13 +1,10 @@
-import {
-  snapshotRectKey,
-  type SnapshotShieldRect,
-  type SnapshotShieldSelection,
-} from '@/lib/recording/snapshot-shield-protocol';
+import { snapshotRectKey, type SnapshotShieldSelection } from '@/lib/recording/snapshot-shield-protocol';
 import { BADGE_RADIUS, type AnnotationLayout, HIGHLIGHT_LINE_WIDTH, HIGHLIGHT_RADIUS, LEADER_LINE_WIDTH, MARKER_INNER_RADIUS, MARKER_RADIUS, MARKER_RING_WIDTH } from '@/lib/media/annotation-contract';
 import { getBadgeFontSize } from '@/lib/media/annotation-geometry';
 import { layoutWithProvisional } from '@/lib/media/annotation-layout';
+import type { Rect } from '@/lib/shared/geometry';
 
-function placeBox(element: HTMLElement, frame: SnapshotShieldRect): void {
+function placeBox(element: HTMLElement, frame: Rect): void {
   element.style.left = `${frame.x}px`;
   element.style.top = `${frame.y}px`;
   element.style.width = `${frame.width}px`;
@@ -15,7 +12,7 @@ function placeBox(element: HTMLElement, frame: SnapshotShieldRect): void {
 }
 
 export interface SnapshotOverlay {
-  preview(rect: SnapshotShieldRect | null): void;
+  preview(rect: Rect | null): void;
   commit(selection: SnapshotShieldSelection & { id: number }): void;
   undo(): void;
   relayout(): void;
@@ -43,7 +40,7 @@ export function createOverlay(): SnapshotOverlay {
   const committedIds = new Set<number>();
   const committedSelections: Array<SnapshotShieldSelection & { id: number }> = [];
   const committedRectKeys = new Set<string>();
-  let previewRect: SnapshotShieldRect | null = null;
+  let previewRect: Rect | null = null;
 
   const svgElement = <K extends keyof SVGElementTagNameMap>(name: K): SVGElementTagNameMap[K] =>
     document.createElementNS('http://www.w3.org/2000/svg', name);
@@ -181,10 +178,10 @@ export function createOverlay(): SnapshotOverlay {
     }
   };
 
-  const isCommittedRect = (rect: SnapshotShieldRect) => committedRectKeys.has(snapshotRectKey(rect));
+  const isCommittedRect = (rect: Rect) => committedRectKeys.has(snapshotRectKey(rect));
 
   return {
-    preview(rect: SnapshotShieldRect | null) {
+    preview(rect: Rect | null) {
       document.body.classList.toggle('has-preview-target', Boolean(rect));
       if ((rect && previewRect && snapshotRectKey(rect) === snapshotRectKey(previewRect)) || (!rect && !previewRect)) return;
       previewRect = rect;

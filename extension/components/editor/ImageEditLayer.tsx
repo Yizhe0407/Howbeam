@@ -2,11 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type 
 import { cn } from '@/lib/shared/utils';
 import { t } from '@/lib/shared/i18n';
 import { IMAGE_EDIT_LIMITS, type TextEdit } from '@/lib/storage/image-edit-model';
-import {
-  clientToImagePoint,
-  type ImageCssSize,
-  type Point,
-} from '@/lib/editor/image-edit-geometry';
+import { clientToImagePoint } from '@/lib/editor/image-edit-geometry';
 import {
   itemBounds,
   itemHandles,
@@ -22,13 +18,14 @@ import {
   IMAGE_EDIT_FONT_WEIGHT,
   textLineHeight,
 } from '@/lib/media/image-edit-render';
+import type { Point, Size } from '@/lib/shared/geometry';
 
 interface Props {
   /** Everything placed on the image except the text currently being typed. */
   items: readonly ImageEditItem[];
   tool: ImageEditToolId;
   /** The screenshot's size in CSS pixels: the coordinate space of every item. */
-  size: ImageCssSize;
+  size: Size;
   /** How the next thing drawn will look. */
   style: ImageEditStyle;
   selectedId: string | null;
@@ -76,7 +73,7 @@ const DOUBLE_PRESS_MS = 350;
 
 const percent = (value: number, total: number): string => `${(value / total) * 100}%`;
 
-function boxStyle(item: ImageEditItem, size: ImageCssSize) {
+function boxStyle(item: ImageEditItem, size: Size) {
   const box = itemBounds(item);
   return {
     left: percent(box.x, size.width),
@@ -100,7 +97,7 @@ function arrowHandleStyle(item: Extract<ImageEditItem, { kind: 'arrow' }>, handl
 const isStrokeHit = (item: ImageEditItem): boolean => item.kind === 'rect' || item.kind === 'ellipse' || item.kind === 'arrow';
 
 /** Dims everything outside the crop, so the area that will be kept stands out. */
-function CropShade({ bounds, size }: { bounds: { x: number; y: number; width: number; height: number }; size: ImageCssSize }) {
+function CropShade({ bounds, size }: { bounds: { x: number; y: number; width: number; height: number }; size: Size }) {
   const top = percent(bounds.y, size.height);
   const bottomStart = percent(bounds.y + bounds.height, size.height);
   const left = percent(bounds.x, size.width);
@@ -125,7 +122,7 @@ function TextEditor({
 }: {
   item: TextEdit;
   scale: number;
-  size: ImageCssSize;
+  size: Size;
   onFinish: (text: string | null) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);

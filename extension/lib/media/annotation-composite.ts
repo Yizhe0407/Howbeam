@@ -1,4 +1,4 @@
-import { validateRasterImageBlob } from '../capture/raster-image-validation';
+import { validateRasterImageBlob } from './raster-image-validation';
 import type { Bounds, ImageEdit, Redaction } from '../storage/models';
 import { getValidScreenshotScale } from './image-utils';
 import type { Annotation } from './annotation-contract';

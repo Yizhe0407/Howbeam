@@ -2,7 +2,7 @@ import { throwIfAborted } from '../shared/abort';
 import { documentLang, t } from '@/lib/shared/i18n';
 import { StepImageError } from './export-errors';
 import { loadPdfFonts } from './pdf/pdf-fonts';
-import { readJpegSize } from './pdf/jpeg-size';
+import { readJpegSize } from '../media/raster-image-validation';
 import { PdfLayouter } from './pdf/pdf-layout';
 import { PdfWriter } from './pdf/pdf-render';
 import { resolvePdfExportSettings, type ProjectPdfOptions } from './pdf-export-settings';

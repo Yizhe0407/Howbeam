@@ -1,43 +1,10 @@
 import { browser } from 'wxt/browser';
-import {
-  buildShieldTokenStorageKey,
-  isSnapshotShieldPortMessage,
-  SNAPSHOT_SHIELD_CANDIDATES,
-  SNAPSHOT_SHIELD_CAPTURE_COMPLETE,
-  SNAPSHOT_SHIELD_COMMIT,
-  SNAPSHOT_SHIELD_CONTROL,
-  SNAPSHOT_SHIELD_CONTROL_RESULT,
-  SNAPSHOT_SHIELD_INIT,
-  SNAPSHOT_SHIELD_POINTER_DOWN,
-  SNAPSHOT_SHIELD_POINTER_MOVE,
-  SNAPSHOT_SHIELD_PREVIEW,
-  SNAPSHOT_SHIELD_READY,
-  SNAPSHOT_SHIELD_REGION_CAPTURE,
-  SNAPSHOT_SHIELD_TOKEN_STORAGE_PREFIX,
-  SNAPSHOT_SHIELD_TOKEN_TTL_MS,
-  SNAPSHOT_SHIELD_TOOLBAR_STATE,
-  SNAPSHOT_SHIELD_UNDO,
-  snapshotRectKey,
-  type SnapshotShieldControlMessage,
-  type SnapshotShieldFrameMessage,
-  type SnapshotShieldInitMessage,
-  type ToolbarTheme,
-  type SnapshotShieldPointerDownMessage,
-  type SnapshotShieldPointerMoveMessage,
-  type SnapshotShieldRegionCaptureMessage,
-  type SnapshotShieldKeyboardAnchor,
-  type SnapshotShieldPreviewResult,
-  type SnapshotShieldDuplicate,
-  type SnapshotShieldRect,
-  type SnapshotShieldSelection,
-  type SnapshotShieldTokenRecord,
-  type SnapshotShieldToolbarStateMessage,
-  type WithoutToken,
-} from './snapshot-shield-protocol';
+import { buildShieldTokenStorageKey, isSnapshotShieldPortMessage, SNAPSHOT_SHIELD_CANDIDATES, SNAPSHOT_SHIELD_CAPTURE_COMPLETE, SNAPSHOT_SHIELD_COMMIT, SNAPSHOT_SHIELD_CONTROL, SNAPSHOT_SHIELD_CONTROL_RESULT, SNAPSHOT_SHIELD_INIT, SNAPSHOT_SHIELD_POINTER_DOWN, SNAPSHOT_SHIELD_POINTER_MOVE, SNAPSHOT_SHIELD_PREVIEW, SNAPSHOT_SHIELD_READY, SNAPSHOT_SHIELD_REGION_CAPTURE, SNAPSHOT_SHIELD_TOKEN_STORAGE_PREFIX, SNAPSHOT_SHIELD_TOKEN_TTL_MS, SNAPSHOT_SHIELD_TOOLBAR_STATE, SNAPSHOT_SHIELD_UNDO, snapshotRectKey, type SnapshotShieldControlMessage, type SnapshotShieldFrameMessage, type SnapshotShieldInitMessage, type ToolbarTheme, type SnapshotShieldPointerDownMessage, type SnapshotShieldPointerMoveMessage, type SnapshotShieldRegionCaptureMessage, type SnapshotShieldKeyboardAnchor, type SnapshotShieldPreviewResult, type SnapshotShieldDuplicate, type SnapshotShieldSelection, type SnapshotShieldTokenRecord, type SnapshotShieldToolbarStateMessage, type WithoutToken } from './snapshot-shield-protocol';
 import { deepElementFromPoint } from '../capture/selector/element-availability';
 import { createViewportOverlayHost, setImportantStyle } from '../capture/viewport-overlay-host';
 import { REAPPEAR_TRANSITION } from '../capture/capture-presentation';
 import type { RecordingControlResult } from '../runtime/messages';
+import type { Rect } from '@/lib/shared/geometry';
 
 const SHIELD_PAGE = '/snapshot-shield.html';
 const SHIELD_READY_TIMEOUT_MS = 4_000;
@@ -275,7 +242,7 @@ export function createSnapshotShield(
     selection: SnapshotShieldSelection | null,
     generation: number,
     captureId: number,
-    duplicateOf?: SnapshotShieldRect,
+    duplicateOf?: Rect,
   ): void => {
     if (removed) return;
     const committed = selection ? { ...selection, id: nextSelectionId++ } : null;

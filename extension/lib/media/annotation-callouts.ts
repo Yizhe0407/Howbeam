@@ -1,6 +1,7 @@
 import type { Bounds } from '../storage/models';
-import { BADGE_RADIUS, CALLOUT_SPACING, type AnnotationPoint } from './annotation-contract';
+import { BADGE_RADIUS, CALLOUT_SPACING } from './annotation-contract';
 import { distanceToBounds, fitPointInViewport } from './annotation-geometry';
+import type { Point } from '@/lib/shared/geometry';
 
 const BADGE_CLEARANCE = 4;
 
@@ -33,7 +34,7 @@ export function placeOrderedSlots(targets: number[], spacing: number, lo: number
   return slots.map((value) => value + shift);
 }
 
-function perimeterCandidates(frame: Bounds): [AnnotationPoint, ...AnnotationPoint[]] {
+function perimeterCandidates(frame: Bounds): [Point, ...Point[]] {
   const { x, y, width: w, height: h } = frame;
   return [
     { x: x + w, y }, { x: x + w, y: y + h / 2 }, { x, y: y + h / 2 }, { x, y },
@@ -41,11 +42,11 @@ function perimeterCandidates(frame: Bounds): [AnnotationPoint, ...AnnotationPoin
   ];
 }
 
-function fitsInViewport(point: AnnotationPoint, viewportWidth: number, viewportHeight: number): boolean {
+function fitsInViewport(point: Point, viewportWidth: number, viewportHeight: number): boolean {
   return point.x - BADGE_RADIUS >= 0 && point.x + BADGE_RADIUS <= viewportWidth && point.y - BADGE_RADIUS >= 0 && point.y + BADGE_RADIUS <= viewportHeight;
 }
 
-function clampToViewport(point: AnnotationPoint, viewportWidth: number, viewportHeight: number): AnnotationPoint {
+function clampToViewport(point: Point, viewportWidth: number, viewportHeight: number): Point {
   return fitPointInViewport(point, BADGE_RADIUS, viewportWidth, viewportHeight);
 }
 
@@ -83,7 +84,7 @@ export class BoundsSpatialIndex {
     }
   }
 
-  near(point: AnnotationPoint, radius: number): Bounds[] {
+  near(point: Point, radius: number): Bounds[] {
     const minColumn = this.cell(point.x - radius, this.columns);
     const maxColumn = this.cell(point.x + radius, this.columns);
     const minRow = this.cell(point.y - radius, this.rows);
@@ -104,26 +105,26 @@ export class BoundsSpatialIndex {
 }
 
 export class PointSpatialIndex {
-  private readonly cells = new Map<string, AnnotationPoint[]>();
+  private readonly cells = new Map<string, Point[]>();
   constructor(private readonly cellSize = BADGE_RADIUS * 2 + BADGE_CLEARANCE) {}
-  add(point: AnnotationPoint): void {
+  add(point: Point): void {
     const key = this.key(point.x, point.y);
     const entries = this.cells.get(key);
     if (entries) entries.push(point); else this.cells.set(key, [point]);
   }
-  near(point: AnnotationPoint, radius: number): AnnotationPoint[] {
+  near(point: Point, radius: number): Point[] {
     const minX = Math.floor((point.x - radius) / this.cellSize);
     const maxX = Math.floor((point.x + radius) / this.cellSize);
     const minY = Math.floor((point.y - radius) / this.cellSize);
     const maxY = Math.floor((point.y + radius) / this.cellSize);
-    const matches: AnnotationPoint[] = [];
+    const matches: Point[] = [];
     for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) matches.push(...(this.cells.get(`${x}:${y}`) ?? []));
     return matches;
   }
   private key(x: number, y: number): string { return `${Math.floor(x / this.cellSize)}:${Math.floor(y / this.cellSize)}`; }
 }
 
-export function badgeOverlaps(point: AnnotationPoint, badges: PointSpatialIndex, rects: BoundsSpatialIndex, ignoredRects?: Set<Bounds>): boolean {
+export function badgeOverlaps(point: Point, badges: PointSpatialIndex, rects: BoundsSpatialIndex, ignoredRects?: Set<Bounds>): boolean {
   const badgeDistance = BADGE_RADIUS * 2 + BADGE_CLEARANCE;
   if (badges.near(point, badgeDistance).some((badge) => Math.hypot(point.x - badge.x, point.y - badge.y) < badgeDistance)) return true;
   const rectDistance = BADGE_RADIUS + BADGE_CLEARANCE;
@@ -149,16 +150,16 @@ function calloutAxes(preferredX: number, preferredStartY: number, count: number,
   return { xs, ys };
 }
 
-export function placeGroupCallouts(count: number, preferredX: number, preferredStartY: number, laneOnRight: boolean, obstacleRects: BoundsSpatialIndex, placedBadges: PointSpatialIndex, ignoredRects: Set<Bounds>, viewportWidth: number, viewportHeight: number): AnnotationPoint[] {
+export function placeGroupCallouts(count: number, preferredX: number, preferredStartY: number, laneOnRight: boolean, obstacleRects: BoundsSpatialIndex, placedBadges: PointSpatialIndex, ignoredRects: Set<Bounds>, viewportWidth: number, viewportHeight: number): Point[] {
   const { xs, ys } = calloutAxes(preferredX, preferredStartY, count, viewportWidth, viewportHeight, laneOnRight);
   const candidateCount = xs.length * ys.length;
-  const candidateAt = (index: number): AnnotationPoint | undefined => {
+  const candidateAt = (index: number): Point | undefined => {
     if (index < 0 || index >= candidateCount || ys.length === 0) return undefined;
     const x = xs[Math.floor(index / ys.length)];
     const y = ys[index % ys.length];
     return x === undefined || y === undefined ? undefined : { x, y };
   };
-  const slots: AnnotationPoint[] = [];
+  const slots: Point[] = [];
   let candidateIndex = 0;
   for (let position = 0; position < count; position++) {
     let candidate = candidateAt(candidateIndex);
@@ -171,7 +172,7 @@ export function placeGroupCallouts(count: number, preferredX: number, preferredS
   return slots;
 }
 
-export function pickPerimeterBadge(frame: Bounds, obstacleRects: BoundsSpatialIndex, placedBadges: PointSpatialIndex, viewportWidth: number, viewportHeight: number): AnnotationPoint {
+export function pickPerimeterBadge(frame: Bounds, obstacleRects: BoundsSpatialIndex, placedBadges: PointSpatialIndex, viewportWidth: number, viewportHeight: number): Point {
   const candidates = perimeterCandidates(frame).filter((point) => fitsInViewport(point, viewportWidth, viewportHeight));
   const ignored = new Set([frame]);
   for (const point of candidates) if (!badgeOverlaps(point, placedBadges, obstacleRects, ignored)) return point;

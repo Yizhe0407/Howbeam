@@ -1,15 +1,8 @@
 import type { RecordingMode, StepRecaptureTarget, Viewport } from '../storage/recording-state';
 import type { CopyKey } from '../shared/i18n/copy';
+import type { Rect } from '@/lib/shared/geometry';
 
 type CaptureIntent = 'click' | 'mark';
-
-/** Clicked element rect in CSS px, relative to the viewport at capture time. */
-interface CaptureRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
 
 export interface ClickCapture {
   type: 'HOWBEAM_CLICK';
@@ -18,7 +11,7 @@ export interface ClickCapture {
   /** 讓已取消 gesture 使進行中的截圖失效。 */
   captureId: string;
   runId: string;
-  rect: CaptureRect;
+  rect: Rect;
   devicePixelRatio: number;
   /** CSS viewport occupied by the screenshot, used to derive its real pixel scale. */
   viewport: Viewport;
@@ -223,7 +216,7 @@ export interface StepFrameRelayBeginMessage {
   runId: string;
   captureId: string;
   /** Target rect in the originating child frame's viewport coordinates. */
-  rect: CaptureRect;
+  rect: Rect;
   text: string;
   tagName: string;
   interactive: boolean;
@@ -378,7 +371,7 @@ export interface HowbeamRecaptureTargetMessage {
   type: 'HOWBEAM_RECAPTURE_TARGET';
   runId: string;
   captureId: string;
-  rect: CaptureRect;
+  rect: Rect;
   viewport: Viewport;
   devicePixelRatio: number;
   url: string;

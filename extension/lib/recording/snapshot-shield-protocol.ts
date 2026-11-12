@@ -4,6 +4,7 @@ import { REGION_CAPTURE_MIN_SIZE, isRegionRectLargeEnough } from '../capture/reg
 import { isFiniteRect } from '../shared/validation';
 import { isCopyKey, type CopyKey } from '../shared/i18n/copy';
 import { isRecordingControlResult } from '../runtime/runtime-message-result';
+import type { Rect } from '@/lib/shared/geometry';
 
 export const SNAPSHOT_SHIELD_INIT = 'HOWBEAM_SNAPSHOT_SHIELD_INIT';
 export const SNAPSHOT_SHIELD_READY = 'HOWBEAM_SNAPSHOT_SHIELD_READY';
@@ -21,33 +22,26 @@ export const SNAPSHOT_SHIELD_REGION_CAPTURE = 'HOWBEAM_SNAPSHOT_SHIELD_REGION_CA
 export const SNAPSHOT_KEYBOARD_LABEL_LIMIT = 200;
 export const SNAPSHOT_REGION_COORDINATE_LIMIT = 1_000_000;
 
-export interface SnapshotShieldRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 /**
  * Canonical dedup/identity key for a shield rect at half-pixel resolution.
  * The page-side recorder and the shield page both key committed rects with
  * this exact function — they MUST agree, or undo/duplicate detection drifts
  * between the two sides of the channel.
  */
-export function snapshotRectKey(rect: SnapshotShieldRect): string {
+export function snapshotRectKey(rect: Rect): string {
   return [rect.x, rect.y, rect.width, rect.height]
     .map((value) => Math.round(value * 2))
     .join(':');
 }
 
 export interface SnapshotShieldSelection {
-  rect: SnapshotShieldRect;
+  rect: Rect;
   label: number;
 }
 
 /** A click on something already annotated: the rect of the annotation it matched. */
 export interface SnapshotShieldDuplicate {
-  duplicateOf: SnapshotShieldRect;
+  duplicateOf: Rect;
 }
 
 /** Distributes over a shield message union, dropping the channel token that
@@ -55,7 +49,7 @@ export interface SnapshotShieldDuplicate {
 export type WithoutToken<M> = M extends { token: string } ? Omit<M, 'token'> : never;
 
 export interface SnapshotShieldPreviewResult {
-  rect: SnapshotShieldRect | null;
+  rect: Rect | null;
 }
 
 export type ToolbarTheme = 'light' | 'dark';
@@ -96,14 +90,14 @@ export interface SnapshotShieldRegionCaptureMessage {
   token: string;
   /** See SnapshotShieldPointerDownMessage.captureId. */
   captureId: number;
-  rect: SnapshotShieldRect;
+  rect: Rect;
 }
 
 interface SnapshotShieldPreviewMessage {
   type: typeof SNAPSHOT_SHIELD_PREVIEW;
   token: string;
   requestId: number;
-  rect: SnapshotShieldRect | null;
+  rect: Rect | null;
 }
 
 interface SnapshotShieldCaptureCompleteMessage {
@@ -190,11 +184,11 @@ function isRequestId(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0;
 }
 
-function isRect(value: unknown): value is SnapshotShieldRect {
+function isRect(value: unknown): value is Rect {
   return isFiniteRect(value, { maxMagnitude: SNAPSHOT_REGION_COORDINATE_LIMIT });
 }
 
-export function isSnapshotShieldRegionRect(value: unknown): value is SnapshotShieldRect {
+export function isSnapshotShieldRegionRect(value: unknown): value is Rect {
   if (
     !isFiniteRect(value, {
       maxMagnitude: SNAPSHOT_REGION_COORDINATE_LIMIT,
@@ -278,7 +272,7 @@ export function isSnapshotShieldPortMessage(value: unknown, token: string): valu
     clientY?: number;
     action?: RecordingControlMessage['type'];
     undoToken?: string;
-    rect?: SnapshotShieldRect;
+    rect?: Rect;
   };
   if (message.token !== token) return false;
   if (message.type === SNAPSHOT_SHIELD_READY) return true;
@@ -315,7 +309,7 @@ export function isSnapshotShieldFrameMessage(value: unknown, token: string): val
     token?: string;
     requestId?: number;
     captureId?: number;
-    rect?: SnapshotShieldRect | null;
+    rect?: Rect | null;
     selection?: (SnapshotShieldSelection & { id: number }) | null;
     state?: SnapshotShieldToolbarStateMessage['state'];
     result?: RecordingControlResult;

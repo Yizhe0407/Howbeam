@@ -1,15 +1,6 @@
-import { isRecord } from '../shared/validation';
+import { CONTROL_CHARACTERS, isIdentifier, isRecord } from '../shared/validation';
 import { buildStepEntries, stepDescriptionLimit, stepRole, type Bounds, type ImageEdit, type Redaction, type Step } from '../storage/models';
-import {
-  IMAGE_EDIT_LIMITS,
-  isImageEditColor,
-  isShapeFill,
-  isTextLook,
-  type EditPoint,
-  type ImageEditColor,
-  type ShapeFill,
-  type TextLook,
-} from '../storage/image-edit-model';
+import { IMAGE_EDIT_LIMITS, isImageEditColor, isShapeFill, isTextLook, type ImageEditColor, type ShapeFill, type TextLook } from '../storage/image-edit-model';
 import { screenshotBlobProblem, screenshotProblem } from '../storage/screenshot-rules';
 import {
   repairProjectSections,
@@ -33,6 +24,7 @@ import {
   type ProjectArchiveMetadata,
   type ProjectArchiveMetadataInput,
 } from './project-archive-contract';
+import type { Point } from '@/lib/shared/geometry';
 
 /** Step ids address blobs and groups inside an archive, so a repeat makes the
  * manifest ambiguous. Both the export and import paths check it on their own
@@ -106,7 +98,7 @@ export function expectString(value: unknown, path: string, maximumLength: number
 
 export function expectIdentifier(value: unknown, path: string): string {
   const identifier = expectString(value, path, PROJECT_ARCHIVE_LIMITS.maxIdLength, false);
-  if (identifier.trim() !== identifier || /[\u0000-\u001f\u007f-\u009f]/u.test(identifier)) {
+  if (!isIdentifier(identifier)) {
     fail('INVALID_ARCHIVE', `${path} contains invalid whitespace or control characters.`);
   }
   return identifier;
@@ -123,7 +115,7 @@ function expectText(value: unknown, path: string, maximumLength: number): string
 
 function expectUrl(value: unknown, path: string): string {
   const raw = expectString(value, path, PROJECT_ARCHIVE_LIMITS.maxUrlLength, false);
-  if (/[\u0000-\u001f\u007f-\u009f]/u.test(raw)) fail('UNSAFE_URL', `${path} contains control characters.`);
+  if (CONTROL_CHARACTERS.test(raw)) fail('UNSAFE_URL', `${path} contains control characters.`);
 
   let parsed: URL;
   try {
@@ -208,7 +200,7 @@ function expectEditColor(value: unknown, path: string): ImageEditColor {
   return value;
 }
 
-function expectEditPoint(value: unknown, path: string): EditPoint {
+function expectEditPoint(value: unknown, path: string): Point {
   const record = expectRecord(value, path);
   assertExactKeys(record, POINT_KEYS, path);
   const limit = PROJECT_ARCHIVE_LIMITS.maxCoordinateMagnitude;

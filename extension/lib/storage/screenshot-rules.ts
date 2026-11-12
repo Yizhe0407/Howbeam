@@ -1,4 +1,4 @@
-import { RasterImageValidationError, validateRasterImageBlob } from '../capture/raster-image-validation';
+import { RasterImageValidationError, validateRasterImageBlob } from '../media/raster-image-validation';
 import { PERSISTED_STEP_LIMITS } from './persistence-limits';
 import { storageError } from './models';
 

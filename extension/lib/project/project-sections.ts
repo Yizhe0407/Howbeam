@@ -1,5 +1,5 @@
 import { entryId, stepRole, type StepEntry } from '../storage/models';
-import { isRecord } from '../shared/validation';
+import { isIdentifier, isRecord } from '../shared/validation';
 import {
   PROJECT_SECTION_LIMITS,
   sanitizeProjectSectionTitle,
@@ -11,7 +11,6 @@ export {
   type ProjectSection,
 } from '../storage/project-section-model';
 
-const IDENTIFIER_CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f]/u;
 
 /**
  * Repairs untrusted or stale section metadata against the current renderable
@@ -106,16 +105,7 @@ export function sectionsInRows(sections: readonly ProjectSection[], rows: readon
 }
 
 function validIdentifier(value: unknown): string | null {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > PROJECT_SECTION_LIMITS.maxIdLength ||
-    value.trim() !== value ||
-    IDENTIFIER_CONTROL_CHARACTERS.test(value)
-  ) {
-    return null;
-  }
-  return value;
+  return isIdentifier(value) ? value : null;
 }
 
 function collectEntryBoundaries(entries: readonly StepEntry[]): Map<string, number> {

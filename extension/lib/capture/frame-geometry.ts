@@ -1,9 +1,5 @@
 import { type Bounds } from '../storage/models';
-
-interface Point {
-  x: number;
-  y: number;
-}
+import type { Point, Size } from '@/lib/shared/geometry';
 
 interface QuadLike {
   p1: Point;
@@ -19,11 +15,6 @@ type ElementWithOptionalQuads = HTMLElement & {
 export interface BorderBoxCoordinateMapper {
   toLocalPoint(point: Point): Point;
   toParentBounds(bounds: Bounds): Bounds;
-}
-
-export interface BorderBoxSize {
-  width: number;
-  height: number;
 }
 
 export interface FrameCoordinateMapper {
@@ -61,7 +52,7 @@ function computedBorderBoxDimension(
  * height retain that fractional used value; offset metrics remain a defensive
  * fallback for non-browser mocks and unusual unresolved styles.
  */
-export function getUntransformedBorderBoxSize(element: HTMLElement): BorderBoxSize {
+export function getUntransformedBorderBoxSize(element: HTMLElement): Size {
   const fallback = { width: element.offsetWidth, height: element.offsetHeight };
   try {
     const style = getComputedStyle(element);
@@ -152,7 +143,7 @@ export function createFrameCoordinateMapper(frame: HTMLIFrameElement): FrameCoor
 /** General border-box mapper shared by iframes and replaced elements. */
 export function createBorderBoxCoordinateMapper(
   element: HTMLElement,
-  borderBoxSize: BorderBoxSize = getUntransformedBorderBoxSize(element),
+  borderBoxSize: Size = getUntransformedBorderBoxSize(element),
 ): BorderBoxCoordinateMapper | null {
   const borderWidth = borderBoxSize.width;
   const borderHeight = borderBoxSize.height;

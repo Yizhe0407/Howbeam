@@ -12,18 +12,10 @@ import {
   stopRecording,
 } from '../../e2e/support/harness';
 import { ACTIVATION_CASES, ANNOTATION_CASES, REPLAY_CASES, type TargetAccuracyCase } from './cases';
-import {
-  fitPreviewFrame,
-  intersectionOverUnion,
-  summarizeBenchmark,
-  type AccuracyResult,
-  type AccuracyStatus,
-  type BenchmarkSummary,
-  type Rect,
-  type ReplayResult,
-} from './metrics';
+import { fitPreviewFrame, intersectionOverUnion, summarizeBenchmark, type AccuracyResult, type AccuracyStatus, type BenchmarkSummary, type ReplayResult } from './metrics';
 import { renderMarkdown, type DetectionBenchmarkReport } from './report';
 import { itemAt } from '../../setup/item-at';
+import type { Rect } from '@/lib/shared/geometry';
 
 test.use({ recordTrace: false });
 test.setTimeout(240_000);

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { getValidScreenshotScale } from '@/lib/media/image-utils';
-import type { ImageCssSize } from './image-edit-geometry';
+import type { Size } from '@/lib/shared/geometry';
 
 /** The screenshot's size in CSS pixels (decoded pixels / capture scale): the
  * coordinate space redactions and every other image edit are stored in.
  * Resolves to null until the blob has been decoded. */
-export function useImageCssSize(blob: Blob | undefined, screenshotScale: number): ImageCssSize | null {
-  const [size, setSize] = useState<ImageCssSize | null>(null);
+export function useImageCssSize(blob: Blob | undefined, screenshotScale: number): Size | null {
+  const [size, setSize] = useState<Size | null>(null);
 
   useEffect(() => {
     if (!blob || typeof createImageBitmap !== 'function') {

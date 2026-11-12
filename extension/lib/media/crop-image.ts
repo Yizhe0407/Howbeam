@@ -1,5 +1,6 @@
 import type { Bounds } from '../storage/models';
 import { getValidScreenshotScale } from './image-utils';
+import { clamp } from '@/lib/shared/geometry';
 
 /**
  * Non-destructive crop. The stored screenshot is never touched; a crop is
@@ -19,7 +20,6 @@ export interface PixelRect {
   sh: number;
 }
 
-const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 
 /** The crop as a whole-device-pixel rectangle inside the image, or null when it
  * covers the entire image (nothing to cut) or lies outside it. */

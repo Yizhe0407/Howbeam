@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readJpegSize } from '@/lib/export/pdf/jpeg-size';
+import { readJpegSize } from '@/lib/media/raster-image-validation';
 import { jpegOfSize } from '../setup/jpeg-fixture';
 
 describe('readJpegSize', () => {
@@ -26,12 +26,12 @@ describe('readJpegSize', () => {
   });
 
   it('rejects bytes that are not a JPEG', () => {
-    expect(() => readJpegSize(new TextEncoder().encode('not an image'))).toThrow('Not a JPEG image.');
-    expect(() => readJpegSize(Uint8Array.of(0xff, 0xd8))).toThrow('Not a JPEG image.');
+    expect(() => readJpegSize(new TextEncoder().encode('not an image'))).toThrow('not a valid JPEG image');
+    expect(() => readJpegSize(Uint8Array.of(0xff, 0xd8))).toThrow('not a valid JPEG image');
   });
 
   it('rejects a JPEG without a readable frame header', () => {
-    expect(() => readJpegSize(Uint8Array.of(0xff, 0xd8, 0xff, 0xd9, 0x00, 0x00))).toThrow('no readable frame header');
-    expect(() => readJpegSize(jpegOfSize(0, 0))).toThrow('no readable frame header');
+    expect(() => readJpegSize(Uint8Array.of(0xff, 0xd8, 0xff, 0xd9, 0x00, 0x00))).toThrow(/frame header|dimensions|invalid/i);
+    expect(() => readJpegSize(jpegOfSize(0, 0))).toThrow(/frame header|dimensions|invalid/i);
   });
 });

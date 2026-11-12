@@ -1,11 +1,6 @@
 import type { Bounds } from '../storage/models';
-import {
-  BADGE_FONT_RATIO,
-  BADGE_RADIUS,
-  HIGHLIGHT_LINE_WIDTH,
-  HIGHLIGHT_PADDING,
-  type AnnotationPoint,
-} from './annotation-contract';
+import { BADGE_FONT_RATIO, BADGE_RADIUS, HIGHLIGHT_LINE_WIDTH, HIGHLIGHT_PADDING } from './annotation-contract';
+import type { Point } from '@/lib/shared/geometry';
 
 const MERGE_OVERLAP_RATIO = 0.4;
 
@@ -69,11 +64,11 @@ export function highlightFrame(bounds: Bounds): Bounds {
 }
 
 export function fitPointInViewport(
-  point: AnnotationPoint,
+  point: Point,
   radius: number,
   viewportWidth: number,
   viewportHeight: number,
-): AnnotationPoint {
+): Point {
   const fitAxis = (value: number, extent: number) => {
     const safeExtent = Math.max(Number.isFinite(extent) ? extent : 0, 0);
     return safeExtent <= radius * 2
@@ -226,7 +221,7 @@ export function padApart<T extends { bounds: Bounds }>(items: T[]): (T & { frame
   }));
 }
 
-export function pointBounds(point: AnnotationPoint, radius: number): Bounds {
+export function pointBounds(point: Point, radius: number): Bounds {
   return { x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2 };
 }
 
@@ -251,7 +246,7 @@ export function unionBounds(bounds: Bounds[]): Bounds {
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
-export function distanceToBounds(point: AnnotationPoint, bounds: Bounds): number {
+export function distanceToBounds(point: Point, bounds: Bounds): number {
   const x = Math.max(bounds.x, Math.min(point.x, bounds.x + bounds.width));
   const y = Math.max(bounds.y, Math.min(point.y, bounds.y + bounds.height));
   return Math.hypot(point.x - x, point.y - y);

@@ -6,7 +6,6 @@ import {
   useState,
   type PointerEvent,
 } from 'react';
-import type { ImageCssSize } from './image-edit-geometry';
 import {
   anchorAt,
   clampZoom,
@@ -18,6 +17,7 @@ import {
   ZOOM_STEP,
   type ZoomAnchor,
 } from './image-edit-viewport';
+import type { Size } from '@/lib/shared/geometry';
 
 /** Breathing room kept around the fitted image so edge masks are easy to reach. */
 const FIT_MARGIN = 24;
@@ -28,13 +28,13 @@ const FIT_MARGIN = 24;
  * the pointer, and middle button, Space + drag, or the pointer tool on empty
  * space pans.
  */
-export function useImageEditViewport(imageSize: ImageCssSize | null) {
+export function useImageEditViewport(imageSize: Size | null) {
   // The dialog content mounts through a portal after the editor first renders,
   // so the elements are tracked as state: effects re-run when they actually exist.
   const [frame, setFrame] = useState<HTMLDivElement | null>(null);
   const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
-  const [frameSize, setFrameSize] = useState<ImageCssSize | null>(null);
+  const [frameSize, setFrameSize] = useState<Size | null>(null);
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const zoomRef = useRef(MIN_ZOOM);
   const anchorRef = useRef<ZoomAnchor | null>(null);

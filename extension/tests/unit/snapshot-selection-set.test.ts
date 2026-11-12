@@ -2,12 +2,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildSnapshotTargetIdentity } from '@/lib/capture/selector/snapshot-identity';
 import { createSnapshotSelectionSet } from '@/lib/recording/snapshot-selection-set';
-import type { SnapshotShieldRect } from '@/lib/recording/snapshot-shield-protocol';
 import type { ResolvedSnapshotTarget } from '@/lib/recording/snapshot-targeting';
+import type { Rect } from '@/lib/shared/geometry';
 
 function createTarget(
   identity: string,
-  rect: SnapshotShieldRect,
+  rect: Rect,
   element?: Element,
   dedupeElement?: Element | null,
 ): ResolvedSnapshotTarget {

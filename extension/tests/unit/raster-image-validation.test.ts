@@ -3,7 +3,7 @@ import {
   RASTER_IMAGE_LIMITS,
   RasterImageValidationError,
   validateRasterImageBlob,
-} from '@/lib/capture/raster-image-validation';
+} from '@/lib/media/raster-image-validation';
 
 function png(width: number, height: number, type = 'image/png'): Blob {
   const bytes = new Uint8Array(24);

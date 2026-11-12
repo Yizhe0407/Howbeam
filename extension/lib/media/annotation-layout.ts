@@ -1,12 +1,5 @@
 import type { Bounds } from '../storage/models';
-import {
-  BADGE_RADIUS,
-  CALLOUT_SPACING,
-  MARKER_RADIUS,
-  type Annotation,
-  type AnnotationLayout,
-  type AnnotationPoint,
-} from './annotation-contract';
+import { BADGE_RADIUS, CALLOUT_SPACING, MARKER_RADIUS, type Annotation, type AnnotationLayout } from './annotation-contract';
 import {
   coincident,
   fitBoundsInViewport,
@@ -25,6 +18,7 @@ import {
   placeOrderedSlots,
   PointSpatialIndex,
 } from './annotation-callouts';
+import type { Point } from '@/lib/shared/geometry';
 
 const CALLOUT_GAP = 14;
 const ANCHOR_TIE_EPSILON = 8;
@@ -32,7 +26,7 @@ const LANE_NUDGE_ATTEMPTS = 3;
 
 interface Item {
   annotation: Annotation;
-  anchor: AnnotationPoint;
+  anchor: Point;
   /** Union-find link; a group's root has none. */
   parent?: Item;
 }
@@ -190,7 +184,7 @@ export function layoutWithProvisional(
     const laneCapacity =
       laneExtent > BADGE_RADIUS * 2 ? Math.floor((laneExtent - BADGE_RADIUS * 2) / CALLOUT_SPACING) + 1 : 0;
 
-    let slots: AnnotationPoint[];
+    let slots: Point[];
     let ordered: Item[];
     if (group.length <= laneCapacity) {
       ordered = sortAlongLane(group, (item) => (laneIsVertical ? item.anchor.y : item.anchor.x));
@@ -214,7 +208,7 @@ export function layoutWithProvisional(
         slotCoordinates.map((coordinate) =>
           laneIsVertical ? { x: cross, y: coordinate } : { x: coordinate, y: cross },
         );
-      const collisions = (points: AnnotationPoint[]) =>
+      const collisions = (points: Point[]) =>
         points.reduce(
           (sum, point) => sum + (badgeOverlaps(point, badgeIndex, obstacleIndex, ownMarkers) ? 1 : 0),
           0,

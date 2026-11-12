@@ -3,20 +3,17 @@ import {
   sanitizeProjectSectionTitle,
   type ProjectSection,
 } from './project-section-model';
-import { isRecord } from '../shared/validation';
+import { isIdentifier, isRecord } from '../shared/validation';
 import { PERSISTED_PROJECT_LIMITS, PERSISTED_STEP_LIMITS } from './persistence-limits';
 import { normalizeStoredText } from './stored-text';
 import { cloneImageEdit, IMAGE_EDIT_LIMITS, readImageEdits, type ImageEdit } from './image-edit-model';
 export type { ImageEdit } from './image-edit-model';
 import { t } from '../shared/i18n';
+import type { Rect } from '../shared/geometry';
 export type { ProjectSection } from './project-section-model';
 
-export interface Bounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+/** A rectangle in screenshot CSS pixels. */
+export type Bounds = Rect;
 
 function isValidBounds(bounds: Bounds): boolean {
   return (
@@ -139,15 +136,7 @@ export function storageError(message: string): never {
 }
 
 export function requireStorageIdentifier(value: unknown, field: string): string {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > STEP_STORAGE_LIMITS.maxIdLength ||
-    value.trim() !== value ||
-    /[\u0000-\u001f\u007f-\u009f]/u.test(value)
-  ) {
-    return storageError(`${field} is not a valid storage identifier.`);
-  }
+  if (!isIdentifier(value)) return storageError(`${field} is not a valid storage identifier.`);
   return value;
 }
 
@@ -227,13 +216,7 @@ function sanitizeProjectSectionsShape(value: unknown): ProjectSection[] {
     const id = typeof candidate.id === 'string' ? candidate.id : '';
     const startEntryId = typeof candidate.startEntryId === 'string' ? candidate.startEntryId : '';
     const title = sanitizeProjectSectionTitle(candidate.title);
-    const validId = (identifier: string) => (
-      identifier.length > 0
-      && identifier.length <= PROJECT_SECTION_LIMITS.maxIdLength
-      && identifier.trim() === identifier
-      && !/[\u0000-\u001f\u007f-\u009f]/u.test(identifier)
-    );
-    if (!validId(id) || !validId(startEntryId) || !title || seenIds.has(id) || seenStarts.has(startEntryId)) continue;
+    if (!isIdentifier(id) || !isIdentifier(startEntryId) || !title || seenIds.has(id) || seenStarts.has(startEntryId)) continue;
     seenIds.add(id);
     seenStarts.add(startEntryId);
     sections.push({ id, title, startEntryId });
@@ -295,11 +278,7 @@ export function isValidRedaction(value: unknown): value is Redaction {
   if (!isRecord(value)) return false;
   const redaction = value as Partial<Redaction>;
   return (
-    typeof redaction.id === 'string' &&
-    redaction.id.length > 0 &&
-    redaction.id.length <= STEP_STORAGE_LIMITS.maxIdLength &&
-    redaction.id.trim() === redaction.id &&
-    !/[\u0000-\u001f\u007f-\u009f]/u.test(redaction.id) &&
+    isIdentifier(redaction.id) &&
     redaction.kind === 'solid' &&
     Boolean(redaction.bounds) &&
     isValidBounds(redaction.bounds as Bounds)

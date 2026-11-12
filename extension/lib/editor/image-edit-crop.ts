@@ -1,7 +1,6 @@
 import type { Bounds } from '@/lib/storage/models';
-import type { ImageCssSize } from './image-edit-geometry';
+import { clamp, type Size } from '@/lib/shared/geometry';
 
-const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 
 /**
  * Settles a dragged crop into what is stored: edges snapped to whole device
@@ -9,7 +8,7 @@ const clamp = (value: number, min: number, max: number): number => Math.min(Math
  * inside the image. Returns null when the crop would cover the whole image, in
  * which case there is nothing to crop.
  */
-export function snapCrop(bounds: Bounds, size: ImageCssSize, dpr: number): Bounds | null {
+export function snapCrop(bounds: Bounds, size: Size, dpr: number): Bounds | null {
   const snap = (value: number, max: number): number => clamp(Math.round(value * dpr) / dpr, 0, max);
   const left = snap(bounds.x, size.width);
   const top = snap(bounds.y, size.height);

@@ -2,28 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import { createRegionCapture, type RegionCapture } from '@/lib/capture/region-capture';
 import RecordingToolbar from '@/lib/recording/recording-toolbar';
-import {
-  buildShieldTokenStorageKey,
-  isSnapshotShieldTokenRecord,
-  isSnapshotShieldFrameMessage,
-  isSnapshotShieldInitMessage,
-  SNAPSHOT_SHIELD_CANDIDATES,
-  SNAPSHOT_SHIELD_CAPTURE_COMPLETE,
-  SNAPSHOT_SHIELD_COMMIT,
-  SNAPSHOT_SHIELD_CONTROL,
-  SNAPSHOT_SHIELD_CONTROL_RESULT,
-  SNAPSHOT_SHIELD_POINTER_DOWN,
-  SNAPSHOT_SHIELD_POINTER_MOVE,
-  SNAPSHOT_SHIELD_PREVIEW,
-  SNAPSHOT_SHIELD_READY,
-  SNAPSHOT_SHIELD_REGION_CAPTURE,
-  SNAPSHOT_SHIELD_TOOLBAR_STATE,
-  SNAPSHOT_SHIELD_UNDO,
-  type SnapshotShieldKeyboardAnchor,
-  type SnapshotShieldRect,
-  type SnapshotShieldPortMessage,
-  type WithoutToken,
-} from '@/lib/recording/snapshot-shield-protocol';
+import { buildShieldTokenStorageKey, isSnapshotShieldTokenRecord, isSnapshotShieldFrameMessage, isSnapshotShieldInitMessage, SNAPSHOT_SHIELD_CANDIDATES, SNAPSHOT_SHIELD_CAPTURE_COMPLETE, SNAPSHOT_SHIELD_COMMIT, SNAPSHOT_SHIELD_CONTROL, SNAPSHOT_SHIELD_CONTROL_RESULT, SNAPSHOT_SHIELD_POINTER_DOWN, SNAPSHOT_SHIELD_POINTER_MOVE, SNAPSHOT_SHIELD_PREVIEW, SNAPSHOT_SHIELD_READY, SNAPSHOT_SHIELD_REGION_CAPTURE, SNAPSHOT_SHIELD_TOOLBAR_STATE, SNAPSHOT_SHIELD_UNDO, type SnapshotShieldKeyboardAnchor, type SnapshotShieldPortMessage, type WithoutToken } from '@/lib/recording/snapshot-shield-protocol';
 import {
   RECORDING_CONTROL_TIMEOUT_MS,
   SNAPSHOT_FREEZE_EVENTS,
@@ -35,6 +14,7 @@ import { createOverlay } from './overlay';
 import { createHoverScheduler } from './hover-scheduler';
 import { localizeDocument, onLocaleChange, t } from '@/lib/shared/i18n';
 import { initLocalePreference } from '@/lib/runtime/locale-preference';
+import type { Rect } from '@/lib/shared/geometry';
 
 const SHIELD_HOVER_TIMEOUT_MS = 4_000;
 const SHIELD_CAPTURE_TIMEOUT_MS = 30_000;
@@ -104,7 +84,7 @@ function tryInitialize(event: MessageEvent): void {
   let captureSequence = 0;
   let activeCaptureId = 0;
   let interactionsEnabled = false;
-  let lastPreviewRect: SnapshotShieldRect | null = null;
+  let lastPreviewRect: Rect | null = null;
   let lastCommitViaKeyboard = false;
   let keyboardAnchors: SnapshotShieldKeyboardAnchor[] = [];
   let keyboardIndex = -1;

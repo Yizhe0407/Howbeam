@@ -1,4 +1,4 @@
-import type { ImageCssSize } from './image-edit-geometry';
+import type { Size } from '@/lib/shared/geometry';
 
 /** Zoom and fit math for the image edit workspace. The workspace lays the
  * image out at `fit * zoom` pixels inside a scrollable viewport (no CSS
@@ -16,13 +16,13 @@ export const MAX_NATIVE_ZOOM = 2;
 export const ZOOM_STEP = 1.25;
 
 /** The largest zoom for an image shown at `fit`: 8x the fit, or twice the image's own size, whichever is larger. */
-export function maxZoomFor(fit: ImageCssSize | null, image: ImageCssSize | null): number {
+export function maxZoomFor(fit: Size | null, image: Size | null): number {
   if (!fit || !image || fit.width <= 0 || image.width <= 0) return MAX_ZOOM;
   return Math.max(MAX_ZOOM, (MAX_NATIVE_ZOOM * image.width) / fit.width);
 }
 
 /** The zoom as a share of the image's own size, which is what a percentage readout should mean. */
-export function nativeZoom(zoom: number, fit: ImageCssSize | null, image: ImageCssSize | null): number {
+export function nativeZoom(zoom: number, fit: Size | null, image: Size | null): number {
   if (!fit || !image || fit.width <= 0 || image.width <= 0) return zoom;
   return (zoom * fit.width) / image.width;
 }
@@ -32,7 +32,7 @@ export function clampZoom(zoom: number, maxZoom: number = MAX_ZOOM): number {
 }
 
 /** The largest size that shows the whole image inside the viewport, keeping its aspect ratio. */
-export function fitSize(viewport: ImageCssSize, image: ImageCssSize, margin: number): ImageCssSize {
+export function fitSize(viewport: Size, image: Size, margin: number): Size {
   const availableWidth = Math.max(viewport.width - margin * 2, 1);
   const availableHeight = Math.max(viewport.height - margin * 2, 1);
   if (image.width <= 0 || image.height <= 0) return { width: availableWidth, height: availableHeight };

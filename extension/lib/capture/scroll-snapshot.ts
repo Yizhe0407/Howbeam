@@ -1,14 +1,8 @@
 import { deepElementFromPoint, getComposedParent } from './selector/element-availability';
 import type { ScrollSnapshot } from './step-capture';
+import type { Rect } from '@/lib/shared/geometry';
 
-interface ViewportRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export function isOutOfViewport(rect: ViewportRect): boolean {
+export function isOutOfViewport(rect: Rect): boolean {
   const right = rect.x + rect.width;
   const bottom = rect.y + rect.height;
   return rect.y < 0 || rect.x < 0 || bottom > window.innerHeight || right > window.innerWidth;
@@ -53,7 +47,7 @@ export function readScrollSnapshot(target: Element): ScrollSnapshot {
  * the region rect while its screenshot is in flight. Mirrors the element
  * capture path, which pins the target's scrollable ancestors.
  */
-export function readRegionScrollSnapshot(rect: ViewportRect): ScrollSnapshot {
+export function readRegionScrollSnapshot(rect: Rect): ScrollSnapshot {
   const insetX = Math.min(4, rect.width / 4);
   const insetY = Math.min(4, rect.height / 4);
   const samplePoints: Array<[number, number]> = [

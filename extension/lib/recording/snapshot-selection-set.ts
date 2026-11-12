@@ -1,5 +1,6 @@
 import type { ResolvedSnapshotTarget } from './snapshot-targeting';
-import { snapshotRectKey, type SnapshotShieldRect } from './snapshot-shield-protocol';
+import { snapshotRectKey } from './snapshot-shield-protocol';
+import type { Rect } from '@/lib/shared/geometry';
 
 export interface SnapshotSelectionSet {
   /** True when the target (by live element, stable identity, or rect key) was
@@ -8,7 +9,7 @@ export interface SnapshotSelectionSet {
   /** The annotated target `target` duplicates, or null. */
   match(target: ResolvedSnapshotTarget): ResolvedSnapshotTarget | null;
   /** Rect-only membership, for region annotations that carry no element. */
-  hasRect(rect: SnapshotShieldRect): boolean;
+  hasRect(rect: Rect): boolean;
   /** Records a committed annotation and invalidates any pending redo. */
   add(target: ResolvedSnapshotTarget): void;
   /** Removes the most recent annotation and parks it for a single restore. */

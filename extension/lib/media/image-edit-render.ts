@@ -1,15 +1,6 @@
-import {
-  type ArrowEdit,
-  type EditBounds,
-  type EditPoint,
-  type EllipseEdit,
-  type ImageEdit,
-  type ImageEditColor,
-  type RectEdit,
-  type StepMarkerEdit,
-  type TextEdit,
-} from '../storage/image-edit-model';
+import { type ArrowEdit, type EllipseEdit, type ImageEdit, type ImageEditColor, type RectEdit, type StepMarkerEdit, type TextEdit } from '../storage/image-edit-model';
 import { BADGE_FONT_FAMILY } from './annotation-contract';
+import type { Rect, Point } from '@/lib/shared/geometry';
 
 /**
  * One definition of how image edits look, shared by the live preview (SVG) and
@@ -130,9 +121,9 @@ export function measureTextEditHeight(edit: Pick<TextEdit, 'text' | 'fontSize'> 
 
 export interface ArrowShape {
   /** Where the shaft stops, tucked under the head so there is no gap. */
-  shaftEnd: EditPoint;
+  shaftEnd: Point;
   /** Triangle tip, then the two base corners. */
-  head: [EditPoint, EditPoint, EditPoint];
+  head: [Point, Point, Point];
 }
 
 /** Arrow head proportions grow with the stroke so thick arrows keep a visible head. */
@@ -158,7 +149,7 @@ export function arrowShape(edit: Pick<ArrowEdit, 'from' | 'to' | 'width'>): Arro
 }
 
 /** Corner radius for a box of this size. */
-export function rectCornerRadius(bounds: Pick<EditBounds, 'width' | 'height'>): number {
+export function rectCornerRadius(bounds: Pick<Rect, 'width' | 'height'>): number {
   return Math.max(Math.min(RECT_CORNER_RADIUS, bounds.width / 2, bounds.height / 2), 0);
 }
 

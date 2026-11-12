@@ -1,26 +1,10 @@
 import type { Bounds, ImageEdit, Redaction } from '../storage/models';
 import { drawImageEdits, type Canvas2D } from './image-edit-render';
-import { isValidImageBounds } from './image-utils';
-import {
-  BADGE_FONT_FAMILY,
-  BADGE_RADIUS,
-  BADGE_TEXT_COLOR,
-  HIGHLIGHT_COLOR,
-  HIGHLIGHT_FILL_COLOR,
-  HIGHLIGHT_LINE_WIDTH,
-  HIGHLIGHT_RADIUS,
-  LEADER_LINE_WIDTH,
-  MARKER_INNER_RADIUS,
-  MARKER_RADIUS,
-  MARKER_RING_WIDTH,
-  REDACTION_COLOR,
-  REDACTION_EXPANSION,
-  isDrawableHighlightFrame,
-  type Annotation,
-  type AnnotationPoint,
-} from './annotation-contract';
+import { isPositiveRect } from '../shared/geometry';
+import { BADGE_FONT_FAMILY, BADGE_RADIUS, BADGE_TEXT_COLOR, HIGHLIGHT_COLOR, HIGHLIGHT_FILL_COLOR, HIGHLIGHT_LINE_WIDTH, HIGHLIGHT_RADIUS, LEADER_LINE_WIDTH, MARKER_INNER_RADIUS, MARKER_RADIUS, MARKER_RING_WIDTH, REDACTION_COLOR, REDACTION_EXPANSION, isDrawableHighlightFrame, type Annotation } from './annotation-contract';
 import { fitHighlightFrame, getBadgeFontSize } from './annotation-geometry';
 import { layoutAnnotations } from './annotation-layout';
+import type { Point } from '@/lib/shared/geometry';
 
 /**
  * Everything drawn over a screenshot, in screenshot CSS pixels. The editor's
@@ -63,7 +47,7 @@ export function getExpandedRedactionBounds(
   viewportWidth: number,
   viewportHeight: number,
 ): Bounds | null {
-  if (!isValidImageBounds(bounds) || !Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight) || viewportWidth <= 0 || viewportHeight <= 0) {
+  if (!isPositiveRect(bounds) || !Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight) || viewportWidth <= 0 || viewportHeight <= 0) {
     return null;
   }
   const left = Math.max(0, bounds.x - REDACTION_EXPANSION);
@@ -117,7 +101,7 @@ function badgeRadius(surface: SceneSurface): number {
   return sizer(surface)(BADGE_RADIUS, 7);
 }
 
-function strokeTarget(ctx: Canvas2D, anchor: AnnotationPoint, surface: SceneSurface) {
+function strokeTarget(ctx: Canvas2D, anchor: Point, surface: SceneSurface) {
   const { dpr } = surface;
   const x = anchor.x * dpr;
   const y = anchor.y * dpr;
@@ -139,7 +123,7 @@ function strokeTarget(ctx: Canvas2D, anchor: AnnotationPoint, surface: SceneSurf
   ctx.fill();
 }
 
-function drawBadge(ctx: Canvas2D, point: AnnotationPoint, order: number, surface: SceneSurface) {
+function drawBadge(ctx: Canvas2D, point: Point, order: number, surface: SceneSurface) {
   const { dpr } = surface;
   const r = badgeRadius(surface);
   const cx = point.x * dpr;
@@ -166,7 +150,7 @@ function drawBadge(ctx: Canvas2D, point: AnnotationPoint, order: number, surface
 }
 
 /** The leader runs between the marker's and the badge's edges. */
-function drawLeader(ctx: Canvas2D, from: AnnotationPoint, to: AnnotationPoint, surface: SceneSurface) {
+function drawLeader(ctx: Canvas2D, from: Point, to: Point, surface: SceneSurface) {
   const { dpr } = surface;
   const dx = (to.x - from.x) * dpr;
   const dy = (to.y - from.y) * dpr;

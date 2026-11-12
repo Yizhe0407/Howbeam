@@ -2,16 +2,9 @@ import type { Bounds } from '@/lib/storage/models';
 import type { TextEdit } from '@/lib/storage/image-edit-model';
 import { measureTextEditHeight, measureTextWidth, type TextMeasure } from '@/lib/media/image-edit-render';
 import { highlightFrame } from '@/lib/media/annotation-geometry';
-import {
-  moveBounds,
-  resizeBounds,
-  resizeBoundsKeepRatio,
-  snapToAngle,
-  type ImageCssSize,
-  type Point,
-  type ResizeHandle,
-} from './image-edit-geometry';
+import { moveBounds, resizeBounds, resizeBoundsKeepRatio, snapToAngle, type ResizeHandle } from './image-edit-geometry';
 import type { ImageEditItem } from './image-edit-items';
+import { clamp, roundHundredths, type Point, type Size } from '@/lib/shared/geometry';
 
 /** Per-kind move/resize rules, so the edit layer treats every item the same way. */
 
@@ -28,8 +21,6 @@ const TEXT_HANDLES: readonly ItemHandle[] = ['w', 'e'];
 const ARROW_HANDLES: readonly ItemHandle[] = ['from', 'to'];
 const NO_HANDLES: readonly ItemHandle[] = [];
 
-const round = (value: number): number => Math.round(value * 100) / 100;
-const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 
 export function itemHandles(item: ImageEditItem): readonly ItemHandle[] {
   if (item.kind === 'arrow') return ARROW_HANDLES;
@@ -55,39 +46,39 @@ export function itemBounds(item: ImageEditItem): Bounds {
 
 /** The text box height that fits its content at the current width and size. */
 export function fitTextHeight<T extends TextEdit>(edit: T, measure: TextMeasure = measureTextWidth): T {
-  const height = round(Math.max(measureTextEditHeight({ text: edit.text || ' ', fontSize: edit.fontSize, width: edit.bounds.width }, measure), edit.fontSize));
+  const height = roundHundredths(Math.max(measureTextEditHeight({ text: edit.text || ' ', fontSize: edit.fontSize, width: edit.bounds.width }, measure), edit.fontSize));
   return height === edit.bounds.height ? edit : { ...edit, bounds: { ...edit.bounds, height } };
 }
 
 /** Moves an item, keeping all of it inside the image. */
-export function translateItem(item: ImageEditItem, dx: number, dy: number, size: ImageCssSize): ImageEditItem {
+export function translateItem(item: ImageEditItem, dx: number, dy: number, size: Size): ImageEditItem {
   const box = itemBounds(item);
-  const moveX = round(clamp(dx, -box.x, Math.max(size.width - (box.x + box.width), -box.x)));
-  const moveY = round(clamp(dy, -box.y, Math.max(size.height - (box.y + box.height), -box.y)));
+  const moveX = roundHundredths(clamp(dx, -box.x, Math.max(size.width - (box.x + box.width), -box.x)));
+  const moveY = roundHundredths(clamp(dy, -box.y, Math.max(size.height - (box.y + box.height), -box.y)));
   if (item.kind === 'arrow') {
     return {
       ...item,
-      from: { x: round(item.from.x + moveX), y: round(item.from.y + moveY) },
-      to: { x: round(item.to.x + moveX), y: round(item.to.y + moveY) },
+      from: { x: roundHundredths(item.from.x + moveX), y: roundHundredths(item.from.y + moveY) },
+      to: { x: roundHundredths(item.to.x + moveX), y: roundHundredths(item.to.y + moveY) },
     };
   }
-  if (item.kind === 'step') return { ...item, center: { x: round(item.center.x + moveX), y: round(item.center.y + moveY) } };
+  if (item.kind === 'step') return { ...item, center: { x: roundHundredths(item.center.x + moveX), y: roundHundredths(item.center.y + moveY) } };
   if (item.kind === 'highlight') {
-    return { ...item, bounds: { ...item.bounds, x: round(item.bounds.x + moveX), y: round(item.bounds.y + moveY) } };
+    return { ...item, bounds: { ...item.bounds, x: roundHundredths(item.bounds.x + moveX), y: roundHundredths(item.bounds.y + moveY) } };
   }
   return { ...item, bounds: moveBounds(item.bounds, dx, dy, size) };
 }
 
-function movePoint(point: Point, dx: number, dy: number, size: ImageCssSize): Point {
-  return { x: round(clamp(point.x + dx, 0, size.width)), y: round(clamp(point.y + dy, 0, size.height)) };
+function movePoint(point: Point, dx: number, dy: number, size: Size): Point {
+  return { x: roundHundredths(clamp(point.x + dx, 0, size.width)), y: roundHundredths(clamp(point.y + dy, 0, size.height)) };
 }
 
-function resizeTextWidth(edit: TextEdit, handle: ItemHandle, dx: number, size: ImageCssSize, measure: TextMeasure): TextEdit {
+function resizeTextWidth(edit: TextEdit, handle: ItemHandle, dx: number, size: Size, measure: TextMeasure): TextEdit {
   let left = edit.bounds.x;
   let right = edit.bounds.x + edit.bounds.width;
   if (handle === 'w') left = clamp(left + dx, 0, right - MIN_TEXT_WIDTH);
   if (handle === 'e') right = clamp(right + dx, left + MIN_TEXT_WIDTH, size.width);
-  return fitTextHeight({ ...edit, bounds: { ...edit.bounds, x: round(left), width: round(right - left) } }, measure);
+  return fitTextHeight({ ...edit, bounds: { ...edit.bounds, x: roundHundredths(left), width: roundHundredths(right - left) } }, measure);
 }
 
 export interface ResizeOptions {
@@ -102,7 +93,7 @@ export function resizeItem(
   handle: ItemHandle,
   dx: number,
   dy: number,
-  size: ImageCssSize,
+  size: Size,
   { constrain = false, measure = measureTextWidth }: ResizeOptions = {},
 ): ImageEditItem {
   if (item.kind === 'arrow') {

@@ -1,18 +1,9 @@
 import { t } from '@/lib/shared/i18n';
+import type { Point, Size } from '@/lib/shared/geometry';
 
 export const RECORDING_TOOLBAR_CORNER_KEY = 'howbeam:recordingToolbarCorner';
 
 export type RecordingToolbarCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-
-export interface ToolbarPoint {
-  x: number;
-  y: number;
-}
-
-export interface ToolbarSize {
-  width: number;
-  height: number;
-}
 
 export interface ToolbarViewport {
   width: number;
@@ -24,11 +15,11 @@ export function isRecordingToolbarCorner(value: unknown): value is RecordingTool
 }
 
 export function clampToolbarPosition(
-  point: ToolbarPoint,
-  size: ToolbarSize,
+  point: Point,
+  size: Size,
   viewport: ToolbarViewport,
   margin: number,
-): ToolbarPoint {
+): Point {
   const maxX = Math.max(margin, viewport.width - size.width - margin);
   const maxY = Math.max(margin, viewport.height - size.height - margin);
   return {
@@ -39,10 +30,10 @@ export function clampToolbarPosition(
 
 export function positionForToolbarCorner(
   corner: RecordingToolbarCorner,
-  size: ToolbarSize,
+  size: Size,
   viewport: ToolbarViewport,
   margin: number,
-): ToolbarPoint {
+): Point {
   return clampToolbarPosition(
     {
       x: corner.endsWith('right') ? viewport.width - size.width - margin : margin,
@@ -55,8 +46,8 @@ export function positionForToolbarCorner(
 }
 
 export function snapToolbarCorner(
-  point: ToolbarPoint,
-  size: ToolbarSize,
+  point: Point,
+  size: Size,
   viewport: ToolbarViewport,
 ): RecordingToolbarCorner {
   const horizontal = point.x + size.width / 2 < viewport.width / 2 ? 'left' : 'right';

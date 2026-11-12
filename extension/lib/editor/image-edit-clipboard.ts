@@ -1,6 +1,6 @@
-import type { ImageCssSize } from './image-edit-geometry';
 import { translateItem } from './image-edit-item-geometry';
 import { appendItem, newItemId, nextStepNumber, type ImageEditItem } from './image-edit-items';
+import type { Size } from '@/lib/shared/geometry';
 
 /** How far a pasted or duplicated copy is offset from its original, so it doesn't hide it. */
 export const PASTE_OFFSET = 16;
@@ -17,7 +17,7 @@ export function pasteItems(
   items: readonly ImageEditItem[],
   source: readonly ImageEditItem[],
   offset: number,
-  size: ImageCssSize,
+  size: Size,
 ): { items: ImageEditItem[]; pasted: ImageEditItem[] } {
   let next = [...items];
   const pasted: ImageEditItem[] = [];
