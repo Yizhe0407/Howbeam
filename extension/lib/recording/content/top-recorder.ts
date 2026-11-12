@@ -23,6 +23,12 @@ import { mountRecordingToolbar } from '../recording-toolbar-host';
 import type { UnrecordablePageReason } from './recordable-page';
 import { addRecorderCleanup, removeRecorderCleanup } from './recorder-cleanup';
 
+type RecorderPushMessage =
+  | HowbeamStopMessage
+  | HowbeamSnapshotActiveMessage
+  | HowbeamSnapshotMarksMessage
+  | HowbeamCaptureTakenMessage;
+
 export interface TopRecorderOptions {
   recordingState: RecordingState;
   runId: string;
@@ -128,15 +134,11 @@ export async function mountTopRecorder({
       return state.operation === 'recording' && state.isRecording && state.runId === runId;
     },
     cleanup: () => cleanup(),
+    onPush: (message) => onPush(message as RecorderPushMessage),
   });
 
-  const onRecorderMessage = (
-    message:
-      | HowbeamStopMessage
-      | HowbeamSnapshotActiveMessage
-      | HowbeamSnapshotMarksMessage
-      | HowbeamCaptureTakenMessage,
-  ) => {
+  /** What the background pushes over the connection; only stop and snapshot activation are answered. */
+  const onPush = (message: RecorderPushMessage) => {
     if (message?.type === 'HOWBEAM_STOP') {
       cleanup();
       return;
@@ -152,7 +154,7 @@ export async function mountTopRecorder({
     if (message?.type === 'HOWBEAM_SNAPSHOT_ACTIVE' && message.runId === runId) {
       snapshot.setInteractionsActive(true);
       snapshot.notifyInvalidated();
-      return Promise.resolve(true);
+      return true;
     }
     return undefined;
   };
@@ -168,12 +170,10 @@ export async function mountTopRecorder({
     session.hoverPreview?.destroy();
     session.hoverPreview = null;
     removeRecorderCleanup(cleanup);
-    browser.runtime.onMessage.removeListener(onRecorderMessage);
     unsubscribeRecordingState();
     recorderLifecycle.stop();
   };
   addRecorderCleanup(cleanup);
-  browser.runtime.onMessage.addListener(onRecorderMessage);
 
   if (shouldFreezeSnapshot) {
     session.shield = createSnapshotShield(

@@ -327,6 +327,28 @@ describe('createKeepAlivePortHandler', () => {
     expect(port.disconnect).toHaveBeenCalledOnce();
   });
 
+  it('hands a recorder’s reply to the push registry instead of refusing the port', async () => {
+    const onConnected = vi.fn();
+    const onReply = vi.fn();
+    const handler = createKeepAlivePortHandler<{ tabId?: number }, { live: boolean }>({
+      getRecordingState: () => Promise.resolve({ live: true }),
+      isTrustedKeepAliveSender: () => true,
+      acknowledgeDisconnect: vi.fn(),
+      onConnected,
+      onReply,
+    });
+    const port = serverPort({ sender: { tabId: 4 } });
+
+    handler(port);
+    await flush();
+    port.emitMessage({ type: 'reply', id: 3, value: true });
+    await flush();
+
+    expect(onConnected).toHaveBeenCalledWith(port);
+    expect(onReply).toHaveBeenCalledWith(port, { type: 'reply', id: 3, value: true });
+    expect(port.disconnect).not.toHaveBeenCalled();
+  });
+
   it('rejects a port that sends anything but a heartbeat', async () => {
     const { handler } = makeHandler({ trusted: true });
     const port = serverPort();

@@ -91,6 +91,9 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
       return state.operation === 'recapture' && state.recapture?.runId === runId;
     },
     cleanup: () => cleanup(),
+    onPush: (message) => {
+      if ((message as HowbeamStopMessage | null)?.type === 'HOWBEAM_STOP') cleanup();
+    },
   });
 
   const cancelWorkflow = () => {
@@ -193,9 +196,6 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
     cancelWorkflow();
   };
   let unsubscribe = () => {};
-  const onStop = (message: HowbeamStopMessage) => {
-    if (message?.type === 'HOWBEAM_STOP') cleanup();
-  };
   function cleanup() {
     if (removed) return;
     removed = true;
@@ -208,7 +208,6 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
     for (const type of STEP_FOLLOWUP_EVENTS) document.removeEventListener(type, onFollowup, { capture: true });
     window.removeEventListener('keydown', onKeyDown, { capture: true });
     removeRecorderCleanup(cleanup);
-    browser.runtime.onMessage.removeListener(onStop);
     unsubscribe();
     lifecycle.stop();
   }
@@ -237,7 +236,6 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
   for (const type of STEP_FOLLOWUP_EVENTS) document.addEventListener(type, onFollowup, { capture: true });
   window.addEventListener('keydown', onKeyDown, { capture: true });
   addRecorderCleanup(cleanup);
-  browser.runtime.onMessage.addListener(onStop);
 
   let ready = false;
   try {

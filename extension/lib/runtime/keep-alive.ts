@@ -11,6 +11,35 @@ function isKeepAliveRejectionMessage(message: unknown): boolean {
   );
 }
 
+/**
+ * The connection also carries the background's pushes to the recorder: a push
+ * with an id wants the recorder's answer back as a reply with that id.
+ */
+export interface RecorderPush {
+  type: 'push';
+  id: number | null;
+  message: unknown;
+}
+
+export interface RecorderReply {
+  type: 'reply';
+  id: number;
+  value: unknown;
+}
+
+function isRecorderPush(message: unknown): message is RecorderPush {
+  return typeof message === 'object' && message !== null && (message as { type?: unknown }).type === 'push';
+}
+
+export function isRecorderReply(message: unknown): message is RecorderReply {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    (message as { type?: unknown }).type === 'reply' &&
+    Number.isSafeInteger((message as { id?: unknown }).id)
+  );
+}
+
 function isKeepAliveHeartbeat(message: unknown): boolean {
   return typeof message === 'object' && message !== null && (message as { type?: unknown }).type === 'heartbeat';
 }
@@ -33,6 +62,11 @@ export interface KeepAlivePortHandlerDeps<TSender, TState> {
   isTrustedKeepAliveSender(sender: TSender | undefined, state: TState): boolean;
   /** 讀取 runtime.lastError，避免 bfcache 斷線產生 Chrome 警告。 */
   acknowledgeDisconnect(): void;
+  /** A recorder connected (before authorization settles; an untrusted one is disconnected right after). */
+  onConnected?(port: KeepAliveServerPortLike<TSender>): void;
+  onDisconnected?(port: KeepAliveServerPortLike<TSender>): void;
+  /** The recorder answered a push. */
+  onReply?(port: KeepAliveServerPortLike<TSender>, reply: RecorderReply): void;
 }
 
 /** 驗證 keep-alive port，並明確拒絕孤立 client，避免無限喚醒 worker。 */
@@ -45,6 +79,7 @@ export function createKeepAlivePortHandler<TSender, TState>(
     const disconnect = () => {
       if (disconnected) return;
       disconnected = true;
+      deps.onDisconnected?.(port);
       try {
         port.disconnect();
       } catch {
@@ -74,16 +109,22 @@ export function createKeepAlivePortHandler<TSender, TState>(
         });
     };
     port.onDisconnect.addListener(() => {
+      if (!disconnected) deps.onDisconnected?.(port);
       disconnected = true;
       deps.acknowledgeDisconnect();
     });
     port.onMessage.addListener((message) => {
+      if (isRecorderReply(message)) {
+        if (!disconnected) deps.onReply?.(port, message);
+        return;
+      }
       if (!isKeepAliveHeartbeat(message)) {
         reject();
         return;
       }
       authorize();
     });
+    deps.onConnected?.(port);
     authorize();
   };
 }
@@ -101,6 +142,8 @@ export interface KeepAliveOptions {
   maxConsecutiveFailures?: number;
   /** 遭拒或耗盡重試後呼叫；此時 handle 已停止。 */
   onRejected?: () => void;
+  /** A message the background pushed; what it returns (or resolves to) is the reply when one is asked for. */
+  onPush?: (message: unknown) => unknown;
 }
 
 export interface KeepAliveHandle {
@@ -173,6 +216,30 @@ export function startKeepAlive(runtime: KeepAliveRuntimeLike, options: KeepAlive
     if (!stopped) scheduleReconnect();
   };
 
+  const deliverPush = (from: KeepAlivePortLike, push: RecorderPush) => {
+    let answer: unknown;
+    try {
+      answer = options.onPush?.(push.message);
+    } catch (error) {
+      console.error('[howbeam] recorder failed to handle a pushed message', error);
+    }
+    if (push.id === null) return;
+    const id = push.id;
+    void Promise.resolve(answer)
+      .catch((error) => {
+        console.error('[howbeam] recorder failed to answer a pushed message', error);
+        return undefined;
+      })
+      .then((value) => {
+        if (stopped || port !== from) return;
+        try {
+          from.postMessage({ type: 'reply', id, value } satisfies RecorderReply);
+        } catch {
+          // The connection went away; the background fails the push on its disconnect.
+        }
+      });
+  };
+
   const connect = () => {
     if (stopped || suspended || port !== null) return;
     let nextPort: KeepAlivePortLike;
@@ -187,8 +254,12 @@ export function startKeepAlive(runtime: KeepAliveRuntimeLike, options: KeepAlive
     port = nextPort;
     nextPort.onDisconnect.addListener(() => disconnectCurrent(nextPort));
     nextPort.onMessage.addListener((message) => {
-      if (stopped || port !== nextPort || !isKeepAliveRejectionMessage(message)) return;
-      giveUp();
+      if (stopped || port !== nextPort) return;
+      if (isKeepAliveRejectionMessage(message)) {
+        giveUp();
+        return;
+      }
+      if (isRecorderPush(message)) deliverPush(nextPort, message);
     });
 
     const heartbeat = () => {

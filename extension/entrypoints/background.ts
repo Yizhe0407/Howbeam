@@ -45,6 +45,9 @@ import type {
   RecordingControlResult,
 } from '@/lib/runtime/messages';
 import { initLocalePreference } from '@/lib/runtime/locale-preference';
+import { createRecorderConnections } from '@/lib/recording/background/recorder-connections';
+
+const recorderConnections = createRecorderConnections();
 
 const recorderRuntime = createRecorderRuntime({
   captureVisibleTab: (windowId) => browser.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 95 }),
@@ -53,7 +56,12 @@ const recorderRuntime = createRecorderRuntime({
       target,
       files: ['/content-scripts/content.js'],
     }),
-  sendStopMessage: (tabId, message) => browser.tabs.sendMessage(tabId, message),
+  // The top-frame recorder hears it over its connection (a recorder not yet
+  // connected is refused when it connects); child frames still hear the broadcast.
+  sendStopMessage: (tabId, message) => {
+    recorderConnections.notifyIfConnected(tabId, message);
+    return browser.tabs.sendMessage(tabId, message);
+  },
 });
 
 // The editor opener and the run need each other: the run opens the editor
@@ -64,6 +72,7 @@ const run = createRun({
   store: { load: getRecordingState, save: setRecordingState },
   ports: createBrowserPorts({
     runtime: recorderRuntime,
+    connections: recorderConnections,
     openEditor: (target) => editorOpen!.openEditor(target),
   }),
   sources: {
@@ -343,6 +352,9 @@ export default defineBackground(() => {
     isTrustedKeepAliveSender: (sender, state) =>
       isTrustedKeepAliveSender(sender ?? {}, state, run.navigation.followOriginTabId()),
     acknowledgeDisconnect: () => void browser.runtime.lastError,
+    onConnected: recorderConnections.connected,
+    onDisconnected: recorderConnections.disconnected,
+    onReply: recorderConnections.replied,
   });
   browser.runtime.onConnect.addListener(handleKeepAlivePort);
 

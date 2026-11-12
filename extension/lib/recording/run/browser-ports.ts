@@ -22,10 +22,13 @@ import { clearPendingUndoRecord, readPendingUndoRecord, savePendingUndoRecord } 
 import type { RecorderRuntime } from '../background/recorder-runtime';
 import { resolveProjectContinuationAnchor } from '../background/source-tab';
 import type { RunPorts } from './ports';
+import type { RecorderConnections } from '../background/recorder-connections';
 
 /** The run flows' ports, on the real browser and storage. */
 export function createBrowserPorts(deps: {
   runtime: RecorderRuntime;
+  /** The recorded tab's connection: pushes to its recorder go over it. */
+  connections: RecorderConnections;
   openEditor(target: { sessionId: string; entryId: string | null }): Promise<unknown>;
 }): RunPorts {
   const { runtime } = deps;
@@ -39,7 +42,7 @@ export function createBrowserPorts(deps: {
       activeInWindow: (windowId) => activeIn({ windowId }),
       activeInFocusedWindow: () => activeIn({ lastFocusedWindow: true }),
       focus: (tabId, windowId) => focusTab(tabId, windowId),
-      send: (tabId, message) => browser.tabs.sendMessage(tabId, message, { frameId: 0 }),
+      send: (tabId, message) => deps.connections.request(tabId, message),
     },
     recorder: {
       inject: (tabId) => runtime.injectRecorder(tabId, true),
