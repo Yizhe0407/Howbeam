@@ -39,14 +39,20 @@ export function useProjectUndo({
     (action: UndoAction): 'gone' | 'moved' | null => {
       const latest = latestProject.current;
       if (!latest || projectDeleted || action.projectId !== latest.id) return 'gone';
-      if (operationActive || action.expectedRevision !== latest.contentRevision) return 'moved';
+      if (operationActive || action.expectedRevision < latest.contentRevision) return 'moved';
+      // An older revision is a render from before the mutation that offered this
+      // undo (its effects can run late on a busy page), not a Project that moved on.
       return null;
     },
     [operationActive, projectDeleted],
   );
 
   useEffect(() => {
-    latestProject.current = project;
+    // Revisions only grow: a late effect from an older render never takes back a newer Project.
+    const known = latestProject.current;
+    if (!project || !known || project.id !== known.id || project.contentRevision >= known.contentRevision) {
+      latestProject.current = project;
+    }
     const pending = current.current;
     if (!pending) return;
     const reason = invalidity(pending);

@@ -118,6 +118,11 @@ function makeProject(contentRevision: number, sections: any[]) {
     createdAt: 1,
     updatedAt: 2,
     contentRevision,
+    // Every stored Project carries all three revisions. Without them the
+    // editor's "is this snapshot newer" check compares undefined with
+    // undefined (false) and keeps showing a stale revision.
+    stepEditRevision: 0,
+    metadataRevision: 0,
   };
 }
 

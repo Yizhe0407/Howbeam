@@ -22,6 +22,22 @@ function renderUndo(initial: Project | null = projectAt(2)) {
 beforeEach(() => toast.mockClear());
 
 describe('useProjectUndo', () => {
+  it('is not ended by a late effect from a render older than the change that offered it', () => {
+    // On a busy page the effect of the render that first showed revision 7 can
+    // run after the delete committed revision 8 and offered its undo.
+    const { result, rerender } = renderUndo(projectAt(7));
+    act(() => result.current.offerUndo(pending('已刪除章節', 8), 'p1'));
+    rerender({ project: projectAt(7) });
+
+    expect(result.current.undoAction).toMatchObject({ message: '已刪除章節' });
+    expect(toast).not.toHaveBeenCalled();
+
+    // A Project that really moved past the undo still ends it.
+    rerender({ project: projectAt(9) });
+    expect(result.current.undoAction).toBeNull();
+    expect(toast).toHaveBeenCalledOnce();
+  });
+
   it('shows only the newest undo when one replaces another', () => {
     const { result, rerender } = renderUndo();
     act(() => result.current.offerUndo(pending('已刪除步驟 3', 2), 'p1'));
