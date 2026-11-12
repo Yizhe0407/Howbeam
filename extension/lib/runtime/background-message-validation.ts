@@ -48,7 +48,8 @@ export function isTrustedKeepAliveSender(
   },
   followOriginTabId: number | null = null,
 ): boolean {
-  if (sender.frameId !== 0 || sender.tab?.id == null) return false;
+  // Any frame of the recorded tab: child frames run recorders too (relays, probes, frozen frames).
+  if (sender.tab?.id == null) return false;
   if (state.operation === 'recording') {
     return state.isRecording && (state.tabId === sender.tab.id || followOriginTabId === sender.tab.id);
   }

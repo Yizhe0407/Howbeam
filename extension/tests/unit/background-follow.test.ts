@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RecordingState } from '@/lib/storage/recording-state';
 import { makeRecordingState } from '../setup/recording-state';
-import { flushAsyncWork, importBackground } from '../setup/background-test-utils';
+import { connectRecorder, flushAsyncWork, importBackground, pushedTo } from '../setup/background-test-utils';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 import { itemAt } from '../setup/item-at';
 
@@ -79,6 +79,8 @@ describe('follow-the-active-tab recording (steps mode)', () => {
   it('moves the run to an eligible activated tab: state first, then inject, then stop the old recorder', async () => {
     await importBackground();
     await flushAsyncWork();
+    const oldRecorder = connectRecorder(mocks, 4);
+    await flushAsyncWork();
 
     await activateTab(9);
 
@@ -88,11 +90,14 @@ describe('follow-the-active-tab recording (steps mode)', () => {
     expect(mocks.executeScript).toHaveBeenCalledWith(
       expect.objectContaining({ target: { tabId: 9, allFrames: true } }),
     );
-    expect(mocks.tabsSendMessage).toHaveBeenCalledWith(4, { type: 'HOWBEAM_STOP' });
+    expect(pushedTo(oldRecorder)).toContainEqual({ type: 'HOWBEAM_STOP' });
     // READY validation reads state.tabId, so the state write must precede injection, and the old recorder must only stop after the new one is in.
     const stateWriteOrder = mocks.setRecordingState.mock.invocationCallOrder[0];
     const injectOrder = itemAt(mocks.executeScript.mock.invocationCallOrder, 0);
-    const stopOrder = itemAt(mocks.tabsSendMessage.mock.invocationCallOrder, 0);
+    const stopCall = oldRecorder.postMessage.mock.calls.findIndex(
+      ([message]) => (message as { message?: { type?: string } }).message?.type === 'HOWBEAM_STOP',
+    );
+    const stopOrder = itemAt(oldRecorder.postMessage.mock.invocationCallOrder, stopCall);
     expect(stateWriteOrder).toBeLessThan(injectOrder);
     expect(injectOrder).toBeLessThan(stopOrder);
   });
@@ -362,6 +367,8 @@ describe('following a blank tab once it loads a page', () => {
     await flushAsyncWork();
 
     // Ctrl+T: the blank tab is activated first, which cannot be followed.
+    const oldRecorder = connectRecorder(mocks, 4);
+    await flushAsyncWork();
     mocks.tabsGet.mockImplementationOnce(async () => ({ ...LOADED_TAB, url: 'chrome://newtab/' }));
     await activateTab(9);
     expect(storedState.tabId).toBe(4);
@@ -377,7 +384,7 @@ describe('following a blank tab once it loads a page', () => {
     expect(mocks.executeScript).toHaveBeenCalledWith(
       expect.objectContaining({ target: { tabId: 9, allFrames: true } }),
     );
-    expect(mocks.tabsSendMessage).toHaveBeenCalledWith(4, { type: 'HOWBEAM_STOP' });
+    expect(pushedTo(oldRecorder)).toContainEqual({ type: 'HOWBEAM_STOP' });
   });
 
   it('never follows a page loading in a window the user is not in', async () => {

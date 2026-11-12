@@ -345,7 +345,7 @@ describe('background sender authorization', () => {
     expect(recorderMessages.some(isExtensionPageOnlyMessage)).toBe(false);
   });
 
-  it('authorizes keep-alive ports only for the top frame owning the active job', () => {
+  it('authorizes connections from any frame of the tab owning the active job', () => {
     const sender = { frameId: 0, tab: { id: 7, url: 'https://example.com/' } };
     expect(
       isTrustedKeepAliveSender(sender, {
@@ -373,7 +373,7 @@ describe('background sender authorization', () => {
           recapture: null,
         },
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isTrustedKeepAliveSender(sender, {
         operation: null,

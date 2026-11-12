@@ -66,19 +66,38 @@ describe('recorder connections', () => {
     await failed;
   });
 
-  it('ignores child-frame ports and replies from another port', async () => {
+  it('reaches every frame of a tab, and a single frame by its id', () => {
     const connections = createRecorderConnections();
-    connections.connected(serverPort(4, 3));
-    expect(connections.notifyIfConnected(4, { type: 'HOWBEAM_STOP' })).toBe(false);
-
     const top = serverPort(4);
-    const other = serverPort(7);
+    const child = serverPort(4, 3);
+    const otherTab = serverPort(7);
+    for (const port of [top, child, otherTab]) connections.connected(port);
+
+    connections.notifyTab(4, { type: 'HOWBEAM_STOP' });
+    expect(top.postMessage).toHaveBeenCalledWith({ type: 'push', id: null, message: { type: 'HOWBEAM_STOP' } });
+    expect(child.postMessage).toHaveBeenCalledWith({ type: 'push', id: null, message: { type: 'HOWBEAM_STOP' } });
+    expect(otherTab.postMessage).not.toHaveBeenCalled();
+
+    expect(connections.notifyFrame(4, 3, { type: 'HOWBEAM_STEP_FRAME_RESULT' })).toBe(true);
+    expect(child.postMessage).toHaveBeenLastCalledWith({
+      type: 'push',
+      id: null,
+      message: { type: 'HOWBEAM_STEP_FRAME_RESULT' },
+    });
+    expect(connections.notifyFrame(4, 9, {})).toBe(false);
+  });
+
+  it('asks only the top frame, and ignores replies from another port', async () => {
+    const connections = createRecorderConnections();
+    const top = serverPort(4);
+    const child = serverPort(4, 3);
+    connections.connected(child);
     connections.connected(top);
-    connections.connected(other);
     const answer = connections.request(4, {});
     await Promise.resolve();
+    expect(child.postMessage).not.toHaveBeenCalled();
     const { id } = top.postMessage.mock.calls[0]![0] as { id: number };
-    connections.replied(other, { type: 'reply', id, value: 'forged' });
+    connections.replied(child, { type: 'reply', id, value: 'forged' });
     connections.replied(top, { type: 'reply', id, value: 'real' });
     await expect(answer).resolves.toBe('real');
   });

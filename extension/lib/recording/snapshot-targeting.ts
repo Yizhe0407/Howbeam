@@ -23,7 +23,6 @@ import {
 } from '../capture/frame-probe';
 import { findImageForArea, resolveImageMapTargetAtPoint } from './image-map-resolver';
 import { isFiniteRect } from '../shared/validation';
-import type { HowbeamStopMessage } from '../runtime/messages';
 import { addRecorderCleanup, removeRecorderCleanup } from './content/recorder-cleanup';
 import type { Rect } from '@/lib/shared/geometry';
 
@@ -318,15 +317,11 @@ export function installSnapshotFrameProbe(runId: string): void {
       }
     })();
   };
+  // Stop arrives over the frame's connection and runs the cleanup registry.
   const cleanup = () => {
     window.removeEventListener('message', onMessage);
     removeRecorderCleanup(cleanup);
-    browser.runtime.onMessage.removeListener(onStop);
-  };
-  const onStop = (message: HowbeamStopMessage) => {
-    if (message?.type === 'HOWBEAM_STOP') cleanup();
   };
   window.addEventListener('message', onMessage);
   addRecorderCleanup(cleanup);
-  browser.runtime.onMessage.addListener(onStop);
 }

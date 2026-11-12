@@ -57,11 +57,10 @@ const recorderRuntime = createRecorderRuntime({
       target,
       files: ['/content-scripts/content.js'],
     }),
-  // The top-frame recorder hears it over its connection (a recorder not yet
-  // connected is refused when it connects); child frames still hear the broadcast.
-  sendStopMessage: (tabId, message) => {
-    recorderConnections.notifyIfConnected(tabId, message);
-    return browser.tabs.sendMessage(tabId, message);
+  // Every frame's recorder hears it over its connection; one not yet connected
+  // is refused when it connects, which ends it all the same.
+  sendStopMessage: async (tabId, message) => {
+    recorderConnections.notifyTab(tabId, message);
   },
 });
 
@@ -180,7 +179,9 @@ export default defineBackground(() => {
   syncActionIconWithRecordingState();
   const stepFrameRelayBroker = createStepFrameRelayBroker({
     sendResult: async (tabId, frameId, message) => {
-      await browser.tabs.sendMessage(tabId, message, { frameId });
+      if (!recorderConnections.notifyFrame(tabId, frameId, message)) {
+        throw new Error(`No recorder is connected in frame ${frameId} of tab ${tabId}.`);
+      }
     },
   });
 

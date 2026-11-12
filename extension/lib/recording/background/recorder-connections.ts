@@ -24,27 +24,37 @@ export class RecorderUnreachableError extends Error {
  * answer fails at once instead of timing out.
  */
 export function createRecorderConnections() {
-  const byTab = new Map<number, RecorderPort>();
+  /** Every connected recorder, by tab and frame (frame 0 is the top frame). */
+  const frames = new Map<number, Map<number, RecorderPort>>();
+  const portFor = (tabId: number, frameId: number) => frames.get(tabId)?.get(frameId);
   const waiting = new Map<number, { port: RecorderPort; resolve(value: unknown): void; reject(error: Error): void }>();
   const connectWaiters = new Map<number, Set<(port: RecorderPort) => void>>();
   let nextId = 1;
 
-  const tabOf = (port: RecorderPort): number | null => {
+  const addressOf = (port: RecorderPort): { tabId: number; frameId: number } | null => {
     const tabId = port.sender?.tab?.id;
-    return port.sender?.frameId === 0 && tabId != null ? tabId : null;
+    const frameId = port.sender?.frameId;
+    return tabId != null && frameId != null ? { tabId, frameId } : null;
   };
 
   function connected(port: RecorderPort): void {
-    const tabId = tabOf(port);
-    if (tabId === null) return;
-    byTab.set(tabId, port);
-    for (const resolve of connectWaiters.get(tabId) ?? []) resolve(port);
-    connectWaiters.delete(tabId);
+    const address = addressOf(port);
+    if (!address) return;
+    const tabFrames = frames.get(address.tabId) ?? new Map<number, RecorderPort>();
+    tabFrames.set(address.frameId, port);
+    frames.set(address.tabId, tabFrames);
+    if (address.frameId !== 0) return;
+    for (const resolve of connectWaiters.get(address.tabId) ?? []) resolve(port);
+    connectWaiters.delete(address.tabId);
   }
 
   function disconnected(port: RecorderPort): void {
-    const tabId = tabOf(port);
-    if (tabId !== null && byTab.get(tabId) === port) byTab.delete(tabId);
+    const address = addressOf(port);
+    const tabFrames = address ? frames.get(address.tabId) : undefined;
+    if (address && tabFrames?.get(address.frameId) === port) {
+      tabFrames.delete(address.frameId);
+      if (tabFrames.size === 0) frames.delete(address.tabId);
+    }
     for (const [id, entry] of waiting) {
       if (entry.port !== port) continue;
       waiting.delete(id);
@@ -59,8 +69,9 @@ export function createRecorderConnections() {
     entry.resolve(reply.value);
   }
 
+  /** The tab's top-frame recorder, waiting briefly for one that is still connecting. */
   function connectionFor(tabId: number): Promise<RecorderPort> {
-    const current = byTab.get(tabId);
+    const current = portFor(tabId, 0);
     if (current) return Promise.resolve(current);
     return new Promise((resolve, reject) => {
       const waiters = connectWaiters.get(tabId) ?? new Set();
@@ -104,7 +115,7 @@ export function createRecorderConnections() {
     },
     /** Pushes to every connected recorder (the run state: a recorder whose run ended must hear it too). */
     broadcast(message: unknown): void {
-      for (const port of [...byTab.values()]) {
+      for (const port of [...frames.values()].flatMap((tabFrames) => [...tabFrames.values()])) {
         try {
           post(port, { type: 'push', id: null, message });
         } catch {
@@ -120,9 +131,19 @@ export function createRecorderConnections() {
         // It disconnected already.
       }
     },
-    /** Pushes to the tab's recorder only if one is connected right now. */
-    notifyIfConnected(tabId: number, message: unknown): boolean {
-      const port = byTab.get(tabId);
+    /** Pushes to every recorder in the tab, top frame and child frames. */
+    notifyTab(tabId: number, message: unknown): void {
+      for (const port of [...(frames.get(tabId)?.values() ?? [])]) {
+        try {
+          post(port, { type: 'push', id: null, message });
+        } catch {
+          // That frame is gone; the others still hear it.
+        }
+      }
+    },
+    /** Pushes to one frame's recorder, if it is connected. */
+    notifyFrame(tabId: number, frameId: number, message: unknown): boolean {
+      const port = portFor(tabId, frameId);
       if (!port) return false;
       try {
         post(port, { type: 'push', id: null, message });

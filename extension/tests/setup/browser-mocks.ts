@@ -97,6 +97,8 @@ export interface BackgroundBrowserMockHandles {
   sessionGet?: Mock;
   sessionSet?: Mock;
   sessionRemove?: Mock;
+  /** Captures the background's runtime.onConnect listener (recorder connections). */
+  onConnect?: (listener: (port: unknown) => void) => void;
   /** Captures the background's runtime.onInstalled listener. */
   onInstalled?: (listener: (details: { reason: string }) => void) => void;
   /** Captures storage.onChanged listeners (recording-state subscribers). */
@@ -114,7 +116,7 @@ export function makeBackgroundBrowserMock(handles: BackgroundBrowserMockHandles 
           handles.onMessage?.((message, sender) => dispatchRuntimeMessage(listener, message, sender));
         },
       },
-      onConnect: { addListener: vi.fn() },
+      onConnect: { addListener: handles.onConnect ?? vi.fn() },
       onInstalled: { addListener: handles.onInstalled ?? vi.fn() },
       sendMessage: vi.fn(),
     },

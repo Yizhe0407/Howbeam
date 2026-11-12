@@ -12,13 +12,14 @@ import { createStepGestureQueue, type StepGesture } from '../capture/step-gestur
 import { installStepPressPipeline } from './step-press-pipeline';
 import { controlKindOf } from '../capture/action-description';
 import { isInScrollbarGutter } from './recording-guards';
-import { onRecordingStateChange } from '../storage/storage';
+import type { RecordingState } from '../storage/recording-state';
+import type { BackgroundTransport } from '../runtime/background-client';
 import { CAPTURE_FAILSAFE_MS, SNAPSHOT_FREEZE_EVENTS } from './content-script-constants';
 import { isFiniteRect } from '../shared/validation';
 import {
   STEP_FRAME_LIMITS,
   type HowbeamStepFrameResultMessage,
-  type HowbeamStopMessage,
+  type HowbeamRecordingStateMessage,
   type StepFrameRelayAbortMessage,
   type StepFrameRelayBeginMessage,
   type StepFrameRelayRejectMessage,
@@ -193,9 +194,17 @@ export function createStepFrameRelayLimiter(): FrameProbeRateLimiter {
 export function installStepFrameRecorder(
   runId: string,
   initiallyPaused: boolean,
-  { passive = isThirdPartyFrame() }: { passive?: boolean } = {},
-): void {
-  if (window.top === window) return;
+  {
+    passive = isThirdPartyFrame(),
+    send,
+  }: {
+    passive?: boolean;
+    /** Requests to the background, over this frame's connection. */
+    send: BackgroundTransport;
+  },
+): StepFrameRecorder {
+  const noop: StepFrameRecorder = { handlePush: () => {} };
+  if (window.top === window) return noop;
   const clickType = stepFrameClickMessageType(browser.runtime.id);
   let paused = initiallyPaused;
   let removed = false;
@@ -216,13 +225,11 @@ export function installStepFrameRecorder(
   const gestureQueue = presses?.gestureQueue ?? createStepGestureQueue();
 
   const abortRelay = (captureId: string) => {
-    void browser.runtime
-      .sendMessage({
-        type: 'HOWBEAM_STEP_FRAME_ABORT',
-        runId,
-        captureId,
-      } satisfies StepFrameRelayAbortMessage)
-      .catch(() => {});
+    void send({
+      type: 'HOWBEAM_STEP_FRAME_ABORT',
+      runId,
+      captureId,
+    } satisfies StepFrameRelayAbortMessage).catch(() => {});
   };
 
   /**
@@ -272,7 +279,7 @@ export function installStepFrameRecorder(
       void (async () => {
         let result: unknown;
         try {
-          result = await browser.runtime.sendMessage({
+          result = await send({
             type: 'HOWBEAM_STEP_FRAME_BEGIN',
             runId,
             captureId,
@@ -330,14 +337,12 @@ export function installStepFrameRecorder(
   };
 
   const rejectRelay = (payload: StepFrameHopPayload) => {
-    void browser.runtime
-      .sendMessage({
-        type: 'HOWBEAM_STEP_FRAME_REJECT',
-        runId,
-        captureId: payload.captureId,
-        relayToken: payload.relayToken,
-      } satisfies StepFrameRelayRejectMessage)
-      .catch(() => {});
+    void send({
+      type: 'HOWBEAM_STEP_FRAME_REJECT',
+      runId,
+      captureId: payload.captureId,
+      relayToken: payload.relayToken,
+    } satisfies StepFrameRelayRejectMessage).catch(() => {});
   };
 
   const onRelayMessage = (event: MessageEvent) => {
@@ -354,17 +359,13 @@ export function installStepFrameRecorder(
     }
   };
 
-  const onRuntimeMessage = (message: unknown) => {
-    if ((message as HowbeamStopMessage | null)?.type === 'HOWBEAM_STOP') {
-      cleanup();
-      return;
-    }
+  /** The background's answer for the click this frame is relaying (stop is the controller's to handle). */
+  const onRelayResult = (message: unknown) => {
     if (isHowbeamStepFrameResultMessage(message) && message.runId === runId && message.captureId === activeCaptureId) {
       settleActiveRelay?.(message.replay);
     }
   };
 
-  let unsubscribe = () => {};
   function cleanup() {
     if (removed) return;
     removed = true;
@@ -388,22 +389,33 @@ export function installStepFrameRecorder(
     }
     window.removeEventListener('message', onRelayMessage);
     removeRecorderCleanup(cleanup);
-    browser.runtime.onMessage.removeListener(onRuntimeMessage);
-    unsubscribe();
   }
-  unsubscribe = onRecordingStateChange((state) => {
+  /** The run state, pushed over the connection after every change. */
+  const applyState = (state: RecordingState) => {
     if (state.operation !== 'recording' || !state.isRecording || state.runId !== runId || state.mode !== 'steps') {
       cleanup();
       return;
     }
     paused = state.phase === 'paused';
     if (paused) gestureQueue.purgePending();
-  });
+  };
 
   if (passive) document.addEventListener('click', onPassiveClick, { capture: true, passive: true });
   window.addEventListener('message', onRelayMessage);
   addRecorderCleanup(cleanup);
-  browser.runtime.onMessage.addListener(onRuntimeMessage);
+  return {
+    handlePush(message) {
+      if (removed) return;
+      const pushed = message as HowbeamRecordingStateMessage | null;
+      if (pushed?.type === 'HOWBEAM_RECORDING_STATE') applyState(pushed.state);
+      else onRelayResult(message);
+    },
+  };
+}
+
+export interface StepFrameRecorder {
+  /** A message the background pushed to this frame (run state, relay results). */
+  handlePush(message: unknown): void;
 }
 
 /**
@@ -456,9 +468,6 @@ export function installSnapshotFrameFreeze(): void {
     if (!findIframeForWindow(event.source)) return;
     ping();
   };
-  const onStop = (message: HowbeamStopMessage) => {
-    if (message?.type === 'HOWBEAM_STOP') cleanup();
-  };
   const cleanup = () => {
     if (removed) return;
     removed = true;
@@ -468,7 +477,6 @@ export function installSnapshotFrameFreeze(): void {
     window.removeEventListener('resize', ping);
     window.removeEventListener('message', onMessage);
     removeRecorderCleanup(cleanup);
-    browser.runtime.onMessage.removeListener(onStop);
   };
 
   for (const type of SNAPSHOT_FREEZE_EVENTS) window.addEventListener(type, consume, { capture: true, passive: false });
@@ -476,5 +484,4 @@ export function installSnapshotFrameFreeze(): void {
   window.addEventListener('resize', ping, { passive: true });
   window.addEventListener('message', onMessage);
   addRecorderCleanup(cleanup);
-  browser.runtime.onMessage.addListener(onStop);
 }

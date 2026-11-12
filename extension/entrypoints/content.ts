@@ -1,6 +1,12 @@
 import { browser } from 'wxt/browser';
 import { installSnapshotFrameProbe } from '@/lib/recording/snapshot-targeting';
-import { installSnapshotFrameFreeze, installStepFrameRecorder } from '@/lib/recording/frame-relay';
+import {
+  installSnapshotFrameFreeze,
+  installStepFrameRecorder,
+  type StepFrameRecorder,
+} from '@/lib/recording/frame-relay';
+import { installRecorderLifecycle } from '@/lib/recording/recorder-lifecycle';
+import type { RecordingState } from '@/lib/storage/recording-state';
 import { getRecordingState } from '@/lib/storage/storage';
 import { installRecaptureRecorder } from '@/lib/recording/recapture-recorder';
 import { initLocalePreference } from '@/lib/runtime/locale-preference';
@@ -68,11 +74,37 @@ async function startRecorder(): Promise<void> {
   const recordingState = await getRecordingState();
   if (!isCurrent()) return;
   const isTop = window.top === window;
-  const role = documentRole(recordingState, {
+  const frame = {
     isTop,
     unrecordable: isTop ? detectUnrecordablePage() : null,
     underUnrecordablePage: !isTop && isChildFrameUnrecordable(),
-  });
+  };
+  const role = documentRole(recordingState, frame);
+
+  /** A child frame's connection: its requests, the background's pushes, and its end. */
+  const connectChildFrame = (onPush?: (message: unknown) => void) => {
+    const stillMine = (state: RecordingState) => {
+      const now = documentRole(state, frame);
+      return now.kind === role.kind && 'runId' in now && 'runId' in role && now.runId === role.runId;
+    };
+    const lifecycle = installRecorderLifecycle({
+      isRunCurrent: async () => stillMine(await getRecordingState()),
+      cleanup: () => runRecorderCleanup(),
+      onPush: (message) => {
+        const pushed = message as { type?: string; state?: RecordingState } | null;
+        if (
+          pushed?.type === 'HOWBEAM_STOP' ||
+          (pushed?.type === 'HOWBEAM_RECORDING_STATE' && pushed.state && !stillMine(pushed.state))
+        ) {
+          runRecorderCleanup();
+          return;
+        }
+        onPush?.(message);
+      },
+    });
+    addRecorderCleanup(() => lifecycle.stop());
+    return lifecycle;
+  };
 
   switch (role.kind) {
     case 'none':
@@ -81,6 +113,7 @@ async function startRecorder(): Promise<void> {
       await installRecaptureRecorder(role.context);
       return;
     case 'probe':
+      connectChildFrame();
       installSnapshotFrameProbe(role.runId);
       // The shield only covers the top viewport, so each child must freeze
       // itself and report pixel-shifting scrolls upward.
@@ -89,7 +122,11 @@ async function startRecorder(): Promise<void> {
     case 'step-child':
       // Child frames capture their own clicks and relay them (with rects
       // mapped hop-by-hop into the top viewport) to the top-frame recorder.
-      installStepFrameRecorder(role.runId, role.paused);
+      {
+        let recorder: StepFrameRecorder | null = null;
+        const connection = connectChildFrame((message) => recorder?.handlePush(message));
+        recorder = installStepFrameRecorder(role.runId, role.paused, { send: connection.send });
+      }
       return;
     case 'top':
       await mountTopRecorder({

@@ -24,6 +24,7 @@ export function makeBackgroundMocks() {
         ) => void),
     windowFocusListener: null as null | ((windowId: number) => void),
     tabRemovedListener: null as null | ((tabId: number) => void),
+    connectListener: null as null | ((port: unknown) => void),
     getProject: vi.fn(),
     getStep: vi.fn(),
     getSteps: vi.fn(),
@@ -91,6 +92,9 @@ export async function mockWxtBrowserModule(mocks: BackgroundMocks, extraHandles:
       },
       onTabRemoved: (listener) => {
         mocks.tabRemovedListener = listener;
+      },
+      onConnect: (listener) => {
+        mocks.connectListener = listener;
       },
       permissionsContains: mocks.permissionsContains,
       permissionsRequest: mocks.permissionsRequest,
@@ -179,4 +183,26 @@ export async function importBackground(): Promise<void> {
 /** Drains chained microtask work (mocked async storage/tabs round trips). */
 export async function flushAsyncWork(rounds = 40): Promise<void> {
   for (let i = 0; i < rounds; i++) await Promise.resolve();
+}
+
+/** Connects a recorder in a tab's frame the way a content script does; its pushes are recorded. */
+export function connectRecorder(mocks: BackgroundMocks, tabId: number, frameId = 0) {
+  const port = {
+    name: 'howbeam-keepalive',
+    sender: { tab: { id: tabId }, frameId, url: 'https://example.com/' },
+    postMessage: vi.fn(),
+    disconnect: vi.fn(),
+    onMessage: { addListener: vi.fn() },
+    onDisconnect: { addListener: vi.fn() },
+  };
+  mocks.connectListener?.(port);
+  return port;
+}
+
+/** The messages the background pushed over a connected recorder's port. */
+export function pushedTo(port: ReturnType<typeof connectRecorder>): unknown[] {
+  return port.postMessage.mock.calls
+    .map(([message]) => message as { type?: string; message?: unknown })
+    .filter((message) => message?.type === 'push')
+    .map((message) => message.message);
 }

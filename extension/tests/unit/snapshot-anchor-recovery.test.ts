@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RecordingState } from '@/lib/storage/recording-state';
 import { makeRecordingState } from '../setup/recording-state';
-import { flushAsyncWork, importBackground } from '../setup/background-test-utils';
+import { connectRecorder, flushAsyncWork, importBackground, pushedTo } from '../setup/background-test-utils';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 import { type Step } from '@/lib/storage/models';
 import { itemAt } from '../setup/item-at';
@@ -252,6 +252,8 @@ describe('annotation clicks against a run whose anchor disappeared mid-run', () 
 
     await importBackground();
     await flushAsyncWork();
+    const recorder = connectRecorder(mocks, 4);
+    await flushAsyncWork();
     mocks.setRecordingState.mockClear();
     mocks.getStep.mockResolvedValue(undefined);
 
@@ -270,7 +272,7 @@ describe('annotation clicks against a run whose anchor disappeared mid-run', () 
     );
     // The recorder in the tab is torn down so the user is not left clicking
     // into a shield whose run is already broken.
-    expect(mocks.tabsSendMessage).toHaveBeenCalledWith(4, { type: 'HOWBEAM_STOP' });
+    expect(pushedTo(recorder)).toContainEqual({ type: 'HOWBEAM_STOP' });
   });
 });
 
