@@ -14,7 +14,6 @@ const mocks = vi.hoisted(() => ({
   keepAliveStop: vi.fn(),
   getRecordingState: vi.fn(),
   stateListeners: [] as Array<(state: unknown) => void>,
-  unsubscribe: vi.fn(),
 }));
 
 vi.mock('wxt/browser', () => ({
@@ -32,16 +31,16 @@ vi.mock('@/lib/recording/snapshot-targeting', () => ({
 vi.mock('@/lib/capture/step-preview', () => ({
   createStepPreview: () => mocks.preview,
 }));
+// The recorder hears the run state as pushes over its connection.
 vi.mock('@/lib/runtime/keep-alive', () => ({
   KEEPALIVE_PORT_NAME: 'howbeam-keepalive',
-  startKeepAlive: vi.fn(() => ({ stop: mocks.keepAliveStop })),
+  startKeepAlive: vi.fn((_runtime: unknown, options: { onPush?: (message: unknown) => unknown }) => {
+    mocks.stateListeners.push((state) => options.onPush?.({ type: 'HOWBEAM_RECORDING_STATE', state }));
+    return { stop: mocks.keepAliveStop };
+  }),
 }));
 vi.mock('@/lib/storage/storage', () => ({
   getRecordingState: mocks.getRecordingState,
-  onRecordingStateChange: vi.fn((callback: (state: unknown) => void) => {
-    mocks.stateListeners.push(callback);
-    return mocks.unsubscribe;
-  }),
 }));
 // jsdom performs no hit-testing or layout, so the gutter guards would misfire
 // on the synthetic coordinates used here. Their logic has dedicated tests.
@@ -132,7 +131,6 @@ beforeEach(() => {
   mocks.preview.prepareForCapture.mockReset().mockResolvedValue(undefined);
   mocks.preview.remove.mockReset();
   mocks.keepAliveStop.mockReset();
-  mocks.unsubscribe.mockReset();
 });
 
 afterEach(() => {
@@ -257,7 +255,6 @@ describe('installRecaptureRecorder', () => {
     expect(document.querySelector('[data-howbeam-recording-toolbar]')).toBeNull();
     expect(mocks.preview.remove).toHaveBeenCalled();
     expect(mocks.keepAliveStop).toHaveBeenCalled();
-    expect(mocks.unsubscribe).toHaveBeenCalled();
 
     pointerDown();
     await flush();

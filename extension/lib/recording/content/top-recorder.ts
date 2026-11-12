@@ -4,7 +4,7 @@ import { collectKeyboardCandidateAnchors, waitForNextFrame } from '../snapshot-t
 import { installRecorderLifecycle } from '../recorder-lifecycle';
 import { createSnapshotShield } from '../snapshot-shield';
 import { createSnapshotRecorder } from './snapshot-recorder';
-import { getRecordingState, onRecordingStateChange } from '../../storage/storage';
+import { getRecordingState } from '../../storage/storage';
 import type { RecordingState } from '../../storage/recording-state';
 import { createCaptureSender } from './capture-sender';
 import { createContentRecordingSession } from './recording-session';
@@ -12,6 +12,7 @@ import { installStepRecorder } from './step-recorder';
 import { createToolbarChannel } from './toolbar-channel';
 import type {
   HowbeamCaptureTakenMessage,
+  HowbeamRecordingStateMessage,
   HowbeamSnapshotActiveMessage,
   HowbeamSnapshotMarksMessage,
   HowbeamStopMessage,
@@ -27,7 +28,8 @@ type RecorderPushMessage =
   | HowbeamStopMessage
   | HowbeamSnapshotActiveMessage
   | HowbeamSnapshotMarksMessage
-  | HowbeamCaptureTakenMessage;
+  | HowbeamCaptureTakenMessage
+  | HowbeamRecordingStateMessage;
 
 export interface TopRecorderOptions {
   recordingState: RecordingState;
@@ -101,7 +103,8 @@ export async function mountTopRecorder({
         })
       : snapshot.install();
 
-  const unsubscribeRecordingState = onRecordingStateChange((state) => {
+  /** The run state, as the background pushes it over the connection after every change. */
+  const applyState = (state: RecordingState) => {
     if (state.runId !== runId) return;
     const wasPaused = session.paused;
     session.paused = state.phase === 'paused';
@@ -123,7 +126,7 @@ export async function mountTopRecorder({
     if (state.phase !== 'recording') session.regionCapture?.cancel('removed');
     session.toolbar?.update(toolbar.toToolbarState(state));
     session.shield?.updateToolbar(toolbar.toToolbarState(state));
-  });
+  };
 
   // Navigating away freezes this document in bfcache with recorder listeners
   // intact; the shared lifecycle hands back the keep-alive port before the
@@ -141,6 +144,10 @@ export async function mountTopRecorder({
   const onPush = (message: RecorderPushMessage) => {
     if (message?.type === 'HOWBEAM_STOP') {
       cleanup();
+      return;
+    }
+    if (message?.type === 'HOWBEAM_RECORDING_STATE') {
+      applyState(message.state);
       return;
     }
     if (message?.type === 'HOWBEAM_CAPTURE_TAKEN' && message.runId === runId) {
@@ -170,7 +177,6 @@ export async function mountTopRecorder({
     session.hoverPreview?.destroy();
     session.hoverPreview = null;
     removeRecorderCleanup(cleanup);
-    unsubscribeRecordingState();
     recorderLifecycle.stop();
   };
   addRecorderCleanup(cleanup);

@@ -5,9 +5,14 @@ import { installRecorderLifecycle } from './recorder-lifecycle';
 import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from '../capture/overlay-layers';
 import { createStepPreview } from '../capture/step-preview';
 import { isInScrollbarGutter, isPointInAnyScrollGutter } from './recording-guards';
-import { getRecordingState, onRecordingStateChange } from '../storage/storage';
+import { getRecordingState } from '../storage/storage';
+import type { RecordingState as StoredRecordingState } from '../storage/recording-state';
 import { createLatestAsyncRequestRunner } from '../capture/frame-probe';
-import type { HowbeamRecaptureTargetMessage, HowbeamStopMessage } from '../runtime/messages';
+import type {
+  HowbeamRecaptureTargetMessage,
+  HowbeamRecordingStateMessage,
+  HowbeamStopMessage,
+} from '../runtime/messages';
 import type { StepRecaptureContext } from '../storage/recording-state';
 import { STEP_FOLLOWUP_EVENTS } from './content-script-constants';
 import { t } from '@/lib/shared/i18n';
@@ -92,7 +97,9 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
     },
     cleanup: () => cleanup(),
     onPush: (message) => {
-      if ((message as HowbeamStopMessage | null)?.type === 'HOWBEAM_STOP') cleanup();
+      const pushed = message as HowbeamStopMessage | HowbeamRecordingStateMessage | null;
+      if (pushed?.type === 'HOWBEAM_STOP') cleanup();
+      else if (pushed?.type === 'HOWBEAM_RECORDING_STATE') applyState(pushed.state);
     },
   });
 
@@ -195,7 +202,8 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
     event.stopImmediatePropagation();
     cancelWorkflow();
   };
-  let unsubscribe = () => {};
+  // Set below; a state pushed before that (none can be, as no await comes first) is ignored.
+  let applyState = (_state: StoredRecordingState): void => {};
   function cleanup() {
     if (removed) return;
     removed = true;
@@ -208,10 +216,10 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
     for (const type of STEP_FOLLOWUP_EVENTS) document.removeEventListener(type, onFollowup, { capture: true });
     window.removeEventListener('keydown', onKeyDown, { capture: true });
     removeRecorderCleanup(cleanup);
-    unsubscribe();
     lifecycle.stop();
   }
-  unsubscribe = onRecordingStateChange((state) => {
+  /** The run state, as the background pushes it over the connection after every change. */
+  applyState = (state: StoredRecordingState) => {
     if (state.operation !== 'recapture' || state.recapture?.runId !== runId) cleanup();
     else {
       const phase = state.recapture.phase;
@@ -229,7 +237,7 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
         busy = false;
       }
     }
-  });
+  };
 
   window.addEventListener('pointermove', onPointerMove, { capture: true, passive: true });
   document.addEventListener('pointerdown', onPointerDown, { capture: true });

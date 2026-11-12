@@ -102,6 +102,24 @@ export function createRecorderConnections() {
     async notify(tabId: number, message: unknown): Promise<void> {
       post(await connectionFor(tabId), { type: 'push', id: null, message });
     },
+    /** Pushes to every connected recorder (the run state: a recorder whose run ended must hear it too). */
+    broadcast(message: unknown): void {
+      for (const port of [...byTab.values()]) {
+        try {
+          post(port, { type: 'push', id: null, message });
+        } catch {
+          // That recorder is gone; the others still hear it.
+        }
+      }
+    },
+    /** Pushes to one connection (the state a recorder gets as it connects). */
+    notifyPort(port: RecorderPort, message: unknown): void {
+      try {
+        post(port, { type: 'push', id: null, message });
+      } catch {
+        // It disconnected already.
+      }
+    },
     /** Pushes to the tab's recorder only if one is connected right now. */
     notifyIfConnected(tabId: number, message: unknown): boolean {
       const port = byTab.get(tabId);

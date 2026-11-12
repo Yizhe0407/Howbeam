@@ -3,7 +3,7 @@
  * jsdom lacks. Production code uses them unguarded; tests get these stand-ins,
  * which a test can still replace with vi.stubGlobal to drive them.
  */
-import { beforeEach } from 'vitest';
+import { afterEach, beforeEach } from 'vitest';
 import { createFakeLockManager } from './fake-locks';
 
 /**
@@ -115,4 +115,17 @@ if (typeof window !== 'undefined') {
   if (!('CSS' in globalThis)) {
     (globalThis as { CSS?: unknown }).CSS = { supports: () => false, escape: (value: string) => value };
   }
+}
+
+if (typeof window !== 'undefined') {
+  // findBy*/waitFor default to 1s, which a full parallel run on a busy machine
+  // can exceed for the editor's multi-step async flows; that made tests flaky,
+  // not wrong. A real hang still fails, just later.
+  const { configure } = await import('@testing-library/react');
+  configure({ asyncUtilTimeout: 3_000 });
+
+  // react-hot-toast keeps its store across tests; a toast from one test must
+  // not show up in the next one's DOM.
+  const { default: toast } = await import('react-hot-toast');
+  afterEach(() => toast.remove());
 }

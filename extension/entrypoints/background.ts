@@ -43,6 +43,7 @@ import type {
   BackgroundResponse,
   RecordingControlMessage,
   RecordingControlResult,
+  HowbeamRecordingStateMessage,
 } from '@/lib/runtime/messages';
 import { initLocalePreference } from '@/lib/runtime/locale-preference';
 import { createRecorderConnections } from '@/lib/recording/background/recorder-connections';
@@ -69,7 +70,14 @@ const recorderRuntime = createRecorderRuntime({
 let editorOpen: EditorOpen | null = null;
 
 const run = createRun({
-  store: { load: getRecordingState, save: setRecordingState },
+  store: {
+    load: getRecordingState,
+    // Every committed state also reaches the connected recorders, which follow it instead of storage.
+    save: async (state) => {
+      await setRecordingState(state);
+      recorderConnections.broadcast({ type: 'HOWBEAM_RECORDING_STATE', state } satisfies HowbeamRecordingStateMessage);
+    },
+  },
   ports: createBrowserPorts({
     runtime: recorderRuntime,
     connections: recorderConnections,
@@ -352,7 +360,15 @@ export default defineBackground(() => {
     isTrustedKeepAliveSender: (sender, state) =>
       isTrustedKeepAliveSender(sender ?? {}, state, run.navigation.followOriginTabId()),
     acknowledgeDisconnect: () => void browser.runtime.lastError,
-    onConnected: recorderConnections.connected,
+    onConnected: (port) => {
+      recorderConnections.connected(port);
+      void run.actor.ready().then(() =>
+        recorderConnections.notifyPort(port, {
+          type: 'HOWBEAM_RECORDING_STATE',
+          state: toRecordingState(run.actor.state()),
+        } satisfies HowbeamRecordingStateMessage),
+      );
+    },
     onDisconnected: recorderConnections.disconnected,
     onReply: recorderConnections.replied,
   });

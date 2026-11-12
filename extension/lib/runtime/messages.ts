@@ -1,4 +1,4 @@
-import type { RecordingMode, StepRecaptureTarget, Viewport } from '../storage/recording-state';
+import type { RecordingMode, RecordingState, StepRecaptureTarget, Viewport } from '../storage/recording-state';
 import type { CopyKey } from '../shared/i18n/copy';
 import type { Rect } from '@/lib/shared/geometry';
 import type { ControlKind } from './control-kind';
@@ -179,6 +179,12 @@ export interface HowbeamCaptureTakenMessage {
 export interface HowbeamSnapshotActiveMessage {
   type: 'HOWBEAM_SNAPSHOT_ACTIVE';
   runId: string;
+}
+
+/** The run state, pushed to every connected recorder after each change and once when it connects. */
+export interface HowbeamRecordingStateMessage {
+  type: 'HOWBEAM_RECORDING_STATE';
+  state: RecordingState;
 }
 
 /** Every mark on the current snapshot, in order, sent by the background (which owns them) after each change. */
