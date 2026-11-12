@@ -285,8 +285,7 @@ export function findVisualTargetCandidatesAtPoint(
   const top = analyzeChain(hit, clientX, clientY, viewport, policy);
   if (
     !policy.pierceTransparentOccluders ||
-    top.interactive ||
-    typeof document.elementsFromPoint !== 'function'
+    top.interactive
   ) {
     return top.targets;
   }

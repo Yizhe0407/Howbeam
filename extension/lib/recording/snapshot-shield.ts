@@ -44,7 +44,7 @@ type RegionHandler = (
 type FailureHandler = (error: Error) => void | Promise<void>;
 
 function isDialogElement(value: unknown): value is HTMLDialogElement {
-  return typeof HTMLDialogElement !== 'undefined' && value instanceof HTMLDialogElement;
+  return value instanceof HTMLDialogElement;
 }
 
 function isModalDialog(element: Element): element is HTMLDialogElement {
@@ -79,8 +79,6 @@ function getDeepActiveElement(): Element | null {
 function installBackdropStyles(shadowRoot: ShadowRoot): void {
   try {
     if (
-      typeof CSSStyleSheet !== 'undefined' &&
-      typeof CSSStyleSheet.prototype.replaceSync === 'function' &&
       'adoptedStyleSheets' in shadowRoot
     ) {
       const sheet = new CSSStyleSheet();

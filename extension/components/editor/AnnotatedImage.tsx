@@ -76,7 +76,7 @@ function useDecodedImage(blob: Blob, enabled: boolean): ImageBitmap | null {
 
 function useNearViewport(lazy: boolean) {
   const ref = useRef<HTMLDivElement>(null);
-  const [near, setNear] = useState(!lazy || typeof IntersectionObserver === 'undefined');
+  const [near, setNear] = useState(!lazy);
   useEffect(() => {
     if (near || !ref.current) return undefined;
     const observer = new IntersectionObserver((entries) => {
@@ -121,7 +121,6 @@ export default function AnnotatedImage({
       ));
     };
     measure();
-    if (typeof ResizeObserver === 'undefined') return undefined;
     const observer = new ResizeObserver(measure);
     observer.observe(canvas);
     return () => observer.disconnect();
@@ -137,7 +136,7 @@ export default function AnnotatedImage({
     if (!canvas || !bitmap) return;
     // A fixed-size cover box only needs its on-screen pixels; a contain image
     // keeps its natural size, because that size is what the layout sizes it by.
-    const deviceRatio = typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+    const deviceRatio = window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
     const backing = fit === 'cover' && frameScale ? Math.min(1, frameScale * deviceRatio) : 1;
     const width = Math.max(1, Math.round(bitmap.width * backing));
     const height = Math.max(1, Math.round(bitmap.height * backing));

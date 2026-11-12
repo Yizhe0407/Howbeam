@@ -102,11 +102,11 @@ export function useToolbarPosition({
       setPosition((current) => current?.x === next.x && current.y === next.y ? current : next);
     };
     reposition();
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(reposition);
-    if (floatingRef.current) observer?.observe(floatingRef.current);
+    const observer = new ResizeObserver(reposition);
+    if (floatingRef.current) observer.observe(floatingRef.current);
     window.addEventListener('resize', reposition);
     return () => {
-      observer?.disconnect();
+      observer.disconnect();
       window.removeEventListener('resize', reposition);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

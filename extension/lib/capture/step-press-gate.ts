@@ -142,7 +142,7 @@ export interface StepPressGateOptions {
  * region selector). Closed shadow roots retarget to their host, which carries
  * the overlay marker, so the composed path always exposes it. */
 export function isExtensionOverlayEvent(event: Event): boolean {
-  const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+  const path = event.composedPath();
   for (const node of path) {
     if (node instanceof Element && isExtensionOverlay(node)) return true;
   }

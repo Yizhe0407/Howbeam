@@ -66,7 +66,6 @@ export async function runFolderBackup(): Promise<BackupResult | null> {
     return result;
   };
 
-  if (typeof navigator === 'undefined' || !navigator.locks) return run();
   const held = await navigator.locks.request(LOCK_NAME, { ifAvailable: true }, (lock) => (lock ? run() : null));
   if (held) return held;
   pendingRun ??= (async () =>

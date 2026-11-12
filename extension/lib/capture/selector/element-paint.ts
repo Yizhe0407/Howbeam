@@ -121,8 +121,6 @@ function elementHasBoxAtPoint(el: Element, clientX: number, clientY: number): bo
 function browserSupportsPseudoComputedStyle(): boolean {
   try {
     return (
-      typeof CSS !== 'undefined' &&
-      typeof CSS.supports === 'function' &&
       CSS.supports('selector(::before)')
     );
   } catch {

@@ -9,8 +9,7 @@ import { focusTab } from '../runtime/navigation';
  * the same Project waits, takes over once the first one closes or leaves the
  * Project, and can ask the holder to come to the front meanwhile.
  *
- * - `held`: this tab edits the Project (also when there is no Project yet, or
- *   the browser has no Web Locks).
+ * - `held`: this tab edits the Project (also when there is no Project yet).
  * - `elsewhere`: another editor tab has it.
  * - `pending`: still asking.
  */
@@ -33,12 +32,12 @@ async function bringThisTabForward(): Promise<void> {
 }
 
 export function useEditorLock(projectId: string | null): { state: EditorLockState; showHolder: () => void } {
-  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+  const locks = navigator.locks;
   const [lock, setLock] = useState<{ projectId: string; state: EditorLockState } | null>(null);
-  const state: EditorLockState = !projectId || !locks ? 'held' : lock?.projectId === projectId ? lock.state : 'pending';
+  const state: EditorLockState = !projectId ? 'held' : lock?.projectId === projectId ? lock.state : 'pending';
 
   useEffect(() => {
-    if (!projectId || !locks) return;
+    if (!projectId) return;
     const name = lockName(projectId);
     const waiting = new AbortController();
     let release!: () => void;
@@ -69,7 +68,7 @@ export function useEditorLock(projectId: string | null): { state: EditorLockStat
   }, [locks, projectId]);
 
   useEffect(() => {
-    if (!projectId || state !== 'held' || typeof BroadcastChannel === 'undefined') return;
+    if (!projectId || state !== 'held') return;
     const channel = new BroadcastChannel(CHANNEL);
     channel.onmessage = (event: MessageEvent<ShowHolderMessage>) => {
       if (event.data?.type !== 'show-holder' || event.data.projectId !== projectId) return;
@@ -79,7 +78,7 @@ export function useEditorLock(projectId: string | null): { state: EditorLockStat
   }, [projectId, state]);
 
   const showHolder = useCallback(() => {
-    if (!projectId || typeof BroadcastChannel === 'undefined') return;
+    if (!projectId) return;
     const channel = new BroadcastChannel(CHANNEL);
     channel.postMessage({ type: 'show-holder', projectId } satisfies ShowHolderMessage);
     channel.close();

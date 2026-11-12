@@ -3,21 +3,13 @@ import { throwIfAborted } from '../shared/abort';
 /** Width of a string in the layout unit, for one fixed font and size. */
 export type MeasureText = (text: string) => number;
 
-type TextSegmenter = { segment(input: string): Iterable<{ segment: string }> };
-
-const segmenters: { word?: TextSegmenter; grapheme?: TextSegmenter } =
-  typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function'
-    ? {
-        word: new Intl.Segmenter(undefined, { granularity: 'word' }),
-        grapheme: new Intl.Segmenter(undefined, { granularity: 'grapheme' }),
-      }
-    : {};
+const segmenters = {
+  word: new Intl.Segmenter(undefined, { granularity: 'word' }),
+  grapheme: new Intl.Segmenter(undefined, { granularity: 'grapheme' }),
+};
 
 export function segmentText(text: string, granularity: 'word' | 'grapheme'): string[] {
-  const segmenter = segmenters[granularity];
-  if (segmenter) return Array.from(segmenter.segment(text), (part) => part.segment);
-  // Per-code-point fallback for runtimes without Intl.Segmenter.
-  return Array.from(text);
+  return Array.from(segmenters[granularity].segment(text), (part) => part.segment);
 }
 
 /** Punctuation that must not start a line: closing brackets and quotes, commas, full stops, marks. */

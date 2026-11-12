@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 // @vitest-environment jsdom
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type ScreenshotStep, type Step, type StepEntry } from '@/lib/storage/models';
 
@@ -108,7 +108,7 @@ describe('timeline preview propagation', () => {
   beforeEach(() => previewMocks.multi.mockClear());
   afterEach(() => vi.restoreAllMocks());
 
-  it('StepRail passes manual-effective bounds and screenshot-owner masks for single and group entries', () => {
+  it('StepRail passes manual-effective bounds and screenshot-owner masks for single and group entries', async () => {
     const entries = [singleEntry(), groupEntry()];
     render(
       <StepRail
@@ -119,6 +119,8 @@ describe('timeline preview propagation', () => {
       />,
     );
 
+    // Rail thumbnails mount once they scroll near the viewport.
+    await act(async () => undefined);
     expect(previewMocks.highlight).toHaveBeenCalledOnce();
     expect(itemAt(previewMocks.highlight.mock.calls, 0)[0]).toMatchObject({
       bounds: { x: 40, y: 50, width: 60, height: 70 },

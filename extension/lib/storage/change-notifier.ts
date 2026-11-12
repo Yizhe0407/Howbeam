@@ -4,12 +4,7 @@
  * message only delays follow-up work until the next page opens. */
 const CHANNEL_NAME = 'howbeam-projects-changed';
 
-function channelsSupported(): boolean {
-  return typeof BroadcastChannel === 'function';
-}
-
 export function notifyProjectsChanged(): void {
-  if (!channelsSupported()) return;
   try {
     // A fresh sender each time: a channel object never receives its own
     // messages, but other objects in the same page do.
@@ -23,7 +18,6 @@ export function notifyProjectsChanged(): void {
 
 /** Calls `listener` for every project write made anywhere in the extension. Returns an unsubscribe function. */
 export function subscribeProjectsChanged(listener: () => void): () => void {
-  if (!channelsSupported()) return () => undefined;
   const channel = new BroadcastChannel(CHANNEL_NAME);
   channel.onmessage = listener;
   return () => channel.close();

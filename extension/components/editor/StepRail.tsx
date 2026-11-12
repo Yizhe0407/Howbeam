@@ -95,10 +95,7 @@ function LazyRailPreview({ eager, children }: { eager: boolean; children: ReactN
       return;
     }
     const element = host.current;
-    if (!element || typeof IntersectionObserver === 'undefined') {
-      setVisible(true);
-      return;
-    }
+    if (!element) return;
     const observer = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       setVisible(true);
@@ -196,12 +193,9 @@ export default function StepRail({
   const railRef = useRef<HTMLElement | null>(null);
   const scrollbar = useAutoHideScrollbar<HTMLUListElement>();
   const sectionByStartId = new Map(sections.map((section) => [section.startEntryId, section]));
-  const [isDesktop, setIsDesktop] = useState(() =>
-    typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 1024px)').matches : true,
-  );
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia('(min-width: 1024px)').matches);
 
   useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return;
     const query = window.matchMedia('(min-width: 1024px)');
     const apply = () => setIsDesktop(query.matches);
     apply();
