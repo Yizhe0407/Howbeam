@@ -1,7 +1,5 @@
-import { palette } from '../shared/design-tokens';
-import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from './overlay-layers';
-import { createViewportOverlayHost } from './viewport-overlay-host';
-import { OVERLAY_FONT_STACK } from './overlay-font';
+import { OVERLAY_LAYER } from './overlay-layers';
+import { mountInPageUi } from './in-page-ui';
 import { t } from '@/lib/shared/i18n';
 import type { Rect, Point } from '@/lib/shared/geometry';
 
@@ -149,25 +147,23 @@ async function waitForRegionCapturePaint(frames = 2): Promise<void> {
   }
 }
 
+/** Only what is particular to the region selector; surfaces and buttons are the in-page UI kit's. */
 const REGION_CAPTURE_STYLES = `
-  :host { color-scheme: light; }
-  * { box-sizing: border-box; }
   .hb-region-blocker {
     position: fixed; inset: 0; overflow: hidden; pointer-events: auto;
     cursor: crosshair; touch-action: none; user-select: none;
-    font-family: ${OVERLAY_FONT_STACK};
   }
   .hb-region-selection {
-    position: absolute; display: none; border: 2px solid ${palette.mark}; border-radius: 8px;
-    background: ${palette.markPreviewFill}; box-shadow: 0 0 0 99999px rgb(15 23 42 / .32);
+    position: absolute; display: none; border: 2px solid var(--hb-mark); border-radius: 8px;
+    background: var(--hb-mark-fill); box-shadow: 0 0 0 99999px rgb(15 23 42 / .32);
     pointer-events: none;
   }
   .hb-region-selection[data-visible="true"] { display: block; }
   /* Once drawn, the box can be moved and resized until it is confirmed. */
   .hb-region-selection[data-interactive="true"] { pointer-events: auto; cursor: move; }
   .hb-region-handle {
-    position: absolute; width: 14px; height: 14px; border: 2px solid ${palette.mark}; border-radius: 99px;
-    background: ${palette.surface}; display: none;
+    position: absolute; width: 14px; height: 14px; border: 2px solid var(--hb-mark); border-radius: 99px;
+    background: var(--hb-surface); display: none;
   }
   .hb-region-selection[data-interactive="true"] .hb-region-handle { display: block; }
   .hb-region-handle[data-handle="nw"] { left: -8px; top: -8px; cursor: nwse-resize; }
@@ -180,34 +176,19 @@ const REGION_CAPTURE_STYLES = `
   .hb-region-handle[data-handle="w"] { left: -8px; top: calc(50% - 7px); cursor: ew-resize; }
   /* Guidance only: it never takes the pointer, so a box can be drawn right under it. */
   .hb-region-hint {
-    position: fixed; top: 16px; left: 50%; max-width: calc(100vw - 32px); padding: 6px 14px;
-    transform: translateX(-50%); border: 2px solid ${palette.line}; border-radius: 999px;
-    background: ${palette.surface}; color: ${palette.line}; font-size: 13px; line-height: 1.4; font-weight: 700;
+    position: fixed; top: 16px; left: 50%; display: block; max-width: calc(100vw - 32px); padding: 6px 14px;
+    transform: translateX(-50%); font-size: 13px; font-weight: 700;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
   }
   /* Attached to the selection (see placeRegionActions) rather than a fixed corner. */
-  .hb-region-actions {
-    position: fixed; left: 0; top: 0; display: none; align-items: center; gap: 8px; padding: 4px;
-    border: 2px solid ${palette.line}; border-radius: 999px; background: ${palette.surface}; cursor: default; pointer-events: auto;
-  }
+  .hb-region-actions { position: fixed; left: 0; top: 0; display: none; cursor: default; pointer-events: auto; }
   .hb-region-actions[data-visible="true"] { display: flex; }
-  .hb-region-cancel {
-    min-width: 40px; min-height: 32px; padding: 0 12px; border: 2px solid ${palette.line}; border-radius: 999px;
-    background: ${palette.surfaceMuted}; color: ${palette.line}; font: inherit; font-weight: 700; cursor: pointer;
-  }
-  .hb-region-cancel:hover { background: ${palette.tamago}; }
-  .hb-region-confirm {
-    min-width: 40px; min-height: 32px; padding: 0 14px; border: 2px solid ${palette.line}; border-radius: 999px;
-    background: ${palette.sora}; color: ${palette.line}; font: inherit; font-weight: 800; cursor: pointer;
-  }
+  .hb-region-cancel, .hb-region-confirm { min-width: 40px; }
   .hb-region-confirm[hidden] { display: none; }
-  .hb-region-confirm:hover { filter: brightness(.95); }
-  .hb-region-cancel:focus-visible, .hb-region-confirm:focus-visible { outline: 2px solid ${palette.focus}; outline-offset: 2px; }
   .hb-region-blocker[data-capturing="true"] { cursor: wait; }
   .hb-region-blocker[data-capturing="true"] .hb-region-selection,
   .hb-region-blocker[data-capturing="true"] .hb-region-hint,
   .hb-region-blocker[data-capturing="true"] .hb-region-actions { visibility: hidden; }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 `;
 
 /**
@@ -221,15 +202,13 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
   const settleFrames = options.settleFrames ?? 2;
   // Hit-testable on purpose: the transparent host swallows the drag so no page
   // target receives it.
-  const host = createViewportOverlayHost(
-    'data-howbeam-region-capture',
-    { 'pointer-events': 'auto' },
-    { popover: true },
-  );
-
-  const root = host.attachShadow({ mode: 'open' });
-  const style = document.createElement('style');
-  style.textContent = REGION_CAPTURE_STYLES;
+  const ui = mountInPageUi('data-howbeam-region-capture', {
+    styles: REGION_CAPTURE_STYLES,
+    hostStyles: { 'pointer-events': 'auto' },
+    layer: OVERLAY_LAYER.modal,
+    shadowMode: 'open',
+  });
+  const { host } = ui;
   const blocker = document.createElement('div');
   blocker.className = 'hb-region-blocker';
   blocker.tabIndex = 0;
@@ -239,18 +218,18 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
   selection.className = 'hb-region-selection';
   selection.dataset.visible = 'false';
   const status = document.createElement('div');
-  status.className = 'hb-region-hint';
+  status.className = 'hb-pill hb-region-hint';
   status.setAttribute('role', 'status');
   status.setAttribute('aria-live', 'polite');
   status.textContent = t().regionCapture.instructions;
   const cancelButton = document.createElement('button');
   cancelButton.type = 'button';
-  cancelButton.className = 'hb-region-cancel';
+  cancelButton.className = 'hb-action hb-action--muted hb-region-cancel';
   cancelButton.textContent = t().common.cancel;
   cancelButton.setAttribute('aria-label', t().regionCapture.cancelLabel);
   const confirmButton = document.createElement('button');
   confirmButton.type = 'button';
-  confirmButton.className = 'hb-region-confirm';
+  confirmButton.className = 'hb-action hb-region-confirm';
   confirmButton.hidden = true;
   confirmButton.textContent = '✓';
   confirmButton.setAttribute('aria-label', t().regionCapture.confirmLabel);
@@ -261,11 +240,11 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
     selection.append(knob);
   }
   const actions = document.createElement('div');
-  actions.className = 'hb-region-actions';
+  actions.className = 'hb-pill hb-region-actions';
   actions.dataset.visible = 'false';
   actions.append(cancelButton, confirmButton);
   blocker.append(selection, status, actions);
-  root.append(style, blocker);
+  ui.layer.append(blocker);
 
   let closed = false;
   let capturing = false;
@@ -308,8 +287,7 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
     closed = true;
     window.removeEventListener('keydown', onKeyDown, true);
     window.removeEventListener('resize', onResize, true);
-    releaseTopLayer(host);
-    host.remove();
+    ui.remove();
     if (notify) options.onClose?.();
   };
 
@@ -471,8 +449,6 @@ export function createRegionCapture(options: RegionCaptureOptions): RegionCaptur
   window.addEventListener('keydown', onKeyDown, { capture: true });
   window.addEventListener('resize', onResize, { capture: true });
 
-  document.documentElement.append(host);
-  showInTopLayer(host, OVERLAY_LAYER.modal);
   queueMicrotask(() => blocker.focus({ preventScroll: true }));
 
   return {

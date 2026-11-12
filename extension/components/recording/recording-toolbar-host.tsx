@@ -3,7 +3,7 @@ import RecordingToolbar from './recording-toolbar';
 import type { MountRecordingToolbar, RecordingToolbarState } from '@/lib/recording/toolbar-contract';
 import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from '@/lib/capture/overlay-layers';
 import { REAPPEAR_TRANSITION } from '@/lib/capture/capture-presentation';
-import { createViewportOverlayHost } from '@/lib/capture/viewport-overlay-host';
+import { createInPageHost } from '@/lib/capture/in-page-ui';
 
 /** How long a transient notice (e.g. a click that was not recorded) stays up. */
 export const TOOLBAR_NOTICE_MS = 6_000;
@@ -31,12 +31,10 @@ function getSurface(): ToolbarSurface {
   if (surface && surface.host.ownerDocument === document) return surface;
   // A popover so it shares the top layer with the hover frame and the page's
   // own modals; plain z-index would always lose to either.
-  const host = createViewportOverlayHost(
-    'data-howbeam-recording-toolbar',
-    { 'pointer-events': 'none', transition: REAPPEAR_TRANSITION },
-    { popover: true },
-  );
-  const shadowRoot = host.attachShadow({ mode: 'closed' });
+  // The kit's host; the toolbar renders the kit's stylesheet itself (it also mounts in the shield frame).
+  const { host, root: shadowRoot } = createInPageHost('data-howbeam-recording-toolbar', {
+    hostStyles: { transition: REAPPEAR_TRANSITION },
+  });
   const container = document.createElement('div');
   shadowRoot.append(container);
   surface = { host, root: createRoot(container) };

@@ -390,7 +390,7 @@ export default function RecordingToolbar({
                         only item it was. */}
                     <button
                       type="button"
-                      className="hb-button"
+                      className="hb-icon-button"
                       data-danger="true"
                       aria-label={t().toolbar.discardLabel}
                       data-tooltip={t().toolbar.discardLabel}
@@ -401,7 +401,7 @@ export default function RecordingToolbar({
                     </button>
                     <button
                       type="button"
-                      className="hb-secondary"
+                      className="hb-action hb-action--quiet hb-secondary"
                       disabled={busy}
                       onClick={() => void run('FINISH_RECORDING')}
                     >
@@ -409,7 +409,7 @@ export default function RecordingToolbar({
                     </button>
                     <button
                       type="button"
-                      className="hb-finish"
+                      className="hb-action hb-finish"
                       disabled={busy}
                       onClick={() => void run('REBUILD_INVALIDATED_SNAPSHOT')}
                     >
@@ -461,7 +461,7 @@ export default function RecordingToolbar({
                   {preparingNext && (
                     <button
                       type="button"
-                      className="hb-primary"
+                      className="hb-action hb-action--accent hb-primary"
                       data-tooltip={t().toolbar.captureFrameTooltip}
                       disabled={busy}
                       onClick={() => void run('CREATE_NEXT_SNAPSHOT')}
@@ -473,7 +473,7 @@ export default function RecordingToolbar({
                   {state.mode === 'snapshot' && !preparingNext && (
                     <button
                       type="button"
-                      className="hb-primary"
+                      className="hb-action hb-action--accent hb-primary"
                       data-quiet={state.itemCount === 0 ? 'true' : undefined}
                       data-tooltip={t().toolbar.nextFrameTooltip}
                       disabled={busy}
@@ -489,7 +489,7 @@ export default function RecordingToolbar({
                       {state.mode === 'steps' && (
                         <button
                           type="button"
-                          className="hb-button"
+                          className="hb-icon-button"
                           data-emphasis={paused ? 'true' : undefined}
                           aria-label={paused ? t().toolbar.resume : t().toolbar.pause}
                           data-tooltip={paused ? t().toolbar.resume : t().toolbar.pause}
@@ -507,7 +507,7 @@ export default function RecordingToolbar({
                       )}
                       <button
                         type="button"
-                        className="hb-button"
+                        className="hb-icon-button"
                         aria-label={t().toolbar.undo}
                         data-tooltip={t().toolbar.undoTooltip}
                         disabled={busy || state.itemCount === 0}
@@ -518,7 +518,7 @@ export default function RecordingToolbar({
                       {onStartRegionCapture && (
                         <button
                           type="button"
-                          className="hb-button"
+                          className="hb-icon-button"
                           aria-label={regionCaptureActive ? t().toolbar.regionCaptureActive : t().toolbar.cropRegion}
                           data-tooltip={regionCaptureActive ? t().toolbar.regionCaptureActive : t().toolbar.cropRegion}
                           aria-pressed={regionCaptureActive}
@@ -534,7 +534,7 @@ export default function RecordingToolbar({
 
                   <button
                     type="button"
-                    className="hb-finish"
+                    className="hb-action hb-finish"
                     data-tooltip={t().toolbar.finishTooltip}
                     disabled={busy}
                     onClick={() => void run('FINISH_RECORDING')}
@@ -543,7 +543,7 @@ export default function RecordingToolbar({
                   </button>
                   <button
                     type="button"
-                    className="hb-button"
+                    className="hb-icon-button"
                     data-danger="true"
                     aria-label={t().toolbar.discardLabel}
                     data-tooltip={t().toolbar.discardLabel}
@@ -554,7 +554,7 @@ export default function RecordingToolbar({
                   </button>
                   <button
                     type="button"
-                    className="hb-button hb-collapse"
+                    className="hb-icon-button hb-collapse"
                     aria-label={t().toolbar.collapse}
                     data-tooltip={t().toolbar.collapse}
                     disabled={busy}

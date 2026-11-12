@@ -1,7 +1,8 @@
 import { sendToBackground } from '../runtime/background-client';
 import { resolveSnapshotTargetAtPoint } from './snapshot-targeting';
 import { installRecorderLifecycle } from './recorder-lifecycle';
-import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from '../capture/overlay-layers';
+import { OVERLAY_LAYER } from '../capture/overlay-layers';
+import { mountInPageUi } from '../capture/in-page-ui';
 import { createStepPreview } from '../capture/step-preview';
 import { isInScrollbarGutter, isPointInAnyScrollGutter } from './recording-guards';
 import { getRecordingState } from '../storage/storage';
@@ -15,66 +16,39 @@ import type {
 import type { StepRecaptureContext } from '../storage/recording-state';
 import { STEP_FOLLOWUP_EVENTS } from './content-script-constants';
 import { t } from '@/lib/shared/i18n';
-import { palette, RADIUS_PX } from '../shared/design-tokens';
 import { addRecorderCleanup, removeRecorderCleanup } from './content/recorder-cleanup';
 
+const RECAPTURE_HINT_STYLES = `
+  .hb-recapture-hint {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 32px);
+    gap: 12px; padding: 4px 4px 4px 16px; font-weight: 600; pointer-events: auto;
+  }
+`;
+
+/** The recapture's hint and cancel, built from the in-page UI kit like the recording toolbar. */
 function createRecaptureToolbar(onCancel: () => void): { host: HTMLElement; remove(): void } {
-  const host = document.createElement('div');
-  host.setAttribute('data-howbeam-recording-toolbar', '');
-  // Top layer like the hover preview it must stay above; z-index alone loses to it.
-  host.setAttribute('popover', 'manual');
-  host.style.setProperty('all', 'initial', 'important');
-  host.style.setProperty('position', 'fixed', 'important');
-  host.style.setProperty('top', '16px', 'important');
-  host.style.setProperty('left', '50%', 'important');
-  host.style.setProperty('transform', 'translateX(-50%)', 'important');
-  host.style.setProperty('z-index', '2147483647', 'important');
-  const root = host.attachShadow({ mode: 'closed' });
-  const wrapper = document.createElement('div');
-  wrapper.setAttribute('role', 'status');
-  wrapper.style.cssText = [
-    'all:initial',
-    'display:flex',
-    'align-items:center',
-    'gap:12px',
-    'padding:10px 12px',
-    `border:2px solid ${palette.line}`,
-    `border-radius:${RADIUS_PX}px`,
-    `background:${palette.surface}`,
-    `color:${palette.text}`,
-    'font:600 14px/1.3 system-ui,sans-serif',
-  ].join(';');
+  const ui = mountInPageUi('data-howbeam-recording-toolbar', {
+    styles: RECAPTURE_HINT_STYLES,
+    // Top layer like the hover preview it must stay above; z-index alone loses to it.
+    layer: OVERLAY_LAYER.chrome,
+  });
+  const hint = document.createElement('div');
+  hint.className = 'hb-pill hb-recapture-hint';
+  hint.setAttribute('role', 'status');
   const label = document.createElement('span');
   label.textContent = t().recapturePicker.instructions;
   const cancel = document.createElement('button');
   cancel.type = 'button';
+  cancel.className = 'hb-action hb-action--muted';
   cancel.textContent = t().common.cancel;
-  cancel.style.cssText = [
-    'all:initial',
-    'cursor:pointer',
-    'padding:7px 10px',
-    `border:2px solid ${palette.line}`,
-    'border-radius:999px',
-    `background:${palette.surfaceMuted}`,
-    `color:${palette.text}`,
-    'font:600 14px/1 system-ui,sans-serif',
-  ].join(';');
   cancel.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
     onCancel();
   });
-  wrapper.append(label, cancel);
-  root.append(wrapper);
-  document.documentElement.append(host);
-  showInTopLayer(host, OVERLAY_LAYER.chrome);
-  return {
-    host,
-    remove: () => {
-      releaseTopLayer(host);
-      host.remove();
-    },
-  };
+  hint.append(label, cancel);
+  ui.layer.append(hint);
+  return { host: ui.host, remove: () => ui.remove() };
 }
 
 export async function installRecaptureRecorder(context: StepRecaptureContext): Promise<void> {
