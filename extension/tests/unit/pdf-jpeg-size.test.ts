@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readJpegSize } from '@/lib/media/raster-image-validation';
+import { readJpegSize } from '@/lib/shared/raster-image-validation';
 import { jpegOfSize } from '../setup/jpeg-fixture';
 
 describe('readJpegSize', () => {

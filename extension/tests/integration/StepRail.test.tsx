@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { installStepRailDomStubs, removeStepRailDomStubs } from '../setup/step-rail-dom';
 import StepRail from '@/components/editor/StepRail';
 import { type StepEntry } from '@/lib/storage/models';
-import type { ProjectSection } from '@/lib/project/project-sections';
+import type { ProjectSection } from '@/lib/storage/project-sections';
 import { makeEntry } from '../setup/step-entries';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { itemAt } from '../setup/item-at';

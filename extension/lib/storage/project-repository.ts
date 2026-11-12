@@ -1,5 +1,5 @@
 import type { IDBPTransaction } from 'idb';
-import { repairProjectSections, type ProjectSection } from '../project/project-sections';
+import { repairProjectSections, type ProjectSection } from './project-sections';
 import {
   buildCompleteStepEntries,
   getEntryImageOwner,

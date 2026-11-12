@@ -1,5 +1,5 @@
-import { isIdentifier } from '../shared/validation';
-import { PERSISTED_STEP_LIMITS } from './persistence-limits';
+import { isIdentifier, isRecord } from '../shared/validation';
+import { isPersistedPoint, isPersistedRect, PERSISTED_STEP_LIMITS } from './persistence-limits';
 import { isStoredText } from './stored-text';
 import type { Rect, Point } from '@/lib/shared/geometry';
 
@@ -99,25 +99,8 @@ export interface StepMarkerEdit {
 
 export type ImageEdit = TextEdit | ArrowEdit | RectEdit | EllipseEdit | StepMarkerEdit;
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const isCoordinate = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= IMAGE_EDIT_LIMITS.maxCoordinateMagnitude;
-
-const isDimension = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= IMAGE_EDIT_LIMITS.maxBoundsDimension;
-
-function isEditBounds(value: unknown): value is Rect {
-  return isRecord(value)
-    && isCoordinate(value.x) && isCoordinate(value.y)
-    && isDimension(value.width) && isDimension(value.height)
-    && isCoordinate((value.x as number) + (value.width as number))
-    && isCoordinate((value.y as number) + (value.height as number));
-}
-
-const isEditPoint = (value: unknown): value is Point =>
-  isRecord(value) && isCoordinate(value.x) && isCoordinate(value.y);
+const isEditBounds = isPersistedRect;
+const isEditPoint = isPersistedPoint;
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/;
 

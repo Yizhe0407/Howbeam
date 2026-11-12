@@ -3,7 +3,7 @@ import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Redaction, ScreenshotStep, Step, StepEntry } from '@/lib/storage/models';
 
-vi.mock('@/lib/media/raster-image-validation', () => ({
+vi.mock('@/lib/shared/raster-image-validation', () => ({
   validateRasterImageBlob: vi.fn(async (blob: Blob) => {
     const image = await decode(blob);
     return { width: image.width, height: image.height, mediaType: 'image/jpeg' };

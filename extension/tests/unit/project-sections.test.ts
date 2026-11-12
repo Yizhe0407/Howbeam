@@ -8,7 +8,7 @@ import {
   sanitizeProjectSectionTitle,
   sectionOfEntry,
   sectionsInRows,
-} from '@/lib/project/project-sections';
+} from '@/lib/storage/project-sections';
 
 function step(id: string, order: number, overrides: Partial<Step> = {}): Step {
   return {

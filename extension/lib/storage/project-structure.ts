@@ -3,7 +3,7 @@ import {
   repairProjectSections,
   sanitizeProjectSectionTitle,
   type ProjectSection,
-} from '../project/project-sections';
+} from './project-sections';
 import {
   assertExactEntryIds,
   entryId,

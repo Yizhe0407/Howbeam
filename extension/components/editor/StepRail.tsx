@@ -8,7 +8,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { entryId, type StepEntry } from '@/lib/storage/models';
-import { railRows, type ProjectSection, type RailRow } from '@/lib/project/project-sections';
+import { railRows, type ProjectSection, type RailRow } from '@/lib/storage/project-sections';
 import {
   horizontalListModifiers,
   useSortableReorder,

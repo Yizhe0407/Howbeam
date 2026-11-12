@@ -1,5 +1,5 @@
 import { throwIfAborted } from '../shared/abort';
-import type { ProjectSection } from '../project/project-sections';
+import type { ProjectSection } from '../storage/project-sections';
 import { type StepEntry } from '../storage/models';
 import {
   DEFAULT_TITLE,

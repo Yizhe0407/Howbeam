@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const toast = vi.hoisted(() => vi.fn());
 vi.mock('react-hot-toast', () => ({ default: toast }));
 
-import { useProjectUndo } from '@/components/editor/use-project-undo';
+import { useProjectUndo } from '@/lib/editor/use-project-undo';
 import type { Project } from '@/lib/storage/models';
 
 const projectAt = (contentRevision: number) => ({ id: 'p1', contentRevision }) as Project;

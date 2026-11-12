@@ -3,7 +3,7 @@ import 'fake-indexeddb/auto';
 import { Blob as NodeBlob } from 'node:buffer';
 import { act, renderHook } from '@testing-library/react';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useProjectMutations } from '@/components/editor/use-project-mutations';
+import { useProjectMutations } from '@/lib/editor/use-project-mutations';
 import type { PendingUndoAction, UndoAction } from '@/lib/editor/editor-app-model';
 import { closeDatabase } from '@/lib/storage/database';
 import { entryId, type Project, type Step, type StepEntry } from '@/lib/storage/models';
@@ -14,7 +14,7 @@ import {
   renameProjectSectionAtomically,
 } from '@/lib/storage/project-structure';
 import { getSteps } from '@/lib/storage/step-repository';
-import type { RailRow } from '@/lib/project/project-sections';
+import type { RailRow } from '@/lib/storage/project-sections';
 import { t } from '@/lib/shared/i18n';
 import { jpegBlob } from '../setup/raster-fixtures';
 import { seedSteps } from '../setup/step-fixtures';

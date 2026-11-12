@@ -34,7 +34,7 @@ vi.mock('@/lib/storage/project-structure', () => {
   };
 });
 
-import { useProjectMutations } from '@/components/editor/use-project-mutations';
+import { useProjectMutations } from '@/lib/editor/use-project-mutations';
 import { itemAt } from '../setup/item-at';
 
 const singleEntry = (id: string) => ({ kind: 'single', step: { id } }) as never;

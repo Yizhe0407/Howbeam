@@ -7,7 +7,7 @@ import {
 } from '@/lib/editor/editor-app-model';
 import { addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, ProjectContentConflictError, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically, type ProjectStructureMutationResult, type ProjectStructureSnapshot } from '@/lib/storage/project-structure';
 import { entryId, type Project, type Step, type StepEntry } from '@/lib/storage/models';
-import { sectionsInRows, type ProjectSection, type RailRow } from '@/lib/project/project-sections';
+import { sectionsInRows, type ProjectSection, type RailRow } from '@/lib/storage/project-sections';
 import { t, type Messages } from '@/lib/shared/i18n';
 
 /** A structural edit with its own progress/failure copy in the i18n catalog. */

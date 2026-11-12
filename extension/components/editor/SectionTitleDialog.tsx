@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { PROJECT_SECTION_LIMITS, sanitizeProjectSectionTitle } from '@/lib/project/project-sections';
+import { PROJECT_SECTION_LIMITS, sanitizeProjectSectionTitle } from '@/lib/storage/project-sections';
 import { t } from '@/lib/shared/i18n';
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 

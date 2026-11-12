@@ -1,15 +1,15 @@
-import { entryId, stepRole, type StepEntry } from '../storage/models';
+import { entryId, stepRole, type StepEntry } from './models';
 import { isIdentifier, isRecord } from '../shared/validation';
 import {
   PROJECT_SECTION_LIMITS,
   sanitizeProjectSectionTitle,
   type ProjectSection,
-} from '../storage/project-section-model';
+} from './project-section-model';
 export {
   PROJECT_SECTION_LIMITS,
   sanitizeProjectSectionTitle,
   type ProjectSection,
-} from '../storage/project-section-model';
+} from './project-section-model';
 
 
 /**

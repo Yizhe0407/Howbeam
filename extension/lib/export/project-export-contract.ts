@@ -1,4 +1,4 @@
-import { repairProjectSections, type ProjectSection } from '../project/project-sections';
+import { repairProjectSections, type ProjectSection } from '../storage/project-sections';
 import { type StepEntry } from '../storage/models';
 import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
 

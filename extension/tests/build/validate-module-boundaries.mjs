@@ -37,6 +37,39 @@ const storageModelModules = new Set([
   'lib/storage/stored-text.ts',
 ]);
 
+/**
+ * The lib/ layers, lowest first. A domain may import its own directory and any
+ * lower layer, never a higher one or another domain of the same layer.
+ */
+const LIB_LAYERS = [
+  ['shared'],
+  ['storage'],
+  ['media'],
+  ['runtime'],
+  ['capture'],
+  ['project', 'export'],
+  ['editor', 'backup', 'recording'],
+];
+const layerOf = new Map(LIB_LAYERS.flatMap((domains, rank) => domains.map((domain) => [domain, rank])));
+
+function libDomain(relative) {
+  const match = /^lib\/([^/]+)\//.exec(relative);
+  return match ? match[1] : null;
+}
+
+function layerViolation(from, target) {
+  const fromDomain = libDomain(from);
+  const targetDomain = libDomain(target);
+  if (!fromDomain || !targetDomain || fromDomain === targetDomain) return null;
+  const fromRank = layerOf.get(fromDomain);
+  const targetRank = layerOf.get(targetDomain);
+  if (fromRank === undefined) return `lib/${fromDomain} has no layer; add it to LIB_LAYERS`;
+  if (targetRank === undefined) return `lib/${targetDomain} has no layer; add it to LIB_LAYERS`;
+  return targetRank < fromRank
+    ? null
+    : `lib/${fromDomain} may not import lib/${targetDomain} (same or higher layer; see LIB_LAYERS)`;
+}
+
 function classify(file) {
   const relative = normalized(file);
   if (relative.startsWith('lib/shared/')) return 'shared-lib';
@@ -62,6 +95,8 @@ function entrypointName(target) {
 }
 
 function boundaryViolation(from, target) {
+  const layered = layerViolation(normalized(from), target);
+  if (layered) return layered;
   switch (classify(from)) {
     case 'shared-lib':
       return target.startsWith('lib/shared/') ? null : 'lib/shared may only import lib/shared modules';
@@ -70,9 +105,9 @@ function boundaryViolation(from, target) {
         ? null
         : 'components/ui may not depend on feature components or lib domains';
     case 'storage-models':
-      return (target.startsWith('lib/storage/') || target.startsWith('lib/project/'))
+      return target.startsWith('lib/storage/')
         && !storageModelModules.has(target) && !storageModelModules.has(`${target}.ts`)
-        ? 'storage/models must stay independent of repositories, database, and project services'
+        ? 'storage/models must stay independent of repositories and the database'
         : null;
     case 'domain-lib':
       return target.startsWith('components/')

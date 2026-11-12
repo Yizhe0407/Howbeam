@@ -4,7 +4,7 @@ import {
   type ProjectSection,
 } from './project-section-model';
 import { isIdentifier, isRecord } from '../shared/validation';
-import { PERSISTED_PROJECT_LIMITS, PERSISTED_STEP_LIMITS } from './persistence-limits';
+import { isPersistedRect, PERSISTED_PROJECT_LIMITS, PERSISTED_STEP_LIMITS } from './persistence-limits';
 import { normalizeStoredText } from './stored-text';
 import { cloneImageEdit, IMAGE_EDIT_LIMITS, readImageEdits, type ImageEdit } from './image-edit-model';
 export type { ImageEdit } from './image-edit-model';
@@ -15,22 +15,7 @@ export type { ProjectSection } from './project-section-model';
 /** A rectangle in screenshot CSS pixels. */
 export type Bounds = Rect;
 
-function isValidBounds(bounds: Bounds): boolean {
-  return (
-    Number.isFinite(bounds.x) &&
-    Number.isFinite(bounds.y) &&
-    Number.isFinite(bounds.width) &&
-    Number.isFinite(bounds.height) &&
-    Math.abs(bounds.x) <= STEP_STORAGE_LIMITS.maxCoordinateMagnitude &&
-    Math.abs(bounds.y) <= STEP_STORAGE_LIMITS.maxCoordinateMagnitude &&
-    bounds.width > 0 &&
-    bounds.height > 0 &&
-    bounds.width <= STEP_STORAGE_LIMITS.maxBoundsDimension &&
-    bounds.height <= STEP_STORAGE_LIMITS.maxBoundsDimension &&
-    Math.abs(bounds.x + bounds.width) <= STEP_STORAGE_LIMITS.maxCoordinateMagnitude &&
-    Math.abs(bounds.y + bounds.height) <= STEP_STORAGE_LIMITS.maxCoordinateMagnitude
-  );
-}
+const isValidBounds = isPersistedRect;
 
 export interface Redaction {
   id: string;
