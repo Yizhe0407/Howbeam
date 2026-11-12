@@ -60,16 +60,16 @@ test.describe('step recording', () => {
     await clickRecordingToolbarButton(appPage, '框選區域');
     const region = appPage.locator('[data-howbeam-region-capture]');
     await expect(region).toHaveCount(1);
-    await expect(region.locator('.ft-region-blocker')).toBeVisible();
+    await expect(region.locator('.hb-region-blocker')).toBeVisible();
 
     await appPage.mouse.move(120, 140);
     await appPage.mouse.down();
     await appPage.mouse.move(300, 260, { steps: 8 });
-    await expect(region.locator('.ft-region-selection')).toHaveAttribute('data-visible', 'true');
+    await expect(region.locator('.hb-region-selection')).toHaveAttribute('data-visible', 'true');
     await appPage.mouse.up();
     // The box stays adjustable until it is confirmed.
-    await expect(region.locator('.ft-region-selection')).toHaveAttribute('data-interactive', 'true');
-    await region.locator('.ft-region-confirm').click();
+    await expect(region.locator('.hb-region-selection')).toHaveAttribute('data-interactive', 'true');
+    await region.locator('.hb-region-confirm').click();
 
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
     const step = itemAt(await readSteps(popupPage), 0);

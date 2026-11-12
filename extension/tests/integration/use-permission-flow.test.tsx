@@ -16,7 +16,8 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
-import { usePermissionFlow } from '@/components/editor/use-permission-flow';
+import { usePermissionFlow } from '@/lib/editor/use-permission-flow';
+import { UserMessageError } from '@/lib/shared/user-message-error';
 
 const selectedEntry = {
   kind: 'single',
@@ -81,7 +82,7 @@ describe('confirmPreparedPermission', () => {
     // The guard passes during preflight (no expected id) and throws on the
     // confirm step, where the prepared entry id is re-validated.
     const requireSelectedEntry = vi.fn((expectedEntryId?: string) => {
-      if (expectedEntryId !== undefined) throw new Error('找不到目前選取的步驟。');
+      if (expectedEntryId !== undefined) throw new UserMessageError('找不到目前選取的步驟。');
       return selectedEntry;
     });
     const { result, options } = renderFlow({ requireSelectedEntry });

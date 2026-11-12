@@ -246,8 +246,8 @@ describe('recording toolbar', () => {
   it('keeps the whole run in its count after switching to Mark, even before the first capture', async () => {
     await mount(<RecordingToolbar state={{ ...state, mode: 'snapshot', phase: 'preparing-next', itemCount: 0, runItemCount: 2 }} onCommand={vi.fn()} />);
     const status = screen.getByRole('button', { name: /待擷取/ });
-    expect(status.querySelector('.ft-dot')).toBeTruthy();
-    expect(status.querySelector('.ft-count-badge')?.textContent).toBe('2');
+    expect(status.querySelector('.hb-dot')).toBeTruthy();
+    expect(status.querySelector('.hb-count-badge')?.textContent).toBe('2');
   });
 
   it('walks a snapshot through capture, next and finish with one main button per state', async () => {
@@ -285,12 +285,12 @@ describe('recording toolbar collapse', () => {
     ));
     const { rerender } = await mount(<RecordingToolbar state={state} onCommand={vi.fn()} />);
     const expand = screen.getByRole('button', { name: /展開錄製控制/ });
-    expect(expand.querySelector('.ft-dot')?.getAttribute('data-tone')).toBeNull();
+    expect(expand.querySelector('.hb-dot')?.getAttribute('data-tone')).toBeNull();
 
     rerender(<RecordingToolbar state={{ ...state, phase: 'paused' }} onCommand={vi.fn()} />);
     const paused = screen.getByRole('button', { name: /展開錄製控制/ });
-    expect(paused.querySelector('.ft-dot')?.getAttribute('data-tone')).toBe('muted');
-    expect(paused.querySelector('.ft-count-badge')?.getAttribute('data-tone')).toBe('muted');
+    expect(paused.querySelector('.hb-dot')?.getAttribute('data-tone')).toBe('muted');
+    expect(paused.querySelector('.hb-count-badge')?.getAttribute('data-tone')).toBe('muted');
   });
 
   it('keeps the choice for the run: a toolbar mounted afresh (another tab) comes up collapsed, a new run does not', async () => {
@@ -318,11 +318,11 @@ describe('recording toolbar collapse', () => {
     }));
     const { container } = render(<RecordingToolbar state={state} onCommand={vi.fn()} />);
     await act(async () => { await Promise.resolve(); });
-    expect(container.querySelector('.ft-position')).toBeNull();
+    expect(container.querySelector('.hb-position')).toBeNull();
 
     await act(async () => { releases.forEach((release) => release()); await Promise.resolve(); });
-    await waitFor(() => expect(container.querySelector('.ft-position')).not.toBeNull());
-    expect(container.querySelector('.ft-position')!.getAttribute('data-horizontal')).toBe('left');
+    await waitFor(() => expect(container.querySelector('.hb-position')).not.toBeNull());
+    expect(container.querySelector('.hb-position')!.getAttribute('data-horizontal')).toBe('left');
   });
 
   it('shows no guidance hint while collapsed', async () => {
@@ -378,7 +378,7 @@ describe('recording toolbar layout', () => {
   /** jsdom has no layout, so the measured rectangles are supplied: the toolbar's right edge and its last child's. */
   function stubWidths(lastChildRight: number, toolbarRight: number) {
     const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      const right = this.classList.contains('ft-toolbar') ? toolbarRight : lastChildRight;
+      const right = this.classList.contains('hb-toolbar') ? toolbarRight : lastChildRight;
       return { x: 0, y: 0, top: 0, left: 0, bottom: 0, width: right, height: 0, right, toJSON: () => ({}) } as DOMRect;
     });
     return () => spy.mockRestore();

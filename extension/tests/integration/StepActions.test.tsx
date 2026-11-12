@@ -84,7 +84,8 @@ describe('StepActions', () => {
 
     fireEvent.click(remove);
 
-    expect(await screen.findByText('The step changed meanwhile.')).toBeTruthy();
+    // The internal message stays in the console; the user reads the action's own copy.
+    expect(await screen.findByText(t().editor.actions.deleteFailed)).toBeTruthy();
     expect(remove.disabled).toBe(false);
   });
 

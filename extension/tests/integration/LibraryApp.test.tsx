@@ -74,6 +74,7 @@ vi.mock('wxt/browser', async () => {
 
 import LibraryApp from '@/entrypoints/library/App';
 import { ProjectArchiveError } from '@/lib/export/project-archive-contract';
+import { t } from '@/lib/shared/i18n';
 
 const project = {
   id: 'project-1',
@@ -126,7 +127,8 @@ describe('專案庫', () => {
     fireEvent.click(await screen.findByRole('button', { name: '刪除' }));
     fireEvent.click(screen.getByRole('button', { name: '永久刪除' }));
 
-    expect(await screen.findByText('durable delete failed')).toBeTruthy();
+    // An internal failure's own wording is never shown; the page's own copy is.
+    expect(await screen.findByText(t().library.operationFailed)).toBeTruthy();
     expect(projectActions.clearSelectedProject).not.toHaveBeenCalled();
     // Mirrors the export flow: the failure reports through the page-level
     // alert, so the modal must close instead of aria-hiding that alert.
@@ -267,7 +269,7 @@ describe('專案庫', () => {
     fireEvent.click(await screen.findByRole('button', { name: '下載「安全教學」的備份' }));
     fireEvent.click(screen.getByRole('button', { name: '下載 .howbeam' }));
 
-    expect((await screen.findByRole('alert')).textContent).toContain('匯出空間不足');
+    expect((await screen.findByRole('alert')).textContent).toContain(t().library.operationFailed);
     expect(screen.getByText(project.title)).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect((screen.getByRole('button', { name: '下載「安全教學」的備份' }) as HTMLButtonElement).disabled).toBe(false);
@@ -285,7 +287,7 @@ describe('專案庫', () => {
       target: { files: [new File(['broken'], 'broken.howbeam')] },
     });
 
-    expect((await screen.findByRole('alert')).textContent).toContain('檔案內容損毀');
+    expect((await screen.findByRole('alert')).textContent).toContain(t().library.operationFailed);
     expect(screen.getByText(project.title)).toBeTruthy();
     expect(database.createProjectFromSteps).not.toHaveBeenCalled();
     expect(database.getProjectSummaries).toHaveBeenCalledOnce();

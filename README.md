@@ -40,8 +40,8 @@
 打開終端機，依序執行：
 
 ```bash
-git clone https://github.com/Yizhe0407/Stepmark.git
-cd Stepmark/extension
+git clone https://github.com/Yizhe0407/Howbeam.git
+cd Howbeam/extension
 pnpm install
 pnpm build
 ```
@@ -49,7 +49,7 @@ pnpm build
 建置完成後，擴充功能就在這個資料夾裡：
 
 ```text
-Stepmark/extension/.output/chrome-mv3
+Howbeam/extension/.output/chrome-mv3
 ```
 
 記下這個位置，下一步會用到。
@@ -75,7 +75,7 @@ Stepmark/extension/.output/chrome-mv3
 ### 用 Firefox？
 
 ```bash
-cd Stepmark/extension
+cd Howbeam/extension
 pnpm install
 pnpm build:firefox
 ```
@@ -182,7 +182,7 @@ PDF 與 HTML 會排成一份簡潔的正式文件：白底黑字，標題下有�
 ## 更新到新版本
 
 ```bash
-cd Stepmark
+cd Howbeam
 git pull
 cd extension
 pnpm install
@@ -210,7 +210,7 @@ pnpm build
 點擊會導向新頁面的連結時，Howbeam 會先拍下「點擊前」的畫面，再放行導覽，所以步驟是對的。「步驟」模式會跟著你錄；「標註」模式只針對單一畫面：按「擷取」前可以自由切換分頁或換頁，擷取之後換頁就會停止。
 
 **建置失敗？**
-先確認 `node -v` 是 24.22.1 以上，且是在 `Stepmark/extension` 資料夾裡執行 `pnpm install`。
+先確認 `node -v` 是 24.22.1 以上，且是在 `Howbeam/extension` 資料夾裡執行 `pnpm install`。
 
 ---
 

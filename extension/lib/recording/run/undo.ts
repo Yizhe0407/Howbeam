@@ -1,5 +1,5 @@
 import type { HowbeamSnapshotHistoryMessage, RecordingControlResult } from '../../runtime/messages';
-import { UNDO_WINDOW_MS } from '../../storage/recording-state';
+import { UNDO_WINDOW_MS } from '../../shared/undo-window';
 import type { PendingUndoRecord } from '../background/pending-undo-store';
 import { isSuperseded, type RunActor } from './actor';
 import type { RunPorts } from './ports';

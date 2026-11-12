@@ -6,7 +6,7 @@ import { buttonVariants } from '@/components/ui/button';
 import InlineAlert from '@/components/shared/InlineAlert';
 import OpenEditorButton from '@/components/popup/OpenEditorButton';
 import RecordTargetPicker from '@/components/popup/RecordTargetPicker';
-import { reportError } from '@/components/shared/report-error';
+import { reportError } from '@/lib/runtime/report-error';
 import { cn } from '@/lib/shared/utils';
 import type { RecordingMode, RecordingState } from '@/lib/storage/recording-state';
 import { startRecording } from '@/lib/project/project-actions';
@@ -27,6 +27,7 @@ import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { copyText } from '@/lib/shared/i18n/copy';
+import { UserMessageError } from '@/lib/shared/user-message-error';
 
 interface Props {
   recording: RecordingState;
@@ -187,7 +188,7 @@ export default function RecordControls({
       const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
       if (!isRecordableTabUrl(activeTab?.url)) {
         setRestrictedPage(true);
-        throw new Error(t().popup.restrictedPageError);
+        throw new UserMessageError(t().popup.restrictedPageError);
       }
       await startRecording(mode, targetProjectId);
       onStarted?.();

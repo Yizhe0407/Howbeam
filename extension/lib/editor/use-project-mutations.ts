@@ -9,6 +9,7 @@ import { addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteP
 import { entryId, type Project, type Step, type StepEntry } from '@/lib/storage/models';
 import { sectionsInRows, type ProjectSection, type RailRow } from '@/lib/storage/project-sections';
 import { t, type Messages } from '@/lib/shared/i18n';
+import { UserMessageError } from '@/lib/shared/user-message-error';
 
 /** A structural edit with its own progress/failure copy in the i18n catalog. */
 type ProjectMutationOperation = Exclude<keyof Messages['editor']['mutations'], 'conflict'>;
@@ -197,7 +198,7 @@ export function useProjectMutations({
     const previousGroup = entries.find(
       (entry): entry is GroupEntry => entry.kind === 'group' && entry.anchor.id === anchorId,
     );
-    if (!previousGroup) throw new Error(t().editor.mutations.reorderAnnotations.groupMissing);
+    if (!previousGroup) throw new UserMessageError(t().editor.mutations.reorderAnnotations.groupMissing);
     const previousAnnotationIds = previousGroup.annotations.map((annotation) => annotation.id);
     await runProjectMutation({
       operation: 'reorderAnnotations',
@@ -249,7 +250,7 @@ export function useProjectMutations({
       operation: 'deleteStep',
       mutate: async (snapshot, projectId) => {
         const deletingEntry = snapshot.entries.find((entry) => entryId(entry) === currentEntryId);
-        if (!deletingEntry) throw new Error(t().editor.mutations.deleteStep.changed);
+        if (!deletingEntry) throw new UserMessageError(t().editor.mutations.deleteStep.changed);
         const deletingIndex = snapshot.entryIds.indexOf(currentEntryId);
         const result = await deleteProjectEntriesAtomically(
           projectId,
@@ -276,7 +277,7 @@ export function useProjectMutations({
 
   async function handleDeleteAnnotation(step: Step) {
     const currentEntry = requireSelectedEntry(step.groupId);
-    if (currentEntry.kind !== 'group') throw new Error(t().editor.mutations.deleteAnnotation.notSnapshot);
+    if (currentEntry.kind !== 'group') throw new UserMessageError(t().editor.mutations.deleteAnnotation.notSnapshot);
     const groupId = step.groupId;
     if (!groupId) return;
     const annotationIndex = currentEntry.annotations.findIndex((annotation) => annotation.id === step.id);

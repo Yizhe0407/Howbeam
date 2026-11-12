@@ -25,7 +25,7 @@ import SourcePermissionDialog from '@/components/editor/SourcePermissionDialog';
 import { useBusyNotice, useUndoNotice } from '@/components/editor/use-notices';
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import SectionTitleDialog, { type SectionDialogRequest } from '@/components/editor/SectionTitleDialog';
-import { usePermissionFlow } from '@/components/editor/use-permission-flow';
+import { usePermissionFlow } from '@/lib/editor/use-permission-flow';
 import { useProjectUndo } from '@/lib/editor/use-project-undo';
 import { useProjectMutations } from '@/lib/editor/use-project-mutations';
 import { exportImagesAsZip } from '@/lib/export/export-images';
@@ -47,8 +47,10 @@ import type {
   CancelStepRecaptureResult,
   FocusStepRecaptureSourceResult,
 } from '@/lib/runtime/messages';
-import { reportError } from '@/components/shared/report-error';
+import { reportError } from '@/lib/runtime/report-error';
 import { copyText } from '@/lib/shared/i18n/copy';
+import { UserMessageError } from '@/lib/shared/user-message-error';
+import { useEditorErrors } from '@/lib/editor/editor-errors';
 
 async function showRecordedTab(tabId: number): Promise<void> {
   try {
@@ -96,7 +98,10 @@ function EditorApp() {
     () => optimisticChanges.reduce((shown, change) => change.apply(shown), { entries: dbEntries, sections: dbSections }),
     [dbEntries, dbSections, optimisticChanges],
   );
-  const [operationError, setOperationError] = useState<string | null>(null);
+  const errors = useEditorErrors();
+  const { report: reportFlowError, reporterFor } = errors;
+  const reportPermissionError = useMemo(() => reporterFor('permission'), [reporterFor]);
+  const reportMutationError = useMemo(() => reporterFor('mutation'), [reporterFor]);
   const handledRecaptureResult = useRef<string | null>(null);
 
   const {
@@ -125,7 +130,7 @@ function EditorApp() {
     whenIdle: operations.idle,
     flushDescriptions,
     requireSelectedEntry,
-    setOperationError,
+    setOperationError: reportPermissionError,
     entryMode: (afterEntryId) => {
       const followed = afterEntryId === undefined ? entries.at(-1) : entries.find((entry) => entryId(entry) === afterEntryId);
       return followed?.kind === 'group' ? 'snapshot' : 'steps';
@@ -149,7 +154,10 @@ function EditorApp() {
     onSelectionInteraction: () => {
       if (isPermissionFlowLocked()) clearPreparedPermission();
     },
-    onSelectionSaved: () => setOperationError(null),
+    onSelectionSaved: () => {
+      reportFlowError('save', null);
+      reportFlowError('selection', null);
+    },
   });
 
   useEffect(() => {
@@ -181,7 +189,7 @@ function EditorApp() {
     // The replaced image reaches the screen through the change broadcast like any other write.
     setSelectedEntryId(result.entryId);
     setZoomOpen(false);
-    setOperationError(result.status === 'failed' ? (result.copy ? copyText(result.copy) : t().editor.recaptureFailed) : null);
+    reportFlowError('recapture', result.status === 'failed' ? (result.copy ? copyText(result.copy) : t().editor.recaptureFailed) : null);
     if (result.status === 'replaced') {
       toast.success(t().editor.recaptureReplaced);
     } else if (result.status === 'cancelled') {
@@ -190,7 +198,7 @@ function EditorApp() {
     void ackStepRecaptureResult(result.runId, result.sessionId).catch((ackError) => {
       console.warn('[howbeam] failed to acknowledge the recapture result', ackError);
     });
-  }, [recording.recaptureResult, sessionId, setSelectedEntryId, setZoomOpen]);
+  }, [recording.recaptureResult, reportFlowError, sessionId, setSelectedEntryId, setZoomOpen]);
 
   async function flushDescriptions(): Promise<void> {
     try {
@@ -199,7 +207,7 @@ function EditorApp() {
       // A failed save may mean the Project was deleted elsewhere; a fresh read shows it read-only when it was.
       requestReload();
       console.error('[howbeam] failed to save descriptions before an editor operation', saveError);
-      setOperationError(t().editor.descriptionSaveRetry);
+      reportFlowError('save', t().editor.descriptionSaveRetry);
       throw saveError;
     }
   }
@@ -224,17 +232,16 @@ function EditorApp() {
 
   function requireSelectedEntry(expectedEntryId?: string): StepEntry {
     if (!selectedEntry || (expectedEntryId !== undefined && expectedEntryId !== entryId(selectedEntry))) {
-      throw new Error(t().editor.selectedEntryMissing);
+      throw new UserMessageError(t().editor.selectedEntryMissing);
     }
     return selectedEntry;
   }
 
-  // `selectEntry` propagates genuine save failures (it swallows only the
-  // pending-confirmation case); fill the banner only when nothing else already surfaced one.
+  // A failed save already reported itself; anything else is a failed switch.
   function selectEntrySafely(id: string): void {
     void selectEntry(id).catch((selectionError) => {
       console.error('[howbeam] failed to switch steps', selectionError);
-      setOperationError((current) => current ?? t().editor.selectFailed);
+      if (!errors.slots.save) reportFlowError('selection', t().editor.selectFailed);
     });
   }
 
@@ -260,7 +267,7 @@ function EditorApp() {
     requireSelectedEntry,
     setSelectedEntryId,
     setZoomOpen,
-    setOperationError,
+    setOperationError: reportMutationError,
     undoAction,
     offeredUndo,
     offerUndo,
@@ -281,9 +288,9 @@ function EditorApp() {
     if (!runId) return;
     try {
       const result = await send(runId);
-      if (!result.ok) setOperationError(copyText(result.error));
+      if (!result.ok) reportFlowError('recapture', copyText(result.error));
     } catch (error) {
-      setOperationError(reportError(label, error, fallback));
+      reportFlowError('recapture', reportError(label, error, fallback));
     }
   }
 
@@ -309,11 +316,11 @@ function EditorApp() {
 
   /** Runs inside the export's queued turn. */
   async function publicationEntries(signal: AbortSignal) {
-    if (!sessionId) throw new Error(t().editor.publishTargetMissing);
+    if (!sessionId) throw new UserMessageError(t().editor.publishTargetMissing);
     await flushDescriptions();
     throwIfAborted(signal);
     const snapshot = await reload();
-    if (!snapshot) throw new Error(t().editor.publishTargetMissing);
+    if (!snapshot) throw new UserMessageError(t().editor.publishTargetMissing);
     throwIfAborted(signal);
     return {
       entries: snapshot.entries,
@@ -328,17 +335,14 @@ function EditorApp() {
 
   async function exportImages(signal: AbortSignal) {
     const publication = await publicationEntries(signal);
-    const stepsToExport = publication.entries.flatMap((entry) =>
-      entry.kind === 'single' ? [entry.step] : [entry.anchor, ...entry.annotations],
-    );
-    return exportImagesAsZip(stepsToExport, undefined, signal);
+    return exportImagesAsZip(publication.entries, undefined, signal);
   }
 
-  // Rejects instead of reporting through `operationError`: the caller's input
+  // Rejects instead of reporting into the error banner: the caller's input
   // must roll back to the stored value, so it needs the failure directly.
   async function updateProjectMetadata(changes: ProjectMetadataChanges): Promise<void> {
-    if (!project || projectDeleted) throw new Error(t().editor.editTargetMissing);
-    if (editingBlocked()) throw new Error(t().editor.editBusy);
+    if (!project || projectDeleted) throw new UserMessageError(t().editor.editTargetMissing);
+    if (editingBlocked()) throw new UserMessageError(t().editor.editBusy);
     const projectId = project.id;
     await operations.run(null, async () => {
       try {
@@ -354,6 +358,11 @@ function EditorApp() {
   const exportShown = useDeferredBusy(exporting);
   const loadingShown = useDeferredBusy(projectLoadState === 'loading');
   const editingLocked = projectDeleted || exportShown || permissionFlowActive || editingElsewhere;
+
+  // While a recapture runs, its own dialog shows the recapture and permission errors.
+  const bannerError = errors.latest(
+    recaptureActive ? ['save', 'selection', 'mutation'] : ['save', 'selection', 'mutation', 'permission', 'recapture'],
+  );
 
   useBusyNotice(operations.running?.label ?? null);
   useUndoNotice({
@@ -392,7 +401,7 @@ function EditorApp() {
       <RecaptureProgressDialog
         open={recaptureActive}
         phase={recording.recapture?.phase ?? 'awaiting-target'}
-        error={recaptureActive ? operationError : null}
+        error={recaptureActive ? errors.latest(['recapture', 'permission']) : null}
         onFocusSource={() => void focusRecaptureSource()}
         onCancel={() => void cancelRecapture()}
       />
@@ -436,11 +445,11 @@ function EditorApp() {
           </Alert>
         </div>
       )}
-      {(error || dataError || (operationError && !recaptureActive)) && (
+      {(error || dataError || bannerError) && (
         <div className="border-b-2 border-border bg-card px-3 py-3 sm:px-7">
           <Alert variant="destructive">
             <AlertCircle />
-            <AlertDescription>{error ? copyText(error) : dataError ?? operationError}</AlertDescription>
+            <AlertDescription>{error ? copyText(error) : dataError ?? bannerError}</AlertDescription>
           </Alert>
         </div>
       )}

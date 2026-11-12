@@ -4,7 +4,7 @@ import { compositeStepEntry } from '@/lib/export/entry-render';
 import { getEntryPrivacyState, type StepEntry } from '@/lib/storage/models';
 import { t } from '@/lib/shared/i18n';
 import InlineAlert from '@/components/shared/InlineAlert';
-import { reportError } from '@/components/shared/report-error';
+import { reportError } from '@/lib/runtime/report-error';
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 

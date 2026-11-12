@@ -109,7 +109,7 @@ describe('createRegionCapture', () => {
     let finishCapture!: () => void;
     const onCapture = vi.fn(() => new Promise<void>((resolve) => { finishCapture = resolve; }));
     const controller = createRegionCapture({ onCapture, viewport: () => viewport });
-    const blocker = controller.host.shadowRoot!.querySelector<HTMLElement>('.ft-region-blocker')!;
+    const blocker = controller.host.shadowRoot!.querySelector<HTMLElement>('.hb-region-blocker')!;
 
     blocker.dispatchEvent(pointerEvent('pointerdown', 10, 12));
     blocker.dispatchEvent(pointerEvent('pointermove', 50, 52));
@@ -118,7 +118,7 @@ describe('createRegionCapture', () => {
     // Releasing only draws the box: nothing is captured until it is confirmed.
     expect(controller.isCapturing()).toBe(false);
     expect(frames).toHaveLength(0);
-    const confirm = controller.host.shadowRoot!.querySelector<HTMLButtonElement>('.ft-region-confirm')!;
+    const confirm = controller.host.shadowRoot!.querySelector<HTMLButtonElement>('.hb-region-confirm')!;
     expect(confirm.hidden).toBe(false);
     confirm.click();
 
@@ -146,8 +146,8 @@ describe('createRegionCapture', () => {
   it('cycles Tab focus onto the cancel button through shadow retargeting', async () => {
     const controller = createRegionCapture({ onCapture: vi.fn(), viewport: () => viewport });
     const root = controller.host.shadowRoot!;
-    const blocker = root.querySelector<HTMLElement>('.ft-region-blocker')!;
-    const cancelButton = root.querySelector<HTMLButtonElement>('.ft-region-cancel')!;
+    const blocker = root.querySelector<HTMLElement>('.hb-region-blocker')!;
+    const cancelButton = root.querySelector<HTMLButtonElement>('.hb-region-cancel')!;
     await flushMicrotasks(); // let the initial blocker focus land before spying
     const blockerFocus = vi.spyOn(blocker, 'focus');
     const cancelFocus = vi.spyOn(cancelButton, 'focus');
@@ -172,11 +172,11 @@ describe('createRegionCapture', () => {
     const onCapture = vi.fn(() => new Promise<void>((resolve) => { finishCapture = resolve; }));
     const onCancel = vi.fn();
     const controller = createRegionCapture({ onCapture, onCancel, viewport: () => viewport });
-    const blocker = controller.host.shadowRoot!.querySelector<HTMLElement>('.ft-region-blocker')!;
+    const blocker = controller.host.shadowRoot!.querySelector<HTMLElement>('.hb-region-blocker')!;
 
     blocker.dispatchEvent(pointerEvent('pointerdown', 10, 12));
     blocker.dispatchEvent(pointerEvent('pointerup', 50, 52));
-    controller.host.shadowRoot!.querySelector<HTMLButtonElement>('.ft-region-confirm')!.click();
+    controller.host.shadowRoot!.querySelector<HTMLButtonElement>('.hb-region-confirm')!.click();
     frames.shift()!(0);
     await flushMicrotasks();
     frames.shift()!(16);
@@ -207,9 +207,9 @@ describe('createRegionCapture', () => {
     const onCapture = vi.fn();
     const controller = createRegionCapture({ onCapture, viewport: () => viewport });
     const root = controller.host.shadowRoot!;
-    const blocker = root.querySelector<HTMLElement>('.ft-region-blocker')!;
-    const selection = root.querySelector<HTMLElement>('.ft-region-selection')!;
-    expect(root.querySelector<HTMLButtonElement>('.ft-region-confirm')!.hidden).toBe(true);
+    const blocker = root.querySelector<HTMLElement>('.hb-region-blocker')!;
+    const selection = root.querySelector<HTMLElement>('.hb-region-selection')!;
+    expect(root.querySelector<HTMLButtonElement>('.hb-region-confirm')!.hidden).toBe(true);
 
     blocker.dispatchEvent(pointerEvent('pointerdown', 10, 10));
     blocker.dispatchEvent(pointerEvent('pointerup', 50, 40));
@@ -220,7 +220,7 @@ describe('createRegionCapture', () => {
     blocker.dispatchEvent(pointerEvent('pointermove', 50, 35));
     blocker.dispatchEvent(pointerEvent('pointerup', 50, 35));
     // Drag the south-east handle by (+10, +10).
-    const handle = root.querySelector<HTMLElement>('.ft-region-handle[data-handle="se"]')!;
+    const handle = root.querySelector<HTMLElement>('.hb-region-handle[data-handle="se"]')!;
     const down = pointerEvent('pointerdown', 70, 50);
     Object.defineProperty(down, 'target', { value: handle });
     blocker.dispatchEvent(down);
@@ -240,9 +240,9 @@ describe('createRegionCapture', () => {
     const onCancel = vi.fn();
     const controller = createRegionCapture({ onCapture: vi.fn(), onCancel, viewport: () => viewport });
     const root = controller.host.shadowRoot!;
-    const blocker = root.querySelector<HTMLElement>('.ft-region-blocker')!;
-    const selection = root.querySelector<HTMLElement>('.ft-region-selection')!;
-    const confirm = root.querySelector<HTMLButtonElement>('.ft-region-confirm')!;
+    const blocker = root.querySelector<HTMLElement>('.hb-region-blocker')!;
+    const selection = root.querySelector<HTMLElement>('.hb-region-selection')!;
+    const confirm = root.querySelector<HTMLButtonElement>('.hb-region-confirm')!;
 
     blocker.dispatchEvent(pointerEvent('pointerdown', 10, 10));
     blocker.dispatchEvent(pointerEvent('pointerup', 50, 40));
@@ -258,8 +258,8 @@ describe('createRegionCapture', () => {
   it('starts a new box when the pointer goes down outside the adjustable one, and rejects a tiny box', () => {
     const controller = createRegionCapture({ onCapture: vi.fn(), viewport: () => viewport });
     const root = controller.host.shadowRoot!;
-    const blocker = root.querySelector<HTMLElement>('.ft-region-blocker')!;
-    const selection = root.querySelector<HTMLElement>('.ft-region-selection')!;
+    const blocker = root.querySelector<HTMLElement>('.hb-region-blocker')!;
+    const selection = root.querySelector<HTMLElement>('.hb-region-selection')!;
 
     blocker.dispatchEvent(pointerEvent('pointerdown', 10, 10));
     blocker.dispatchEvent(pointerEvent('pointerup', 50, 40));
@@ -267,7 +267,7 @@ describe('createRegionCapture', () => {
     blocker.dispatchEvent(pointerEvent('pointerup', 82, 72));
 
     expect(selection.dataset.visible).toBe('false');
-    expect(root.querySelector<HTMLButtonElement>('.ft-region-confirm')!.hidden).toBe(true);
+    expect(root.querySelector<HTMLButtonElement>('.hb-region-confirm')!.hidden).toBe(true);
   });
 
   it('supports Escape cancellation without capturing', () => {

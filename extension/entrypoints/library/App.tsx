@@ -24,7 +24,7 @@ import AppHeader from '@/components/shared/AppHeader';
 import Mascot from '@/components/shared/Mascot';
 import BackupPausedNotice from '@/components/shared/BackupPausedNotice';
 import { useAutoFolderBackup } from '@/lib/backup/use-folder-backup';
-import { reportError } from '@/components/shared/report-error';
+import { reportError } from '@/lib/runtime/report-error';
 import { usePendingAction } from '@/components/shared/use-pending-action';
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { intlLocale, t } from '@/lib/shared/i18n';

@@ -19,14 +19,15 @@ vi.mock('@/lib/export/entry-render', () => ({
   compositeStepEntry: mocks.composite,
 }));
 
+import { PROJECT_EXPORT_LIMITS, ProjectExportLimitError } from '@/lib/export/project-export-contract';
 import {
-  IMAGE_ZIP_EXPORT_LIMITS,
-  ImageZipExportLimitError,
   RedactionReviewRequiredError,
   exportImagesAsZip,
   localDateStamp,
 } from '@/lib/export/export-images';
-import { type Step } from '@/lib/storage/models';
+import { buildStepEntries, type Step } from '@/lib/storage/models';
+
+const asEntries = (steps: Step[]) => buildStepEntries(steps);
 
 function step(order: number): Step {
   return {
@@ -42,8 +43,8 @@ function step(order: number): Step {
   };
 }
 
-it('keeps the persisted-limit-derived ZIP export budgets at their established values', () => {
-  expect(IMAGE_ZIP_EXPORT_LIMITS).toEqual({
+it('keeps the persisted-limit-derived image export budgets at their established values', () => {
+  expect(PROJECT_EXPORT_LIMITS).toMatchObject({
     maxEntries: 2_000,
     maxImageBytes: 16 * 1024 * 1024,
     maxTotalImageBytes: 128 * 1024 * 1024,
@@ -68,7 +69,7 @@ describe('image export', () => {
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:archive');
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 
-    const result = await exportImagesAsZip([step(0), step(1), step(2)]);
+    const result = await exportImagesAsZip(asEntries([step(0), step(1), step(2)]));
 
     expect(mocks.composite).toHaveBeenCalledTimes(3);
     expect(mocks.composite).toHaveBeenNthCalledWith(1, expect.objectContaining({ kind: 'single' }), 'image/jpeg');
@@ -91,7 +92,7 @@ describe('image export', () => {
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
     mocks.download.mockRejectedValue(new Error('download failed'));
 
-    await expect(exportImagesAsZip([step(0)])).rejects.toThrow('download failed');
+    await expect(exportImagesAsZip(asEntries([step(0)]))).rejects.toThrow('download failed');
 
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:archive');
   });
@@ -103,7 +104,7 @@ describe('image export', () => {
       return new Blob(['cancelled']);
     });
 
-    await expect(exportImagesAsZip([step(0), step(1)], undefined, controller.signal)).rejects.toMatchObject({
+    await expect(exportImagesAsZip(asEntries([step(0), step(1)]), undefined, controller.signal)).rejects.toMatchObject({
       name: 'AbortError',
     });
 
@@ -116,26 +117,26 @@ describe('image export', () => {
     pending.redactions = [{ id: 'mask', kind: 'solid', bounds: { x: 1, y: 2, width: 3, height: 4 } }];
     pending.redactionReviewRequired = true;
 
-    await expect(exportImagesAsZip([step(1), pending])).rejects.toMatchObject({
+    await expect(exportImagesAsZip(asEntries([step(1), pending]))).rejects.toMatchObject({
       name: 'RedactionReviewRequiredError',
       ordinals: [2],
     });
-    await expect(exportImagesAsZip([pending])).rejects.toBeInstanceOf(RedactionReviewRequiredError);
+    await expect(exportImagesAsZip(asEntries([pending]))).rejects.toBeInstanceOf(RedactionReviewRequiredError);
     expect(mocks.composite).not.toHaveBeenCalled();
     expect(mocks.download).not.toHaveBeenCalled();
   });
 
 
   it('resolves null without downloading when no entry can be exported', async () => {
-    await expect(exportImagesAsZip([])).resolves.toBeNull();
-    await expect(exportImagesAsZip([{ ...step(0), screenshotBlob: undefined }])).resolves.toBeNull();
+    await expect(exportImagesAsZip(asEntries([]))).resolves.toBeNull();
+    await expect(exportImagesAsZip(asEntries([{ ...step(0), screenshotBlob: undefined }]))).resolves.toBeNull();
     expect(mocks.download).not.toHaveBeenCalled();
   });
 
   it('rejects an excessive image count before compositing or creating a download', async () => {
-    const steps = Array.from({ length: IMAGE_ZIP_EXPORT_LIMITS.maxEntries + 1 }, (_, index) => step(index));
+    const steps = Array.from({ length: PROJECT_EXPORT_LIMITS.maxEntries + 1 }, (_, index) => step(index));
 
-    await expect(exportImagesAsZip(steps)).rejects.toBeInstanceOf(ImageZipExportLimitError);
+    await expect(exportImagesAsZip(asEntries(steps))).rejects.toBeInstanceOf(ProjectExportLimitError);
     expect(mocks.composite).not.toHaveBeenCalled();
     expect(mocks.download).not.toHaveBeenCalled();
   });
@@ -143,11 +144,11 @@ describe('image export', () => {
   it('rejects an oversized composited image before allocating its ArrayBuffer', async () => {
     const arrayBuffer = vi.fn(async () => new ArrayBuffer(1));
     mocks.composite.mockResolvedValueOnce({
-      size: IMAGE_ZIP_EXPORT_LIMITS.maxImageBytes + 1,
+      size: PROJECT_EXPORT_LIMITS.maxImageBytes + 1,
       arrayBuffer,
     } as unknown as Blob);
 
-    await expect(exportImagesAsZip([step(0)])).rejects.toBeInstanceOf(ImageZipExportLimitError);
+    await expect(exportImagesAsZip(asEntries([step(0)]))).rejects.toBeInstanceOf(ProjectExportLimitError);
     expect(arrayBuffer).not.toHaveBeenCalled();
     expect(mocks.download).not.toHaveBeenCalled();
   });
@@ -155,14 +156,14 @@ describe('image export', () => {
   it('enforces the cumulative image budget before buffering the overflowing image', async () => {
     const arrayBuffer = vi.fn(async () => new ArrayBuffer(1));
     mocks.composite.mockResolvedValue({
-      size: IMAGE_ZIP_EXPORT_LIMITS.maxImageBytes,
+      size: PROJECT_EXPORT_LIMITS.maxImageBytes,
       arrayBuffer,
     } as unknown as Blob);
-    const overflowAt = IMAGE_ZIP_EXPORT_LIMITS.maxTotalImageBytes / IMAGE_ZIP_EXPORT_LIMITS.maxImageBytes + 1;
+    const overflowAt = PROJECT_EXPORT_LIMITS.maxTotalImageBytes / PROJECT_EXPORT_LIMITS.maxImageBytes + 1;
 
     await expect(
-      exportImagesAsZip(Array.from({ length: overflowAt }, (_, index) => step(index))),
-    ).rejects.toBeInstanceOf(ImageZipExportLimitError);
+      exportImagesAsZip(asEntries(Array.from({ length: overflowAt }, (_, index) => step(index)))),
+    ).rejects.toBeInstanceOf(ProjectExportLimitError);
     expect(mocks.composite).toHaveBeenCalledTimes(overflowAt);
     expect(arrayBuffer).toHaveBeenCalledTimes(overflowAt - 1);
     expect(mocks.download).not.toHaveBeenCalled();

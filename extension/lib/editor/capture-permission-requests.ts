@@ -8,6 +8,7 @@ import type { StepRecaptureTarget } from '../storage/recording-state';
 import type { PreparedCapturePermission } from './editor-app-model';
 import type { StepEntry } from '../storage/models';
 import { copyText } from '@/lib/shared/i18n/copy';
+import { UserMessageError } from '@/lib/shared/user-message-error';
 
 /**
  * The editor's request layer for source-permission preflights and run starts.
@@ -23,7 +24,7 @@ export function recaptureTargetForEntry(entry: StepEntry): StepRecaptureTarget {
   // Replacing the base image of a multi-annotation snapshot would invalidate
   // every other annotation on it, so that case is refused outright.
   const [annotation, ...others] = entry.annotations;
-  if (!annotation || others.length > 0) throw new Error(t().editor.multiAnnotationRecaptureBlocked);
+  if (!annotation || others.length > 0) throw new UserMessageError(t().editor.multiAnnotationRecaptureBlocked);
   return {
     kind: 'snapshot-singleton',
     anchorId: entry.anchor.id,
@@ -41,7 +42,7 @@ export async function requestRecapturePreflight(
     sessionId,
     target,
   });
-  if (!result.ok) throw new Error(copyText(result.message));
+  if (!result.ok) throw new UserMessageError(copyText(result.message));
   validatePreparedPermissionSource(result.sourceOrigin, result.permissionPattern);
   return {
     source: {
@@ -68,7 +69,7 @@ export async function requestContinuationPreflight(
     // A Project without steps has no source page to lock onto. That is not a
     // terminal error: the dialog still opens and offers the site-agnostic
     // 「改在其他頁面接續」 path, which needs no stored source.
-    if (result.code !== 'SOURCE_NOT_FOUND') throw new Error(copyText(result.message));
+    if (result.code !== 'SOURCE_NOT_FOUND') throw new UserMessageError(copyText(result.message));
     return {
       source: { kind: 'unavailable', reason: copyText(result.message) },
       entryId: null,
@@ -90,7 +91,7 @@ export async function requestContinuationPreflight(
 
 export async function startRecordingOrThrow(message: StartRecordingMessage): Promise<void> {
   const started = await sendToBackground(message);
-  if (!started.ok) throw new Error(copyText(started.error));
+  if (!started.ok) throw new UserMessageError(copyText(started.error));
 }
 
 export async function startStepRecaptureOrThrow(
@@ -98,5 +99,5 @@ export async function startStepRecaptureOrThrow(
   target: StepRecaptureTarget,
 ): Promise<void> {
   const result = await sendToBackground({ type: 'START_STEP_RECAPTURE', sessionId, target });
-  if (!result.ok) throw new Error(copyText(result.error));
+  if (!result.ok) throw new UserMessageError(copyText(result.error));
 }

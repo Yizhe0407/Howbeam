@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
-import { UNDO_WINDOW_MS } from '@/lib/storage/recording-state';
+import { UNDO_WINDOW_MS } from '@/lib/shared/undo-window';
 
 export const RECORDING_TOOLBAR_UNDO_KEY = 'howbeam:recordingToolbarUndo';
 

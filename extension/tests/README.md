@@ -41,7 +41,7 @@ pnpm benchmark:detection
 - 每項測試使用獨立的 Chromium profile，測試前清除 extension storage 與 IndexedDB。
 - E2E 專用 extension 複本位於 `.output/e2e-chrome-mv3`；production manifest 不會被修改。
 - E2E 複本預先授予 `<all_urls>`，避免權限提示干擾自動化；另只在該複本加入 `clipboardRead`，用來讀回並驗證 production UI 寫入的 PNG。
-- 測試固定單 worker 執行，避免 `activeTab`、`captureVisibleTab` quota 與系統剪貼簿互相干擾。
+- 每個測試檔各自平行執行（Playwright 預設 worker 數），同一檔內的測試依序執行；每項測試都有自己的瀏覽器 profile，彼此不共用 storage 或剪貼簿。
 - 失敗時保存 trace、頁面截圖與 console error；成功案例不保留大型 artifact。
 
 E2E 與 Vitest 的測試檔及測試項目會隨功能持續增加，實際數量與結果請以當次測試命令輸出為準；視覺編輯、重拍與隱私遮罩的跨 context 實機流程仍列在手動／E2E 驗收清單。

@@ -10,7 +10,7 @@ import DescriptionField from './DescriptionField';
 import AnnotationList from './AnnotationList';
 import EditableTitle from '@/components/shared/EditableTitle';
 import InlineAlert from '@/components/shared/InlineAlert';
-import { reportError } from '@/components/shared/report-error';
+import { reportError } from '@/lib/runtime/report-error';
 import { PERSISTED_PROJECT_LIMITS } from '@/lib/storage/persistence-limits';
 import { t } from '@/lib/shared/i18n';
 

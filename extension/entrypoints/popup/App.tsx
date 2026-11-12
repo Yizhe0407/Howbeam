@@ -9,7 +9,7 @@ import BrandMark from '@/components/shared/BrandMark';
 import { needsEditorRecovery } from '@/lib/recording/recording-recovery';
 import { openLibrary, openSettings } from '@/lib/runtime/actions';
 import { ensureSelectedProject } from '@/lib/project/project-actions';
-import { reportError } from '@/components/shared/report-error';
+import { reportError } from '@/lib/runtime/report-error';
 import { t } from '@/lib/shared/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { copyText } from '@/lib/shared/i18n/copy';

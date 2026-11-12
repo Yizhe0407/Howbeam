@@ -56,8 +56,8 @@ function RunStatus({ paused, count, small }: { paused: boolean; count: number; s
   const tone = paused ? 'muted' : undefined;
   return (
     <>
-      <span className="ft-dot" data-tone={tone} aria-hidden="true" />
-      <span className="ft-count-badge" data-tone={tone} data-size={small ? 'small' : undefined}>{count}</span>
+      <span className="hb-dot" data-tone={tone} aria-hidden="true" />
+      <span className="hb-count-badge" data-tone={tone} data-size={small ? 'small' : undefined}>{count}</span>
     </>
   );
 }
@@ -212,7 +212,7 @@ export default function RecordingToolbar({
   // mode or phase) and the viewport rather than a hard-coded breakpoint.
   useLayoutEffect(() => {
     const toolbar = floatingRef.current;
-    if (!toolbar?.classList.contains('ft-toolbar')) return;
+    if (!toolbar?.classList.contains('hb-toolbar')) return;
     const fit = () => {
       toolbar.removeAttribute('data-compact');
       // Measured on the real children: scrollWidth would also count the tooltips'
@@ -261,7 +261,7 @@ export default function RecordingToolbar({
     <>
       <style>{recordingToolbarStyles}</style>
       <div
-        className="ft-layer"
+        className="hb-layer"
         data-theme={theme}
         onKeyDown={(event) => {
           if (event.key !== 'Escape' || pendingRef.current) return;
@@ -270,7 +270,7 @@ export default function RecordingToolbar({
       >
         {confirmDiscard && (
           <div
-            className="ft-modal-backdrop"
+            className="hb-modal-backdrop"
             aria-hidden="true"
             onPointerDown={() => {
               if (pendingRef.current) return;
@@ -279,42 +279,42 @@ export default function RecordingToolbar({
           />
         )}
         <div
-          className="ft-position"
+          className="hb-position"
           data-horizontal={corner.endsWith('left') ? 'left' : 'right'}
           data-vertical={corner.startsWith('top') ? 'top' : 'bottom'}
           style={position ? { transform: `translate3d(${position.x}px, ${position.y}px, 0)` } : undefined}
         >
           {(message || (state.error && !invalidated) || notice) && (
-            <div className="ft-message" data-kind="error" role="alert">
+            <div className="hb-message" data-kind="error" role="alert">
               {message ?? ((state.error && !invalidated) ? copyText(state.error) : notice)}
             </div>
           )}
           {!message && !state.error && !notice && showSuccess && (
-            <div className="ft-message" role="status"><Check className="ft-success" />{t().toolbar.recorded}</div>
+            <div className="hb-message" role="status"><Check className="hb-success" />{t().toolbar.recorded}</div>
           )}
           {hint && !collapsed && !message && !state.error && !notice && !showSuccess && !undo && !confirmDiscard && (
-            <div className="ft-hint">{hint}</div>
+            <div className="hb-hint">{hint}</div>
           )}
           {undo && (
-            <div className="ft-snackbar" role="status">
+            <div className="hb-snackbar" role="status">
               <span>{modeCopy.itemRemoved(undo.itemNumber)}</span>
               <button type="button" onClick={handleRestore} disabled={busy}>{t().common.restore}</button>
             </div>
           )}
           {confirmDiscard && (
             <div
-              className="ft-confirm"
+              className="hb-confirm"
               role="alertdialog"
               aria-modal="true"
               aria-labelledby={confirmTitleId}
               aria-describedby={confirmDescriptionId}
               onKeyDown={handleConfirmKeyDown}
             >
-              <h2 className="ft-confirm-title" id={confirmTitleId}>{t().toolbar.discardTitle}</h2>
-              <p className="ft-confirm-copy" id={confirmDescriptionId}>
+              <h2 className="hb-confirm-title" id={confirmTitleId}>{t().toolbar.discardTitle}</h2>
+              <p className="hb-confirm-copy" id={confirmDescriptionId}>
                 {t().toolbar.discardBody}
               </p>
-              <div className="ft-confirm-actions">
+              <div className="hb-confirm-actions">
                 <button
                   ref={cancelDiscardRef}
                   type="button"
@@ -339,7 +339,7 @@ export default function RecordingToolbar({
             <button
               ref={(element) => { floatingRef.current = element; }}
               type="button"
-              className="ft-collapsed"
+              className="hb-collapsed"
               data-howbeam-toolbar-position=""
               aria-label={t().toolbar.expandLabel(statusLabel)}
               data-tooltip={t().toolbar.expandTooltip}
@@ -356,32 +356,32 @@ export default function RecordingToolbar({
               }}
             >
               <RunStatus paused={paused} count={state.runItemCount} small />
-              <span className="ft-collapsed-expand">
+              <span className="hb-collapsed-expand">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
               </span>
             </button>
           ) : (
             <div
               ref={(element) => { floatingRef.current = element; }}
-              className={`ft-toolbar${invalidated ? ' ft-toolbar--invalidated' : ''}`}
+              className={`hb-toolbar${invalidated ? ' hb-toolbar--invalidated' : ''}`}
               inert={confirmDiscard}
               role="toolbar"
               aria-label={t().toolbar.controlsLabel}
             >
               {invalidated ? (
                 <>
-                  <div className="ft-invalidated-status" role="status">
+                  <div className="hb-invalidated-status" role="status">
                     <TriangleAlert aria-hidden="true" />
-                    <span className="ft-invalidated-copy">{t().toolbar.viewportChanged}</span>
+                    <span className="hb-invalidated-copy">{t().toolbar.viewportChanged}</span>
                   </div>
-                  <div className="ft-invalidated-actions">
+                  <div className="hb-invalidated-actions">
                     {/* The invalidated shell has no collapse control (collapsing
                         would hide the only way out of the dead run), so discard
                         sits directly in the row instead of behind a menu whose
                         only item it was. */}
                     <button
                       type="button"
-                      className="ft-button"
+                      className="hb-button"
                       data-danger="true"
                       aria-label={t().toolbar.discardLabel}
                       data-tooltip={t().toolbar.discardLabel}
@@ -392,7 +392,7 @@ export default function RecordingToolbar({
                     </button>
                     <button
                       type="button"
-                      className="ft-secondary"
+                      className="hb-secondary"
                       disabled={busy}
                       onClick={() => void run('FINISH_RECORDING')}
                     >
@@ -400,7 +400,7 @@ export default function RecordingToolbar({
                     </button>
                     <button
                       type="button"
-                      className="ft-finish"
+                      className="hb-finish"
                       disabled={busy}
                       onClick={() => void run('REBUILD_INVALIDATED_SNAPSHOT')}
                     >
@@ -413,7 +413,7 @@ export default function RecordingToolbar({
                 <>
                   <button
                     type="button"
-                    className="ft-status"
+                    className="hb-status"
                     data-howbeam-toolbar-position=""
                     aria-label={t().toolbar.moveLabel(statusLabel)
                       + (state.projectTitle ? `; ${t().toolbar.appendingTo(state.projectTitle)}` : '')}
@@ -423,11 +423,11 @@ export default function RecordingToolbar({
                     onPointerUp={finishPositionDrag}
                     onPointerCancel={finishPositionDrag}
                   >
-                    <GripVertical className="ft-grip" aria-hidden="true" />
+                    <GripVertical className="hb-grip" aria-hidden="true" />
                     <RunStatus paused={paused} count={state.runItemCount} />
                   </button>
 
-                  <div className="ft-mode-switch" role="radiogroup" aria-label={t().common.recordingMode}>
+                  <div className="hb-mode-switch" role="radiogroup" aria-label={t().common.recordingMode}>
                     {MODE_OPTIONS.map((option) => (
                       <button
                         key={option}
@@ -446,7 +446,7 @@ export default function RecordingToolbar({
                   {preparingNext && (
                     <button
                       type="button"
-                      className="ft-primary"
+                      className="hb-primary"
                       data-tooltip={t().toolbar.captureFrameTooltip}
                       disabled={busy}
                       onClick={() => void run('CREATE_NEXT_SNAPSHOT')}
@@ -458,7 +458,7 @@ export default function RecordingToolbar({
                   {state.mode === 'snapshot' && !preparingNext && (
                     <button
                       type="button"
-                      className="ft-primary"
+                      className="hb-primary"
                       data-quiet={state.itemCount === 0 ? 'true' : undefined}
                       data-tooltip={t().toolbar.nextFrameTooltip}
                       disabled={busy}
@@ -470,11 +470,11 @@ export default function RecordingToolbar({
                   )}
 
                   {!preparingNext && (
-                    <div className="ft-actions-group">
+                    <div className="hb-actions-group">
                       {state.mode === 'steps' && (
                         <button
                           type="button"
-                          className="ft-button"
+                          className="hb-button"
                           data-emphasis={paused ? 'true' : undefined}
                           aria-label={paused ? t().toolbar.resume : t().toolbar.pause}
                           data-tooltip={paused ? t().toolbar.resume : t().toolbar.pause}
@@ -488,7 +488,7 @@ export default function RecordingToolbar({
                       )}
                       <button
                         type="button"
-                        className="ft-button"
+                        className="hb-button"
                         aria-label={t().toolbar.undo}
                         data-tooltip={t().toolbar.undoTooltip}
                         disabled={busy || state.itemCount === 0}
@@ -499,7 +499,7 @@ export default function RecordingToolbar({
                       {onStartRegionCapture && (
                         <button
                           type="button"
-                          className="ft-button"
+                          className="hb-button"
                           aria-label={regionCaptureActive ? t().toolbar.regionCaptureActive : t().toolbar.cropRegion}
                           data-tooltip={regionCaptureActive ? t().toolbar.regionCaptureActive : t().toolbar.cropRegion}
                           aria-pressed={regionCaptureActive}
@@ -515,7 +515,7 @@ export default function RecordingToolbar({
 
                   <button
                     type="button"
-                    className="ft-finish"
+                    className="hb-finish"
                     data-tooltip={t().toolbar.finishTooltip}
                     disabled={busy}
                     onClick={() => void run('FINISH_RECORDING')}
@@ -524,7 +524,7 @@ export default function RecordingToolbar({
                   </button>
                   <button
                     type="button"
-                    className="ft-button"
+                    className="hb-button"
                     data-danger="true"
                     aria-label={t().toolbar.discardLabel}
                     data-tooltip={t().toolbar.discardLabel}
@@ -535,7 +535,7 @@ export default function RecordingToolbar({
                   </button>
                   <button
                     type="button"
-                    className="ft-button ft-collapse"
+                    className="hb-button hb-collapse"
                     aria-label={t().toolbar.collapse}
                     data-tooltip={t().toolbar.collapse}
                     disabled={busy}
@@ -548,7 +548,7 @@ export default function RecordingToolbar({
             </div>
           )}
         </div>
-        <div className="ft-sr-only" aria-live="polite" aria-atomic="true">{announcement}</div>
+        <div className="hb-sr-only" aria-live="polite" aria-atomic="true">{announcement}</div>
       </div>
     </>
   );

@@ -5,6 +5,7 @@ import { clearActiveProjectId, getActiveProjectId, setActiveProjectId } from '..
 import type { RecordingMode } from '../storage/recording-state';
 import { t } from '@/lib/shared/i18n';
 import { copyText } from '@/lib/shared/i18n/copy';
+import { UserMessageError } from '@/lib/shared/user-message-error';
 
 // Preserve invocation order across async IndexedDB lookups. Without this, a
 // slow earlier select could overwrite a newer selection after its lookup ends.
@@ -18,7 +19,7 @@ function queueSelectionAction<T>(action: () => Promise<T>): Promise<T> {
 
 async function selectExistingProject(projectId: string): Promise<Project> {
   const project = await getProject(projectId);
-  if (!project) throw new Error(t().runtime.projectNotFound);
+  if (!project) throw new UserMessageError(t().runtime.projectNotFound);
   await setActiveProjectId(project.id);
   return project;
 }
@@ -49,7 +50,7 @@ export async function startRecording(mode: RecordingMode, targetProjectId: strin
     target: targetProjectId ? { kind: 'project', projectId: targetProjectId } : { kind: 'new' },
     mode,
   }, t().runtime.recordingServiceUnavailable);
-  if (!result.ok) throw new Error(copyText(result.error));
+  if (!result.ok) throw new UserMessageError(copyText(result.error));
 }
 
 /** Explicit UI-flow helper for editor navigation with no valid selection
@@ -86,7 +87,7 @@ export async function openSelectedProjectInEditor(projectId: string, options: { 
     sessionId: project.id,
     ...(options.inPlace ? { inPlace: true } : {}),
   }, t().popup.editorServiceUnavailable);
-  if (!result.ok) throw new Error(copyText(result.error));
+  if (!result.ok) throw new UserMessageError(copyText(result.error));
 }
 
 /** Compare-and-clears only the matching UI selection. It deliberately does

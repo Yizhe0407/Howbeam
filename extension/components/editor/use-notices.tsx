@@ -3,10 +3,10 @@ import toast from 'react-hot-toast';
 import UndoNotice from '@/components/editor/UndoNotice';
 import type { UndoAction } from '@/lib/editor/editor-app-model';
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
+import { UNDO_WINDOW_MS } from '@/lib/shared/undo-window';
 
 const UNDO_NOTICE_ID = 'editor-undo';
 const BUSY_NOTICE_ID = 'editor-busy';
-const UNDO_WINDOW_MS = 5_000;
 
 /**
  * Offers the pending undo on the notice stack. The notice has no timer of its

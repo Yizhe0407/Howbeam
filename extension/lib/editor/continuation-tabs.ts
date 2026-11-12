@@ -2,6 +2,7 @@ import { browser } from 'wxt/browser';
 import { isRecordableTab } from '../shared/restricted-urls';
 import type { ContinuationTabOption } from './editor-app-model';
 import { t } from '@/lib/shared/i18n';
+import { UserMessageError } from '@/lib/shared/user-message-error';
 
 /**
  * Fails closed on any prepared source-permission payload that does not name a
@@ -15,14 +16,14 @@ export function validatePreparedPermissionSource(
   try {
     parsed = new URL(sourceOrigin);
   } catch {
-    throw new Error(t().editor.permission.invalidGrant);
+    throw new UserMessageError(t().editor.permission.invalidGrant);
   }
   if (
     (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
     parsed.origin !== sourceOrigin ||
     permissionPattern !== `${parsed.origin}/*`
   ) {
-    throw new Error(t().editor.permission.unsafeGrant);
+    throw new UserMessageError(t().editor.permission.unsafeGrant);
   }
 }
 

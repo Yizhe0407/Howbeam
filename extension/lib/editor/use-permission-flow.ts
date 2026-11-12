@@ -15,10 +15,11 @@ import {
 } from '@/lib/editor/capture-permission-requests';
 import { isRecordableTab } from '@/lib/shared/restricted-urls';
 import { focusTab } from '@/lib/runtime/navigation';
-import { reportError } from '@/components/shared/report-error';
+import { reportError } from '@/lib/runtime/report-error';
 import { entryId, type StepEntry } from '@/lib/storage/models';
 import type { RecordingMode } from '@/lib/storage/recording-state';
 import { t } from '@/lib/shared/i18n';
+import { UserMessageError } from '@/lib/shared/user-message-error';
 
 interface UsePermissionFlowOptions {
   sessionId: string | null;
@@ -193,7 +194,7 @@ export function usePermissionFlow({
       // Must remain the first async browser API call in this click handler so Chromium preserves transient user activation.
       const granted = await browser.permissions.request({ origins: [prepared.source.permissionPattern] });
       if (!flow.isCurrent()) return;
-      if (!granted) throw new Error(t().editor.permission.accessRequired);
+      if (!granted) throw new UserMessageError(t().editor.permission.accessRequired);
 
       if (!(await flushOrBail(flow))) return;
       if (prepared.action.kind === 'continuation') {
@@ -285,7 +286,7 @@ export function usePermissionFlow({
       }
       if (!flow.isCurrent()) return;
       if (!confirmed.active || !isRecordableTab(confirmed)) {
-        throw new Error(t().editor.permission.switchTabFailed);
+        throw new UserMessageError(t().editor.permission.switchTabFailed);
       }
 
       await startRecordingOrThrow({

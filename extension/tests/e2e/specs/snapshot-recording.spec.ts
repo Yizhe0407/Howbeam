@@ -171,7 +171,7 @@ test.describe('snapshot recording', () => {
     await shield.getByRole('button', { name: '復原上一個' }).click();
     await expect(shield.locator('.snapshot-annotation__frame')).toHaveCount(0);
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
-    await expect(shield.locator('.ft-snackbar')).toContainText('已移除標註 1');
+    await expect(shield.locator('.hb-snackbar')).toContainText('已移除標註 1');
 
     await shield.getByRole('button', { name: '還原' }).click();
     await expect(shield.locator('.snapshot-annotation__frame')).toHaveCount(1);
@@ -244,7 +244,7 @@ test.describe('snapshot recording', () => {
     await appPage.mouse.down();
     await appPage.mouse.move(40, viewportHeight - 40, { steps: 6 });
     await appPage.mouse.up();
-    await expect.poll(() => shield.locator('.ft-toolbar').evaluate((element) => {
+    await expect.poll(() => shield.locator('.hb-toolbar').evaluate((element) => {
       const rect = element.getBoundingClientRect();
       return {
         left: Math.round(rect.left),
@@ -342,10 +342,10 @@ test.describe('snapshot recording', () => {
       return {
         viewportWidth: window.innerWidth,
         scrollWidth: document.documentElement.scrollWidth,
-        toolbar: rect('.ft-toolbar--invalidated'),
-        status: rect('.ft-invalidated-status'),
-        secondary: rect('.ft-invalidated-actions .ft-secondary'),
-        primary: rect('.ft-invalidated-actions .ft-finish'),
+        toolbar: rect('.hb-toolbar--invalidated'),
+        status: rect('.hb-invalidated-status'),
+        secondary: rect('.hb-invalidated-actions .hb-secondary'),
+        primary: rect('.hb-invalidated-actions .hb-finish'),
       };
     });
     expect(invalidatedLayout.scrollWidth).toBeLessThanOrEqual(invalidatedLayout.viewportWidth);

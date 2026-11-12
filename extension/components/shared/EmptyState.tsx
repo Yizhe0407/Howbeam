@@ -4,12 +4,13 @@ import { browser } from 'wxt/browser';
 import { Button } from '@/components/ui/button';
 import InlineAlert from '@/components/shared/InlineAlert';
 import Mascot from '@/components/shared/Mascot';
-import { reportError } from '@/components/shared/report-error';
+import { reportError } from '@/lib/runtime/report-error';
 import { byMostRecentlyAccessed } from '@/lib/editor/continuation-tabs';
 import { focusTab } from '@/lib/runtime/navigation';
 import { isRecordableTab } from '@/lib/shared/restricted-urls';
 import { t } from '@/lib/shared/i18n';
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
+import { UserMessageError } from '@/lib/shared/user-message-error';
 
 interface Props {
   isRecording?: boolean;
@@ -32,7 +33,7 @@ export default function EmptyState({ isRecording = false, recordingTabId = null 
       const target =
         tabs.find((tab) => tab.id === recordingTabId) ??
         tabs.filter(isRecordableTab).sort(byMostRecentlyAccessed)[0];
-      if (target?.id == null) throw new Error(t().emptyState.noRecordableTab);
+      if (target?.id == null) throw new UserMessageError(t().emptyState.noRecordableTab);
 
       await focusTab(target.id, target.windowId);
 

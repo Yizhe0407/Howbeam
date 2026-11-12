@@ -54,60 +54,21 @@ function entryOwner(entry: StepEntry): Step {
   return entry.kind === 'single' ? entry.step : entry.anchor;
 }
 
-type EntryImageBudgetViolation =
-  | { kind: 'entry-count' }
-  | { kind: 'image-bytes'; ordinal: number }
-  | { kind: 'total-bytes'; ordinal: number };
-
-/**
- * Limits plus an error factory so every consumer of the shared sequential
- * rendering loop (project publications, image ZIP export) enforces the same
- * budget checks while surfacing its own error class and wording.
- */
-export interface EntryImageBudget {
-  maxEntries: number;
-  maxImageBytes: number;
-  maxTotalImageBytes: number;
-  createLimitError: (violation: EntryImageBudgetViolation) => Error;
-}
-
-const PROJECT_ENTRY_IMAGE_BUDGET: EntryImageBudget = {
-  maxEntries: PROJECT_EXPORT_LIMITS.maxEntries,
-  maxImageBytes: PROJECT_EXPORT_LIMITS.maxImageBytes,
-  maxTotalImageBytes: PROJECT_EXPORT_LIMITS.maxTotalImageBytes,
-  createLimitError: (violation) => {
-    switch (violation.kind) {
-      case 'entry-count':
-        return new ProjectExportLimitError('Project contains too many entries to export safely.');
-      case 'image-bytes':
-        return new ProjectExportLimitError(`Step ${violation.ordinal} exceeds the per-image project export limit.`);
-      case 'total-bytes':
-        return new ProjectExportLimitError('Project images exceed the total export limit.');
-    }
-  },
-};
-
-function assertEntryImageBudget(
-  budget: EntryImageBudget,
-  imageBytes: number,
-  totalImageBytes: number,
-  ordinal: number,
-): void {
-  if (!Number.isSafeInteger(imageBytes) || imageBytes < 0 || imageBytes > budget.maxImageBytes) {
-    throw budget.createLimitError({ kind: 'image-bytes', ordinal });
+function assertImageBudget(imageBytes: number, totalImageBytes: number, ordinal: number): void {
+  if (!Number.isSafeInteger(imageBytes) || imageBytes < 0 || imageBytes > PROJECT_EXPORT_LIMITS.maxImageBytes) {
+    throw new ProjectExportLimitError(`Step ${ordinal} exceeds the per-image export limit.`);
   }
-  if (totalImageBytes + imageBytes > budget.maxTotalImageBytes) {
-    throw budget.createLimitError({ kind: 'total-bytes', ordinal });
+  if (totalImageBytes + imageBytes > PROJECT_EXPORT_LIMITS.maxTotalImageBytes) {
+    throw new ProjectExportLimitError('Project images exceed the total export limit.');
   }
 }
 
 export async function* renderEntryImages(
   entries: readonly StepEntry[],
   signal?: AbortSignal,
-  budget: EntryImageBudget = PROJECT_ENTRY_IMAGE_BUDGET,
 ): AsyncGenerator<RenderedEntryImage> {
-  if (entries.length > budget.maxEntries) {
-    throw budget.createLimitError({ kind: 'entry-count' });
+  if (entries.length > PROJECT_EXPORT_LIMITS.maxEntries) {
+    throw new ProjectExportLimitError('Project contains too many entries to export safely.');
   }
 
   // Refuse up front, for every format alike, naming every step that needs a
@@ -150,13 +111,13 @@ export async function* renderEntryImages(
 
       // Blob.size is available without allocating another full copy, so reject
       // oversized output before arrayBuffer() and base64's ~4/3 expansion.
-      assertEntryImageBudget(budget, image.size, declaredImageBytes, ordinal);
+      assertImageBudget(image.size, declaredImageBytes, ordinal);
       declaredImageBytes += image.size;
       const bytes = new Uint8Array(await image.arrayBuffer());
       throwIfAborted(signal);
       // Recheck the owned buffer as defense-in-depth for non-native Blob-like
       // implementations used by tests or future adapters.
-      assertEntryImageBudget(budget, bytes.byteLength, actualImageBytes, ordinal);
+      assertImageBudget(bytes.byteLength, actualImageBytes, ordinal);
       actualImageBytes += bytes.byteLength;
 
       const owner = entryOwner(entry);

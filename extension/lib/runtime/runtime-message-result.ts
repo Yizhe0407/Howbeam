@@ -28,6 +28,7 @@ import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
 import { isBoundedString, isRecord } from '../shared/validation';
 import { t } from '@/lib/shared/i18n';
 import { isCopyKey, type CopyKey } from '@/lib/shared/i18n/copy';
+import { UserMessageError } from '../shared/user-message-error';
 
 export type RuntimeMessageResultGuard<T> = (value: unknown) => value is T;
 
@@ -265,6 +266,6 @@ export function requireRuntimeMessageResult<T>(
   guard: RuntimeMessageResultGuard<T>,
   unavailableMessage?: string,
 ): T {
-  if (!guard(value)) throw new Error(unavailableMessage ?? t().runtime.backgroundUnavailable);
+  if (!guard(value)) throw new UserMessageError(unavailableMessage ?? t().runtime.backgroundUnavailable);
   return value;
 }
