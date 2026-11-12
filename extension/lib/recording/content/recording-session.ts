@@ -1,6 +1,6 @@
 import type { RegionCapture } from '../../capture/region-capture';
 import type { StepGestureQueue } from '../../capture/step-gesture-queue';
-import type { MountedRecordingToolbar } from '../recording-toolbar-host';
+import type { MountedRecordingToolbar, MountRecordingToolbar } from '../toolbar-contract';
 import type { SnapshotShield } from '../snapshot-shield';
 import type { StepHoverPreview } from '../step-hover-preview';
 import type { BackgroundTransport } from '../../runtime/background-client';
@@ -16,6 +16,8 @@ export interface ContentRecordingSession {
   readonly runId: string;
   /** Requests to the background, over the recorder's connection. */
   readonly send: BackgroundTransport;
+  /** Puts the recording toolbar on the page (UI the entrypoint provides). */
+  readonly mountToolbar: MountRecordingToolbar;
   /** True while the run is paused; recorders read it to drop input. */
   paused: boolean;
   shield: SnapshotShield | null;
@@ -29,10 +31,12 @@ export function createContentRecordingSession(options: {
   runId: string;
   paused: boolean;
   send: BackgroundTransport;
+  mountToolbar: MountRecordingToolbar;
 }): ContentRecordingSession {
   return {
     runId: options.runId,
     send: options.send,
+    mountToolbar: options.mountToolbar,
     paused: options.paused,
     shield: null,
     regionCapture: null,

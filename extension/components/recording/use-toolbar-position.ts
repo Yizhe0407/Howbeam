@@ -15,7 +15,7 @@ import {
   snapToolbarCorner,
   toolbarCornerLabel,
   type RecordingToolbarCorner,
-} from './recording-toolbar-position';
+} from '@/lib/recording/recording-toolbar-position';
 import { t } from '@/lib/shared/i18n';
 import type { Point } from '@/lib/shared/geometry';
 

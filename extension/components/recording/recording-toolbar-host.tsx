@@ -1,31 +1,12 @@
 import { createRoot, type Root } from 'react-dom/client';
-import RecordingToolbar, { type RecordingToolbarState } from './recording-toolbar';
-import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from '../capture/overlay-layers';
-import { REAPPEAR_TRANSITION } from '../capture/capture-presentation';
-import { createViewportOverlayHost } from '../capture/viewport-overlay-host';
-import type { RecordingControlMessage, RecordingControlResult } from '@/lib/runtime/messages';
-
-type ToolbarAction = RecordingControlMessage['type'];
+import RecordingToolbar from './recording-toolbar';
+import type { MountRecordingToolbar, RecordingToolbarState } from '@/lib/recording/toolbar-contract';
+import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from '@/lib/capture/overlay-layers';
+import { REAPPEAR_TRANSITION } from '@/lib/capture/capture-presentation';
+import { createViewportOverlayHost } from '@/lib/capture/viewport-overlay-host';
 
 /** How long a transient notice (e.g. a click that was not recorded) stays up. */
 export const TOOLBAR_NOTICE_MS = 6_000;
-
-interface Options {
-  onCommand: (action: ToolbarAction, undoToken?: string) => Promise<RecordingControlResult>;
-  onUndoApplied?: () => void;
-  onRestoreApplied?: () => void;
-  onStartRegionCapture?: () => void;
-}
-
-export interface MountedRecordingToolbar {
-  host: HTMLElement;
-  update(state: RecordingToolbarState): void;
-  setRegionCaptureActive(active: boolean): void;
-  /** Shows a page-side problem on the toolbar; transient notices clear
-   * themselves, a persistent one stays until replaced or cleared with null. */
-  showNotice(notice: string | null, options?: { persistent?: boolean }): void;
-  remove(): void;
-}
 
 interface ToolbarSurface {
   host: HTMLElement;
@@ -62,7 +43,7 @@ function getSurface(): ToolbarSurface {
   return surface;
 }
 
-export function mountRecordingToolbar(initialState: RecordingToolbarState, options: Options): MountedRecordingToolbar {
+export const mountRecordingToolbar: MountRecordingToolbar = (initialState, options) => {
   const { host, root } = getSurface();
   const token = ++ownerToken;
   const owns = () => ownerToken === token;
@@ -136,4 +117,4 @@ export function mountRecordingToolbar(initialState: RecordingToolbarState, optio
       host.remove();
     },
   };
-}
+};

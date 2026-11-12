@@ -23,7 +23,7 @@ import {
 } from '../frame-relay';
 import { isStepFrameRelayClaimResult, isStepFrameRelayMutationResult } from '../../runtime/runtime-message-result';
 import { installStepPressPipeline, type HeldPress } from '../step-press-pipeline';
-import { mountRecordingToolbar, type MountedRecordingToolbar } from '../recording-toolbar-host';
+import type { MountedRecordingToolbar } from '../toolbar-contract';
 import { waitForNextFrame } from '../snapshot-targeting';
 import { createStepHoverPreview } from '../step-hover-preview';
 import type { ClickCapture, StepFrameRelayClaimMessage, StepFrameRelaySettleMessage } from '../../runtime/messages';
@@ -517,7 +517,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
   window.addEventListener('message', onStepFrameClickMessage);
   document.addEventListener('visibilitychange', preview.handlers.onVisibilityChange);
 
-  session.toolbar = mountRecordingToolbar(initialToolbarState, {
+  session.toolbar = session.mountToolbar(initialToolbarState, {
     onCommand: sendCommandAfterPendingSteps,
     onStartRegionCapture: startStepRegionCapture,
   });

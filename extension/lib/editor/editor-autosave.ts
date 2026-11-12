@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { saveStepDescription, StepNotFoundError } from '../storage/step-repository';
 import { type Step } from '../storage/models';
 import { normalizeStoredText } from '../storage/stored-text';
@@ -39,7 +48,7 @@ export function EditorSaveProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('pagehide', flushBeforeLeaving);
   }, [flushAll]);
 
-  return <EditorSaveContext.Provider value={{ register, flushAll }}>{children}</EditorSaveContext.Provider>;
+  return createElement(EditorSaveContext.Provider, { value: { register, flushAll } }, children);
 }
 
 export function useEditorSaveRegistry(): EditorSaveRegistry {

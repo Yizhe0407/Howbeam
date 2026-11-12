@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import { createRegionCapture, type RegionCapture } from '@/lib/capture/region-capture';
-import RecordingToolbar from '@/lib/recording/recording-toolbar';
+import RecordingToolbar from '@/components/recording/recording-toolbar';
 import {
   buildShieldTokenStorageKey,
   isSnapshotShieldTokenRecord,
@@ -107,7 +107,7 @@ function tryInitialize(event: MessageEvent): void {
   let pendingRegionCompletion: (() => void) | null = null;
   let lastCommitWasRegion = false;
   let captureTimeout: ReturnType<typeof setTimeout> | null = null;
-  let toolbarState: import('@/lib/recording/recording-toolbar').RecordingToolbarState | null = null;
+  let toolbarState: import('@/lib/recording/toolbar-contract').RecordingToolbarState | null = null;
   // A click is never dropped for arriving too early or too fast: it waits
   // here until the recording state arrives or the previous annotation is done,
   // then commits at the point the user actually clicked.

@@ -19,7 +19,7 @@ import type {
   SnapshotRecorderFailureMessage,
 } from '../../runtime/messages';
 import { t } from '../../shared/i18n';
-import { mountRecordingToolbar } from '../recording-toolbar-host';
+import type { MountRecordingToolbar } from '../toolbar-contract';
 import type { UnrecordablePageReason } from './recordable-page';
 import { addRecorderCleanup, removeRecorderCleanup } from './recorder-cleanup';
 
@@ -37,6 +37,8 @@ export interface TopRecorderOptions {
   shouldFreezeSnapshot: boolean;
   /** False once a newer start replaced this one; a stale start backs out. */
   isCurrent: () => boolean;
+  /** Puts the recording toolbar on the page (UI the entrypoint provides). */
+  mountToolbar: MountRecordingToolbar;
 }
 
 /**
@@ -51,6 +53,7 @@ export async function mountTopRecorder({
   unrecordable,
   shouldFreezeSnapshot,
   isCurrent,
+  mountToolbar,
 }: TopRecorderOptions): Promise<void> {
   const isSnapshotMode = recordingState.mode === 'snapshot';
   const isStepMode = recordingState.mode === 'steps';
@@ -81,6 +84,7 @@ export async function mountTopRecorder({
     runId,
     paused: recordingState.phase === 'paused',
     send,
+    mountToolbar,
   });
   const capture = createCaptureSender(runId, send);
   const toolbar = createToolbarChannel(runId, send);
@@ -97,7 +101,7 @@ export async function mountTopRecorder({
 
   const uninstallModeRecorder = unrecordable
     ? (() => {
-        session.toolbar = mountRecordingToolbar(toolbar.toToolbarState(recordingState), {
+        session.toolbar = mountToolbar(toolbar.toToolbarState(recordingState), {
           onCommand: toolbar.sendCommand,
         });
         session.toolbar.showNotice(

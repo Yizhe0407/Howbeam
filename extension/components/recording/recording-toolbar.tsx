@@ -15,16 +15,17 @@ import {
   Undo2,
 } from 'lucide-react';
 import type { RecordingControlMessage, RecordingControlResult } from '@/lib/runtime/messages';
-import type { RecordingMode, RecordingPhase } from '@/lib/storage/recording-state';
-import { recordingModeCopy } from './recording-mode-copy';
+import type { RecordingMode } from '@/lib/storage/recording-state';
+import type { RecordingToolbarState } from '@/lib/recording/toolbar-contract';
+import { recordingModeCopy } from '@/lib/recording/recording-mode-copy';
 
 import { recordingToolbarStyles } from './recording-toolbar-styles';
-import type { ToolbarTheme } from './snapshot-shield-protocol';
+import type { ToolbarTheme } from '@/lib/recording/snapshot-shield-protocol';
 import { useToolbarPosition } from './use-toolbar-position';
 import { useToolbarCollapsed } from './use-toolbar-collapsed';
 import { useToolbarUndo } from './use-toolbar-undo';
 import { isRecordingControlResult } from '@/lib/runtime/runtime-message-result';
-import { copyText, type CopyKey } from '@/lib/shared/i18n/copy';
+import { copyText } from '@/lib/shared/i18n/copy';
 import { t, useActiveLocale } from '@/lib/shared/i18n';
 
 type ToolbarAction = RecordingControlMessage['type'];
@@ -33,17 +34,6 @@ const MODE_OPTIONS: readonly RecordingMode[] = ['steps', 'snapshot'];
 
 const modeSwitchAction = (target: RecordingMode): ToolbarAction =>
   target === 'snapshot' ? 'SWITCH_TO_SNAPSHOT_MODE' : 'SWITCH_TO_STEPS_MODE';
-
-export interface RecordingToolbarState {
-  runId: string;
-  mode: RecordingMode;
-  phase: RecordingPhase;
-  itemCount: number;
-  runItemCount: number;
-  /** Existing Project the run appends to; null when recording into a new one. */
-  projectTitle?: string | null;
-  error: CopyKey | null;
-}
 
 function RunStatus({ paused, count, small }: { paused: boolean; count: number; small?: boolean }) {
   const tone = paused ? 'muted' : undefined;

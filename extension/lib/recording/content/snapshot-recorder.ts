@@ -4,7 +4,7 @@ import { pauseMotion } from '../../capture/page-motion';
 import { isRegionRectInsideViewport } from '../../capture/region-capture';
 import { SNAPSHOT_FREEZE_EVENTS } from '../content-script-constants';
 import { findIframeForWindow, snapshotFrameScrollPingType } from '../frame-relay';
-import { mountRecordingToolbar, type MountedRecordingToolbar } from '../recording-toolbar-host';
+import type { MountedRecordingToolbar } from '../toolbar-contract';
 import { createSnapshotSelectionSet } from '../snapshot-selection-set';
 import { isMatchingSnapshotViewport } from '../recording-guards';
 import { resolveSnapshotTargetAtPoint, type ResolvedSnapshotTarget } from '../snapshot-targeting';
@@ -167,7 +167,7 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     if (!freezePage) {
       // phase === 'preparing-next': the page stays live; only the floating
       // toolbar is injected so the user can create the next snapshot.
-      session.toolbar = mountRecordingToolbar(initialToolbarState, {
+      session.toolbar = session.mountToolbar(initialToolbarState, {
         onCommand: toolbar.sendCommand,
       });
       // cleanup() owns the toolbar's removal (session.toolbar?.remove()).

@@ -14,6 +14,7 @@ import { detectUnrecordablePage, isChildFrameUnrecordable } from '@/lib/recordin
 import { addRecorderCleanup, runRecorderCleanup } from '@/lib/recording/content/recorder-cleanup';
 import { documentRole } from '@/lib/recording/content/document-role';
 import { mountTopRecorder } from '@/lib/recording/content/top-recorder';
+import { mountRecordingToolbar } from '@/components/recording/recording-toolbar-host';
 
 /** The live recorder module of this document's extension world. */
 const RECORDER_KEY = `__howbeam_recorder_${browser.runtime.id}`;
@@ -135,6 +136,7 @@ async function startRecorder(): Promise<void> {
         unrecordable: role.unrecordable,
         shouldFreezeSnapshot: role.freezeSnapshot,
         isCurrent,
+        mountToolbar: mountRecordingToolbar,
       });
   }
 }

@@ -17,10 +17,11 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
-import RecordingToolbar, { type RecordingToolbarState } from '@/lib/recording/recording-toolbar';
+import RecordingToolbar from '@/components/recording/recording-toolbar';
+import type { RecordingToolbarState } from '@/lib/recording/toolbar-contract';
 import { RECORDING_TOOLBAR_CORNER_KEY } from '@/lib/recording/recording-toolbar-position';
-import { RECORDING_TOOLBAR_COLLAPSED_KEY } from '@/lib/recording/use-toolbar-collapsed';
-import { RECORDING_TOOLBAR_UNDO_KEY } from '@/lib/recording/use-toolbar-undo';
+import { RECORDING_TOOLBAR_COLLAPSED_KEY } from '@/components/recording/use-toolbar-collapsed';
+import { RECORDING_TOOLBAR_UNDO_KEY } from '@/components/recording/use-toolbar-undo';
 import { itemAt } from '../setup/item-at';
 
 const state: RecordingToolbarState = {

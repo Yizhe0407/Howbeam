@@ -126,6 +126,13 @@ function boundaryViolation(from, target) {
 }
 
 const files = (await Promise.all(sourceRoots.map((directory) => collectFiles(path.join(root, directory))))).flat();
+// UI lives in components/ and entrypoints/; lib/ holds logic (hooks included) and no JSX.
+const libJsx = files.map(normalized).filter((file) => file.startsWith('lib/') && /\.(tsx|jsx)$/.test(file));
+if (libJsx.length > 0) {
+  throw new Error(
+    `lib/ must not contain UI (JSX) files; move them to components/:\n${libJsx.map((file) => `- ${file}`).join('\n')}`,
+  );
+}
 const knownFiles = new Set(files);
 function resolveModule(from, specifier) {
   let base;

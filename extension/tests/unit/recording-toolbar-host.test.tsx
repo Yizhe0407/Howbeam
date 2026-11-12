@@ -13,9 +13,9 @@ vi.mock('react-dom/client', () => ({
     return { render: mocks.render, unmount: vi.fn() };
   },
 }));
-vi.mock('@/lib/recording/recording-toolbar', () => ({ default: () => null }));
+vi.mock('@/components/recording/recording-toolbar', () => ({ default: () => null }));
 
-const { mountRecordingToolbar, TOOLBAR_NOTICE_MS } = await import('@/lib/recording/recording-toolbar-host');
+const { mountRecordingToolbar, TOOLBAR_NOTICE_MS } = await import('@/components/recording/recording-toolbar-host');
 
 const state = {
   runId: 'run-1',

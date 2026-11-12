@@ -1,5 +1,5 @@
-import { darkPalette, palette, RADIUS_PX } from '../shared/design-tokens';
-import { OVERLAY_FONT_STACK } from '../capture/overlay-font';
+import { darkPalette, palette, RADIUS_PX } from '@/lib/shared/design-tokens';
+import { OVERLAY_FONT_STACK } from '@/lib/capture/overlay-font';
 
 const dark = { ...palette, ...darkPalette };
 

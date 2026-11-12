@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('react-dom/client', () => ({
   createRoot: () => ({ render: vi.fn() }),
 }));
-vi.mock('@/lib/recording/recording-toolbar', () => ({ default: () => null }));
+vi.mock('@/components/recording/recording-toolbar', () => ({ default: () => null }));
 vi.mock('wxt/browser', () => ({
   browser: {
     runtime: { id: 'test-extension' },
