@@ -9,12 +9,11 @@ import {
   type ScrollSnapshot,
   type StepCaptureHandlers,
   type StepCaptureOutcome,
-  createLateClickSuppressor,
   orchestrateStepCapture,
 } from '../../capture/step-capture';
-import { type StepGesture, createStepGestureQueue } from '../../capture/step-gesture-queue';
-import { STEP_PRESS_GATE_EVENTS, createStepPressGate, isExtensionOverlayEvent } from '../../capture/step-press-gate';
-import { CAPTURE_FAILSAFE_MS, STEP_LATE_CLICK_SUPPRESS_MS } from '../content-script-constants';
+import type { StepGesture } from '../../capture/step-gesture-queue';
+import { isExtensionOverlayEvent, type StepPress } from '../../capture/step-press-gate';
+import { CAPTURE_FAILSAFE_MS } from '../content-script-constants';
 import {
   type RelayedStepFrameHop,
   STEP_FRAME_CLICK_FAILSAFE_MS,
@@ -23,7 +22,7 @@ import {
   stepFrameClickMessageType,
 } from '../frame-relay';
 import { isStepFrameRelayClaimResult, isStepFrameRelayMutationResult } from '../../runtime/runtime-message-result';
-import { isInScrollbarGutter, isPointInAnyScrollGutter } from '../recording-guards';
+import { installStepPressPipeline, type HeldPress } from '../step-press-pipeline';
 import { mountRecordingToolbar, type MountedRecordingToolbar } from '../recording-toolbar-host';
 import { waitForNextFrame } from '../snapshot-targeting';
 import { createStepHoverPreview } from '../step-hover-preview';
@@ -74,16 +73,20 @@ function settleWithin<T>(promise: Promise<T>, ms: number): Promise<T | 'pending'
 export function installStepRecorder(deps: StepRecorderDeps): () => void {
   const { session, capture, toolbar, initialToolbarState } = deps;
 
-  const gestureQueue = createStepGestureQueue();
-  session.gestureQueue = gestureQueue;
   let removed = false;
-  const lateClickSuppressor = createLateClickSuppressor<Element>(STEP_LATE_CLICK_SUPPRESS_MS);
-  // Click-vs-drag classification and follow-up event ownership for every
-  // recorded press (see step-press-gate.ts).
-  const pressGate = createStepPressGate({
-    lateClicks: lateClickSuppressor,
-    isBusy: () => gestureQueue.isBusy(),
+  const presses = installStepPressPipeline({
+    // Howbeam's own UI (the toolbar, even while it is see-through during a
+    // capture) is never a step; its input reaches it untouched.
+    ignore: (event) => session.paused || Boolean(session.regionCapture?.isActive()) || isExtensionOverlayEvent(event),
+    // Resolved through the preview so the captured element is exactly the
+    // box the highlight was showing when the user pressed.
+    resolveTarget: (clientX, clientY) => preview.resolveTargetAt(clientX, clientY),
+    onGestureStart: () => preview.suspend(),
+    onNotAClick: () => preview.schedule(),
+    deliver: (gesture, press, el, held) => deliverClick(gesture, press, el, held),
   });
+  const { gestureQueue } = presses;
+  session.gestureQueue = gestureQueue;
 
   /** The page already ran a click whose step was lost: say so on the toolbar
    * instead of letting the step vanish without a trace. */
@@ -331,84 +334,36 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
     }
   };
 
-  const onPointerDown = (event: Event) => {
-    const pe = event as PointerEvent;
-    if (!pe.isTrusted) return;
-    // Trusted events are ordered: any earlier press is over, and the previous
-    // gesture's trailing click (if any) has already been dispatched. Disarming
-    // here keeps a rapid second click on the same element from being
-    // swallowed after the dedup window declines to capture it.
-    pressGate.onTrustedPointerDown();
-    lateClickSuppressor.onTrustedPointerDown();
-    if (pe.button !== 0 || !pe.isPrimary) return;
-    if (session.paused || session.regionCapture?.isActive()) return;
-    // Howbeam's own UI (the toolbar, even while it is see-through during a
-    // capture) is never a step; its input reaches it untouched.
-    if (isExtensionOverlayEvent(pe)) return;
-
-    // A pointerdown in a native scrollbar gutter is a scroll gesture, not a
-    // step: leave it untouched so the drag scrolls and no bogus step lands.
-    if (isInScrollbarGutter(pe.clientX, pe.clientY, document.documentElement)) return;
-    if (isPointInAnyScrollGutter(pe.clientX, pe.clientY)) return;
-
-    // Resolved through the preview so the captured element is exactly the
-    // box the highlight was showing when the user pressed.
-    const el = preview.resolveTargetAt(pe.clientX, pe.clientY);
-    if (!el) return;
-
-    // Event dispatch never waits for an async listener, so the gate takes the
-    // press over synchronously: page scripts stop seeing it while the
-    // browser's own default actions (caret, selection, native drag, slider)
-    // still run. Whether it becomes a step is decided on release.
-    const begun = pressGate.begin(pe, el);
-    if (begun.kind === 'continuation') return;
-    const { press } = begun;
-    const now = Date.now();
-
-    gestureQueue.enqueue({
-      captureId: crypto.randomUUID(),
-      validate: () => el.isConnected,
-      onSkipped: () => pressGate.abandon(press),
-      start: async (gesture) => {
-        preview.suspend();
-        const kind = await Promise.race([press.outcome, gesture.cancelled.then(() => 'cancel' as const)]);
-        if (kind !== 'click') {
-          // A drag, selection or browser-taken gesture already went to the
-          // page natively; nothing is recorded or replayed.
-          pressGate.abandon(press);
-          gesture.release();
-          preview.schedule();
-          return;
-        }
-        let delivery: Promise<StepDelivery> | null = null;
-        const outcome = await orchestrateStepCapture(
-          makeStepOrchestrationHandlers(gesture, el, {
-            capture: () => {
-              const tracked = trackScreenshot((onTaken) =>
-                captureElement(
-                  el,
-                  press.clientX,
-                  press.clientY,
-                  isInteractiveElement(el) ? 'click' : 'mark',
-                  now,
-                  gesture.captureId,
-                  gesture.isCancelled,
-                  onTaken,
-                ),
-              );
-              delivery = tracked.delivery;
-              return tracked.taken;
-            },
-            replay: () => pressGate.replay(press),
-          }),
-        );
-        if (outcome === 'cancelled') pressGate.abandon(press);
-        if (outcome === 'timeout') {
-          console.warn('[howbeam] capture exceeded its failsafe budget; invalidated it before replaying the click');
-        }
-        reportStepDelivery(outcome, delivery);
-      },
-    });
+  /** A press released as a click: capture it, then hand the click back to the page. */
+  const deliverClick = async (gesture: StepGesture, press: StepPress, el: Element, held: HeldPress): Promise<void> => {
+    const now = held.pressedAt;
+    let delivery: Promise<StepDelivery> | null = null;
+    const outcome = await orchestrateStepCapture(
+      makeStepOrchestrationHandlers(gesture, el, {
+        capture: () => {
+          const tracked = trackScreenshot((onTaken) =>
+            captureElement(
+              el,
+              press.clientX,
+              press.clientY,
+              isInteractiveElement(el) ? 'click' : 'mark',
+              now,
+              gesture.captureId,
+              gesture.isCancelled,
+              onTaken,
+            ),
+          );
+          delivery = tracked.delivery;
+          return tracked.taken;
+        },
+        replay: held.replay,
+      }),
+    );
+    if (outcome === 'cancelled') held.abandon();
+    if (outcome === 'timeout') {
+      console.warn('[howbeam] capture exceeded its failsafe budget; invalidated it before replaying the click');
+    }
+    reportStepDelivery(outcome, delivery);
   };
 
   // Clicks inside child frames never bubble into this document. Instrumented
@@ -544,9 +499,6 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
     });
   };
 
-  const onPressGateEvent = (event: Event) => pressGate.handleEvent(event);
-  const onWindowBlur = () => pressGate.handleBlur();
-
   /** Toolbar commands apply after the clicks the user already made: an undo
    * pressed right after a click must remove that click's step, and a pause
    * must not reject a capture that is still in flight. Bounded so a stuck
@@ -564,11 +516,6 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
   window.addEventListener('resize', preview.schedule, { passive: true });
   window.addEventListener('message', onStepFrameClickMessage);
   document.addEventListener('visibilitychange', preview.handlers.onVisibilityChange);
-  document.addEventListener('pointerdown', onPointerDown, { capture: true });
-  for (const type of STEP_PRESS_GATE_EVENTS) {
-    document.addEventListener(type, onPressGateEvent, { capture: true });
-  }
-  window.addEventListener('blur', onWindowBlur);
 
   session.toolbar = mountRecordingToolbar(initialToolbarState, {
     onCommand: sendCommandAfterPendingSteps,
@@ -580,7 +527,6 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
   // uninstaller only detaches listeners.
   return () => {
     removed = true;
-    document.removeEventListener('pointerdown', onPointerDown, { capture: true });
     window.removeEventListener('pointermove', preview.handlers.onPointerMove, { capture: true });
     window.removeEventListener('pointerout', preview.handlers.onPointerOut, { capture: true });
     window.removeEventListener('pointerleave', preview.handlers.onPointerLeave, { capture: true });
@@ -589,19 +535,8 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
     window.removeEventListener('resize', preview.schedule);
     window.removeEventListener('message', onStepFrameClickMessage);
     document.removeEventListener('visibilitychange', preview.handlers.onVisibilityChange);
-    for (const type of STEP_PRESS_GATE_EVENTS) {
-      document.removeEventListener(type, onPressGateEvent, { capture: true });
-    }
-    window.removeEventListener('blur', onWindowBlur);
-    // Whatever is actively capturing is cancelled (its own settle path
-    // decides what that means); every queued-but-not-started press is handed
-    // back to the page without being recorded instead of left to hang, and a
-    // press still held gets its withheld pointerdown back.
-    gestureQueue.cancelActive();
-    gestureQueue.purgePending();
-    pressGate.clear();
+    presses.uninstall();
     if (session.gestureQueue === gestureQueue) session.gestureQueue = null;
-    lateClickSuppressor.clear();
     setCaptureScrollLock(null);
   };
 }
