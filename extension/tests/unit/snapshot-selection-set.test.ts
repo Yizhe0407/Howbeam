@@ -98,23 +98,32 @@ describe('createSnapshotSelectionSet', () => {
     expect(selection.match(createTarget('region:other', { x: 0, y: 0, width: 1, height: 1 }))).toBe(other);
     expect(selection.match(createTarget('region:new', { x: 500, y: 500, width: 10, height: 10 }))).toBeNull();
 
-    selection.undoLast();
+    // The background's list after an undo no longer has the last mark.
+    selection.sync([original.rect]);
     expect(selection.match(other)).toBeNull();
+    expect(selection.match(original)).toBe(original);
   });
 
-  it('removes and restores every dedup dimension for composite targets', () => {
+  it('follows the background list through an undo and a restore, every dedup dimension included', () => {
     const selection = createSnapshotSelectionSet();
     const { first, second } = createSharedMapTargets();
     selection.add(first);
     selection.add(second);
 
-    expect(selection.undoLast()).toBe(second);
+    selection.sync([first.rect]);
     expect(selection.isSelected(first)).toBe(true);
     expect(selection.isSelected(second)).toBe(false);
 
-    expect(selection.restoreUndone()).toBe(second);
+    selection.sync([first.rect, second.rect]);
     expect(selection.isSelected(first)).toBe(true);
     expect(selection.isSelected(second)).toBe(true);
-    expect(selection.restoreUndone()).toBeNull();
+  });
+
+  it('counts a mark this page never saw by its rect', () => {
+    const selection = createSnapshotSelectionSet();
+    const rect = { x: 10, y: 10, width: 20, height: 20 };
+    selection.sync([rect]);
+    expect(selection.hasRect(rect)).toBe(true);
+    expect(selection.isSelected(createTarget('button:elsewhere', rect))).toBe(true);
   });
 });

@@ -16,14 +16,15 @@ export const SNAPSHOT_SHIELD_POINTER_DOWN = 'HOWBEAM_SNAPSHOT_SHIELD_POINTER_DOW
 export const SNAPSHOT_SHIELD_POINTER_MOVE = 'HOWBEAM_SNAPSHOT_SHIELD_POINTER_MOVE';
 export const SNAPSHOT_SHIELD_PREVIEW = 'HOWBEAM_SNAPSHOT_SHIELD_PREVIEW';
 export const SNAPSHOT_SHIELD_CAPTURE_COMPLETE = 'HOWBEAM_SNAPSHOT_SHIELD_CAPTURE_COMPLETE';
-export const SNAPSHOT_SHIELD_COMMIT = 'HOWBEAM_SNAPSHOT_SHIELD_COMMIT';
-export const SNAPSHOT_SHIELD_UNDO = 'HOWBEAM_SNAPSHOT_SHIELD_UNDO';
+export const SNAPSHOT_SHIELD_MARKS = 'HOWBEAM_SNAPSHOT_SHIELD_MARKS';
 export const SNAPSHOT_SHIELD_TOOLBAR_STATE = 'HOWBEAM_SNAPSHOT_SHIELD_TOOLBAR_STATE';
 export const SNAPSHOT_SHIELD_CONTROL = 'HOWBEAM_SNAPSHOT_SHIELD_CONTROL';
 export const SNAPSHOT_SHIELD_CONTROL_RESULT = 'HOWBEAM_SNAPSHOT_SHIELD_CONTROL_RESULT';
 export const SNAPSHOT_SHIELD_CANDIDATES = 'HOWBEAM_SNAPSHOT_SHIELD_CANDIDATES';
 export const SNAPSHOT_SHIELD_REGION_CAPTURE = 'HOWBEAM_SNAPSHOT_SHIELD_REGION_CAPTURE';
 export const SNAPSHOT_KEYBOARD_LABEL_LIMIT = 200;
+/** More marks than any snapshot can hold (each is a stored step). */
+export const SNAPSHOT_MARKS_LIMIT = 2_000;
 export const SNAPSHOT_REGION_COORDINATE_LIMIT = 1_000_000;
 
 /**
@@ -112,15 +113,11 @@ interface SnapshotShieldCaptureCompleteMessage {
   duplicateOf?: number;
 }
 
-interface SnapshotShieldCommitMessage {
-  type: typeof SNAPSHOT_SHIELD_COMMIT;
+/** Every mark on the snapshot, in order (a mark's id is its number). Replaces whatever the frame drew. */
+interface SnapshotShieldMarksMessage {
+  type: typeof SNAPSHOT_SHIELD_MARKS;
   token: string;
-  selection: SnapshotShieldSelection & { id: number };
-}
-
-interface SnapshotShieldUndoMessage {
-  type: typeof SNAPSHOT_SHIELD_UNDO;
-  token: string;
+  marks: Array<SnapshotShieldSelection & { id: number }>;
 }
 
 export interface SnapshotShieldToolbarStateMessage {
@@ -176,8 +173,7 @@ export type SnapshotShieldPortMessage =
 export type SnapshotShieldFrameMessage =
   | SnapshotShieldPreviewMessage
   | SnapshotShieldCaptureCompleteMessage
-  | SnapshotShieldCommitMessage
-  | SnapshotShieldUndoMessage
+  | SnapshotShieldMarksMessage
   | SnapshotShieldToolbarStateMessage
   | SnapshotShieldControlResultMessage
   | SnapshotShieldCandidatesMessage;
@@ -313,6 +309,7 @@ export function isSnapshotShieldFrameMessage(value: unknown, token: string): val
     captureId?: number;
     rect?: Rect | null;
     selection?: (SnapshotShieldSelection & { id: number }) | null;
+    marks?: unknown[];
     state?: SnapshotShieldToolbarStateMessage['state'];
     result?: RecordingControlResult;
     anchors?: SnapshotShieldKeyboardAnchor[];
@@ -337,8 +334,13 @@ export function isSnapshotShieldFrameMessage(value: unknown, token: string): val
   if (message.type === SNAPSHOT_SHIELD_CAPTURE_COMPLETE) {
     return isRequestId(message.captureId) && (message.selection === null || isSelection(message.selection));
   }
-  if (message.type === SNAPSHOT_SHIELD_COMMIT) return isSelection(message.selection);
-  if (message.type === SNAPSHOT_SHIELD_UNDO) return true;
+  if (message.type === SNAPSHOT_SHIELD_MARKS) {
+    return (
+      Array.isArray(message.marks) &&
+      message.marks.length <= SNAPSHOT_MARKS_LIMIT &&
+      message.marks.every((mark, index) => isSelection(mark) && mark.id === index + 1 && mark.label === index + 1)
+    );
+  }
   if (message.type === SNAPSHOT_SHIELD_TOOLBAR_STATE) {
     const state = message.state;
     if (!state) return false;

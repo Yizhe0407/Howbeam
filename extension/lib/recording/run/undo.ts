@@ -1,4 +1,5 @@
-import type { HowbeamSnapshotHistoryMessage, RecordingControlResult } from '../../runtime/messages';
+import type { RecordingControlResult } from '../../runtime/messages';
+import { sendSnapshotMarks } from './snapshot-marks';
 import { UNDO_WINDOW_MS } from '../../shared/undo-window';
 import type { PendingUndoRecord } from '../background/pending-undo-store';
 import { isSuperseded, type RunActor } from './actor';
@@ -22,13 +23,9 @@ export function createUndo(deps: { actor: RunActor; ports: RunPorts }) {
     });
   }
 
-  /** The frozen snapshot draws its own marks, so it hears about every undo and restore. */
-  function notifySnapshot(recording: Recording, change: HowbeamSnapshotHistoryMessage['change']): void {
-    if (recording.mode !== 'snapshot') return;
-    const message: HowbeamSnapshotHistoryMessage = { type: 'HOWBEAM_SNAPSHOT_HISTORY', runId: recording.runId, change };
-    void ports.tabs.send(recording.tabId, message).catch((error) => {
-      console.warn('[howbeam] snapshot did not hear an annotation undo/restore', error);
-    });
+  /** The frozen snapshot redraws its marks from the stored ones after every undo and restore. */
+  function notifySnapshot(recording: Recording): void {
+    void sendSnapshotMarks(ports, recording);
   }
 
   const undoable = (recording: Recording | null): recording is Recording =>
@@ -68,7 +65,7 @@ export function createUndo(deps: { actor: RunActor; ports: RunPorts }) {
         return { ok: false, error: 'background.undoStateChanged' };
       }
       pending = record;
-      notifySnapshot(recording, 'undo');
+      notifySnapshot(recording);
       return { ok: true, undoToken: record.token, removedItemNumber: recording.itemCount };
     });
   }
@@ -98,7 +95,7 @@ export function createUndo(deps: { actor: RunActor; ports: RunPorts }) {
         return { ok: false, error: 'background.restoreStateChanged' };
       }
       discard();
-      notifySnapshot(recording, 'restore');
+      notifySnapshot(recording);
       return { ok: true };
     });
   }

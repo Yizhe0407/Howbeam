@@ -22,8 +22,8 @@ function placeBox(element: HTMLElement, frame: Rect): void {
 
 export interface SnapshotOverlay {
   preview(rect: Rect | null): void;
-  commit(selection: SnapshotShieldSelection & { id: number }): void;
-  undo(): void;
+  /** Draws exactly these marks (a mark's id is its number), keeping the nodes of marks that stay. */
+  setMarks(marks: ReadonlyArray<SnapshotShieldSelection & { id: number }>): void;
   relayout(): void;
   /** Flashes a committed annotation. */
   pulse(id: number): void;
@@ -46,9 +46,8 @@ export function createOverlay(): SnapshotOverlay {
   root.append(committedLayer, preview);
   document.body.append(root);
 
-  const committedIds = new Set<number>();
-  const committedSelections: Array<SnapshotShieldSelection & { id: number }> = [];
-  const committedRectKeys = new Set<string>();
+  let committedSelections: ReadonlyArray<SnapshotShieldSelection & { id: number }> = [];
+  let committedRectKeys = new Set<string>();
   let previewRect: Rect | null = null;
 
   const svgElement = <K extends keyof SVGElementTagNameMap>(name: K): SVGElementTagNameMap[K] =>
@@ -197,26 +196,20 @@ export function createOverlay(): SnapshotOverlay {
       previewRect = rect;
       renderCommitted();
     },
-    commit(selection: SnapshotShieldSelection & { id: number }) {
-      if (committedIds.has(selection.id)) return;
-      committedIds.add(selection.id);
-      committedSelections.push(selection);
-      committedRectKeys.add(snapshotRectKey(selection.rect));
-      renderCommitted();
-    },
-    // Undo/restore is tracked in three lockstep layers (page recorder, shield
-    // channel, this overlay); all three must pop/push together or the drawn annotations drift.
-    undo() {
-      const selection = committedSelections.pop();
-      if (!selection) return;
-      committedIds.delete(selection.id);
-      committedRectKeys.clear();
-      for (const committed of committedSelections) committedRectKeys.add(snapshotRectKey(committed.rect));
-      const elements = elementsById.get(selection.id);
-      elements?.leader.remove();
-      elements?.target.remove();
-      elements?.badge.remove();
-      elementsById.delete(selection.id);
+    setMarks(marks) {
+      const previous = new Map(committedSelections.map((mark) => [mark.id, snapshotRectKey(mark.rect)]));
+      committedSelections = marks;
+      committedRectKeys = new Set(marks.map((mark) => snapshotRectKey(mark.rect)));
+      // A number now naming a different rect (or none) gets fresh nodes; the rest are reused.
+      for (const [id, key] of previous) {
+        const current = marks[id - 1];
+        if (current && snapshotRectKey(current.rect) === key) continue;
+        const elements = elementsById.get(id);
+        elements?.leader.remove();
+        elements?.target.remove();
+        elements?.badge.remove();
+        elementsById.delete(id);
+      }
       renderCommitted();
     },
     relayout() {

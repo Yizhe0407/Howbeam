@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 import {
   SNAPSHOT_SHIELD_CAPTURE_COMPLETE,
-  SNAPSHOT_SHIELD_COMMIT,
+  SNAPSHOT_SHIELD_MARKS,
   SNAPSHOT_SHIELD_POINTER_DOWN,
   SNAPSHOT_SHIELD_POINTER_MOVE,
   SNAPSHOT_SHIELD_PREVIEW,
@@ -198,15 +198,19 @@ describe('createSnapshotShield', () => {
       Transferable[],
     ];
     const replacementPort = replacementTransfer![0] as MessagePort;
-    const replacementMessages: Array<{ type?: string; selection?: { id: number } }> = [];
+    const replacementMessages: Array<{ type?: string; marks?: Array<{ id: number }> }> = [];
     replacementPort.onmessage = (event) => replacementMessages.push(event.data);
     replacementPort.start();
     replacementPort.postMessage({ type: SNAPSHOT_SHIELD_READY, token: initMessage.token });
     await vi.waitFor(() =>
       expect(replacementMessages).toContainEqual(
         expect.objectContaining({
-          type: SNAPSHOT_SHIELD_COMMIT,
-          selection: expect.objectContaining({ id: 1, ...selection }),
+          type: SNAPSHOT_SHIELD_MARKS,
+          // A reloaded frame gets every mark at once, in order.
+          marks: [
+            expect.objectContaining({ id: 1, rect: selection.rect }),
+            expect.objectContaining({ id: 2, rect: regionSelection.rect }),
+          ],
         }),
       ),
     );

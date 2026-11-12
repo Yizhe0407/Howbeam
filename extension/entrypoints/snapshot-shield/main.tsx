@@ -9,7 +9,6 @@ import {
   isSnapshotShieldInitMessage,
   SNAPSHOT_SHIELD_CANDIDATES,
   SNAPSHOT_SHIELD_CAPTURE_COMPLETE,
-  SNAPSHOT_SHIELD_COMMIT,
   SNAPSHOT_SHIELD_CONTROL,
   SNAPSHOT_SHIELD_CONTROL_RESULT,
   SNAPSHOT_SHIELD_POINTER_DOWN,
@@ -18,7 +17,7 @@ import {
   SNAPSHOT_SHIELD_READY,
   SNAPSHOT_SHIELD_REGION_CAPTURE,
   SNAPSHOT_SHIELD_TOOLBAR_STATE,
-  SNAPSHOT_SHIELD_UNDO,
+  SNAPSHOT_SHIELD_MARKS,
   type SnapshotShieldKeyboardAnchor,
   type SnapshotShieldPortMessage,
   type WithoutToken,
@@ -453,12 +452,8 @@ function tryInitialize(event: MessageEvent): void {
       keyboardIndex = -1;
       return;
     }
-    if (event.data.type === SNAPSHOT_SHIELD_COMMIT) {
-      overlay.commit(event.data.selection);
-      return;
-    }
-    if (event.data.type === SNAPSHOT_SHIELD_UNDO) {
-      overlay.undo();
+    if (event.data.type === SNAPSHOT_SHIELD_MARKS) {
+      overlay.setMarks(event.data.marks);
       return;
     }
     if (event.data.type === SNAPSHOT_SHIELD_TOOLBAR_STATE) {
@@ -493,13 +488,11 @@ function tryInitialize(event: MessageEvent): void {
     if (event.data.type === SNAPSHOT_SHIELD_CAPTURE_COMPLETE) {
       if (event.data.captureId !== activeCaptureId || !capturing) {
         // A stale completion (its timeout already fired, or a newer capture owns the
-        // flow): its annotation may still commit to the overlay, but it must not
-        // settle the current capture or run a pendingRegionCompletion it doesn't own.
-        if (event.data.selection) overlay.commit(event.data.selection);
+        // flow) must not settle the current capture or run a pendingRegionCompletion
+        // it doesn't own. Its mark, if any, arrives with the marks list.
         return;
       }
       if (event.data.selection) {
-        overlay.commit(event.data.selection);
         if (lastCommitWasRegion) {
           const label = event.data.selection.label;
           announce(t().shield.regionAdded(label));

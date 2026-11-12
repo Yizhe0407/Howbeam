@@ -181,11 +181,11 @@ export interface HowbeamSnapshotActiveMessage {
   runId: string;
 }
 
-/** The background undid or restored the snapshot's last annotation, from whichever control asked. */
-export interface HowbeamSnapshotHistoryMessage {
-  type: 'HOWBEAM_SNAPSHOT_HISTORY';
+/** Every mark on the current snapshot, in order, sent by the background (which owns them) after each change. */
+export interface HowbeamSnapshotMarksMessage {
+  type: 'HOWBEAM_SNAPSHOT_MARKS';
   runId: string;
-  change: 'undo' | 'restore';
+  marks: Rect[];
 }
 
 /** `error` is a short diagnostic reason code/message, not user-facing copy —

@@ -28,6 +28,7 @@ import type { RunPorts } from './ports';
 import type { RecorderGate, SnapshotContext } from './recorder-gate';
 import type { Recording, SnapshotAnchor } from './state';
 import { captureCommitted, liveRecording, notice, snapshotInvalidated, withNotice, withRecording } from './transitions';
+import { sendSnapshotMarks } from './snapshot-marks';
 
 /** The page no longer matches the snapshot's base image. */
 class SnapshotViewportChangedError extends Error {}
@@ -259,6 +260,7 @@ export function createCapture(deps: CaptureDeps) {
       else await captureStep(ctx, recording, message, windowId);
       const live = liveRecording(ctx.state(), message.runId);
       if (live) await ctx.commit((state) => withRecording(state, captureCommitted(live, message.captureId)));
+      if (recording.mode === 'snapshot') void sendSnapshotMarks(ports, recording);
       return { ok: true };
     } catch (error) {
       return failedClick(ctx, recording, message, error);

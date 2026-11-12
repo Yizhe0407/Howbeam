@@ -13,7 +13,7 @@ import { createToolbarChannel } from './toolbar-channel';
 import type {
   HowbeamCaptureTakenMessage,
   HowbeamSnapshotActiveMessage,
-  HowbeamSnapshotHistoryMessage,
+  HowbeamSnapshotMarksMessage,
   HowbeamStopMessage,
   RecorderReadyMessage,
   SnapshotRecorderFailureMessage,
@@ -134,7 +134,7 @@ export async function mountTopRecorder({
     message:
       | HowbeamStopMessage
       | HowbeamSnapshotActiveMessage
-      | HowbeamSnapshotHistoryMessage
+      | HowbeamSnapshotMarksMessage
       | HowbeamCaptureTakenMessage,
   ) => {
     if (message?.type === 'HOWBEAM_STOP') {
@@ -145,8 +145,8 @@ export async function mountTopRecorder({
       capture.markCaptureTaken(message.captureId);
       return;
     }
-    if (message?.type === 'HOWBEAM_SNAPSHOT_HISTORY' && message.runId === runId) {
-      if (isSnapshotMode) snapshot.applyHistory(message.change);
+    if (message?.type === 'HOWBEAM_SNAPSHOT_MARKS' && message.runId === runId) {
+      if (isSnapshotMode) snapshot.applyMarks(message.marks);
       return;
     }
     if (message?.type === 'HOWBEAM_SNAPSHOT_ACTIVE' && message.runId === runId) {

@@ -4,7 +4,6 @@ import {
   isSnapshotShieldPortMessage,
   SNAPSHOT_SHIELD_CANDIDATES,
   SNAPSHOT_SHIELD_CAPTURE_COMPLETE,
-  SNAPSHOT_SHIELD_COMMIT,
   SNAPSHOT_SHIELD_CONTROL,
   SNAPSHOT_SHIELD_CONTROL_RESULT,
   SNAPSHOT_SHIELD_INIT,
@@ -16,7 +15,7 @@ import {
   SNAPSHOT_SHIELD_TOKEN_STORAGE_PREFIX,
   SNAPSHOT_SHIELD_TOKEN_TTL_MS,
   SNAPSHOT_SHIELD_TOOLBAR_STATE,
-  SNAPSHOT_SHIELD_UNDO,
+  SNAPSHOT_SHIELD_MARKS,
   snapshotRectKey,
   type SnapshotShieldControlMessage,
   type SnapshotShieldFrameMessage,
@@ -58,10 +57,8 @@ export interface SnapshotShield {
   runWithoutShield<T>(callback: () => T): T;
   updateToolbar(state: SnapshotShieldToolbarStateMessage['state']): void;
   sendKeyboardCandidates(anchors: SnapshotShieldKeyboardAnchor[]): void;
-  /** Takes the last committed annotation off the shield (an undo the background accepted). */
-  undoLast(): void;
-  /** Puts the last undone annotation back (a restore the background accepted). */
-  restoreUndone(): void;
+  /** Draws exactly these marks, in order: the background's list after each change. */
+  setMarks(rects: readonly Rect[]): void;
   remove(): void;
 }
 
@@ -222,9 +219,19 @@ export function createSnapshotShield(
   let removed = false;
   let ready = false;
   let channelGeneration = 0;
-  let nextSelectionId = 1;
-  const committedSelections: Array<SnapshotShieldSelection & { id: number }> = [];
-  let lastUndoneSelection: (SnapshotShieldSelection & { id: number }) | null = null;
+  /** What the shield frame draws, replayed into it after a reload. A mark's id is its number. */
+  let marks: Array<SnapshotShieldSelection & { id: number }> = [];
+  const appendMark = (rect: Rect): SnapshotShieldSelection & { id: number } => {
+    const existing = marks.find((mark) => snapshotRectKey(mark.rect) === snapshotRectKey(rect));
+    if (existing) return existing;
+    const mark = { rect, label: marks.length + 1, id: marks.length + 1 };
+    marks = [...marks, mark];
+    return mark;
+  };
+  // Hoisted as a function: the frame's READY handler, set up later, replays the marks.
+  function postMarks(): void {
+    post({ type: SNAPSHOT_SHIELD_MARKS, marks });
+  }
   let toolbarState: SnapshotShieldToolbarStateMessage['state'] | null = null;
   let keyboardAnchors: SnapshotShieldKeyboardAnchor[] | null = null;
   let port: MessagePort | null = null;
@@ -274,24 +281,17 @@ export function createSnapshotShield(
     duplicateOf?: Rect,
   ): void => {
     if (removed) return;
-    const committed = selection ? { ...selection, id: nextSelectionId++ } : null;
-    if (committed) {
-      committedSelections.push(committed);
-      lastUndoneSelection = null;
-    }
-
-    if (!isStale(generation)) {
-      const matched =
-        duplicateOf && committedSelections.find(({ rect }) => snapshotRectKey(rect) === snapshotRectKey(duplicateOf));
-      post({
-        type: SNAPSHOT_SHIELD_CAPTURE_COMPLETE,
-        captureId,
-        selection: committed,
-        ...(matched && { duplicateOf: matched.id }),
-      });
-    } else if (committed) {
-      post({ type: SNAPSHOT_SHIELD_COMMIT, selection: committed });
-    }
+    // Drawn at once; the background's list, which follows, confirms it.
+    const committed = selection ? appendMark(selection.rect) : null;
+    if (committed) postMarks();
+    if (isStale(generation)) return;
+    const matched = duplicateOf && marks.find(({ rect }) => snapshotRectKey(rect) === snapshotRectKey(duplicateOf));
+    post({
+      type: SNAPSHOT_SHIELD_CAPTURE_COMPLETE,
+      captureId,
+      selection: committed,
+      ...(matched && { duplicateOf: matched.id }),
+    });
   };
 
   const handlePoint = async (message: SnapshotShieldPointerDownMessage, generation: number): Promise<void> => {
@@ -327,20 +327,9 @@ export function createSnapshotShield(
     post({ type: SNAPSHOT_SHIELD_CONTROL_RESULT, requestId: message.requestId, result });
   };
 
-  // committedSelections replays committed annotations into a reloaded shield
-  // frame; the snapshot recorder moves it in lockstep with its own selection
-  // set and the shield page's overlay stack (snapshot-recorder applyHistory).
-  const undoLast = (): void => {
-    lastUndoneSelection = committedSelections.pop() ?? null;
-    if (lastUndoneSelection) post({ type: SNAPSHOT_SHIELD_UNDO });
-  };
-
-  const restoreUndone = (): void => {
-    if (!lastUndoneSelection) return;
-    committedSelections.push(lastUndoneSelection);
-    const restoredSelection = lastUndoneSelection;
-    lastUndoneSelection = null;
-    post({ type: SNAPSHOT_SHIELD_COMMIT, selection: restoredSelection });
+  const setMarks = (rects: readonly Rect[]): void => {
+    marks = rects.map((rect, index) => ({ rect, label: index + 1, id: index + 1 }));
+    postMarks();
   };
 
   const runWithoutShieldHitTesting = <T>(callback: () => T): T => {
@@ -510,9 +499,7 @@ export function createSnapshotShield(
           resolveReady();
         }
         frame.focus({ preventScroll: true });
-        for (const selection of committedSelections) {
-          post({ type: SNAPSHOT_SHIELD_COMMIT, selection });
-        }
+        postMarks();
         if (toolbarState) {
           post({ type: SNAPSHOT_SHIELD_TOOLBAR_STATE, state: toolbarState });
         }
@@ -573,8 +560,7 @@ export function createSnapshotShield(
       keyboardAnchors = anchors;
       post({ type: SNAPSHOT_SHIELD_CANDIDATES, anchors });
     },
-    undoLast,
-    restoreUndone,
+    setMarks,
     remove,
   };
 }

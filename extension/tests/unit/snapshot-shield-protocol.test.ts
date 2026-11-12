@@ -9,7 +9,7 @@ import {
   SNAPSHOT_SHIELD_TOKEN_STORAGE_PREFIX,
   SNAPSHOT_SHIELD_CANDIDATES,
   SNAPSHOT_SHIELD_CAPTURE_COMPLETE,
-  SNAPSHOT_SHIELD_COMMIT,
+  SNAPSHOT_SHIELD_MARKS,
   SNAPSHOT_SHIELD_CONTROL,
   SNAPSHOT_SHIELD_INIT,
   SNAPSHOT_SHIELD_POINTER_DOWN,
@@ -149,12 +149,18 @@ describe('snapshot shield protocol', () => {
     expect(isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_CAPTURE_COMPLETE, token, selection }, token)).toBe(
       false,
     );
-    expect(isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_COMMIT, token, selection }, token)).toBe(true);
+    const mark = { ...selection, id: 1, label: 1 };
+    expect(isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_MARKS, token, marks: [mark] }, token)).toBe(true);
+    expect(isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_MARKS, token, marks: [] }, token)).toBe(true);
+    // A mark's id and label are its position: a gap or a mismatch is malformed.
     expect(
       isSnapshotShieldFrameMessage(
-        { type: SNAPSHOT_SHIELD_COMMIT, token, selection: { ...selection, label: 0 } },
+        { type: SNAPSHOT_SHIELD_MARKS, token, marks: [{ ...mark, id: 2, label: 2 }] },
         token,
       ),
+    ).toBe(false);
+    expect(
+      isSnapshotShieldFrameMessage({ type: SNAPSHOT_SHIELD_MARKS, token, marks: [{ ...mark, label: 0 }] }, token),
     ).toBe(false);
     expect(
       isSnapshotShieldFrameMessage(

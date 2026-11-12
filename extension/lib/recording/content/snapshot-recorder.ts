@@ -1,3 +1,4 @@
+import type { Rect } from '../../shared/geometry';
 import { browser } from 'wxt/browser';
 import { pauseMotion } from '../../capture/page-motion';
 import { isRegionRectInsideViewport } from '../../capture/region-capture';
@@ -150,20 +151,11 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     return toolbar.sendCommand(message.action, message.undoToken);
   };
 
-  /** Undo/restore is DELIBERATELY tracked in three lockstep layers, all moved
-   * here by the background's HOWBEAM_SNAPSHOT_HISTORY whichever control asked:
-   * this recorder's selection set (dedup of future clicks), the shield
-   * channel's committedSelections, and the shield page's overlay stack. All
-   * three must pop and push together or duplicate detection and the drawn
-   * annotations drift. */
-  const applyHistory = (change: 'undo' | 'restore'): void => {
-    if (change === 'undo') {
-      selection.undoLast();
-      session.shield?.undoLast();
-    } else {
-      selection.restoreUndone();
-      session.shield?.restoreUndone();
-    }
+  /** The background's list of marks after a change (a commit, an undo, a restore):
+   * deduplication and the drawing both follow it, so neither can drift. */
+  const applyMarks = (rects: readonly Rect[]): void => {
+    selection.sync(rects);
+    session.shield?.setMarks(rects);
   };
 
   /** Installs the snapshot-mode page instrumentation and returns its
@@ -223,7 +215,7 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     install,
     /** The shield's message handlers, in the order createSnapshotShield takes them. */
     handlers: { onPoint, onHover, onControl, onRegion },
-    applyHistory,
+    applyMarks,
     /** Selection is armed by the background's SNAPSHOT_ACTIVE handshake and by
      * every recording-phase transition. */
     setInteractionsActive(active: boolean): void {
