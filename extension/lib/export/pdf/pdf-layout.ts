@@ -159,11 +159,13 @@ export class PdfLayouter {
     }
     this.stepCount += 1;
 
-    const leadingHeight = step.section
+    const sectionHeight = step.section
       ? PDF_TEXT.section.lineHeight + PDF_TEXT.section.gapAfter + PDF_SPEC.sectionRuleThickness + PDF_SPEC.sectionRuleGapAfter
       : 0;
-    const imageSpace = this.imageSpaceFor(step.image.width, step.image.height, leadingHeight);
-    this.ensureSpace(leadingHeight + PDF_TEXT.stepTitle.lineHeight + PDF_TEXT.stepTitle.gapAfter + imageSpace);
+    // An untitled step's number hangs beside the screenshot instead of taking a line above it.
+    const headingHeight = step.title ? PDF_TEXT.stepTitle.lineHeight + PDF_TEXT.stepTitle.gapAfter : 0;
+    const imageSpace = this.imageSpaceFor(step.image.width, step.image.height, sectionHeight + headingHeight);
+    this.ensureSpace(sectionHeight + headingHeight + imageSpace);
     if (step.section) {
       this.addTextBlock(
         { kind: 'heading', level: 2, outline: { level: 1, title: shortenText(step.section.title, OUTLINE_TITLE_LENGTH) } },
@@ -173,7 +175,8 @@ export class PdfLayouter {
       this.inSection = true;
       this.addRule(0, PDF_SPEC.sectionRuleGapAfter, PDF_SPEC.sectionRuleThickness, PDF_COLORS.rule);
     }
-    this.addStepHeading(step.ordinal, step.title, imageSpace);
+    if (step.title) this.addStepHeading(step.ordinal, step.title, imageSpace);
+    else this.addStepNumber(step.ordinal);
     this.addImage(step.image, step.alt);
     this.addAnnotations(step.annotations);
     this.addTextBlock({ kind: 'paragraph' }, step.description, PDF_TEXT.stepDescription, PDF_SPEC.stepIndent);
@@ -187,7 +190,7 @@ export class PdfLayouter {
    * into the leftover strip of a page, yet a page is not left empty because a
    * screenshot would be a little too tall.
    */
-  private imageSpaceFor(imageWidth: number, imageHeight: number, leadingHeight: number): number {
+  private imageSpaceFor(imageWidth: number, imageHeight: number, aboveImage: number): number {
     if (this.options.settings.stepLayout === 'page-per-step') return PDF_SPEC.imageMinSpace;
     const scale = Math.min(
       this.stepContentWidth / Math.max(1, imageWidth),
@@ -195,7 +198,7 @@ export class PdfLayouter {
       1,
     );
     const freshPageSpace =
-      this.contentBottom - PDF_SPEC.margin - leadingHeight - PDF_TEXT.stepTitle.lineHeight - PDF_TEXT.stepTitle.gapAfter - PDF_SPEC.imageBottomClearance;
+      this.contentBottom - PDF_SPEC.margin - aboveImage - PDF_SPEC.imageBottomClearance;
     const preferred = Math.ceil(imageHeight * scale);
     return Math.max(PDF_SPEC.imageMinSpace, Math.min(Math.ceil(preferred * PDF_SPEC.continuousImageMinShare), freshPageSpace));
   }
@@ -236,11 +239,23 @@ export class PdfLayouter {
     this.cursorY += style.gapAfter;
   }
 
+  /** An untitled step's heading: only its number, in the hanging column level with the top of the
+   * screenshot that follows. The cursor stays put, so no line is left blank above the screenshot. */
+  private addStepNumber(ordinal: number): void {
+    this.pushBlock({
+      kind: 'heading',
+      level: this.inSection ? 3 : 2,
+      lines: [{ text: `${ordinal}.`, x: PDF_SPEC.margin, top: this.cursorY, style: PDF_TEXT.stepTitle }],
+      outline: { level: this.inSection ? 2 : 1, title: `${ordinal}.` },
+    });
+    this.hasContent = true;
+  }
+
   /** Step heading: the printed number in the hanging column, the bold title beside it. */
   private addStepHeading(ordinal: number, text: string, imageSpace: number): void {
     const style = PDF_TEXT.stepTitle;
     const lines = wrapText(this.measure(style), text, this.stepContentWidth, this.options.signal);
-    const outlineTitle = shortenText(text ? `${ordinal}. ${text}` : `${ordinal}.`, OUTLINE_TITLE_LENGTH);
+    const outlineTitle = shortenText(`${ordinal}. ${text}`, OUTLINE_TITLE_LENGTH);
     let pendingGap = style.gapBefore;
     let block: (PdfBlock & { kind: 'heading' }) | undefined;
     let blockPage = 0;

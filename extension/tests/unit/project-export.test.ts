@@ -330,7 +330,8 @@ describe('project export', () => {
     const html = await generateProjectHtml([entry({ title: 'x'.repeat(5_000) })], { title: 'y'.repeat(5_000) });
 
     expect(html).toMatch(/h1, h2, h3, p, li \{ margin: 0; overflow-wrap: anywhere; \}/);
-    expect(html).toMatch(/\.step-title \{ display: grid; grid-template-columns: 2\.2em minmax\(0, 1fr\);/);
+    expect(html).toMatch(/\.step \{ margin-top: 32px; display: grid; grid-template-columns: 2\.2em minmax\(0, 1fr\); \}/);
+    expect(html).toMatch(/\.step-title \{ grid-column: 1 \/ -1; display: grid; grid-template-columns: 2\.2em minmax\(0, 1fr\); grid-template-columns: subgrid;/);
   });
 
   it('builds the HTML as Blob parts so no document-sized string is ever assembled', async () => {
@@ -650,7 +651,7 @@ describe('project export', () => {
       mocks.composite.mockImplementation(async () => new Blob([jpegOfSize(1_200, 700)], { type: 'image/jpeg' }));
       const pdfText = (await readPdf(await generateProjectPdf(blank, { title: 'Blank' }))).pages.flatMap((page) => page.lines).join('\n');
 
-      expect(html).toContain('<h3 class="step-title"><span class="step-number">1.</span></h3>');
+      expect(html).toContain('<section class="step" data-untitled>\n<h3 class="step-title"><span class="step-number">1.</span></h3>');
       expect(markdown).toContain('### 1.\n');
       expect(html).not.toContain('<p class="step-description">');
       expect(pdfText).toContain('1.');

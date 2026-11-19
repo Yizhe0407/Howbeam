@@ -147,11 +147,12 @@ describe('StepStage sections', () => {
     expect(screen.getByText('所屬章節：條目頁面')).toBeTruthy();
   });
 
-  it('offers to start a section here only when the owner allows it, and not while editing is disabled', () => {
+  it('offers to start a section here only when the owner allows it, and not while editing is disabled', async () => {
     const onStartSection = vi.fn();
     const { rerender } = renderStage({ entry: singleEntry(), onStartSection });
     const button = screen.getByRole('button', { name: '新增章節' });
-    expect(button.getAttribute('title')).toBe('從第 1 步開始新章節');
+    fireEvent.focus(button);
+    expect((await screen.findByRole('tooltip')).textContent).toBe('從第 1 步開始新章節');
     fireEvent.click(button);
     expect(onStartSection).toHaveBeenCalledOnce();
 

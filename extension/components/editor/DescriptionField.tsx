@@ -26,7 +26,7 @@ export default function DescriptionField({ step, disabled = false }: Props) {
 
   return (
     <div className="flex w-full flex-col gap-2">
-      <label htmlFor={`description-${step.id}`} className="text-xs font-bold text-muted-foreground">
+      <label htmlFor={`description-${step.id}`} className="sr-only">
         {t().editor.description.label}
       </label>
       <Textarea
@@ -37,7 +37,9 @@ export default function DescriptionField({ step, disabled = false }: Props) {
         onBlur={() => void flush().catch(() => undefined)}
         disabled={disabled}
         placeholder={t().editor.description.placeholder}
-        className="min-h-16 resize-none px-3.5 py-3 text-sm leading-relaxed"
+        rows={1}
+        // Starts one line tall and grows with the text, so the screenshot above keeps the height until it is needed.
+        className="app-scrollbar min-h-10 max-h-40 resize-none overflow-y-auto px-3.5 py-2 text-sm leading-relaxed"
       />
       <TextSaveIssue
         issue={saveIssue}

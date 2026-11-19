@@ -267,6 +267,21 @@ describe('PdfLayouter', () => {
       expect(heading.lines.length).toBeGreaterThan(2);
     });
 
+    it('hangs the number of an untitled step level with its screenshot, leaving no blank title line', () => {
+      const titled = newLayouter();
+      titled.addStep(step(1));
+      const untitled = newLayouter();
+      untitled.addStep(step(1, { title: '' }));
+      const titledPage = itemAt(laidOut(titled), 0);
+      const page = itemAt(laidOut(untitled), 0);
+
+      const heading = itemAt(headings(page), 0);
+      const figure = itemAt(ofKind(page, 'figure'), 0);
+      expect(heading.lines).toEqual([expect.objectContaining({ text: '1.', x: PDF_SPEC.margin, top: figure.image.y })]);
+      expect(heading.outline).toEqual({ level: 1, title: '1.' });
+      expect(figure.image.y).toBeLessThan(itemAt(ofKind(titledPage, 'figure'), 0).image.y);
+    });
+
     it('lists annotations as one numbered list under the screenshot', () => {
       const layouter = newLayouter();
       layouter.addStep(step(1, { annotations: [{ description: 'Click Sign in' }, { description: '' }] }));

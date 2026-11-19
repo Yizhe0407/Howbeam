@@ -11,7 +11,7 @@ interface Props {
   disabled?: boolean;
 }
 
-/** The step's heading, edited where the export prints it: above the screenshot. */
+/** The step's heading, edited in the row above the screenshot. `number` only names the field: the rail already shows it. */
 export default function StepTitleField({ step, number, disabled = false }: Props) {
   const {
     value,
@@ -28,25 +28,22 @@ export default function StepTitleField({ step, number, disabled = false }: Props
 
   return (
     <div className="flex w-full flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <span aria-hidden="true" className="shrink-0 text-lg font-bold text-muted-foreground">{number}.</span>
-        <input
-          type="text"
-          aria-label={t().editor.title.label(number)}
-          value={value}
-          maxLength={PERSISTED_STEP_LIMITS.maxStepTitleLength}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
-            e.preventDefault();
-            e.currentTarget.blur();
-          }}
-          onBlur={() => void flush().catch(() => undefined)}
-          disabled={disabled}
-          placeholder={t().editor.title.placeholder}
-          className="min-w-0 flex-1 rounded-md border-2 border-transparent bg-transparent px-2 py-1 text-lg leading-tight font-bold text-foreground outline-none transition-colors focus-ring placeholder:font-normal placeholder:text-muted-foreground hover:border-border-soft focus:border-border focus:bg-card disabled:opacity-60"
-        />
-      </div>
+      <input
+        type="text"
+        aria-label={t().editor.title.label(number)}
+        value={value}
+        maxLength={PERSISTED_STEP_LIMITS.maxStepTitleLength}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+          e.preventDefault();
+          e.currentTarget.blur();
+        }}
+        onBlur={() => void flush().catch(() => undefined)}
+        disabled={disabled}
+        placeholder={t().editor.title.placeholder}
+        className="h-10 w-full min-w-0 rounded-md border-2 border-transparent bg-transparent px-2 text-base font-bold text-foreground outline-none transition-colors focus-ring placeholder:font-normal placeholder:text-muted-foreground hover:border-border-soft focus:border-border focus:bg-card disabled:opacity-60"
+      />
       <TextSaveIssue
         issue={saveIssue}
         savedValue={savedValue}

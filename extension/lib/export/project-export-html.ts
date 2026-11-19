@@ -104,7 +104,7 @@ function renderHtmlEntry(entry: RenderedEntryContent, imageSrc: string): string 
   const annotations = hasAnnotationText(entry.annotations) ? renderHtmlAnnotations(entry) : '';
 
   return [
-    `<section class="step">`,
+    `<section class="step"${entry.title ? '' : ' data-untitled'}>`,
     `<h3 class="step-title"><span class="step-number">${entry.ordinal}.</span>${entry.title ? `<span>${htmlText(entry.title)}</span>` : ''}</h3>`,
     `<figure><img src="${imageSrc}" alt="${alt}"></figure>`,
     annotations,
@@ -241,13 +241,16 @@ h1, h2, h3, p, li { margin: 0; overflow-wrap: anywhere; }
 h1 { font-size: 30px; line-height: 1.35; font-weight: 700; }
 .document-description { margin-top: 10px; color: var(--text-secondary); }
 .section-heading { margin-top: 44px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); font-size: 21px; line-height: 1.45; font-weight: 700; }
-.step { margin-top: 32px; }
-.step-title { display: grid; grid-template-columns: ${PAGE.stepIndent}em minmax(0, 1fr); font-size: 17px; line-height: 1.7; font-weight: 600; }
+.step { margin-top: 32px; display: grid; grid-template-columns: ${PAGE.stepIndent}em minmax(0, 1fr); }
+.step > * { grid-column: 2; }
+.step-title { grid-column: 1 / -1; display: grid; grid-template-columns: ${PAGE.stepIndent}em minmax(0, 1fr); grid-template-columns: subgrid; font-size: 17px; line-height: 1.7; font-weight: 600; }
 .step-number { font-variant-numeric: tabular-nums; }
-figure { margin: 14px 0 0 ${PAGE.stepIndent}em; }
+.step[data-untitled] > .step-title { grid-column: 1; grid-row: 1; }
+.step[data-untitled] > figure { grid-row: 1; margin-top: 0; }
+figure { margin: 14px 0 0; }
 img { display: block; max-width: 100%; height: auto; border: 1px solid var(--image-border); border-radius: ${PROJECT_EXPORT_THEME.imageRadius}px; }
-.step-description { margin: 14px 0 0 ${PAGE.stepIndent}em; }
-.annotations { margin: 12px 0 0 ${PAGE.stepIndent}em; padding-left: ${LIST.marker}em; color: var(--text-secondary); }
+.step-description { margin: 14px 0 0; }
+.annotations { margin: 12px 0 0; padding-left: ${LIST.marker}em; color: var(--text-secondary); }
 .annotations li + li { margin-top: ${LIST.itemGap}em; }
 .annotations[data-columns] { padding-left: 0; column-gap: ${LIST.columnGap}em; }
 .annotations[data-columns] li { margin: 0 0 ${LIST.itemGap}em ${LIST.marker}em; break-inside: avoid; }
@@ -256,8 +259,7 @@ img { display: block; max-width: 100%; height: auto; border: 1px solid var(--ima
 @media (max-width: 560px) {
   .document { padding-top: 28px; }
   h1 { font-size: 25px; }
-  .step-title { grid-template-columns: 1.8em minmax(0, 1fr); }
-  figure, .annotations, .step-description { margin-left: 0; }
+  .step { grid-template-columns: 1.8em minmax(0, 1fr); }
 }
 @page { size: A4; margin: 18mm 16mm 20mm; }
 @media print {

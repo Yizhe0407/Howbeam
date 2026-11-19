@@ -4,6 +4,7 @@ import { getEntryPrivacyState, type Step, type StepEntry } from '@/lib/storage/m
 import ImageEditWorkspace from './ImageEditWorkspace';
 import { Badge } from '@/components/ui/badge';
 import { DashedOutline } from '@/components/ui/dashed-outline';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import EntryThumbnail from './EntryThumbnail';
 import StepActions from './StepActions';
 import DescriptionField from './DescriptionField';
@@ -41,35 +42,48 @@ export default function StepStage({
   const privacy = getEntryPrivacyState(entry);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
 
+  const owner = entry.kind === 'single' ? entry.step : entry.anchor;
+
+  // One row for everything above the image, the step's title included, so the screenshot gets the rest of the height.
   const headerRow = (
-    <div className="mb-3.5 flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
-      <div className="flex min-w-0 items-center gap-2">
-        {sectionTitle && (
-          <span
-            title={t().editor.sections.current(sectionTitle)}
-            // No outline: in this UI an ink outline marks something you can press, and this only labels.
-            className="flex min-w-0 max-w-[16rem] items-center gap-1 rounded-full bg-matcha px-3 py-1 text-xs font-bold text-on-accent"
-          >
-            <Bookmark className="size-3 shrink-0" aria-hidden="true" />
-            <span className="sr-only">{t().editor.sections.current(sectionTitle)}</span>
-            <span aria-hidden="true" className="min-w-0 truncate">{sectionTitle}</span>
-          </span>
-        )}
-        {/* Sits with the section chip: a section is where this step stands in the document, not an image action. */}
-        {onStartSection && (
-          <Badge asChild variant="dashedAction" className="shrink-0 disabled:opacity-50">
-            <button
-              type="button"
-              onClick={onStartSection}
-              disabled={editingDisabled}
-              title={t().editor.sections.addAt(index + 1)}
-            >
-              <DashedOutline radius="full" outset={2} hideOnHover />
-              <Plus className="size-3.5 stroke-[2.5]" />
-              {t().editor.sections.add}
-            </button>
-          </Badge>
-        )}
+    <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
+      {(sectionTitle || onStartSection) && (
+        <div className="flex min-w-0 items-center gap-2">
+          {sectionTitle && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  // No outline: in this UI an ink outline marks something you can press, and this only labels.
+                  className="flex min-w-0 max-w-[16rem] items-center gap-1 rounded-full bg-matcha px-3 py-1 text-xs font-bold text-on-accent"
+                >
+                  <Bookmark className="size-3 shrink-0" aria-hidden="true" />
+                  <span className="sr-only">{t().editor.sections.current(sectionTitle)}</span>
+                  <span aria-hidden="true" className="min-w-0 truncate">{sectionTitle}</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{t().editor.sections.current(sectionTitle)}</TooltipContent>
+            </Tooltip>
+          )}
+          {/* Sits with the section chip: a section is where this step stands in the document, not an image action. */}
+          {onStartSection && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge asChild variant="dashedAction" className="shrink-0 disabled:opacity-50">
+                  <button type="button" onClick={onStartSection} disabled={editingDisabled}>
+                    <DashedOutline radius="full" outset={2} hideOnHover />
+                    <Plus className="size-3.5 stroke-[2.5]" />
+                    {t().editor.sections.add}
+                  </button>
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>{t().editor.sections.addAt(index + 1)}</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      )}
+      <div className="min-w-[12rem] flex-1">
+        {/* Keyed by the row, so switching steps never carries one step's draft into another. */}
+        <StepTitleField key={owner.id} step={owner} number={index + 1} disabled={editingDisabled} />
       </div>
       <div className="flex items-center gap-3">
         {/* Also the way out of a pending mask review: the editor is where masks are checked and confirmed. */}
@@ -113,9 +127,6 @@ export default function StepStage({
     </button>
   );
 
-  const owner = entry.kind === 'single' ? entry.step : entry.anchor;
-  // Keyed by the row, so switching steps never carries one step's draft into another.
-  const stepTitle = <StepTitleField key={owner.id} step={owner} number={index + 1} disabled={editingDisabled} />;
   const descriptionField = <DescriptionField key={owner.id} step={owner} disabled={editingDisabled} />;
 
   const privacyReviewNotice = privacy.reviewRequired && (
@@ -148,17 +159,18 @@ export default function StepStage({
     />
   );
 
+  // Below lg the stage scrolls, so its end keeps the notice lane clear to scroll out from under the floating notices.
+  // From lg it fits the window and nothing scrolls, so the description sits at the bottom with the same margin as the top.
   if (entry.kind === 'single') {
     return (
-      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-y-auto bg-background px-[var(--content-gutter,1rem)] pt-4 pb-[var(--notice-lane,5rem)] lg:pt-5">
+      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-y-auto bg-background px-[var(--content-gutter,1rem)] pt-4 pb-[var(--notice-lane,5rem)] lg:py-5">
         <div className="flex w-full max-w-[1180px] flex-none flex-col gap-3 lg:min-h-0 lg:flex-1">
           <div className="flex-none">{headerRow}</div>
           {privacyReviewNotice && <div className="flex-none">{privacyReviewNotice}</div>}
-          <div className="flex-none">{stepTitle}</div>
           <div className="flex w-full flex-none items-center justify-center p-1 lg:min-h-[14rem] lg:flex-1">
             {imageFrame(t().editor.stage.stepAlt(index + 1))}
           </div>
-          <div className="mt-1 flex-none">{descriptionField}</div>
+          <div className="flex-none">{descriptionField}</div>
         </div>
         {imageEditor}
       </main>
@@ -166,10 +178,9 @@ export default function StepStage({
   }
 
   return (
-    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto bg-background px-[var(--content-gutter,1rem)] pt-4 pb-[var(--notice-lane,5rem)] lg:pt-5">
+    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto bg-background px-[var(--content-gutter,1rem)] pt-4 pb-[var(--notice-lane,5rem)] lg:py-5">
       <div className="flex-none">{headerRow}</div>
       {privacyReviewNotice && <div className="flex-none">{privacyReviewNotice}</div>}
-      <div className="flex-none">{stepTitle}</div>
       <div className="flex flex-none flex-col gap-5 lg:min-h-[14rem] lg:flex-1 lg:flex-row lg:gap-[22px]">
         <div className="flex min-w-0 flex-none items-center justify-center p-1 lg:min-h-0 lg:flex-1">
           {imageFrame(t().editor.stage.snapshotAlt(index + 1))}
@@ -183,7 +194,7 @@ export default function StepStage({
           />
         </aside>
       </div>
-      <div className="mt-1 flex-none">{descriptionField}</div>
+      <div className="flex-none">{descriptionField}</div>
       {imageEditor}
     </main>
   );
