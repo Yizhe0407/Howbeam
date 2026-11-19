@@ -27,6 +27,7 @@ const editorSave = vi.hoisted(() => ({
 const rendered = vi.hoisted(() => ({
   stepRailProps: null as any,
   stepStageProps: null as any,
+  headerProps: null as any,
 }));
 
 vi.mock('wxt/browser', async () => {
@@ -76,7 +77,12 @@ vi.mock('@/lib/editor/editor-autosave', () => ({
 }));
 vi.mock('@/lib/export/export-images', () => ({ exportImagesAsZip: vi.fn() }));
 
-vi.mock('@/components/editor/EditorHeader', () => ({ default: () => null }));
+vi.mock('@/components/editor/EditorHeader', () => ({
+  default: (props: any) => {
+    rendered.headerProps = props;
+    return null;
+  },
+}));
 vi.mock('@/components/editor/StepRail', () => ({
   default: (props: any) => {
     rendered.stepRailProps = props;
@@ -214,6 +220,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   rendered.stepRailProps = null;
   rendered.stepStageProps = null;
+  rendered.headerProps = null;
   editorSave.flushAll.mockResolvedValue(undefined);
   recordingSession.useRecordingSession.mockImplementation((explicitSessionId?: string | null) => {
     if (explicitSessionId === 'project-1') return editorSessionResult();
@@ -360,19 +367,19 @@ describe('Editor App and changes from other tabs', () => {
 
     expect(await screen.findByText(/專案已被刪除/)).toBeTruthy();
     expect(screen.getByLabelText('StepStage test double').getAttribute('data-editing-disabled')).toBe('true');
-    await expect(rendered.stepStageProps.onTitleChange('新名稱')).rejects.toThrow();
+    await expect(rendered.headerProps.onTitleChange('新名稱')).rejects.toThrow();
     expect(database.updateProject).not.toHaveBeenCalled();
   });
 
   it('shows a title another tab saved', async () => {
     render(<EditorApp />);
-    await waitFor(() => expect(rendered.stepStageProps?.projectTitle).toBe('結構測試教學'));
+    await waitFor(() => expect(rendered.headerProps?.projectTitle).toBe('結構測試教學'));
 
     database.getProjectStructureSnapshot.mockClear();
     database.getProject.mockResolvedValue({ ...project, title: '別的分頁改的標題', metadataRevision: project.metadataRevision + 1 });
     notifyProjectsChanged();
 
-    await waitFor(() => expect(rendered.stepStageProps.projectTitle).toBe('別的分頁改的標題'));
+    await waitFor(() => expect(rendered.headerProps.projectTitle).toBe('別的分頁改的標題'));
     // Only the title changed, so the structure is not read again.
     expect(database.getProjectStructureSnapshot).not.toHaveBeenCalled();
   });
@@ -380,9 +387,9 @@ describe('Editor App and changes from other tabs', () => {
   it('sends a title edit as a single metadata update', async () => {
     database.updateProject.mockResolvedValue({ ...project, title: '新名稱', metadataRevision: 4 });
     render(<EditorApp />);
-    await waitFor(() => expect(rendered.stepStageProps).not.toBeNull());
+    await waitFor(() => expect(rendered.headerProps?.projectTitle).toBe('結構測試教學'));
 
-    await act(() => rendered.stepStageProps.onTitleChange('新名稱'));
+    await act(() => rendered.headerProps.onTitleChange('新名稱'));
 
     expect(database.updateProject).toHaveBeenCalledWith('project-1', { title: '新名稱' });
   });
@@ -639,7 +646,7 @@ describe('editor handoff answers (單一編輯器分頁)', () => {
 
     const reply = await act(async () => handoff({ type: 'EDITOR_HANDOFF', sessionId: 'project-2' }));
 
-    expect(reply).toEqual({ ok: false, error: t().editor.descriptionSaveRetry });
+    expect(reply).toEqual({ ok: false, error: t().editor.textSaveRetry });
   });
 
   it('still reports ready for its own Project when the save is blocked, because nothing will navigate', async () => {

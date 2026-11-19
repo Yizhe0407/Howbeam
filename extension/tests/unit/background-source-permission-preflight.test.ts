@@ -56,6 +56,7 @@ function ordinaryStep(overrides: Partial<Step> = {}): Step {
     bounds: { x: 1, y: 2, width: 30, height: 40 },
     devicePixelRatio: 2,
     screenshotScale: 2,
+    title: '',
     description: 'Persisted step',
     url: 'https://persisted.example/path?fresh=1#target',
     timestamp: 1,

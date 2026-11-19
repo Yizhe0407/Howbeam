@@ -8,27 +8,14 @@ import {
   IMAGE_MIME_TYPE,
   textValue,
 } from './project-export-contract';
-import { t } from '@/lib/shared/i18n';
 
 export type RenderedEntryContent = {
   entryId: string;
   ordinal: number;
+  title: string;
   description: string;
   annotations: readonly Step[];
 };
-
-/**
- * The heading every publication prints above an entry's screenshot. A Mark
- * entry has no description of its own (only its annotations do, and the editor
- * offers no field for one), so it gets no heading text rather than the
- * missing-description placeholder; only an entry with nothing at all to say
- * shows the placeholder.
- */
-export function entryHeading(entry: RenderedEntryContent): string {
-  const description = textValue(entry.description);
-  if (description || entry.annotations.length > 0) return description;
-  return t().export.missingDescription;
-}
 
 /** Whether any marker has a label. Markers start unlabelled, and a list of
  * nothing but placeholders says less than the numbered image already does. */
@@ -164,6 +151,7 @@ export async function* renderEntryImages(
         content: {
           entryId: owner.id,
           ordinal,
+          title: textValue(owner.title),
           description: textValue(owner.description),
           annotations: sortedAnnotations(entry),
         },

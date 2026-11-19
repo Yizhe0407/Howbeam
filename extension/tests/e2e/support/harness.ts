@@ -155,6 +155,7 @@ export interface StoredStep {
   id: string;
   sessionId: string;
   order: number;
+  title: string;
   description: string;
   bounds: { x: number; y: number; width: number; height: number } | null;
   groupId?: string;
@@ -268,6 +269,7 @@ export async function readSteps(popup: Page): Promise<StoredStep[]> {
               id: step.id,
               sessionId: step.sessionId,
               order: step.order,
+              title: step.title,
               description: step.description,
               bounds: step.bounds,
               groupId: step.groupId,

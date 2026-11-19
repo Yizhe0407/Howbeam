@@ -1,9 +1,8 @@
-import { PERSISTED_STEP_LIMITS } from '@/lib/storage/persistence-limits';
-import { type Step } from '@/lib/storage/models';
-import { useStepDescriptionAutosave } from '@/lib/editor/editor-autosave';
+import { stepDescriptionLimit, type Step } from '@/lib/storage/models';
+import { useStepTextAutosave } from '@/lib/editor/editor-autosave';
 import { Textarea } from '@/components/ui/textarea';
-import DescriptionDraftRecoveries from './DescriptionDraftRecoveries';
-import DescriptionSaveIssue from './DescriptionSaveIssue';
+import TextDraftRecoveries from './TextDraftRecoveries';
+import TextSaveIssue from './TextSaveIssue';
 import { t } from '@/lib/shared/i18n';
 
 interface Props {
@@ -13,43 +12,41 @@ interface Props {
 
 export default function DescriptionField({ step, disabled = false }: Props) {
   const {
-    description,
-    setDescription,
+    value,
+    setValue,
     saveIssue,
-    savedDescription,
+    savedValue,
     keepSaved,
     recoveries,
     restoreRecovery,
     discardRecovery,
     flush,
     confirmOverwrite,
-  } = useStepDescriptionAutosave(step);
+  } = useStepTextAutosave(step, 'description');
 
   return (
-    <div className="mt-4 flex w-full flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <label htmlFor={`description-${step.id}`} className="text-xs font-bold text-muted-foreground">
-          {t().editor.description.label}
-        </label>
-      </div>
+    <div className="flex w-full flex-col gap-2">
+      <label htmlFor={`description-${step.id}`} className="text-xs font-bold text-muted-foreground">
+        {t().editor.description.label}
+      </label>
       <Textarea
         id={`description-${step.id}`}
-        value={description}
-        maxLength={PERSISTED_STEP_LIMITS.maxStepDescriptionLength}
-        onChange={(e) => setDescription(e.target.value)}
+        value={value}
+        maxLength={stepDescriptionLimit(step)}
+        onChange={(e) => setValue(e.target.value)}
         onBlur={() => void flush().catch(() => undefined)}
         disabled={disabled}
         placeholder={t().editor.description.placeholder}
         className="min-h-16 resize-none px-3.5 py-3 text-sm leading-relaxed"
       />
-      <DescriptionSaveIssue
+      <TextSaveIssue
         issue={saveIssue}
-        savedDescription={savedDescription}
+        savedValue={savedValue}
         onOverwrite={confirmOverwrite}
         onKeepSaved={keepSaved}
         disabled={disabled}
       />
-      <DescriptionDraftRecoveries
+      <TextDraftRecoveries
         recoveries={recoveries}
         onRestore={restoreRecovery}
         onDiscard={discardRecovery}

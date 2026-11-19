@@ -17,6 +17,7 @@ function makeStep(overrides: Partial<Step> = {}): Step {
     screenshotBlob: new Blob(['pixels'], { type: 'image/png' }),
     bounds: { x: 1, y: 2, width: 30, height: 40 },
     devicePixelRatio: 1,
+    title: '',
     description: '',
     url: 'https://example.com',
     timestamp: 1,

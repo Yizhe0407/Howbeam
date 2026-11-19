@@ -12,6 +12,7 @@ function step(description: string): Step {
     order: 0,
     bounds: null,
     devicePixelRatio: 1,
+    title: '',
     description,
     url: 'https://example.com/',
     timestamp: 1,

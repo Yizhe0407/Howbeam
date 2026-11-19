@@ -5,7 +5,7 @@ import { itemAt } from '../setup/item-at';
 
 function step(id: string, overrides: Partial<ScreenshotStep> = {}, content = 'pixels'): ScreenshotStep {
   return {
-    id, sessionId: 's', order: 0, bounds: null, devicePixelRatio: 1, description: '', url: 'https://x.test', timestamp: 0,
+    id, sessionId: 's', order: 0, bounds: null, devicePixelRatio: 1, title: '', description: '', url: 'https://x.test', timestamp: 0,
     screenshotBlob: new Blob([content], { type: 'image/png' }), ...overrides,
   };
 }

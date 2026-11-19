@@ -174,7 +174,7 @@ describe('ImageEditWorkspace recorded boxes', () => {
   function snapshot(count: number): StepEntry {
     const step = (id: string, order: number) => ({
       id, sessionId: 'session-1', groupId: 'anchor', order, bounds: { ...recorded, x: order * 100 },
-      devicePixelRatio: 1, description: '', url: 'https://example.test', timestamp: 0,
+      devicePixelRatio: 1, title: '', description: '', url: 'https://example.test', timestamp: 0,
     });
     return {
       kind: 'group',

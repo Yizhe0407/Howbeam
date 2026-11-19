@@ -25,7 +25,7 @@ function isEditorHandoffMessage(value: unknown): value is EditorHandoffMessage {
 /**
  * Answers whether this page can take over the Project the background was asked
  * to open. The page decides because it is the only component that knows which
- * Project it renders and whether a description is still unsaved; the background
+ * Project it renders and whether step text is still unsaved; the background
  * keeps sole ownership of actually moving the tab.
  */
 async function answerHandoff(
@@ -55,7 +55,7 @@ async function answerHandoff(
       error:
         error instanceof DraftConfirmationRequiredError
           ? error.message
-          : t().editor.descriptionSaveRetry,
+          : t().editor.textSaveRetry,
     };
   }
   return { ok: true, ready: false };

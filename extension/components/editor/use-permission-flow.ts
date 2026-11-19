@@ -141,7 +141,7 @@ export function usePermissionFlow({
     if (flow.isCurrent()) setOperationError(message);
   }
 
-  /** Flushes pending descriptions before starting a run. Returns false when
+  /** Flushes pending step text before starting a run. Returns false when
    * the flush failed or the flow went stale while flushing. */
   async function flushOrBail(flow: FlowToken): Promise<boolean> {
     try {

@@ -12,6 +12,7 @@ export function makeEntry(id: string, order: number): StepEntry {
       bounds: { x: 10, y: 10, width: 20, height: 20 },
       devicePixelRatio: 1,
       screenshotScale: 1,
+      title: '',
       description: `Step ${order + 1}`,
       url: 'https://example.com/',
       timestamp: order,

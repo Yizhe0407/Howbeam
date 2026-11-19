@@ -1,6 +1,6 @@
 import { browser, type Browser } from 'wxt/browser';
 import { StaleCaptureError, queueCapture } from '../background-queues';
-import { generateActionDescription } from '../../capture/action-description';
+import { generateActionTitle } from '../../capture/action-title';
 import {
   CAPTURE_PRESENTATION_CSS,
   waitForCapturePresentationPaint,
@@ -156,6 +156,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
         bounds: null,
         devicePixelRatio: context.devicePixelRatio,
         screenshotScale: captured.scale,
+        title: '',
         description: '',
         url: context.url,
         timestamp: context.timestamp,
@@ -310,6 +311,7 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
       bounds: message.rect,
       devicePixelRatio: anchor.devicePixelRatio,
       screenshotScale: anchor.screenshotScale,
+      title: '',
       description: '',
       url: message.url,
       timestamp: message.timestamp,
@@ -379,7 +381,8 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
           bounds: message.rect,
           devicePixelRatio: message.devicePixelRatio,
           screenshotScale: captured.scale,
-          description: generateActionDescription(message),
+          title: generateActionTitle(message),
+          description: '',
           url: message.url,
           timestamp: message.timestamp,
         }]);

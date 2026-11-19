@@ -231,6 +231,7 @@ describe('recoverInterruptedRecording', () => {
     screenshotBlob: new Blob(['base']),
     bounds: null,
     devicePixelRatio: 2,
+    title: '',
     description: '',
     url: PAGE_URL,
     timestamp: 1,

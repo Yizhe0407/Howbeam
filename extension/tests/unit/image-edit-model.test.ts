@@ -7,7 +7,7 @@ const text = { id: 't1', kind: 'text' as const, bounds: { x: 1, y: 2, width: 100
 const arrow = { id: 'a1', kind: 'arrow' as const, from: { x: 0, y: 0 }, to: { x: 50, y: 60 }, width: 4, color: '#2f6fed' };
 
 function step(overrides: Partial<Step> = {}): Step {
-  return { id: 's1', sessionId: 'p', order: 0, bounds: null, devicePixelRatio: 1, description: '', url: 'https://x.test', timestamp: 0, ...overrides };
+  return { id: 's1', sessionId: 'p', order: 0, bounds: null, devicePixelRatio: 1, title: '', description: '', url: 'https://x.test', timestamp: 0, ...overrides };
 }
 
 describe('image edit validation', () => {

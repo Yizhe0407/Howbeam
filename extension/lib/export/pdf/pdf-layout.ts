@@ -64,10 +64,11 @@ export interface PdfPage {
 export interface LayoutStep {
   section?: { title: string };
   ordinal: number;
-  heading: string;
+  title: string;
   image: { bytes: Uint8Array; width: number; height: number };
   alt: string;
   annotations: readonly { description: string }[];
+  description: string;
 }
 
 export interface PdfLayouterOptions {
@@ -78,7 +79,6 @@ export interface PdfLayouterOptions {
   labels: {
     pageNumber: (page: number) => string;
     credit: string;
-    missingDescription: string;
   };
   signal?: AbortSignal;
 }
@@ -173,10 +173,10 @@ export class PdfLayouter {
       this.inSection = true;
       this.addRule(0, PDF_SPEC.sectionRuleGapAfter, PDF_SPEC.sectionRuleThickness, PDF_COLORS.rule);
     }
-    this.addStepHeading(step.ordinal, step.heading, imageSpace);
+    this.addStepHeading(step.ordinal, step.title, imageSpace);
     this.addImage(step.image, step.alt);
-    // The heading already carries the entry's own description; a Mark entry's markers are its content, so they always follow.
     this.addAnnotations(step.annotations);
+    this.addTextBlock({ kind: 'paragraph' }, step.description, PDF_TEXT.stepDescription, PDF_SPEC.stepIndent);
   }
 
   /**
@@ -209,9 +209,10 @@ export class PdfLayouter {
     template: { kind: 'heading'; level: 1 | 2 | 3; outline?: PdfOutlineEntry } | { kind: 'paragraph' },
     text: string,
     style: PdfTextStyle,
+    indent = 0,
   ): void {
     if (!text) return;
-    const lines = wrapText(this.measure(style), text, this.contentWidth, this.options.signal);
+    const lines = wrapText(this.measure(style), text, this.contentWidth - indent, this.options.signal);
     let pendingGap = style.gapBefore;
     let block: (PdfBlock & { lines: PdfText[] }) | undefined;
     let blockPage = 0;
@@ -227,7 +228,7 @@ export class PdfLayouter {
         blockPage = this.pageNumber;
         this.pushBlock(block);
       }
-      block.lines.push({ text: line, x: PDF_SPEC.margin, top: this.cursorY, style });
+      block.lines.push({ text: line, x: PDF_SPEC.margin + indent, top: this.cursorY, style });
       this.cursorY += style.lineHeight;
       this.hasContent = true;
       pendingGap = 0;
@@ -278,7 +279,7 @@ export class PdfLayouter {
     // Same rule as hasAnnotationText in project-export-render: unlabelled markers get no list.
     if (annotations.every((annotation) => annotation.description.trim() === '')) return;
     const style = PDF_TEXT.annotation;
-    const texts = annotations.map((annotation) => annotation.description.trim() || this.options.labels.missingDescription);
+    const texts = annotations.map((annotation) => annotation.description.trim());
     const labelFor = (index: number) => `${index + 1}. `;
     const labelWidth = Math.max(...texts.map((_, index) => this.options.measure(labelFor(index), style)));
     const layout = chooseAnnotationColumns(

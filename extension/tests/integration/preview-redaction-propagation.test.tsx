@@ -71,6 +71,7 @@ function makeStep(changes: Partial<Step> = {}): Step {
     order: 0,
     bounds: { x: 10, y: 20, width: 30, height: 40 },
     devicePixelRatio: 1,
+    title: '',
     description: '',
     url: 'https://example.test',
     timestamp: 0,

@@ -44,6 +44,7 @@ function makeStep(overrides: Partial<Step> = {}): Step {
     screenshotBlob: pngBlob(),
     bounds: { x: 12.5, y: -4, width: 100, height: 50 },
     devicePixelRatio: 2,
+    title: '',
     description: 'Click the button',
     url: 'https://example.com/path?q=one#section',
     timestamp: 1_700_000_000_000,

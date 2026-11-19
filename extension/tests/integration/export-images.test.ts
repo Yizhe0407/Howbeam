@@ -36,6 +36,7 @@ function step(order: number): Step {
     screenshotBlob: new Blob([`image-${order}`], { type: 'image/jpeg' }),
     bounds: null,
     devicePixelRatio: 1,
+    title: '',
     description: '',
     url: 'https://example.com',
     timestamp: order,

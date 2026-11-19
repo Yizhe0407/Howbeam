@@ -45,6 +45,7 @@ function anchorStep(overrides: Partial<Step> = {}): Step {
     bounds: null,
     devicePixelRatio: 2,
     screenshotScale: 2,
+    title: '',
     description: '',
     url: PAGE_URL,
     timestamp: 1,

@@ -18,6 +18,7 @@ function step(id: string, order: number, overrides: Partial<Step> = {}): Step {
     screenshotBlob: new Blob([id], { type: 'image/png' }),
     bounds: { x: 0, y: 0, width: 10, height: 10 },
     devicePixelRatio: 1,
+    title: '',
     description: id,
     url: 'https://example.com/',
     timestamp: order,

@@ -5,7 +5,7 @@ import {
   getSteps,
   replaceStepCaptureAtomically,
   StepImageEditConflictError,
-  saveStepDescription,
+  saveStepText,
   updateStepsAtomically,
 } from '@/lib/storage/step-repository';
 import { buildStepEntries, type Redaction, type Step, type StepEntry } from '@/lib/storage/models';
@@ -36,6 +36,7 @@ function makeStep(overrides: Partial<Step> = {}): Step {
     screenshotBlob: jpegBlob(),
     bounds: { x: 1, y: 2, width: 3, height: 4 },
     devicePixelRatio: 1,
+    title: '',
     description: '',
     url: 'https://example.com',
     timestamp: Date.now(),
@@ -91,7 +92,7 @@ describe('image edit revision', () => {
   it('moves forward on every write of masks, drawings or crop, and on nothing else', async () => {
     const step = makeStep();
     await addStep(step);
-    await saveStepDescription(step.id, 'text only', step.description);
+    await saveStepText(step.id, 'description', 'text only', step.description);
     expect((await getStep(step.id))?.imageEditRevision).toBeUndefined();
 
     await updateStepsAtomically(step.sessionId, [{ id: step.id, changes: { crop: { x: 0, y: 0, width: 1, height: 1 } } }]);

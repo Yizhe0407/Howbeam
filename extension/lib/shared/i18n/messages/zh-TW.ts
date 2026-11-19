@@ -211,10 +211,10 @@ export const zhTW = {
     noSelectionTitle: '尚未選擇步驟',
     noSelectionBody: '請從左側步驟列表選擇要編輯的內容。',
     recaptureFailed: '重拍失敗，原本內容未變更。',
-    recaptureReplaced: '重拍完成；原步驟的說明與順序已保留。原有的遮罩與圖片標示已清除。',
+    recaptureReplaced: '重拍完成；原步驟的標題、說明與順序已保留。原有的遮罩與圖片標示已清除。',
     recaptureCancelled: '已取消重拍，原本內容未變更。',
     selectedEntryMissing: '找不到目前選取的步驟。',
-    selectFailed: '切換步驟失敗：儲存目前說明時發生錯誤，請再試一次。',
+    selectFailed: '切換步驟失敗：儲存目前的標題或說明時發生錯誤，請再試一次。',
     recaptureTabMissing: '找不到重拍分頁。',
     recaptureCancelFailed: '無法取消重拍，請再試一次。',
     publishTargetMissing: '找不到要發佈的專案。',
@@ -224,8 +224,8 @@ export const zhTW = {
     editBusy: '目前有其他操作進行中，請稍後再修改。',
     continuationAction: '接續錄製',
     recaptureAction: '重拍',
-    descriptionSaveRetry: '尚有說明無法儲存。請重試後再繼續。',
-    draftConfirmationRequired: '覆寫已儲存的說明前，需要先確認要保留哪一份草稿。',
+    textSaveRetry: '尚有標題或說明無法儲存。請重試後再繼續。',
+    draftConfirmationRequired: '覆寫已儲存的內容前，需要先確認要保留哪一份草稿。',
     multiAnnotationRecaptureBlocked: '有多個標註，無法重拍；請重新錄這張快照。',
     privacyReviewRequiredNotice:
       '這張圖片的敏感資訊遮罩尚未確認，因此預覽會保持全黑，複製與匯出也會被阻擋。請按「檢查遮罩」確認遮罩。',
@@ -307,9 +307,12 @@ export const zhTW = {
       confirmReview: '確認遮罩',
     },
 
+    projectTitle: {
+      label: '專案標題',
+      saveFailed: '標題儲存失敗，請再試一次。',
+    },
+
     stage: {
-      titleLabel: '專案標題',
-      titleSaveFailed: '標題儲存失敗，請再試一次。',
       zoomHint: '點擊放大',
       zoomImage: '放大圖片',
       stepAlt: (number: number) => `步驟 ${number}`,
@@ -327,6 +330,11 @@ export const zhTW = {
       deleteDisabled: '錄製或重拍期間無法刪除步驟',
     },
 
+    title: {
+      label: (number: number) => `步驟 ${number} 標題`,
+      placeholder: '輸入標題…',
+    },
+
     description: {
       label: '說明',
       placeholder: '輸入步驟說明…',
@@ -334,13 +342,13 @@ export const zhTW = {
 
     saveIssue: {
       conflict: '尚未儲存：與其他分頁衝突',
-      conflictBody: '其他分頁已儲存了不同的說明。之後輸入的內容不會儲存，直到你選擇要保留哪一份。',
+      conflictBody: '其他分頁已儲存了不同的內容。之後輸入的內容不會儲存，直到你選擇要保留哪一份。',
       savedVersion: (excerpt: string) => `已儲存的版本：${excerpt}`,
       savedEmpty: '（空白）',
       overwrite: '用我的版本覆寫',
       keepSaved: '改用已儲存的版本',
       missing: '尚未儲存：這個步驟已被刪除。',
-      failed: '尚未儲存：說明儲存失敗，繼續編輯時會再試一次。',
+      failed: '尚未儲存：儲存失敗，繼續編輯時會再試一次。',
     },
 
     annotations: {
@@ -354,7 +362,7 @@ export const zhTW = {
     },
 
     drafts: {
-      label: '其他分頁的說明草稿',
+      label: '其他分頁的草稿',
       found: (count: number) => `找到 ${count} 份其他分頁或先前版本的草稿`,
       intro: '草稿不會自動覆寫目前內容。請先載入並確認，或只捨棄不需要的版本。',
       empty: '（空白草稿）',
@@ -619,26 +627,20 @@ export const zhTW = {
     annotationNotCreated: '未建立標註，請再選一次',
   },
 
-  /** Default step descriptions written at capture time; the user edits them afterwards. */
+  /** Default step titles written at capture time; the user edits them afterwards. */
   capture: {
-    markRegion: '標記頁面區域',
     openNewTab: '開啟新分頁',
-    openLink: '開啟連結',
-    selectOption: '選擇選項',
-    typeInField: '在文字欄位中輸入',
-    toggleCheckbox: '切換核取方塊',
-    selectRadio: '選取單選按鈕',
-    submitForm: '提交表單',
-    useInput: '操作輸入欄位',
-    clickButton: '點擊按鈕',
-    toggleDisclosure: '展開或收合區段',
-    clickLabel: '點擊欄位標籤',
-    clickElement: '點擊互動元素',
+    openLink: (label: string) => `開啟 ${label}`,
+    selectOption: (label: string) => `在 ${label} 選擇選項`,
+    typeInField: (label: string) => `在 ${label} 欄位輸入`,
+    toggleCheckbox: (label: string) => `勾選 ${label}`,
+    selectRadio: (label: string) => `選取 ${label}`,
+    toggleDisclosure: (label: string) => `展開 ${label}`,
+    click: (label: string) => `點擊 ${label}`,
   },
 
   /** Text inside exported HTML, PDF and Markdown documents. */
   export: {
-    missingDescription: '（未填寫說明）',
     imageAlt: '步驟截圖',
     pageNumber: (page: number) => `第 ${page} 頁`,
     downloadNotStarted: '瀏覽器沒有開始下載，請再試一次。',

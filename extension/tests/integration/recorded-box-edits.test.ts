@@ -27,6 +27,7 @@ function makeStep(sessionId: string, overrides: Partial<Step> = {}): Step {
     screenshotBlob: jpegBlob(),
     bounds: detected,
     devicePixelRatio: 1,
+    title: '',
     description: '',
     url: 'https://example.com',
     timestamp: Date.now(),

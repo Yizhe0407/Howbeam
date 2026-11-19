@@ -17,6 +17,7 @@ vi.mock('@/components/editor/MultiHighlightThumbnail', () => ({
   default: ({ overlay }: { overlay?: ReactNode }) => <div data-testid="group-image-frame">{overlay}</div>,
 }));
 vi.mock('@/components/editor/DescriptionField', () => ({ default: () => null }));
+vi.mock('@/components/editor/StepTitleField', () => ({ default: () => null }));
 vi.mock('@/components/editor/AnnotationList', () => ({ default: () => null }));
 vi.mock('@/components/editor/StepActions', () => ({ default: () => null }));
 
@@ -40,6 +41,7 @@ function makeStep(changes: Partial<Step> = {}): Step {
     order: 1,
     bounds: { x: 10, y: 20, width: 30, height: 40 },
     devicePixelRatio: 1,
+    title: '',
     description: '',
     url: 'https://example.test',
     timestamp: 0,
@@ -108,15 +110,18 @@ afterEach(() => {
 });
 
 describe('StepStage snapshots', () => {
-  it('anchors the zoom hint to the rendered image frame in both modes', () => {
-    const { unmount } = renderStage();
-    const groupHint = screen.getByText('點擊放大');
-    expect(groupHint.parentElement?.dataset.testid).toBe('group-image-frame');
+  it('puts the zoom target, hint included, inside the rendered image frame in both modes', () => {
+    for (const [entry, frame] of [[groupEntry(), 'group-image-frame'], [singleEntry(), 'single-image-frame']] as const) {
+      const onZoom = vi.fn();
+      const { unmount } = renderStage({ entry, onZoom });
+      const zoom = screen.getByRole('button', { name: '放大圖片' });
 
-    unmount();
-    renderStage({ entry: singleEntry() });
-    const singleHint = screen.getByText('點擊放大');
-    expect(singleHint.parentElement?.dataset.testid).toBe('single-image-frame');
+      expect(zoom.parentElement?.dataset.testid).toBe(frame);
+      expect(zoom.contains(screen.getByText('點擊放大'))).toBe(true);
+      fireEvent.click(zoom);
+      expect(onZoom).toHaveBeenCalledTimes(1);
+      unmount();
+    }
   });
 });
 

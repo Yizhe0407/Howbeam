@@ -5,7 +5,7 @@ import {
 } from './project-section-model';
 import { isRecord } from '../shared/validation';
 import { PERSISTED_PROJECT_LIMITS, PERSISTED_STEP_LIMITS } from './persistence-limits';
-import { normalizeStoredText } from './stored-text';
+import { normalizeStoredLine, normalizeStoredText } from './stored-text';
 import { cloneImageEdit, IMAGE_EDIT_LIMITS, readImageEdits, type ImageEdit } from './image-edit-model';
 export type { ImageEdit } from './image-edit-model';
 import { t } from '../shared/i18n';
@@ -81,6 +81,8 @@ export interface Step {
   devicePixelRatio: number;
   /** Actual screenshot pixels per CSS pixel, measured from the captured image. */
   screenshotScale?: number;
+  /** One line printed above the screenshot. Snapshot annotations keep it empty. */
+  title: string;
   description: string;
   url: string;
   timestamp: number;
@@ -107,7 +109,7 @@ export interface Project {
   updatedAt: number;
   /** Monotonic generation of the Project's structure: which rows exist, their order and grouping. */
   contentRevision: number;
-  /** Monotonic generation of in-place row edits: descriptions, image edits. */
+  /** Monotonic generation of in-place row edits: titles, descriptions, image edits. */
   stepEditRevision: number;
   /** Monotonic generation of title and description. */
   metadataRevision: number;
@@ -156,6 +158,14 @@ function sanitizeStepText(value: unknown, maximum: number, field: string): strin
     return storageError(`${field} exceeds its storage limit.`);
   }
   return normalizeStoredText(value);
+}
+
+function sanitizeStepTitle(value: unknown, role: StepRole): string {
+  if (role === 'annotation') return '';
+  if (typeof value !== 'string' || value.length > PERSISTED_STEP_LIMITS.maxStepTitleLength) {
+    return storageError('Step title exceeds its storage limit.');
+  }
+  return normalizeStoredLine(value);
 }
 
 function sanitizeStepUrl(value: unknown): string {
@@ -273,6 +283,13 @@ export type StepRole = 'ordinary' | 'anchor' | 'annotation';
 export function stepRole(step: Pick<Step, 'id' | 'groupId'>): StepRole {
   if (!step.groupId) return 'ordinary';
   return step.id === step.groupId ? 'anchor' : 'annotation';
+}
+
+/** The two texts a person writes for a step. */
+export type StepTextField = 'title' | 'description';
+
+export function stepTextLimit(step: Pick<Step, 'id' | 'groupId'>, field: StepTextField): number {
+  return field === 'title' ? PERSISTED_STEP_LIMITS.maxStepTitleLength : stepDescriptionLimit(step);
 }
 
 export function stepDescriptionLimit(step: Pick<Step, 'id' | 'groupId'>): number {
@@ -414,6 +431,7 @@ export function sanitizeStepForStorage(step: Step): Step {
       ? null
       : isValidBounds(step.bounds) ? { ...step.bounds } : null,
     devicePixelRatio: sanitizePixelRatio(step.devicePixelRatio, 'Step device pixel ratio'),
+    title: sanitizeStepTitle(step.title, stepRole({ id, groupId })),
     description: sanitizeStepText(step.description, stepDescriptionLimit(step), 'Step description'),
     url: sanitizeStepUrl(step.url),
     timestamp: sanitizeNonNegativeSafeInteger(step.timestamp, 'Step timestamp'),

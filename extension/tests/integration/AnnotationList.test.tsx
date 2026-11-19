@@ -15,9 +15,9 @@ function render(ui: Parameters<typeof rtlRender>[0], options?: Parameters<typeof
 const autosave = vi.hoisted(() => ({ setDescription: vi.fn() }));
 
 vi.mock('@/lib/editor/editor-autosave', () => ({
-  useStepDescriptionAutosave: (step: Step) => ({
-    description: step.description,
-    setDescription: autosave.setDescription,
+  useStepTextAutosave: (step: Step) => ({
+    value: step.description,
+    setValue: autosave.setDescription,
     recoveries: [],
     restoreRecovery: vi.fn(),
     discardRecovery: vi.fn(),
@@ -35,6 +35,7 @@ function makeAnnotation(): Step {
     order: 0,
     bounds: { x: 10, y: 10, width: 20, height: 20 },
     devicePixelRatio: 1,
+    title: '',
     description: '標註內容',
     url: 'https://example.com/',
     timestamp: 1,

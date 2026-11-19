@@ -130,7 +130,7 @@ test.describe('element detection', () => {
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
     const step = itemAt(await readSteps(popupPage), 0);
     // Without closed-root access the hit test stops at the host, which would record the whole 320x160 block as an unlabelled region.
-    expect(step.description).toBe('點擊按鈕');
+    expect(step.title).toBe('點擊 影子按鈕');
     expectBoundsNear(step.bounds, shadowButton);
     expect(step.bounds!.width).toBeLessThan(host.width);
 
@@ -152,7 +152,7 @@ test.describe('element detection', () => {
 
     const steps = await readSteps(popupPage);
     // Neither card has a role, href, handler property or pointer cursor: the framework attribute is the only evidence they're controls.
-    expect(steps.map((step) => step.description)).toEqual(['點擊互動元素', '點擊互動元素']);
+    expect(steps.map((step) => step.title)).toEqual(['點擊 jsaction 卡片', '點擊 Stimulus 卡片']);
     expectBoundsNear(itemAt(steps, 0).bounds, jsaction);
     expectBoundsNear(itemAt(steps, 1).bounds, stimulus);
 
@@ -177,7 +177,7 @@ test.describe('element detection', () => {
       imageMapClicks: 1,
     });
     const step = itemAt(await readSteps(popupPage), 0);
-    expect(step.description).toBe('開啟連結');
+    expect(step.title).toBe('開啟 Image map hotspot');
     expectBoundsNear(step.bounds, area);
 
     await stopRecording(popupPage);
@@ -233,7 +233,7 @@ test.describe('element detection', () => {
       activationOverlayClicks: 1,
     });
     const step = itemAt(await readSteps(popupPage), 0);
-    expect(step.description).toBe('點擊互動元素');
+    expect(step.title).toBe('點擊 透明操作遮罩');
     expectBoundsNear(step.bounds, overlay);
     expect(step.bounds!.width).toBeGreaterThan(coveredButton.width);
     expect(step.bounds!.height).toBeGreaterThan(coveredButton.height);
@@ -452,7 +452,7 @@ test.describe('element detection', () => {
       paintedBackdropClicks: 1,
     });
     const step = itemAt(await readSteps(popupPage), 0);
-    expect(step.description).toBe('標記頁面區域');
+    expect(step.title).toBe('');
     expectBoundsNear(step.bounds, backdrop);
     expect(step.bounds!.width).toBeGreaterThan(coveredButton.width);
     expect(step.bounds!.height).toBeGreaterThan(coveredButton.height);

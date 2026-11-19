@@ -1,5 +1,5 @@
 import { isRecord } from '../shared/validation';
-import { buildStepEntries, stepDescriptionLimit, stepRole, type Bounds, type ImageEdit, type Redaction, type Step } from '../storage/models';
+import { buildStepEntries, stepDescriptionLimit, stepRole, stepTextLimit, type Bounds, type ImageEdit, type Redaction, type Step } from '../storage/models';
 import {
   IMAGE_EDIT_LIMITS,
   isImageEditColor,
@@ -16,7 +16,7 @@ import {
   sanitizeProjectSectionTitle,
   type ProjectSection,
 } from '../project/project-sections';
-import { isStoredText } from '../storage/stored-text';
+import { isStoredText, normalizeStoredLine } from '../storage/stored-text';
 import {
   BOUNDS_KEYS,
   IMAGE_EDIT_KEYS,
@@ -119,6 +119,12 @@ function expectText(value: unknown, path: string, maximumLength: number): string
     fail('INVALID_ARCHIVE', `${path} contains invalid control characters.`);
   }
   return text;
+}
+
+function expectTitle(value: unknown, path: string, maximumLength: number): string {
+  const title = expectString(value, path, maximumLength);
+  if (title !== normalizeStoredLine(title)) fail('INVALID_ARCHIVE', `${path} contains invalid control characters.`);
+  return title;
 }
 
 function expectUrl(value: unknown, path: string): string {
@@ -461,6 +467,7 @@ export function validateRuntimeStep(stepValue: unknown, path: string): Step {
       Number.MIN_VALUE,
       PROJECT_ARCHIVE_LIMITS.maxPixelRatio,
     ),
+    title: expectTitle(record.title, `${path}.title`, stepRole({ id, groupId }) === 'annotation' ? 0 : stepTextLimit({ id, groupId }, 'title')),
     description: expectText(record.description, `${path}.description`, stepDescriptionLimit({ id, groupId })),
     url: expectUrl(record.url, `${path}.url`),
     timestamp: expectSafeInteger(record.timestamp, `${path}.timestamp`),

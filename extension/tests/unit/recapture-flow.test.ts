@@ -77,6 +77,7 @@ function step(overrides: Partial<Step> = {}): Step {
     bounds: { x: 1, y: 2, width: 30, height: 40 },
     devicePixelRatio: 2,
     screenshotScale: 2,
+    title: '',
     description: 'Persisted step',
     url: SOURCE_URL,
     timestamp: 1,

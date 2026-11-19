@@ -26,6 +26,7 @@ function makeStep(id: string, order: number, changes: Partial<Step> = {}): Step 
     screenshotBlob: new Blob([id], { type: 'image/jpeg' }),
     bounds: { x: 10, y: 20, width: 30, height: 40 },
     devicePixelRatio: 1,
+    title: '',
     description: '',
     url: 'https://example.com',
     timestamp: order,

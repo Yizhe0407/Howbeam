@@ -7,7 +7,7 @@ import {
   horizontalListSortingStrategy,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { entryId, type StepEntry } from '@/lib/storage/models';
+import { entryId, getEntryImageOwner, type StepEntry } from '@/lib/storage/models';
 import { railRows, type ProjectSection, type RailRow } from '@/lib/project/project-sections';
 import {
   horizontalListModifiers,
@@ -122,8 +122,9 @@ function LazyRailPreview({ eager, children }: { eager: boolean; children: ReactN
 // Sits on top of a screenshot, so it wears the same solid sticker chip as the step number.
 const RAIL_HANDLE = 'size-6 rounded-full border-2 border-border bg-card text-foreground hover:bg-secondary [&_svg]:size-3.5';
 
-/** An entry's screenshot with its step number, as the rail and a dragged entry's copy show it. */
+/** An entry's screenshot with its step number and title, as the rail and a dragged entry's copy show it. */
 function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: number; active: boolean }) {
+  const title = getEntryImageOwner(entry).title;
   return (
     <div className={cn(
       'pointer-events-none relative z-[1] aspect-[16/9] w-full overflow-hidden rounded-sm border-2 bg-secondary',
@@ -146,6 +147,11 @@ function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: nu
       )}>
         {number}
       </span>
+      {title && (
+        <span className="absolute inset-x-0 bottom-0 z-30 truncate border-t-2 border-border bg-card px-1.5 py-0.5 text-[11px] leading-tight font-bold text-foreground">
+          {title}
+        </span>
+      )}
     </div>
   );
 }

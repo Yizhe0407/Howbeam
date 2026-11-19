@@ -14,7 +14,6 @@ import {
   type ProjectMarkdownArchive,
 } from './project-export-contract';
 import {
-  entryHeading,
   hasAnnotationText,
   renderEntryImages,
   type RenderedEntryContent,
@@ -73,18 +72,18 @@ function renderProjectMarkdown<T extends RenderedEntryContent>(
     if (section) {
       lines.push('', `## ${escapeProjectMarkdown(section.title)}`);
     }
-    // Text-first reading order matches the HTML and PDF publications: the step
-    // description leads, its screenshot follows, then any group annotations.
-    const heading = entryHeading(entry);
-    if (heading) lines.push('', escapeProjectMarkdown(heading));
-    const alt = textOrDefault(entry.description, t().export.imageAlt);
+    // Same reading order as the HTML and PDF publications: numbered title,
+    // screenshot, markers, then the description. Empty parts are left out.
+    lines.push('', `### ${entry.ordinal}.${entry.title ? ` ${escapeProjectMarkdown(entry.title)}` : ''}`);
+    const alt = textOrDefault(entry.title, t().export.imageAlt);
     lines.push('', `![${escapeProjectMarkdown(alt)}](${imageReference(entry)})`);
     if (hasAnnotationText(entry.annotations)) {
       lines.push('');
       for (const [index, annotation] of entry.annotations.entries()) {
-        lines.push(`${index + 1}. ${escapeProjectMarkdown(textOrDefault(annotation.description, t().export.missingDescription))}`);
+        lines.push(`${index + 1}. ${escapeProjectMarkdown(textValue(annotation.description))}`.trimEnd());
       }
     }
+    if (entry.description) lines.push('', escapeProjectMarkdown(entry.description));
   }
 
   return `${lines.join('\n')}\n`;

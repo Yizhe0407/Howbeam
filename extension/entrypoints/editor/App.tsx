@@ -194,13 +194,13 @@ function EditorApp() {
     } catch (saveError) {
       // A failed save may mean the Project was deleted elsewhere; a fresh read shows it read-only when it was.
       requestReload();
-      console.error('[howbeam] failed to save descriptions before an editor operation', saveError);
+      console.error('[howbeam] failed to save step text before an editor operation', saveError);
       // A pending draft confirmation carries its own user-facing message; only
       // genuine save failures get the generic retry wording.
       setOperationError(
         saveError instanceof DraftConfirmationRequiredError
           ? saveError.message
-          : t().editor.descriptionSaveRetry,
+          : t().editor.textSaveRetry,
       );
       throw saveError;
     }
@@ -376,6 +376,8 @@ function EditorApp() {
         operation={recording.operation}
         hasSteps={entries.length > 0}
         projectTitle={project?.title ?? null}
+        onTitleChange={(title) => updateProjectMetadata({ title })}
+        onTitleError={(titleError) => setOperationError(reportError('[howbeam] failed to rename project', titleError, t().editor.projectTitle.saveFailed))}
         projectActionsAvailable={projectLoadState !== 'missing' && !projectDeleted}
         beforeNavigate={leaveEditor}
         onShowRecording={ordinaryRecordingActive && recording.tabId != null ? () => void showRecordedTab(recording.tabId!) : undefined}
@@ -513,8 +515,6 @@ function EditorApp() {
                     ? undefined
                     : () => setSectionDialog({ kind: 'add', startEntryId: entryId(selectedEntry), step: selectedIndex + 1 })
                 }
-                projectTitle={project?.title}
-                onTitleChange={(title) => updateProjectMetadata({ title })}
                 onDelete={deleteEntry}
                 onDeleteAnnotation={handleDeleteAnnotation}
                 onZoom={() => setZoomOpen(true)}

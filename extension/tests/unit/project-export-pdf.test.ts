@@ -39,7 +39,7 @@ import { StepImageError } from '@/lib/export/export-errors';
 import { generateProjectPdf } from '@/lib/export/project-export-pdf';
 import { itemAt } from '../setup/item-at';
 
-function entry(id: string, order: number, description: string): StepEntry {
+function entry(id: string, order: number, title: string, description = ''): StepEntry {
   return {
     kind: 'single',
     step: {
@@ -49,6 +49,7 @@ function entry(id: string, order: number, description: string): StepEntry {
       screenshotBlob: new Blob(['source'], { type: 'image/jpeg' }),
       bounds: null,
       devicePixelRatio: 1,
+      title,
       description,
       url: 'https://example.com/settings',
       timestamp: order,
@@ -57,7 +58,7 @@ function entry(id: string, order: number, description: string): StepEntry {
 }
 
 /** Snapshot group: an anchor owning the screenshot plus numbered annotations. */
-function groupEntry(id: string, order: number, description: string, annotations: string[]): StepEntry {
+function groupEntry(id: string, order: number, title: string, annotations: string[], description = ''): StepEntry {
   return {
     kind: 'group',
     anchor: {
@@ -68,6 +69,7 @@ function groupEntry(id: string, order: number, description: string, annotations:
       screenshotBlob: new Blob(['source'], { type: 'image/jpeg' }),
       bounds: null,
       devicePixelRatio: 1,
+      title,
       description,
       url: 'https://example.com/settings',
       timestamp: order,
@@ -79,6 +81,7 @@ function groupEntry(id: string, order: number, description: string, annotations:
       order: order + index + 1,
       bounds: { x: 10 * (index + 1), y: 20, width: 30, height: 40 },
       devicePixelRatio: 1,
+      title: '',
       description: text,
       url: 'https://example.com/settings',
       timestamp: order + index + 1,
@@ -358,6 +361,16 @@ describe('generateProjectPdf', () => {
       expect(third).toEqual([['H3', '3. 完成'], ['Figure', '']]);
     });
 
+    it('tags a step description as a paragraph after the screenshot and its markers', async () => {
+      const read = await readPdf(await generateProjectPdf(
+        [groupEntry('a', 1, 'Snapshot', ['點這裡'], '先找到設定')],
+        { title: '指南' },
+      ));
+
+      const [first] = read.structure.map((page) => itemAt(page, 0).children.map((node) => [node.role, node.text]));
+      expect(first).toEqual([['H1', '指南'], ['H2', '1. Snapshot'], ['Figure', ''], ['L', '1. 點這裡'], ['P', '先找到設定']]);
+    });
+
     it('structures a list as items with a label and a body', async () => {
       const read = await readPdf(await generateProjectPdf(project(), { title: 'T', sections }));
 
@@ -369,7 +382,7 @@ describe('generateProjectPdf', () => {
       ]);
     });
 
-    it('gives every screenshot its step description as alternative text, and a fallback when there is none', async () => {
+    it('gives every screenshot its step title as alternative text, and a fallback when there is none', async () => {
       const read = await readPdf(await generateProjectPdf([entry('a', 1, '開啟設定'), entry('b', 2, '')], { title: 'T' }));
 
       const alts = read.structure.flatMap((page) => flat(page)).filter((node) => node.role === 'Figure').map((node) => node.alt);

@@ -6,6 +6,7 @@ import {
   stepRole,
   type Bounds,
   type Step,
+  type StepTextField,
 } from './models';
 import type { StepRecaptureTarget } from './recording-state';
 import { assertStorableScreenshots } from './screenshot-rules';
@@ -118,7 +119,7 @@ export class StepUpdateConflictError extends Error {
 }
 
 /** A targeted step row no longer exists. Callers that hold user-typed content
- * (description autosave) must keep their durable draft instead of treating the
+ * (title and description autosave) must keep their durable draft instead of treating the
  * write as committed. */
 export class StepNotFoundError extends Error {
   constructor(public readonly stepId: string) {
@@ -127,17 +128,18 @@ export class StepNotFoundError extends Error {
   }
 }
 
-/** The persisted description diverged from the value the editor last observed.
- * Carries the winning value so the caller can rebase and ask for confirmation
- * instead of silently losing either tab's text. */
-export class StepDescriptionConflictError extends Error {
+/** The persisted title or description diverged from the value the editor last
+ * observed. Carries the winning value so the caller can rebase and ask for
+ * confirmation instead of silently losing either tab's text. */
+export class StepTextConflictError extends Error {
   constructor(
     public readonly stepId: string,
-    public readonly expectedDescription: string,
-    public readonly actualDescription: string,
+    public readonly field: StepTextField,
+    public readonly expectedValue: string,
+    public readonly actualValue: string,
   ) {
-    super('Step description changed before the edit was saved.');
-    this.name = 'StepDescriptionConflictError';
+    super(`Step ${field} changed before the edit was saved.`);
+    this.name = 'StepTextConflictError';
   }
 }
 
@@ -158,7 +160,7 @@ export class StepImageEditConflictError extends Error {
 const IMAGE_EDIT_FIELDS = ['redactions', 'imageEdits', 'crop', 'manualBounds', 'highlightRemoved'] as const;
 /** Every field an in-place edit may write. None of them is structural or
  * counted by the Project summary. */
-const IN_PLACE_FIELDS = [...IMAGE_EDIT_FIELDS, 'redactionReviewRequired', 'description'] as const;
+const IN_PLACE_FIELDS = [...IMAGE_EDIT_FIELDS, 'redactionReviewRequired', 'title', 'description'] as const;
 type InPlaceStepChanges = Partial<Pick<Step, (typeof IN_PLACE_FIELDS)[number]>>;
 
 /** Copies only the in-place fields `changes` carries, whatever else it holds.
@@ -189,7 +191,7 @@ function hadPrivacyMasks(step: Step): boolean {
 }
 
 /** Applies a visual edit as one IndexedDB transaction. Each row is re-read in
- * the transaction, so description autosaves and reorders cannot be lost by a
+ * the transaction, so text autosaves and reorders cannot be lost by a
  * stale editor draft. Missing or cross-session rows abort the whole commit. */
 export async function updateStepsAtomically(sessionId: string, updates: StepUpdate[]): Promise<void> {
   assertMutationItems(updates, 'Step updates');
@@ -322,29 +324,30 @@ export async function replaceStepCaptureAtomically(
   });
 }
 
-/** Compare-and-set description save for the editor autosave path. It only
- * conflicts when the same row's description diverged from what this editor
- * last observed, so the CAS guards exactly that value. Conflicts surface as StepDescriptionConflictError
- * (with the winning value) instead of last-write-wins.
+/** Compare-and-set title or description save for the editor autosave path. It
+ * only conflicts when the same row's field diverged from what this editor last
+ * observed, so the CAS guards exactly that value. Conflicts surface as
+ * StepTextConflictError (with the winning value) instead of last-write-wins.
  *
- * Resolves with the description as stored (normalized by the stored-text
- * rule), which is the value the caller must compare against from now on. */
-export async function saveStepDescription(
+ * Resolves with the value as stored (normalized by the stored-text rule), which
+ * is the value the caller must compare against from now on. */
+export async function saveStepText(
   id: string,
-  description: string,
-  expectedDescription: string,
+  field: StepTextField,
+  value: string,
+  expectedValue: string,
 ): Promise<string> {
   return runProjectStepsWrite(async (tx) => {
     const existing = await tx.objectStore('steps').get(id);
     if (!existing) throw new StepNotFoundError(id);
-    if (existing.description !== expectedDescription) {
-      throw new StepDescriptionConflictError(id, expectedDescription, existing.description);
+    if (existing[field] !== expectedValue) {
+      throw new StepTextConflictError(id, field, expectedValue, existing[field]);
     }
     const project = await requireWritableProject(tx, existing.sessionId);
-    const stored = applyStepChanges(existing, { description });
+    const stored = applyStepChanges(existing, { [field]: value });
     await tx.objectStore('steps').put(stored);
     await recordStepEdit(tx, project);
-    return stored.description;
+    return stored[field];
   });
 }
 

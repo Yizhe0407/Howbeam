@@ -15,6 +15,7 @@ function makeStep(overrides: Partial<Step> = {}): Step {
     id: crypto.randomUUID(), sessionId: 'source-project', order: 0,
     screenshotBlob: pngBlob(),
     bounds: { x: 1, y: 2, width: 30, height: 40 }, devicePixelRatio: 1,
+    title: '',
     description: '', url: 'https://example.com/path', timestamp: Date.now(), ...overrides,
   };
 }

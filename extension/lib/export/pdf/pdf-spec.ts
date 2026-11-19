@@ -92,5 +92,6 @@ export const PDF_TEXT = Object.freeze({
   section: { fontSize: 36, lineHeight: 56, color: PDF_COLORS.text, weight: 'bold', gapBefore: 0, gapAfter: 10 },
   stepTitle: { fontSize: 30, lineHeight: 52, color: PDF_COLORS.text, weight: 'bold', gapBefore: 0, gapAfter: 22 },
   annotation: { fontSize: 28, lineHeight: 48, color: PDF_COLORS.secondary, weight: 'regular', gapBefore: 6, gapAfter: 6 },
+  stepDescription: { fontSize: 28, lineHeight: 48, color: PDF_COLORS.text, weight: 'regular', gapBefore: 18, gapAfter: 0 },
   footer: { fontSize: PDF_SPEC.footerFontSize, lineHeight: PDF_SPEC.footerLineHeight, color: PDF_COLORS.muted, weight: 'regular', gapBefore: 0, gapAfter: 0 },
 } satisfies Record<string, PdfTextStyle>);

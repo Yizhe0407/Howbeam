@@ -171,6 +171,7 @@ export const STEP_KEYS = [
   'crop',
   'devicePixelRatio',
   'screenshotScale',
+  'title',
   'description',
   'url',
   'timestamp',

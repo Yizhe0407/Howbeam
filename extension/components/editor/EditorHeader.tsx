@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import ExportPopover, { type ExportPopoverProps } from './ExportPopover';
 import { t } from '@/lib/shared/i18n';
 import { projectDisplayTitle } from '@/lib/storage/models';
+import { PERSISTED_PROJECT_LIMITS } from '@/lib/storage/persistence-limits';
+import EditableTitle from '../shared/EditableTitle';
 
 interface Props {
   operationActive: boolean;
@@ -16,12 +18,15 @@ interface Props {
   hasSteps: boolean;
   /** The open project's title, shown as the current crumb; null before it loads. */
   projectTitle?: string | null;
+  /** Renames the project from its crumb; a rejection reverts the crumb and goes to `onTitleError`. */
+  onTitleChange?: (title: string) => Promise<void>;
+  onTitleError?: (error: unknown) => void;
   /** False when there is no project to act on (a missing project): only the way
    * back to the library stays, instead of a row of permanently disabled buttons. */
   projectActionsAvailable?: boolean;
   /** What the export panel needs; without it the Export button stays disabled. */
   publish?: Omit<ExportPopoverProps, 'trigger'>;
-  /** Saves pending descriptions before the tab leaves; false keeps the editor. */
+  /** Saves pending step text before the tab leaves; false keeps the editor. */
   beforeNavigate?: () => Promise<boolean>;
   /** Brings the recorded tab forward; the editor is locked while a run is live, so the badge is the way back. */
   onShowRecording?: () => void;
@@ -33,6 +38,8 @@ export default function EditorHeader({
   operation,
   hasSteps,
   projectTitle = null,
+  onTitleChange,
+  onTitleError,
   projectActionsAvailable = true,
   publish,
   beforeNavigate,
@@ -54,6 +61,18 @@ export default function EditorHeader({
   return (
     <AppHeader
       current={projectTitle == null ? t().common.editor : projectDisplayTitle(projectTitle)}
+      currentContent={projectTitle != null && onTitleChange && (
+        <EditableTitle
+          value={projectTitle}
+          maxLength={PERSISTED_PROJECT_LIMITS.maxTitleLength}
+          fallback={t().common.untitledProject}
+          label={t().editor.projectTitle.label}
+          disabled={editingDisabled || operationActive}
+          onCommit={onTitleChange}
+          onCommitError={onTitleError}
+          className="block min-w-0 max-w-full truncate rounded-sm border-2 border-transparent px-1.5 py-0.5 text-base font-bold text-foreground outline-none transition-colors focus-ring hover:border-border-soft focus:border-border focus:bg-background [field-sizing:content]"
+        />
+      )}
       currentHeading={{ id: 'howbeam-editor-title' }}
       beforeNavigate={beforeNavigate}
       status={operationActive && (

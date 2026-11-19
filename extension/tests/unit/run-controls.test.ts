@@ -86,6 +86,7 @@ function step(id: string, overrides: Partial<Step> = {}): Step {
     bounds: { x: 1, y: 2, width: 3, height: 4 },
     devicePixelRatio: 2,
     screenshotScale: 2,
+    title: '',
     description: id,
     url: PAGE_URL,
     timestamp: 1,

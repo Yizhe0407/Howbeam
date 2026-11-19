@@ -13,6 +13,8 @@ interface Props {
    * extension's home: there the brand itself is the current location.
    */
   current?: string;
+  /** Replaces the plain `current` text with an interactive crumb, such as an editable title. */
+  currentContent?: ReactNode;
   /**
    * Render the current crumb as the page's <h1>. `id` lets the page move focus
    * to it (the editor does after opening a requested step).
@@ -26,7 +28,7 @@ interface Props {
   isSettingsPage?: boolean;
   /**
    * Asked before the tab leaves this page; resolving false keeps the page
-   * (the editor uses it to save descriptions, and shows why it stayed).
+   * (the editor uses it to save step text, and shows why it stayed).
    */
   beforeNavigate?: () => Promise<boolean>;
 }
@@ -39,7 +41,7 @@ const crumbClass = 'flex min-w-0 items-center gap-2 rounded-sm px-1.5 py-1 text-
  * the same corner everywhere, so any page reaches any other in one step —
  * within the same tab.
  */
-export default function AppHeader({ current, currentHeading, status, actions, isSettingsPage = false, beforeNavigate }: Props) {
+export default function AppHeader({ current, currentContent, currentHeading, status, actions, isSettingsPage = false, beforeNavigate }: Props) {
   const isHome = current === undefined;
 
   async function navigate(page: InPlacePage): Promise<void> {
@@ -77,7 +79,12 @@ export default function AppHeader({ current, currentHeading, status, actions, is
           {!isHome && (
             <li aria-current="page" className="flex min-w-0 items-center gap-1">
               <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              {currentHeading ? (
+              {currentContent ? (
+                // Named by the location alone, not by the control's own label inside it.
+                <h1 id={currentHeading?.id} tabIndex={currentHeading?.id ? -1 : undefined} aria-label={current} className="flex min-w-0 text-base font-bold text-foreground outline-none">
+                  {currentContent}
+                </h1>
+              ) : currentHeading ? (
                 // The crumb truncates on narrow windows; the tooltip keeps the full name reachable.
                 <h1 id={currentHeading.id} tabIndex={currentHeading.id ? -1 : undefined} title={current} className={cn(crumbClass, 'block min-w-0 truncate text-foreground outline-none')}>
                   {current}

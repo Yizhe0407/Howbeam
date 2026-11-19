@@ -7,11 +7,8 @@ import { DashedOutline } from '@/components/ui/dashed-outline';
 import EntryThumbnail from './EntryThumbnail';
 import StepActions from './StepActions';
 import DescriptionField from './DescriptionField';
+import StepTitleField from './StepTitleField';
 import AnnotationList from './AnnotationList';
-import EditableTitle from '@/components/shared/EditableTitle';
-import InlineAlert from '@/components/shared/InlineAlert';
-import { reportError } from '@/components/shared/report-error';
-import { PERSISTED_PROJECT_LIMITS } from '@/lib/storage/persistence-limits';
 import { t } from '@/lib/shared/i18n';
 
 interface Props {
@@ -21,8 +18,6 @@ interface Props {
   sectionTitle?: string;
   /** Present when a section can start at this entry. */
   onStartSection?: () => void;
-  projectTitle?: string;
-  onTitleChange?: (title: string) => Promise<void>;
   onDelete: () => Promise<void>;
   onDeleteAnnotation: (step: Step) => Promise<void>;
   onZoom: () => void;
@@ -36,8 +31,6 @@ export default function StepStage({
   index,
   sectionTitle,
   onStartSection,
-  projectTitle,
-  onTitleChange,
   onDelete,
   onDeleteAnnotation,
   onZoom,
@@ -45,26 +38,8 @@ export default function StepStage({
   onRecapture,
   editingDisabled = false,
 }: Props) {
-  const [stageError, setStageError] = useState<string | null>(null);
   const privacy = getEntryPrivacyState(entry);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
-
-  const titleRow = (
-    <div className="mb-4 flex shrink-0 items-center gap-1.5 border-b-2 border-border-soft pb-4">
-      <EditableTitle
-        value={projectTitle ?? ''}
-        maxLength={PERSISTED_PROJECT_LIMITS.maxTitleLength}
-        fallback={t().common.untitledProject}
-        label={t().editor.stage.titleLabel}
-        disabled={editingDisabled || !onTitleChange}
-        onCommit={(title) => onTitleChange?.(title)}
-        onCommitError={(titleError) => {
-          setStageError(reportError('[howbeam] failed to rename project', titleError, t().editor.stage.titleSaveFailed));
-        }}
-        className="w-fit min-w-[8ch] max-w-full rounded-md border-2 border-transparent px-2 py-1 text-[22px] leading-tight font-bold text-foreground transition-colors focus-ring hover:border-border-soft focus:border-border focus:bg-card [field-sizing:content]"
-      />
-    </div>
-  );
 
   const headerRow = (
     <div className="mb-3.5 flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -138,7 +113,10 @@ export default function StepStage({
     </button>
   );
 
-  const errorNotice = stageError && <InlineAlert>{stageError}</InlineAlert>;
+  const owner = entry.kind === 'single' ? entry.step : entry.anchor;
+  // Keyed by the row, so switching steps never carries one step's draft into another.
+  const stepTitle = <StepTitleField key={owner.id} step={owner} number={index + 1} disabled={editingDisabled} />;
+  const descriptionField = <DescriptionField key={owner.id} step={owner} disabled={editingDisabled} />;
 
   const privacyReviewNotice = privacy.reviewRequired && (
     <div role="alert" className="rounded-md border-2 border-border bg-warning-soft px-3.5 py-2.5 text-sm text-foreground">
@@ -174,20 +152,13 @@ export default function StepStage({
     return (
       <main className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-y-auto bg-background px-[var(--content-gutter,1rem)] pt-4 pb-[var(--notice-lane,5rem)] lg:pt-5">
         <div className="flex w-full max-w-[1180px] flex-none flex-col gap-3 lg:min-h-0 lg:flex-1">
-          <div className="flex-none">{titleRow}</div>
           <div className="flex-none">{headerRow}</div>
-          {errorNotice && <div className="flex-none">{errorNotice}</div>}
           {privacyReviewNotice && <div className="flex-none">{privacyReviewNotice}</div>}
+          <div className="flex-none">{stepTitle}</div>
           <div className="flex w-full flex-none items-center justify-center p-1 lg:min-h-[14rem] lg:flex-1">
             {imageFrame(t().editor.stage.stepAlt(index + 1))}
           </div>
-          <div className="flex-none">
-            <DescriptionField
-              key={entry.step.id}
-              step={entry.step}
-              disabled={editingDisabled}
-            />
-          </div>
+          <div className="mt-1 flex-none">{descriptionField}</div>
         </div>
         {imageEditor}
       </main>
@@ -196,10 +167,9 @@ export default function StepStage({
 
   return (
     <main className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto bg-background px-[var(--content-gutter,1rem)] pt-4 pb-[var(--notice-lane,5rem)] lg:pt-5">
-      <div className="flex-none">{titleRow}</div>
       <div className="flex-none">{headerRow}</div>
-      {errorNotice && <div className="flex-none">{errorNotice}</div>}
       {privacyReviewNotice && <div className="flex-none">{privacyReviewNotice}</div>}
+      <div className="flex-none">{stepTitle}</div>
       <div className="flex flex-none flex-col gap-5 lg:min-h-[14rem] lg:flex-1 lg:flex-row lg:gap-[22px]">
         <div className="flex min-w-0 flex-none items-center justify-center p-1 lg:min-h-0 lg:flex-1">
           {imageFrame(t().editor.stage.snapshotAlt(index + 1))}
@@ -213,6 +183,7 @@ export default function StepStage({
           />
         </aside>
       </div>
+      <div className="mt-1 flex-none">{descriptionField}</div>
       {imageEditor}
     </main>
   );

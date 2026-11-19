@@ -6,10 +6,10 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { PERSISTED_STEP_LIMITS } from '@/lib/storage/persistence-limits';
 import { type Step } from '@/lib/storage/models';
 import { useSortableReorder, verticalListModifiers } from '@/lib/editor/dnd';
-import { useStepDescriptionAutosave } from '@/lib/editor/editor-autosave';
+import { useStepTextAutosave } from '@/lib/editor/editor-autosave';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import DescriptionDraftRecoveries from './DescriptionDraftRecoveries';
-import DescriptionSaveIssue from './DescriptionSaveIssue';
+import TextDraftRecoveries from './TextDraftRecoveries';
+import TextSaveIssue from './TextSaveIssue';
 import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import { t } from '@/lib/shared/i18n';
 import { cn } from '@/lib/shared/utils';
@@ -47,17 +47,17 @@ function NumberBadge({ value }: { value: number }) {
  * brings it back and is reported with the editor's other edits. */
 function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHandle, overlay }: RowProps) {
   const {
-    description,
-    setDescription,
+    value: description,
+    setValue: setDescription,
     saveIssue,
-    savedDescription,
+    savedValue,
     keepSaved,
     recoveries,
     restoreRecovery,
     discardRecovery,
     flush,
     confirmOverwrite,
-  } = useStepDescriptionAutosave(step);
+  } = useStepTextAutosave(step, 'description');
 
   function handleDelete() {
     if (deleteDisabled) return;
@@ -122,15 +122,15 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
           {dragHandle}
         </div>
       </div>
-      <DescriptionSaveIssue
+      <TextSaveIssue
         issue={saveIssue}
-        savedDescription={savedDescription}
+        savedValue={savedValue}
         onOverwrite={confirmOverwrite}
         onKeepSaved={keepSaved}
         disabled={deleteDisabled}
         className="mt-2 ml-9"
       />
-      <DescriptionDraftRecoveries
+      <TextDraftRecoveries
         recoveries={recoveries}
         onRestore={restoreRecovery}
         onDiscard={discardRecovery}

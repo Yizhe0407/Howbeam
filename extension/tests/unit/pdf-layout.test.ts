@@ -12,7 +12,7 @@ function newLayouter(settings: Partial<PdfExportSettings> = {}, signal?: AbortSi
     settings: { ...DEFAULT_PDF_EXPORT_SETTINGS, ...settings },
     measure,
     footerTitle: 'My project',
-    labels: { pageNumber: (page) => `Page ${page}`, credit: 'Made with Howbeam', missingDescription: '(No description)' },
+    labels: { pageNumber: (page) => `Page ${page}`, credit: 'Made with Howbeam' },
     signal,
   });
 }
@@ -20,10 +20,11 @@ function newLayouter(settings: Partial<PdfExportSettings> = {}, signal?: AbortSi
 function step(ordinal: number, overrides: Partial<LayoutStep> = {}, size = { width: 1_000, height: 500 }): LayoutStep {
   return {
     ordinal,
-    heading: `Step ${ordinal}`,
+    title: `Step ${ordinal}`,
     image: { bytes: new Uint8Array([ordinal]), ...size },
     alt: `Step ${ordinal}`,
     annotations: [],
+    description: '',
     ...overrides,
   };
 }
@@ -215,9 +216,9 @@ describe('PdfLayouter', () => {
 
     it('bookmarks every section and step, with steps nested under their section', () => {
       const layouter = newLayouter();
-      layouter.addStep(step(1, { heading: 'Open settings' }));
-      layouter.addStep(step(2, { heading: 'Sign in', section: { title: 'Chapter one' } }));
-      layouter.addStep(step(3, { heading: '' }));
+      layouter.addStep(step(1, { title: 'Open settings' }));
+      layouter.addStep(step(2, { title: 'Sign in', section: { title: 'Chapter one' } }));
+      layouter.addStep(step(3, { title: '' }));
       const outline = laidOut(layouter).flatMap((page) => headings(page).flatMap((block) => (block.outline ? [block.outline] : [])));
 
       expect(outline).toEqual([
@@ -230,7 +231,7 @@ describe('PdfLayouter', () => {
 
     it('shortens a very long step heading for its bookmark without cutting a character in two', () => {
       const layouter = newLayouter();
-      layouter.addStep(step(1, { heading: '👩‍👩‍👧‍👦'.repeat(200) }));
+      layouter.addStep(step(1, { title: '👩‍👩‍👧‍👦'.repeat(200) }));
       const page = itemAt(laidOut(layouter), 0);
 
       const title = itemAt(headings(page), 0).outline!.title;
@@ -257,7 +258,7 @@ describe('PdfLayouter', () => {
   describe('step heading and annotations', () => {
     it('hangs the printed number left of the title, which wraps in its own column', () => {
       const layouter = newLayouter();
-      layouter.addStep(step(7, { heading: 'x'.repeat(160) }));
+      layouter.addStep(step(7, { title: 'x'.repeat(160) }));
       const page = itemAt(laidOut(layouter), 0);
 
       const heading = itemAt(headings(page), 0);
@@ -272,7 +273,7 @@ describe('PdfLayouter', () => {
       const page = itemAt(laidOut(layouter), 0);
 
       expect(ofKind(page, 'list')).toHaveLength(1);
-      expect(listTexts(page)).toEqual(['1. ', 'Click Sign in', '2. ', '(No description)']);
+      expect(listTexts(page)).toEqual(['1. ', 'Click Sign in', '2. ', '']);
     });
 
     it('starts a fresh list on the next page when the annotations run past the foot of a page', () => {
@@ -426,7 +427,7 @@ describe('PdfLayouter', () => {
         settings: DEFAULT_PDF_EXPORT_SETTINGS,
         measure,
         footerTitle: 'x'.repeat(500),
-        labels: { pageNumber: (page) => `Page ${page}`, credit: 'Made with Howbeam', missingDescription: '' },
+        labels: { pageNumber: (page) => `Page ${page}`, credit: 'Made with Howbeam' },
       });
       layouter.addStep(step(1));
       const page = itemAt(laidOut(layouter), 0);

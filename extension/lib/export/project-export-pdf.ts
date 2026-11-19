@@ -15,7 +15,7 @@ import {
   textValue,
   type ProjectExportMetadata,
 } from './project-export-contract';
-import { entryHeading, renderEntryImages } from './project-export-render';
+import { renderEntryImages } from './project-export-render';
 import { type StepEntry } from '../storage/models';
 
 /**
@@ -53,7 +53,7 @@ export async function generateProjectPdf(
     settings,
     measure: (text, style) => writer.measure(text, style),
     footerTitle: title,
-    labels: { pageNumber: copy.pageNumber, credit: MADE_WITH, missingDescription: copy.missingDescription },
+    labels: { pageNumber: copy.pageNumber, credit: MADE_WITH },
     signal,
   });
   const writePages = () => {
@@ -73,10 +73,11 @@ export async function generateProjectPdf(
     layouter.addStep({
       section: section && { title: section.title },
       ordinal: rendered.content.ordinal,
-      heading: entryHeading(rendered.content),
+      title: rendered.content.title,
       image: { bytes: rendered.imageBytes, ...size },
-      alt: textOrDefault(rendered.content.description, copy.imageAlt),
+      alt: textOrDefault(rendered.content.title, copy.imageAlt),
       annotations: rendered.content.annotations,
+      description: rendered.content.description,
     });
     writePages();
   }

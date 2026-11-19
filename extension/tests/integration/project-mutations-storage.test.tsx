@@ -42,6 +42,7 @@ function single(id: string, order: number, overrides: Partial<Step> = {}): Step 
     screenshotBlob: jpegBlob(),
     bounds: { x: 1, y: 2, width: 3, height: 4 },
     devicePixelRatio: 1,
+    title: '',
     description: `about ${id}`,
     url: 'https://example.com',
     timestamp: 1,

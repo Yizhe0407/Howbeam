@@ -21,7 +21,7 @@ vi.mock('wxt/browser', () => ({
 
 import { closeDatabase, isPristineProject } from '@/lib/storage/database';
 import { createProject, discardPristineProject, getProject, updateProject } from '@/lib/storage/project-repository';
-import { addStepsAfter, saveStepDescription, updateStepsAtomically } from '@/lib/storage/step-repository';
+import { addStepsAfter, saveStepText, updateStepsAtomically } from '@/lib/storage/step-repository';
 import { type Step } from '@/lib/storage/models';
 import { ACTIVE_PROJECT_ID_KEY, getActiveProjectId, setActiveProjectId } from '@/lib/storage/storage';
 import { pngBlob } from '../setup/raster-fixtures';
@@ -40,6 +40,7 @@ function makeStep(sessionId: string, overrides: Partial<Step> = {}): Step {
     screenshotBlob: pngBlob(),
     bounds: { x: 1, y: 2, width: 3, height: 4 },
     devicePixelRatio: 1,
+    title: '',
     description: '',
     url: 'https://example.com',
     timestamp: Date.now(),
@@ -116,7 +117,7 @@ describe('discardPristineProject', () => {
     const step = makeStep(project.id);
     await addStepsAfter([step], null);
     const added = (await getProject(project.id))!;
-    await saveStepDescription(step.id, '新說明', step.description);
+    await saveStepText(step.id, 'description', '新說明', step.description);
     await updateStepsAtomically(project.id, [{ id: step.id, changes: { crop: null, imageEdits: [] } }]);
     const edited = (await getProject(project.id))!;
     expect(edited.contentRevision).toBe(added.contentRevision);

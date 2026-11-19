@@ -5,6 +5,7 @@ export const PERSISTED_STEP_LIMITS = Object.freeze({
   maxStepsPerProject: 2_000,
   maxTotalScreenshotBytes: 64 * 1024 * 1024,
   maxScreenshotBytes: 16 * 1024 * 1024,
+  maxStepTitleLength: 500,
   maxStepDescriptionLength: 500,
   maxAnnotationDescriptionLength: 200,
   maxUrlLength: 8_192,

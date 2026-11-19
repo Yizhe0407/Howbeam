@@ -33,6 +33,7 @@ function entry(overrides: Partial<ScreenshotStep> = {}): StepEntry {
     kind: 'single',
     step: {
       id: 's', sessionId: 'p', order: 0, bounds: { x: 150, y: 90, width: 30, height: 40 }, devicePixelRatio: 1,
+      title: '',
       description: '', url: 'https://x.test', timestamp: 0, screenshotBlob: original,
       redactions: [{ id: 'm', kind: 'solid', bounds: { x: 120, y: 70, width: 10, height: 10 } }],
       ...overrides,

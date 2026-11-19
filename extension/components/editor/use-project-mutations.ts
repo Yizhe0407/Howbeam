@@ -55,7 +55,7 @@ function inOrder<T>(ids: readonly string[], idOf: (item: T) => string): (items: 
 /**
  * The editor's structural mutations. Each shows its result at once where it can
  * (an optimistic change over the stored entries), then takes its turn in the
- * operation queue: flush pending descriptions, read a fresh snapshot,
+ * operation queue: flush pending step text, read a fresh snapshot,
  * compare-and-swap against its revision, show the committed structure and offer
  * an undo. Its optimistic change goes away when it settles, whichever way.
  */

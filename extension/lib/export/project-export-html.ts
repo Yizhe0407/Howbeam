@@ -16,7 +16,7 @@ import {
 import { chooseAnnotationColumns } from './annotation-columns';
 import { encodeBase64Parts } from './base64';
 import { segmentText, wrapText } from './text-wrap';
-import { entryHeading, hasAnnotationText, renderEntryImages, type RenderedEntryContent } from './project-export-render';
+import { hasAnnotationText, renderEntryImages, type RenderedEntryContent } from './project-export-render';
 import { documentLang, t } from '@/lib/shared/i18n';
 
 /**
@@ -100,15 +100,15 @@ function renderHtmlSectionHeading(section: ProjectSection): string {
 }
 
 function renderHtmlEntry(entry: RenderedEntryContent, imageSrc: string): string {
-  const heading = entryHeading(entry);
-  const alt = escapeProjectHtml(textOrDefault(entry.description, t().export.imageAlt));
+  const alt = escapeProjectHtml(textOrDefault(entry.title, t().export.imageAlt));
   const annotations = hasAnnotationText(entry.annotations) ? renderHtmlAnnotations(entry) : '';
 
   return [
     `<section class="step">`,
-    `<h3 class="step-title"><span class="step-number">${entry.ordinal}.</span>${heading ? `<span>${htmlText(heading)}</span>` : ''}</h3>`,
+    `<h3 class="step-title"><span class="step-number">${entry.ordinal}.</span>${entry.title ? `<span>${htmlText(entry.title)}</span>` : ''}</h3>`,
     `<figure><img src="${imageSrc}" alt="${alt}"></figure>`,
     annotations,
+    entry.description ? `<p class="step-description">${htmlText(entry.description)}</p>` : '',
     `</section>`,
   ]
     .filter(Boolean)
@@ -116,7 +116,7 @@ function renderHtmlEntry(entry: RenderedEntryContent, imageSrc: string): string 
 }
 
 function renderHtmlAnnotations(entry: RenderedEntryContent): string {
-  const texts = entry.annotations.map((annotation) => textOrDefault(annotation.description, t().export.missingDescription));
+  const texts = entry.annotations.map((annotation) => textValue(annotation.description));
   const { listAttributes, spans } = annotationColumns(texts);
   const items = texts.map((text, index) => `<li${spans[index] ? ' data-span' : ''}>${htmlText(text)}</li>`).join('\n');
   return `<ol class="annotations"${listAttributes}>
@@ -246,6 +246,7 @@ h1 { font-size: 30px; line-height: 1.35; font-weight: 700; }
 .step-number { font-variant-numeric: tabular-nums; }
 figure { margin: 14px 0 0 ${PAGE.stepIndent}em; }
 img { display: block; max-width: 100%; height: auto; border: 1px solid var(--image-border); border-radius: ${PROJECT_EXPORT_THEME.imageRadius}px; }
+.step-description { margin: 14px 0 0 ${PAGE.stepIndent}em; }
 .annotations { margin: 12px 0 0 ${PAGE.stepIndent}em; padding-left: ${LIST.marker}em; color: var(--text-secondary); }
 .annotations li + li { margin-top: ${LIST.itemGap}em; }
 .annotations[data-columns] { padding-left: 0; column-gap: ${LIST.columnGap}em; }
@@ -256,7 +257,7 @@ img { display: block; max-width: 100%; height: auto; border: 1px solid var(--ima
   .document { padding-top: 28px; }
   h1 { font-size: 25px; }
   .step-title { grid-template-columns: 1.8em minmax(0, 1fr); }
-  figure, .annotations { margin-left: 0; }
+  figure, .annotations, .step-description { margin-left: 0; }
 }
 @page { size: A4; margin: 18mm 16mm 20mm; }
 @media print {

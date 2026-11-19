@@ -39,7 +39,8 @@ function entry(overrides: Record<string, unknown> = {}): StepEntry {
       screenshotBlob: new Blob(['source'], { type: 'image/jpeg' }),
       bounds: null,
       devicePixelRatio: 1,
-      description: 'Open settings',
+      title: 'Open settings',
+      description: '',
       url: 'https://example.com/settings',
       timestamp: 1,
       ...overrides,
@@ -57,7 +58,8 @@ function groupEntry(): StepEntry {
       screenshotBlob: new Blob(['source'], { type: 'image/jpeg' }),
       bounds: null,
       devicePixelRatio: 1,
-      description: 'Shared page',
+      title: 'Shared page',
+      description: '',
       url: 'https://example.com/shared',
       timestamp: 1,
       groupId: 'anchor',
@@ -104,6 +106,7 @@ function markEntry(id: string, order: number, notes: string[]): StepEntry {
       screenshotBlob: new Blob(['source'], { type: 'image/jpeg' }),
       bounds: null,
       devicePixelRatio: 1,
+      title: '',
       description: '',
       url: 'https://example.com/mark',
       timestamp: order,
@@ -116,6 +119,7 @@ function markEntry(id: string, order: number, notes: string[]): StepEntry {
       order: order + index + 1,
       bounds: { x: 1, y: 1, width: 2, height: 2 },
       devicePixelRatio: 1,
+      title: '',
       description,
       url: 'https://example.com/mark',
       timestamp: order + index + 1,
@@ -128,9 +132,9 @@ function markEntry(id: string, order: number, notes: string[]): StepEntry {
 /** Steps and Mark entries interleaved, the way most real projects are recorded. */
 function mixedProject(): StepEntry[] {
   return [
-    entry({ id: 'step-1', order: 1, description: 'Open settings' }),
+    entry({ id: 'step-1', order: 1, title: 'Open settings' }),
     markEntry('mark-1', 10, ['Search box', 'Language menu', 'History tab']),
-    entry({ id: 'step-2', order: 20, description: 'Click history' }),
+    entry({ id: 'step-2', order: 20, title: 'Click history' }),
     markEntry('mark-2', 30, ['A long note that keeps going so the list has to wrap across lines', 'Edit']),
   ];
 }
@@ -256,7 +260,7 @@ describe('project export', () => {
 
   it('builds safe Markdown through the shared composite renderer', async () => {
     const markdown = await archiveMarkdown(
-      [entry({ description: '<script>alert(1)</script> [link](javascript:alert(1))' })],
+      [entry({ title: '<script>alert(1)</script> [link](javascript:alert(1))' })],
       {
         title: '# unsafe',
         description: 'A <b>description</b>',
@@ -276,7 +280,7 @@ describe('project export', () => {
 
   it('escapes user HTML and unsafe URLs in self-contained HTML', async () => {
     const html = await generateProjectHtml(
-      [entry({ description: '<img src=x onerror=alert(1)>' })],
+      [entry({ title: '<img src=x onerror=alert(1)>' })],
       {
         title: '<svg onload=alert(1)>',
         description: '"quoted" & <b>unsafe</b>',
@@ -297,7 +301,7 @@ describe('project export', () => {
 
   it('escapes ordered-list markers and setext underlines in Markdown text', async () => {
     const markdown = await archiveMarkdown(
-      [entry({ description: '1. 點擊按鈕\n10. 完成設定' })],
+      [entry({ title: '1. 點擊按鈕\n10. 完成設定' })],
       { title: '版本說明', description: '總覽\n====' },
     );
 
@@ -310,7 +314,7 @@ describe('project export', () => {
 
   it('keeps URLs and addresses in Markdown descriptions from becoming GFM autolinks with stray backslashes', async () => {
     const markdown = await archiveMarkdown([
-      entry({ description: 'See https://cdn.example.com/a_b/track.png) and www.example.com/x_y or me@example.com' }),
+      entry({ title: 'See https://cdn.example.com/a_b/track.png) and www.example.com/x_y or me@example.com' }),
     ]);
 
     // Each autolink trigger is neutralised, so no renderer can create a link
@@ -323,7 +327,7 @@ describe('project export', () => {
   });
 
   it('lets long unbreakable strings wrap in the HTML export', async () => {
-    const html = await generateProjectHtml([entry({ description: 'x'.repeat(5_000) })], { title: 'y'.repeat(5_000) });
+    const html = await generateProjectHtml([entry({ title: 'x'.repeat(5_000) })], { title: 'y'.repeat(5_000) });
 
     expect(html).toMatch(/h1, h2, h3, p, li \{ margin: 0; overflow-wrap: anywhere; \}/);
     expect(html).toMatch(/\.step-title \{ display: grid; grid-template-columns: 2\.2em minmax\(0, 1fr\);/);
@@ -402,7 +406,7 @@ describe('project export', () => {
     expect(html).not.toContain('Step 1');
   });
 
-  it('prints the step number and description as one heading above each HTML screenshot', async () => {
+  it('prints the step number and title as one heading above each HTML screenshot', async () => {
     const html = await generateProjectHtml([entry(), groupEntry()], { title: 'Project' });
 
     const firstHeading = html.indexOf('<h3 class="step-title"><span class="step-number">1.</span><span>Open settings</span></h3>');
@@ -639,16 +643,33 @@ describe('project export', () => {
       expect(pdfText).not.toContain('（未填寫說明）');
     });
 
-    it('still flags a step that has no description at all', async () => {
-      const blank = [entry({ id: 'blank', description: '' })];
+    it('prints only the number of a step with no title, and no placeholder', async () => {
+      const blank = [entry({ id: 'blank', title: '' })];
       const html = await generateProjectHtml(blank, { title: 'Blank' });
       const markdown = await archiveMarkdown(blank, { title: 'Blank' });
       mocks.composite.mockImplementation(async () => new Blob([jpegOfSize(1_200, 700)], { type: 'image/jpeg' }));
       const pdfText = (await readPdf(await generateProjectPdf(blank, { title: 'Blank' }))).pages.flatMap((page) => page.lines).join('\n');
 
-      expect(html).toContain('<span>（未填寫說明）</span>');
-      expect(markdown).toContain('（未填寫說明）');
-      expect(pdfText).toContain('（未填寫說明）');
+      expect(html).toContain('<h3 class="step-title"><span class="step-number">1.</span></h3>');
+      expect(markdown).toContain('### 1.\n');
+      expect(html).not.toContain('<p class="step-description">');
+      expect(pdfText).toContain('1.');
+    });
+
+    it('prints a step description under the screenshot and its markers', async () => {
+      const mark = markEntry('mark', 10, ['Search box']);
+      if (mark.kind !== 'group') throw new Error('markEntry builds a group');
+      const described: StepEntry[] = [
+        entry({ id: 'step', title: 'Open settings', description: 'Settings sit behind the gear icon.' }),
+        { ...mark, anchor: { ...mark.anchor, title: 'Find it', description: 'Use the search box first.' } },
+      ];
+      const html = await generateProjectHtml(described, { title: 'Described' });
+      const markdown = await archiveMarkdown(described, { title: 'Described' });
+
+      expect(html.indexOf('<figure>')).toBeLessThan(html.indexOf('<p class="step-description">Settings sit behind the gear icon.</p>'));
+      expect(html.indexOf('<ol class="annotations"')).toBeLessThan(html.indexOf('Use the search box first.'));
+      expect(markdown).toContain('### 2. Find it');
+      expect(markdown.indexOf('1. Search box')).toBeLessThan(markdown.indexOf('Use the search box first.'));
     });
   });
 });

@@ -207,10 +207,10 @@ export const en: Messages = {
     noSelectionTitle: 'No step selected',
     noSelectionBody: 'Choose a step from the list on the left to edit it.',
     recaptureFailed: 'The retake failed. Nothing was changed.',
-    recaptureReplaced: 'Retake complete. The step’s description and position were kept; its old masks and image annotations were cleared.',
+    recaptureReplaced: 'Retake complete. The step’s title, description and position were kept; its old masks and image annotations were cleared.',
     recaptureCancelled: 'Retake cancelled. Nothing was changed.',
     selectedEntryMissing: 'Couldn’t find the selected step.',
-    selectFailed: 'Couldn’t switch steps: saving the current description failed. Please try again.',
+    selectFailed: 'Couldn’t switch steps: saving the current title or description failed. Please try again.',
     recaptureTabMissing: 'Couldn’t find the retake tab.',
     recaptureCancelFailed: 'Couldn’t cancel the retake. Please try again.',
     publishTargetMissing: 'Couldn’t find the project to export.',
@@ -220,8 +220,8 @@ export const en: Messages = {
     editBusy: 'Another action is in progress. Try again in a moment.',
     continuationAction: 'Continue recording',
     recaptureAction: 'Retake',
-    descriptionSaveRetry: 'Some descriptions couldn’t be saved. Retry before continuing.',
-    draftConfirmationRequired: 'Choose which draft to keep before overwriting the saved description.',
+    textSaveRetry: 'Some titles or descriptions couldn’t be saved. Retry before continuing.',
+    draftConfirmationRequired: 'Choose which draft to keep before overwriting the saved text.',
     multiAnnotationRecaptureBlocked: 'Several markers, so it can’t be retaken. Record this snapshot again.',
     privacyReviewRequiredNotice:
       'The sensitive-information masks on this image haven’t been confirmed, so its preview stays black and copying and exporting are blocked. Choose “Check masks” to confirm them.',
@@ -307,9 +307,12 @@ export const en: Messages = {
       confirmReview: 'Confirm masks',
     },
 
+    projectTitle: {
+      label: 'Project title',
+      saveFailed: 'Couldn’t save the title. Please try again.',
+    },
+
     stage: {
-      titleLabel: 'Project title',
-      titleSaveFailed: 'Couldn’t save the title. Please try again.',
       zoomHint: 'Click to enlarge',
       zoomImage: 'Enlarge image',
       stepAlt: (number: number) => `Step ${number}`,
@@ -327,6 +330,11 @@ export const en: Messages = {
       deleteDisabled: 'You can’t delete steps while recording or retaking',
     },
 
+    title: {
+      label: (number: number) => `Step ${number} title`,
+      placeholder: 'Add a title…',
+    },
+
     description: {
       label: 'Description',
       placeholder: 'Describe this step…',
@@ -334,13 +342,13 @@ export const en: Messages = {
 
     saveIssue: {
       conflict: 'Not saved: conflicts with another tab',
-      conflictBody: 'Another tab saved a different description. Nothing you type here is saved until you choose which version to keep.',
+      conflictBody: 'Another tab saved different text. Nothing you type here is saved until you choose which version to keep.',
       savedVersion: (excerpt: string) => `Saved version: ${excerpt}`,
       savedEmpty: '(empty)',
       overwrite: 'Overwrite with mine',
       keepSaved: 'Use the saved version',
       missing: 'Not saved: this step was deleted.',
-      failed: 'Not saved: the description couldn’t be saved. It will retry as you keep editing.',
+      failed: 'Not saved: saving failed. It will retry as you keep editing.',
     },
 
     annotations: {
@@ -354,7 +362,7 @@ export const en: Messages = {
     },
 
     drafts: {
-      label: 'Description drafts from other tabs',
+      label: 'Drafts from other tabs',
       found: (count: number) =>
         `Found ${count} ${count === 1 ? 'draft' : 'drafts'} from other tabs or earlier versions`,
       intro: 'Drafts never overwrite the current text on their own. Load one and confirm, or discard the ones you don’t need.',
@@ -622,23 +630,17 @@ export const en: Messages = {
   },
 
   capture: {
-    markRegion: 'Mark an area of the page',
     openNewTab: 'Open a new tab',
-    openLink: 'Open the link',
-    selectOption: 'Select an option',
-    typeInField: 'Type in the text field',
-    toggleCheckbox: 'Toggle the checkbox',
-    selectRadio: 'Select the radio button',
-    submitForm: 'Submit the form',
-    useInput: 'Use the input field',
-    clickButton: 'Click the button',
-    toggleDisclosure: 'Expand or collapse the section',
-    clickLabel: 'Click the field label',
-    clickElement: 'Click the element',
+    openLink: (label: string) => `Open ${label}`,
+    selectOption: (label: string) => `Choose an option in ${label}`,
+    typeInField: (label: string) => `Type in the ${label} field`,
+    toggleCheckbox: (label: string) => `Check ${label}`,
+    selectRadio: (label: string) => `Select ${label}`,
+    toggleDisclosure: (label: string) => `Expand ${label}`,
+    click: (label: string) => `Click ${label}`,
   },
 
   export: {
-    missingDescription: '(No description)',
     imageAlt: 'Step screenshot',
     pageNumber: (page: number) => `Page ${page}`,
     downloadNotStarted: 'The browser didn’t start the download. Please try again.',

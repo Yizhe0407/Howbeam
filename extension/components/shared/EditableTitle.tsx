@@ -85,6 +85,8 @@ export default function EditableTitle({
           cancelled.current = false;
           setEditing(true);
         }}
+        // The full title on hover, for when the owner truncates it.
+        title={committed}
         className={cn('cursor-text text-left break-words', className)}
       >
         <span className="sr-only">{label} </span>

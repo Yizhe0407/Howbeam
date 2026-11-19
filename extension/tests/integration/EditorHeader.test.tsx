@@ -64,6 +64,28 @@ describe('EditorHeader', () => {
     expect(heading.closest('li')?.getAttribute('aria-current')).toBe('page');
   });
 
+  it('renames the project from its crumb, which stays the page heading', async () => {
+    const onTitleChange = vi.fn().mockResolvedValue(undefined);
+    renderHeader({ onTitleChange });
+
+    const heading = screen.getByRole('heading', { level: 1, name: '新增成員' });
+    expect(heading.id).toBe('howbeam-editor-title');
+    const crumb = within(heading).getByRole('button', { name: /新增成員/ });
+    expect(crumb.getAttribute('title')).toBe('新增成員');
+    fireEvent.click(crumb);
+    const field = within(heading).getByRole('textbox', { name: '專案標題' });
+    fireEvent.change(field, { target: { value: '新名稱' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+
+    await waitFor(() => expect(onTitleChange).toHaveBeenCalledWith('新名稱'));
+  });
+
+  it('keeps the crumb read-only while editing is disabled', () => {
+    renderHeader({ onTitleChange: vi.fn(), editingDisabled: true });
+
+    expect((within(screen.getByRole('heading', { level: 1 })).getByRole('button') as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('names the location even before the project loads, and for an untitled project', () => {
     renderHeader({ projectTitle: null });
     expect(screen.getByRole('heading', { level: 1, name: '編輯器' })).toBeTruthy();
