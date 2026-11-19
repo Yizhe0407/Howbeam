@@ -71,7 +71,6 @@ describe('EditorHeader', () => {
     const heading = screen.getByRole('heading', { level: 1, name: '新增成員' });
     expect(heading.id).toBe('howbeam-editor-title');
     const crumb = within(heading).getByRole('button', { name: /新增成員/ });
-    expect(crumb.getAttribute('title')).toBe('新增成員');
     fireEvent.click(crumb);
     const field = within(heading).getByRole('textbox', { name: '專案標題' });
     fireEvent.change(field, { target: { value: '新名稱' } });

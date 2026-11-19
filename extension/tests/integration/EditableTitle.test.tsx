@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import EditableTitle from '@/components/shared/EditableTitle';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 afterEach(cleanup);
 
@@ -9,7 +10,7 @@ const LONG = '新進員工到職第一天要完成的帳號申請、權限設定
 
 function renderTitle(props: Partial<Parameters<typeof EditableTitle>[0]> = {}) {
   const onCommit = vi.fn().mockResolvedValue(undefined);
-  render(<EditableTitle value={LONG} onCommit={onCommit} fallback="未命名專案" label="專案名稱" maxLength={80} {...props} />);
+  render(<EditableTitle value={LONG} onCommit={onCommit} fallback="未命名專案" label="專案名稱" maxLength={80} {...props} />, { wrapper: TooltipProvider });
   return { onCommit };
 }
 

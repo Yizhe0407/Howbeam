@@ -59,21 +59,24 @@ function Segmented<V extends string | number>({ label, value, options, onSelect 
   return (
     <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5" role="radiogroup" aria-label={label}>
       {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          role="radio"
-          aria-checked={value === option.value}
-          aria-label={option.title}
-          title={option.title}
-          onClick={() => onSelect(option.value)}
-          className={cn(
-            pillButton,
-            value === option.value ? 'bg-selected text-on-accent' : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-          )}
-        >
-          {option.content}
-        </button>
+        <Tooltip key={option.value}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={value === option.value}
+              aria-label={option.title}
+              onClick={() => onSelect(option.value)}
+              className={cn(
+                pillButton,
+                value === option.value ? 'bg-selected text-on-accent' : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+              )}
+            >
+              {option.content}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{option.title}</TooltipContent>
+        </Tooltip>
       ))}
     </div>
   );
@@ -88,32 +91,40 @@ function ColorControl({ color, onChange }: { color: string; onChange: (color: st
   return (
     <div className="flex items-center gap-1.5" role="radiogroup" aria-label={copy.colorLabel}>
       {swatches.map((swatch) => (
-        <button
-          key={swatch}
-          type="button"
-          role="radio"
-          aria-checked={color === swatch}
-          aria-label={swatch}
-          title={swatch}
-          onClick={() => onChange(swatch)}
-          className={cn(
-            'size-6 rounded-full border-2 outline-none transition-transform focus-ring',
-            color === swatch ? 'scale-110 border-foreground ring-2 ring-card' : 'border-border-soft hover:scale-105',
-          )}
-          style={{ backgroundColor: swatch }}
-        />
+        <Tooltip key={swatch}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={color === swatch}
+              aria-label={swatch}
+              onClick={() => onChange(swatch)}
+              className={cn(
+                'size-6 rounded-full border-2 outline-none transition-transform focus-ring',
+                color === swatch ? 'scale-110 border-foreground ring-2 ring-card' : 'border-border-soft hover:scale-105',
+              )}
+              style={{ backgroundColor: swatch }}
+            />
+          </TooltipTrigger>
+          <TooltipContent>{swatch}</TooltipContent>
+        </Tooltip>
       ))}
-      <ImageEditColorPicker color={color} onChange={onChange}>
-        <button
-          type="button"
-          aria-label={copy.customColor}
-          title={copy.customColor}
-          className="group relative flex size-6 items-center justify-center rounded-full border-2 border-transparent text-muted-foreground outline-none transition-colors focus-ring hover:border-foreground hover:text-foreground data-[state=open]:border-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground"
-        >
-          <DashedOutline radius="full" outset={2} hideOnHover className="group-data-[state=open]:hidden" />
-          <Plus className="size-3.5" strokeWidth={2.5} />
-        </button>
-      </ImageEditColorPicker>
+      <Tooltip>
+        <ImageEditColorPicker color={color} onChange={onChange}>
+          <TooltipTrigger asChild>
+            {/* Open state comes from aria-expanded: the tooltip's trigger writes its own data-state on this same button. */}
+            <button
+              type="button"
+              aria-label={copy.customColor}
+              className="group relative flex size-6 items-center justify-center rounded-full border-2 border-transparent text-muted-foreground outline-none transition-colors focus-ring hover:border-foreground hover:text-foreground aria-expanded:border-foreground aria-expanded:bg-secondary aria-expanded:text-foreground"
+            >
+              <DashedOutline radius="full" outset={2} hideOnHover className="group-aria-expanded:hidden" />
+              <Plus className="size-3.5" strokeWidth={2.5} />
+            </button>
+          </TooltipTrigger>
+        </ImageEditColorPicker>
+        <TooltipContent>{copy.customColor}</TooltipContent>
+      </Tooltip>
     </div>
   );
 }

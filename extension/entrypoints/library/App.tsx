@@ -21,6 +21,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import AppToaster from '@/components/shared/AppToaster';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import AppHeader from '@/components/shared/AppHeader';
+import OverflowTooltip from '@/components/shared/OverflowTooltip';
 import Mascot from '@/components/shared/Mascot';
 import BackupPausedNotice from '@/components/shared/BackupPausedNotice';
 import { useAutoFolderBackup } from '@/lib/backup/use-folder-backup';
@@ -282,12 +283,13 @@ export default function App() {
                   <div className="flex flex-1 flex-col gap-2.5 p-4">
                     <button
                       type="button"
-                      title={projectDisplayTitle(project.title)}
                       onClick={() => void run(project.id, () => openSelectedProjectInEditor(project.id, { inPlace: true }))}
                       disabled={actionsLocked}
                       className="-ml-1.5 w-full cursor-pointer rounded-md border-2 border-transparent px-1 py-0.5 text-left text-base leading-snug font-bold text-foreground focus-ring hover:underline disabled:cursor-default disabled:no-underline disabled:opacity-70"
                     >
-                      <span className="line-clamp-2">{projectDisplayTitle(project.title)}</span>
+                      <OverflowTooltip content={projectDisplayTitle(project.title)}>
+                        <span className="line-clamp-2">{projectDisplayTitle(project.title)}</span>
+                      </OverflowTooltip>
                     </button>
                     {project.description && (
                       <p className="line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { cn } from '@/lib/shared/utils';
+import OverflowTooltip from './OverflowTooltip';
 
 interface Props {
   value: string;
@@ -78,21 +79,22 @@ export default function EditableTitle({
 
   if (!editing) {
     return (
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => {
-          cancelled.current = false;
-          setEditing(true);
-        }}
-        // The full title on hover, for when the owner truncates it.
-        title={committed}
-        className={cn('cursor-text text-left break-words', className)}
-      >
-        <span className="sr-only">{label} </span>
-        <span>{committed}</span>
-        {!disabled && <Pencil className="ml-2 inline size-4 align-[-0.1em] text-muted-foreground" aria-hidden="true" />}
-      </button>
+      // The full title, for when the owner truncates it.
+      <OverflowTooltip content={committed}>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => {
+            cancelled.current = false;
+            setEditing(true);
+          }}
+          className={cn('cursor-text text-left break-words', className)}
+        >
+          <span className="sr-only">{label} </span>
+          <span>{committed}</span>
+          {!disabled && <Pencil className="ml-2 inline size-4 align-[-0.1em] text-muted-foreground" aria-hidden="true" />}
+        </button>
+      </OverflowTooltip>
     );
   }
 

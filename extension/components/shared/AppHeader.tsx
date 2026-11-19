@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ChevronRight, Settings } from 'lucide-react';
 import Mascot from './Mascot';
+import OverflowTooltip from './OverflowTooltip';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { navigateInPlace, type InPlacePage } from '@/lib/runtime/page-navigation';
@@ -86,11 +87,15 @@ export default function AppHeader({ current, currentContent, currentHeading, sta
                 </h1>
               ) : currentHeading ? (
                 // The crumb truncates on narrow windows; the tooltip keeps the full name reachable.
-                <h1 id={currentHeading.id} tabIndex={currentHeading.id ? -1 : undefined} title={current} className={cn(crumbClass, 'block min-w-0 truncate text-foreground outline-none')}>
-                  {current}
-                </h1>
+                <OverflowTooltip content={current}>
+                  <h1 id={currentHeading.id} tabIndex={currentHeading.id ? -1 : undefined} className={cn(crumbClass, 'block min-w-0 truncate text-foreground outline-none')}>
+                    {current}
+                  </h1>
+                </OverflowTooltip>
               ) : (
-                <span title={current} className={cn(crumbClass, 'block min-w-0 truncate text-foreground')}>{current}</span>
+                <OverflowTooltip content={current}>
+                  <span className={cn(crumbClass, 'block min-w-0 truncate text-foreground')}>{current}</span>
+                </OverflowTooltip>
               )}
             </li>
           )}

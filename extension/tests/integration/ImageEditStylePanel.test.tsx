@@ -3,12 +3,13 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ImageEditStylePanel from '@/components/editor/ImageEditStylePanel';
 import { DEFAULT_IMAGE_EDIT_STYLE } from '@/lib/editor/image-edit-style';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 afterEach(cleanup);
 
 function renderPanel(fields: Parameters<typeof ImageEditStylePanel>[0]['fields'], number?: number) {
   const onChange = vi.fn();
-  render(<ImageEditStylePanel fields={fields} style={DEFAULT_IMAGE_EDIT_STYLE} number={number} onChange={onChange} />);
+  render(<ImageEditStylePanel fields={fields} style={DEFAULT_IMAGE_EDIT_STYLE} number={number} onChange={onChange} />, { wrapper: TooltipProvider });
   return onChange;
 }
 
@@ -55,7 +56,7 @@ describe('ImageEditStylePanel', () => {
 
   it('shows a picked colour as its own selected swatch, keeping the picker button', () => {
     const onChange = vi.fn();
-    render(<ImageEditStylePanel fields={['color']} style={{ ...DEFAULT_IMAGE_EDIT_STYLE, color: '#8a2be2' }} onChange={onChange} />);
+    render(<ImageEditStylePanel fields={['color']} style={{ ...DEFAULT_IMAGE_EDIT_STYLE, color: '#8a2be2' }} onChange={onChange} />, { wrapper: TooltipProvider });
     expect(screen.getByRole('radio', { name: '#8a2be2' }).getAttribute('aria-checked')).toBe('true');
     expect(screen.getByRole('button', { name: '自訂顏色' })).toBeTruthy();
   });

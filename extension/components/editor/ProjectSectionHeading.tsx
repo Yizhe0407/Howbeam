@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Ellipsis, Pencil, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { t } from '@/lib/shared/i18n';
+import OverflowTooltip from '@/components/shared/OverflowTooltip';
 
 interface ProjectSectionHeadingSection {
   id: string;
@@ -53,9 +54,11 @@ function ProjectSectionHeading({
       className="flex min-w-0 items-center gap-1.5 pt-1.5 pb-0.5 pl-1"
     >
       <span aria-hidden="true" className="w-1 self-stretch rounded-full bg-matcha" />
-      <h2 title={section.title} className="min-w-0 flex-1 truncate text-[13px] leading-6 font-bold text-foreground">
-        {section.title}
-      </h2>
+      <OverflowTooltip content={section.title}>
+        <h2 className="min-w-0 flex-1 truncate text-[13px] leading-6 font-bold text-foreground">
+          {section.title}
+        </h2>
+      </OverflowTooltip>
       <Popover open={menuOpen} onOpenChange={setMenuOpen}>
         <PopoverTrigger asChild>
           <button

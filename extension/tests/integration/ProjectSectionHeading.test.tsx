@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import ProjectSectionHeading, {
   type ProjectSectionHeadingProps,
 } from '@/components/editor/ProjectSectionHeading';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 function createProps(overrides: Partial<ProjectSectionHeadingProps> = {}): ProjectSectionHeadingProps {
   return {
@@ -32,7 +33,7 @@ afterEach(() => {
 
 describe('ProjectSectionHeading', () => {
   it('以一行可存取的二級標題顯示章節，操作收在選單裡', () => {
-    render(<ProjectSectionHeading {...createProps()} />);
+    render(<ProjectSectionHeading {...createProps()} />, { wrapper: TooltipProvider });
 
     expect(screen.getByRole('region', { name: '章節：開始使用' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: '開始使用', level: 2 })).toBeTruthy();
@@ -45,7 +46,7 @@ describe('ProjectSectionHeading', () => {
 
   it('從選單重新命名時只請求開啟對話框', () => {
     const onRename = vi.fn();
-    render(<ProjectSectionHeading {...createProps({ onRename })} />);
+    render(<ProjectSectionHeading {...createProps({ onRename })} />, { wrapper: TooltipProvider });
 
     openMenu();
     fireEvent.click(button('重新命名'));
@@ -57,7 +58,7 @@ describe('ProjectSectionHeading', () => {
 
   it('從選單直接把刪除交給 callback，不使用元件內確認流程', async () => {
     const onDelete = vi.fn();
-    render(<ProjectSectionHeading {...createProps({ onDelete })} />);
+    render(<ProjectSectionHeading {...createProps({ onDelete })} />, { wrapper: TooltipProvider });
 
     openMenu();
     fireEvent.click(button('刪除章節'));
@@ -70,7 +71,7 @@ describe('ProjectSectionHeading', () => {
     const onDelete = vi.fn(() => new Promise<void>((resolve) => {
       resolveDelete = resolve;
     }));
-    const { rerender } = render(<ProjectSectionHeading {...createProps({ onDelete })} />);
+    const { rerender } = render(<ProjectSectionHeading {...createProps({ onDelete })} />, { wrapper: TooltipProvider });
 
     openMenu();
     fireEvent.click(button('刪除章節'));
