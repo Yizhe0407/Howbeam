@@ -331,6 +331,43 @@ test.describe('editor workflows', () => {
     await expect(dialog).not.toBeVisible();
   });
 
+  test('zooms only from the image itself, not from the empty space around it', async ({
+    appPage,
+    popupPage,
+    extensionContext,
+    extensionId,
+    browserErrors: _browserErrors,
+  }) => {
+    await recordStepTargets(appPage, popupPage, ['#plain-text']);
+    const editor = await openEditor(extensionContext, extensionId, popupPage, 1);
+
+    const zoomButton = editor.getByRole('button', { name: '放大圖片' });
+    const image = editor.locator('main img').first();
+    await expect(zoomButton).toBeVisible();
+    const buttonBox = (await zoomButton.boundingBox())!;
+    const imageBox = (await image.boundingBox())!;
+    for (const edge of ['x', 'y', 'width', 'height'] as const) {
+      expect(buttonBox[edge]).toBeCloseTo(imageBox[edge], 0);
+    }
+
+    const outsidePoints = [
+      { x: imageBox.x - 6, y: imageBox.y + imageBox.height / 2 },
+      { x: imageBox.x + imageBox.width + 6, y: imageBox.y + imageBox.height / 2 },
+      { x: imageBox.x + imageBox.width / 2, y: imageBox.y - 6 },
+      { x: imageBox.x + imageBox.width / 2, y: imageBox.y + imageBox.height + 6 },
+    ];
+    for (const point of outsidePoints) {
+      const hitsZoomButton = await editor.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.closest('button[aria-label="放大圖片"]') !== null,
+        point,
+      );
+      expect(hitsZoomButton, `point ${point.x},${point.y} is outside the image`).toBe(false);
+    }
+
+    await editor.mouse.click(imageBox.x + imageBox.width / 2, imageBox.y + imageBox.height / 2);
+    await expect(editor.getByRole('dialog')).toBeVisible();
+  });
+
   test('copies ordinary and snapshot entries as valid PNG images', async ({
     appPage,
     popupPage,

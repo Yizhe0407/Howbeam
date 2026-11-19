@@ -123,11 +123,19 @@ export default function StepStage({
     </div>
   );
 
-  const zoomHint = (
-    <span className="pointer-events-none absolute right-3 bottom-3 flex items-center gap-1 rounded-full border-2 border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-      <ZoomIn className="size-3.5" />
-      {t().editor.stage.zoomHint}
-    </span>
+  // Lives in the thumbnail's overlay slot, which is exactly the image's box, so only the image itself zooms.
+  const zoomTarget = (
+    <button
+      type="button"
+      onClick={onZoom}
+      aria-label={t().editor.stage.zoomImage}
+      className="group pointer-events-auto absolute inset-0 cursor-zoom-in rounded-md border-none bg-transparent outline-none focus-ring"
+    >
+      <span className="pointer-events-none absolute right-3 bottom-3 flex items-center gap-1 rounded-full border-2 border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+        <ZoomIn className="size-3.5" />
+        {t().editor.stage.zoomHint}
+      </span>
+    </button>
   );
 
   const errorNotice = stageError && <InlineAlert>{stageError}</InlineAlert>;
@@ -140,21 +148,16 @@ export default function StepStage({
 
   function imageFrame(alt: string) {
     return (
-      <button
-        type="button"
-        onClick={onZoom}
-        aria-label={t().editor.stage.zoomImage}
-        className="group relative flex w-full cursor-zoom-in items-center justify-center rounded-md border-none bg-transparent outline-none focus-ring lg:h-full lg:max-h-full lg:max-w-full"
-      >
+      <div className="relative flex w-full items-center justify-center lg:h-full lg:max-h-full lg:max-w-full">
         <EntryThumbnail
           entry={entry}
           alt={alt}
           fit="contain"
           className="max-w-full lg:h-full lg:max-h-full"
           imgClassName="block h-auto w-auto max-w-full rounded-md object-contain outline-2 outline-border lg:max-h-full"
-          overlay={zoomHint}
+          overlay={zoomTarget}
         />
-      </button>
+      </div>
     );
   }
 
