@@ -1,0 +1,3 @@
+# Vendored font license texts ship byte for byte as upstream publishes them;
+# the PDF font test checks them against their recorded SHA-256.
+extension/public/fonts/**/*.txt -text
