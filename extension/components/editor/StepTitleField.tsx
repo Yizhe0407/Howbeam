@@ -25,6 +25,7 @@ export default function StepTitleField({ step, number, disabled = false }: Props
     discardRecovery,
     flush,
     confirmOverwrite,
+    cutCount,
   } = useStepTextAutosave(step, 'title');
   const limit = PERSISTED_STEP_LIMITS.maxStepTitleLength;
   const lengthId = `title-length-${step.id}`;
@@ -48,7 +49,7 @@ export default function StepTitleField({ step, number, disabled = false }: Props
         placeholder={t().editor.title.placeholder}
         className="h-10 w-full min-w-0 rounded-md border-2 border-transparent bg-transparent px-2 text-base font-bold text-foreground outline-none transition-colors focus-ring placeholder:font-normal placeholder:text-muted-foreground hover:border-border-soft focus:border-border focus:bg-card disabled:opacity-60"
       />
-      <TextLengthHint id={lengthId} length={value.length} limit={limit} visibility="focus" className="-mt-1" />
+      <TextLengthHint id={lengthId} length={value.length} limit={limit} cutCount={cutCount} visibility="focus" className="-mt-1" />
       <TextSaveIssue
         issue={saveIssue}
         savedValue={savedValue}

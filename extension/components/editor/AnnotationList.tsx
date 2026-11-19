@@ -58,6 +58,7 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
     discardRecovery,
     flush,
     confirmOverwrite,
+    cutCount,
   } = useStepTextAutosave(step, 'description');
   const limit = PERSISTED_STEP_LIMITS.maxAnnotationDescriptionLength;
   const lengthId = `annotation-length-${step.id}`;
@@ -126,7 +127,7 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
           {dragHandle}
         </div>
       </div>
-      <TextLengthHint id={lengthId} length={description.length} limit={limit} visibility="focus" className="mt-1" />
+      <TextLengthHint id={lengthId} length={description.length} limit={limit} cutCount={cutCount} visibility="focus" className="mt-1" />
       <TextSaveIssue
         issue={saveIssue}
         savedValue={savedValue}

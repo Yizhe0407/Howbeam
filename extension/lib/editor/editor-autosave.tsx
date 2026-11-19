@@ -91,6 +91,8 @@ export interface TextAutosaveResult {
   discardRecovery: (writerId: string) => void;
   flush: () => Promise<void>;
   confirmOverwrite: () => Promise<void>;
+  /** How many characters the last edit lost to the field's limit; 0 when none. */
+  cutCount: number;
 }
 
 /** Thrown by flush() while an explicit user confirmation is outstanding. The
@@ -104,8 +106,10 @@ export class DraftConfirmationRequiredError extends Error {
 
 /** A title is one line; a description keeps its line breaks. Both are cut to
  * storage's limit, because `maxLength` does not hold during IME composition. */
-function normalizeStepText(field: StepTextField, value: string, limit: number): string {
-  return clampStoredText(field === 'title' ? normalizeStoredLine(value) : normalizeStoredText(value), limit);
+function normalizeStepText(field: StepTextField, value: string, limit: number): { text: string; cut: number } {
+  const normalized = field === 'title' ? normalizeStoredLine(value) : normalizeStoredText(value);
+  const text = clampStoredText(normalized, limit);
+  return { text, cut: normalized.length - text.length };
 }
 
 function logAutosaveFailure(message: string): (error: unknown) => void {
@@ -139,14 +143,17 @@ export function useStepTextAutosave(
       writerId.current,
     );
     const restored = candidates.find((candidate) => candidate.belongsToCurrentWriter) ?? null;
+    // A journal record can predate the stored-text rule; normalize it like typed text.
+    const normalized = restored ? normalizeStepText(field, restored.value, limit) : { text: stored, cut: 0 };
     return {
-      // A journal record can predate the stored-text rule; normalize it like typed text.
-      value: restored ? normalizeStepText(field, restored.value, limit) : stored,
+      value: normalized.text,
+      cut: normalized.cut,
       recoveries: candidates.filter((candidate) => !candidate.belongsToCurrentWriter),
       confirmationRequired: Boolean(restored?.conflictsWithPersistedValue),
     };
   });
   const [value, setValueState] = useState(initial.value);
+  const [cutCount, setCutCount] = useState(initial.cut);
   const [recoveries, setRecoveries] = useState<RestoredTextDraft[]>(initial.recoveries);
   const [saveIssue, setSaveIssue] = useState<TextSaveIssue | null>(
     initial.confirmationRequired ? 'conflict' : null,
@@ -264,7 +271,8 @@ export function useStepTextAutosave(
   const setValue = useCallback(
     (typedValue: string) => {
       // Normalize as the user types, so the draft is exactly what storage will keep.
-      const nextValue = normalizeStepText(field, typedValue, limit);
+      const { text: nextValue, cut } = normalizeStepText(field, typedValue, limit);
+      setCutCount(cut);
       const journaled = writeTextDraft({ ...target(), value: persisted.current }, nextValue, writerId.current);
       draft.current = nextValue;
       setValueState(nextValue);
@@ -287,7 +295,7 @@ export function useStepTextAutosave(
     const recovery = recoveries.find((candidate) => candidate.writerId === recoveryWriterId);
     if (!recovery) return false;
     clearTimer();
-    const recovered = normalizeStepText(field, recovery.value, limit);
+    const { text: recovered, cut } = normalizeStepText(field, recovery.value, limit);
     const journaled = writeTextDraft({ ...target(), value: persisted.current }, recovered, writerId.current);
     // The journal write's integrity pass may have cleaned records that are
     // still on screen; re-read so the visible list matches storage.
@@ -295,6 +303,7 @@ export function useStepTextAutosave(
     if (!journaled) return false;
     draft.current = recovered;
     setValueState(recovered);
+    setCutCount(cut);
     requireConfirmation('restored');
     return true;
   }, [clearTimer, field, limit, recoveries, refreshRecoveries, requireConfirmation, target]);
@@ -305,6 +314,7 @@ export function useStepTextAutosave(
     discardTextDraft(target(), writerId.current);
     draft.current = persisted.current;
     setValueState(persisted.current);
+    setCutCount(0);
     requireConfirmation(null);
     refreshRecoveries();
   }, [clearTimer, refreshRecoveries, requireConfirmation, target]);
@@ -328,6 +338,7 @@ export function useStepTextAutosave(
     if (draft.current === previousExternalValue || draft.current === external.value) {
       draft.current = external.value;
       setValueState(external.value);
+      setCutCount(0);
       requireConfirmation(null);
       // clearMatching covers this writer's record too; see performFlush.
       clearMatchingCommittedTextDrafts(external, external.value);
@@ -378,5 +389,6 @@ export function useStepTextAutosave(
     discardRecovery,
     flush,
     confirmOverwrite,
+    cutCount,
   };
 }

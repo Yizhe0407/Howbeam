@@ -396,6 +396,10 @@ describe('editor description autosave', () => {
 
     expect(mocks.saveStepText).toHaveBeenCalledWith('step-1', 'description', '字'.repeat(500), '');
     expect(screen.getByText('500 / 500 字')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('已達 500 字上限，多出的 1 字未保留');
+
+    fireEvent.change(screen.getByLabelText('說明'), { target: { value: '字'.repeat(499) } });
+    expect(screen.getByRole('status').textContent).toBe('');
   });
 
   async function settle(ms = 650) {

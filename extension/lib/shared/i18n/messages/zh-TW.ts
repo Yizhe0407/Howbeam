@@ -341,6 +341,7 @@ export const zhTW = {
     },
 
     textLength: (count: number, max: number) => `${count} / ${max} 字`,
+    textCut: (max: number, cut: number) => `已達 ${max} 字上限，多出的 ${cut} 字未保留`,
 
     saveIssue: {
       conflict: '尚未儲存：與其他分頁衝突',

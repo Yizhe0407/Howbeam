@@ -250,9 +250,12 @@ html body {
   }
 }
 
-.app-scrollbar {
-  scrollbar-color: rgb(31 27 22 / 0.28) transparent;
-  scrollbar-width: thin;
+/* Chrome 121+ ignores ::-webkit-scrollbar wherever scrollbar-width or scrollbar-color is set, and then draws its own arrows, so the standard properties are only for browsers without the pseudo-elements. */
+@supports not selector(::-webkit-scrollbar) {
+  .app-scrollbar {
+    scrollbar-color: rgb(31 27 22 / 0.28) transparent;
+    scrollbar-width: thin;
+  }
 }
 
 .app-scrollbar::-webkit-scrollbar {
@@ -277,8 +280,10 @@ html body {
 }
 
 @media (prefers-color-scheme: dark) {
-  .app-scrollbar {
-    scrollbar-color: rgb(246 238 223 / 0.24) transparent;
+  @supports not selector(::-webkit-scrollbar) {
+    .app-scrollbar {
+      scrollbar-color: rgb(246 238 223 / 0.24) transparent;
+    }
   }
 
   .app-scrollbar::-webkit-scrollbar-thumb {

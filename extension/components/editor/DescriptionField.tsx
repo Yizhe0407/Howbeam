@@ -24,6 +24,7 @@ export default function DescriptionField({ step, disabled = false }: Props) {
     discardRecovery,
     flush,
     confirmOverwrite,
+    cutCount,
   } = useStepTextAutosave(step, 'description');
   const limit = stepDescriptionLimit(step);
   const lengthId = `description-length-${step.id}`;
@@ -49,7 +50,7 @@ export default function DescriptionField({ step, disabled = false }: Props) {
         // The auto-hide scrollbar reserves a 10px gutter on both edges, so 4px of padding keeps the 14px text inset.
         className="app-scrollbar-autohide min-h-10 max-h-40 resize-none overflow-y-auto px-1 py-2 text-sm leading-relaxed"
       />
-      <TextLengthHint id={lengthId} length={value.length} limit={limit} className="-mt-1" />
+      <TextLengthHint id={lengthId} length={value.length} limit={limit} cutCount={cutCount} className="-mt-1" />
       <TextSaveIssue
         issue={saveIssue}
         savedValue={savedValue}

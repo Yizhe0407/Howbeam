@@ -341,6 +341,7 @@ export const en: Messages = {
     },
 
     textLength: (count: number, max: number) => `${count} / ${max} characters`,
+    textCut: (max: number, cut: number) => `${max}-character limit reached; ${cut} ${cut === 1 ? 'character was' : 'characters were'} not kept`,
 
     saveIssue: {
       conflict: 'Not saved: conflicts with another tab',
