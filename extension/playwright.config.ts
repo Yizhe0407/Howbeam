@@ -6,8 +6,11 @@ const port = Number(process.env.E2E_PORT ?? 4175);
 export default defineConfig({
   testDir: './tests/e2e/specs',
   globalSetup: './tests/e2e/setup/global-setup.ts',
-  // Every test gets its own browser context and profile, so files run in parallel
-  // (Playwright's default: half the CPU cores); tests within a file stay in order.
+  // Every test gets its own browser context and profile, so files run in parallel;
+  // tests within a file stay in order. Each worker is a full Chromium with the
+  // extension, and the recorder's ready timeout is a real-time budget, so too many
+  // workers starve startup and fail it. Capped below Playwright's half-the-cores default.
+  workers: process.env.CI ? undefined : 4,
   fullyParallel: false,
   timeout: 45_000,
   expect: {
