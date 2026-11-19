@@ -16,7 +16,8 @@ import {
   sanitizeProjectSectionTitle,
   type ProjectSection,
 } from '../project/project-sections';
-import { isStoredText, normalizeStoredLine } from '../storage/stored-text';
+import { clampStoredText, isStoredText, normalizeStoredLine } from '../storage/stored-text';
+import { PERSISTED_STEP_LIMITS } from '../storage/persistence-limits';
 import {
   BOUNDS_KEYS,
   IMAGE_EDIT_KEYS,
@@ -120,6 +121,8 @@ function expectText(value: unknown, path: string, maximumLength: number): string
   }
   return text;
 }
+
+const legacyTextLength = (limit: number) => Math.max(limit, PERSISTED_STEP_LIMITS.maxLegacyStepTextLength);
 
 function expectTitle(value: unknown, path: string, maximumLength: number): string {
   const title = expectString(value, path, maximumLength);
@@ -467,8 +470,15 @@ export function validateRuntimeStep(stepValue: unknown, path: string): Step {
       Number.MIN_VALUE,
       PROJECT_ARCHIVE_LIMITS.maxPixelRatio,
     ),
-    title: expectTitle(record.title, `${path}.title`, stepRole({ id, groupId }) === 'annotation' ? 0 : stepTextLimit({ id, groupId }, 'title')),
-    description: expectText(record.description, `${path}.description`, stepDescriptionLimit({ id, groupId })),
+    // Text an older version allowed is read and cut to the current limits.
+    title: clampStoredText(
+      expectTitle(record.title, `${path}.title`, stepRole({ id, groupId }) === 'annotation' ? 0 : legacyTextLength(stepTextLimit({ id, groupId }, 'title'))),
+      stepTextLimit({ id, groupId }, 'title'),
+    ),
+    description: clampStoredText(
+      expectText(record.description, `${path}.description`, legacyTextLength(stepDescriptionLimit({ id, groupId }))),
+      stepDescriptionLimit({ id, groupId }),
+    ),
     url: expectUrl(record.url, `${path}.url`),
     timestamp: expectSafeInteger(record.timestamp, `${path}.timestamp`),
   };

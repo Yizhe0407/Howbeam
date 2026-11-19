@@ -340,6 +340,8 @@ export const en: Messages = {
       placeholder: 'Describe this step…',
     },
 
+    textLength: (count: number, max: number) => `${count} / ${max} characters`,
+
     saveIssue: {
       conflict: 'Not saved: conflicts with another tab',
       conflictBody: 'Another tab saved different text. Nothing you type here is saved until you choose which version to keep.',

@@ -300,6 +300,16 @@ describe('project archive', () => {
     ]);
   });
 
+  it('reads a step title saved under the older, longer limit and cuts it to the current one', async () => {
+    const legacy = await archiveObject([makeStep()]);
+    legacy.manifest.steps[0].title = '標'.repeat(PERSISTED_STEP_LIMITS.maxLegacyStepTextLength);
+    const imported = await importProjectArchive(pack(legacy));
+    expect(itemAt(imported.steps, 0).title).toBe('標'.repeat(PERSISTED_STEP_LIMITS.maxStepTitleLength));
+
+    legacy.manifest.steps[0].title = '標'.repeat(PERSISTED_STEP_LIMITS.maxLegacyStepTextLength + 1);
+    await expect(importProjectArchive(pack(legacy))).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' });
+  });
+
   it('rejects unknown metadata/section fields and oversized metadata', async () => {
     const unknownMetadata = await archiveObject();
     unknownMetadata.manifest.metadata.html = '<script>alert(1)</script>';

@@ -2,6 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from '
 import { notifyProjectsChanged } from './change-notifier';
 import {
   STEP_STORAGE_LIMITS,
+  clampStepTexts,
   getEffectiveBounds,
   requireStorageIdentifier,
   sanitizeProject,
@@ -230,8 +231,18 @@ async function abortTransaction(tx: ProjectStepsTransaction, error: unknown): Pr
   throw error;
 }
 
-// Older databases are not upgraded. It stays 2 because lowering it would stop browsers that already hold version 2 from opening.
-export const DATABASE_VERSION = 2;
+// Version 3 cut step titles and marker labels from 500 and 200 characters to 60.
+export const DATABASE_VERSION = 3;
+
+/** Cuts every step's text saved under the longer limits, so no stored row is over the current ones. */
+async function clampStoredStepTexts(tx: IDBPTransaction<HowbeamDB, ('projects' | 'steps')[], 'versionchange'>) {
+  let cursor = await tx.objectStore('steps').openCursor();
+  while (cursor) {
+    const clamped = clampStepTexts(cursor.value);
+    if (clamped !== cursor.value) await cursor.update(clamped);
+    cursor = await cursor.continue();
+  }
+}
 
 let databasePromise: Promise<IDBPDatabase<HowbeamDB>> | undefined;
 let databaseConnection: IDBPDatabase<HowbeamDB> | undefined;
@@ -239,8 +250,11 @@ let databaseConnection: IDBPDatabase<HowbeamDB> | undefined;
 function getDatabase(): Promise<IDBPDatabase<HowbeamDB>> {
   if (databasePromise) return databasePromise;
   databasePromise = openDB<HowbeamDB>('howbeam', DATABASE_VERSION, {
-    upgrade(db, oldVersion) {
-      if (oldVersion >= 1) return;
+    async upgrade(db, oldVersion, _newVersion, tx) {
+      if (oldVersion >= 1) {
+        if (oldVersion < 3) await clampStoredStepTexts(tx);
+        return;
+      }
       const steps = db.createObjectStore('steps', { keyPath: 'id' });
       steps.createIndex('by-session', 'sessionId');
       const projects = db.createObjectStore('projects', { keyPath: 'id' });

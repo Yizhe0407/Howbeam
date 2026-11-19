@@ -10,6 +10,7 @@ import { useStepTextAutosave } from '@/lib/editor/editor-autosave';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import TextDraftRecoveries from './TextDraftRecoveries';
 import TextSaveIssue from './TextSaveIssue';
+import TextLengthHint from './TextLengthHint';
 import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import { t } from '@/lib/shared/i18n';
 import { cn } from '@/lib/shared/utils';
@@ -58,6 +59,8 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
     flush,
     confirmOverwrite,
   } = useStepTextAutosave(step, 'description');
+  const limit = PERSISTED_STEP_LIMITS.maxAnnotationDescriptionLength;
+  const lengthId = `annotation-length-${step.id}`;
 
   function handleDelete() {
     if (deleteDisabled) return;
@@ -65,7 +68,7 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
   }
 
   return (
-    <div className="group flex flex-col rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
+    <div className="group group/text flex flex-col rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
       {overlay && createPortal(
         <div className="flex size-full items-start rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
           <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -84,9 +87,10 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
         {/* Grows with its text so a long marker label is read in full, not cut at the field's edge. */}
         <textarea
           aria-label={t().editor.annotations.descriptionLabel(index + 1)}
+          aria-describedby={lengthId}
           value={description}
           rows={1}
-          maxLength={PERSISTED_STEP_LIMITS.maxAnnotationDescriptionLength}
+          maxLength={limit}
           // A marker label is one line, as it was when this was an input: Enter finishes, a pasted break becomes a space.
           onChange={(e) => setDescription(e.target.value.replace(/\s*[\r\n]+\s*/g, ' '))}
           onKeyDown={(e) => {
@@ -122,6 +126,7 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
           {dragHandle}
         </div>
       </div>
+      <TextLengthHint id={lengthId} length={description.length} limit={limit} visibility="focus" className="mt-1" />
       <TextSaveIssue
         issue={saveIssue}
         savedValue={savedValue}

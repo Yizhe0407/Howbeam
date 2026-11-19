@@ -1,8 +1,10 @@
 import { stepDescriptionLimit, type Step } from '@/lib/storage/models';
 import { useStepTextAutosave } from '@/lib/editor/editor-autosave';
+import { useAutoHideScrollbar } from '@/lib/editor/use-auto-hide-scrollbar';
 import { Textarea } from '@/components/ui/textarea';
 import TextDraftRecoveries from './TextDraftRecoveries';
 import TextSaveIssue from './TextSaveIssue';
+import TextLengthHint from './TextLengthHint';
 import { t } from '@/lib/shared/i18n';
 
 interface Props {
@@ -23,6 +25,9 @@ export default function DescriptionField({ step, disabled = false }: Props) {
     flush,
     confirmOverwrite,
   } = useStepTextAutosave(step, 'description');
+  const limit = stepDescriptionLimit(step);
+  const lengthId = `description-length-${step.id}`;
+  const scrollbar = useAutoHideScrollbar<HTMLTextAreaElement>();
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -32,15 +37,19 @@ export default function DescriptionField({ step, disabled = false }: Props) {
       <Textarea
         id={`description-${step.id}`}
         value={value}
-        maxLength={stepDescriptionLimit(step)}
+        maxLength={limit}
+        aria-describedby={lengthId}
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => void flush().catch(() => undefined)}
         disabled={disabled}
         placeholder={t().editor.description.placeholder}
+        {...scrollbar}
         rows={1}
         // Starts one line tall and grows with the text, so the screenshot above keeps the height until it is needed.
-        className="app-scrollbar min-h-10 max-h-40 resize-none overflow-y-auto px-3.5 py-2 text-sm leading-relaxed"
+        // The auto-hide scrollbar reserves a 10px gutter on both edges, so 4px of padding keeps the 14px text inset.
+        className="app-scrollbar-autohide min-h-10 max-h-40 resize-none overflow-y-auto px-1 py-2 text-sm leading-relaxed"
       />
+      <TextLengthHint id={lengthId} length={value.length} limit={limit} className="-mt-1" />
       <TextSaveIssue
         issue={saveIssue}
         savedValue={savedValue}

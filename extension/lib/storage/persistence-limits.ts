@@ -5,9 +5,12 @@ export const PERSISTED_STEP_LIMITS = Object.freeze({
   maxStepsPerProject: 2_000,
   maxTotalScreenshotBytes: 64 * 1024 * 1024,
   maxScreenshotBytes: 16 * 1024 * 1024,
-  maxStepTitleLength: 500,
+  maxStepTitleLength: 60,
   maxStepDescriptionLength: 500,
-  maxAnnotationDescriptionLength: 200,
+  maxAnnotationDescriptionLength: 60,
+  /** What step titles and marker labels were once allowed to hold; older archives
+   * up to this length are still read, cut to the current limits. */
+  maxLegacyStepTextLength: 500,
   maxUrlLength: 8_192,
   maxIdLength: 256,
   maxRedactionsPerStep: 1_000,

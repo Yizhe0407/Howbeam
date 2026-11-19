@@ -340,6 +340,8 @@ export const zhTW = {
       placeholder: '輸入步驟說明…',
     },
 
+    textLength: (count: number, max: number) => `${count} / ${max} 字`,
+
     saveIssue: {
       conflict: '尚未儲存：與其他分頁衝突',
       conflictBody: '其他分頁已儲存了不同的內容。之後輸入的內容不會儲存，直到你選擇要保留哪一份。',

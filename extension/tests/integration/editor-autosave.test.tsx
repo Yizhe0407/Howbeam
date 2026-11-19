@@ -359,22 +359,43 @@ describe('editor description autosave', () => {
   });
 
   it('flushes to IndexedDB immediately when the synchronous journal rejects the draft', async () => {
-    // Longer than the journal accepts, so it must flush straight to IndexedDB instead of waiting for blur/unmount.
-    const oversized = 'x'.repeat(100_001);
+    // A full localStorage rejects the journal write, so it must flush straight to IndexedDB instead of waiting for blur/unmount.
+    const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    });
+    try {
+      render(
+        <EditorSaveProvider>
+          <DescriptionField step={makeStep()} />
+        </EditorSaveProvider>,
+      );
+
+      fireEvent.change(screen.getByLabelText('說明'), { target: { value: '草稿' } });
+      await act(async () => {
+        vi.advanceTimersByTime(0);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(mocks.saveStepText).toHaveBeenCalledWith('step-1', 'description', '草稿', '');
+    } finally {
+      setItem.mockRestore();
+    }
+  });
+
+  // maxLength does not hold while an IME composes, so over-limit text can reach onChange.
+  it('cuts typed text to the storage limit before saving it', async () => {
     render(
       <EditorSaveProvider>
         <DescriptionField step={makeStep()} />
       </EditorSaveProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText('說明'), { target: { value: oversized } });
-    await act(async () => {
-      vi.advanceTimersByTime(0);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    fireEvent.change(screen.getByLabelText('說明'), { target: { value: '字'.repeat(501) } });
+    await settle();
 
-    expect(mocks.saveStepText).toHaveBeenCalledWith('step-1', 'description', oversized, '');
+    expect(mocks.saveStepText).toHaveBeenCalledWith('step-1', 'description', '字'.repeat(500), '');
+    expect(screen.getByText('500 / 500 字')).toBeTruthy();
   });
 
   async function settle(ms = 650) {

@@ -5,7 +5,7 @@ import {
 } from './project-section-model';
 import { isRecord } from '../shared/validation';
 import { PERSISTED_PROJECT_LIMITS, PERSISTED_STEP_LIMITS } from './persistence-limits';
-import { normalizeStoredLine, normalizeStoredText } from './stored-text';
+import { clampStoredText, normalizeStoredLine, normalizeStoredText } from './stored-text';
 import { cloneImageEdit, IMAGE_EDIT_LIMITS, readImageEdits, type ImageEdit } from './image-edit-model';
 export type { ImageEdit } from './image-edit-model';
 import { t } from '../shared/i18n';
@@ -296,6 +296,13 @@ export function stepDescriptionLimit(step: Pick<Step, 'id' | 'groupId'>): number
   return stepRole(step) === 'annotation'
     ? PERSISTED_STEP_LIMITS.maxAnnotationDescriptionLength
     : PERSISTED_STEP_LIMITS.maxStepDescriptionLength;
+}
+
+/** The step with its title and description cut to the current limits, for text saved under longer ones. */
+export function clampStepTexts<T extends Pick<Step, 'id' | 'groupId' | 'title' | 'description'>>(step: T): T {
+  const title = clampStoredText(step.title, stepTextLimit(step, 'title'));
+  const description = clampStoredText(step.description, stepDescriptionLimit(step));
+  return title === step.title && description === step.description ? step : { ...step, title, description };
 }
 
 export function getEffectiveBounds(step: Pick<Step, 'bounds' | 'manualBounds' | 'highlightRemoved'>): Bounds | null {

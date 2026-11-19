@@ -25,6 +25,13 @@ export function isStoredText(value: string): boolean {
   return !DISALLOWED_TEXT_CHARACTER.test(value);
 }
 
+/** Cuts `value` to at most `limit` UTF-16 units without splitting a surrogate pair. */
+export function clampStoredText(value: string, limit: number): string {
+  if (value.length <= limit) return value;
+  const clamped = value.slice(0, limit);
+  return /[\uD800-\uDBFF]$/u.test(clamped) ? clamped.slice(0, -1) : clamped;
+}
+
 /** Removes every control character, for single-line labels. */
 export function normalizeStoredLine(value: string): string {
   return value.replace(DISALLOWED_LINE_CHARACTERS, '');

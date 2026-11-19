@@ -8,8 +8,8 @@ import {
   type ReactNode,
 } from 'react';
 import { saveStepText, StepTextConflictError, StepNotFoundError } from '../storage/step-repository';
-import { type Step, type StepTextField } from '../storage/models';
-import { normalizeStoredLine, normalizeStoredText } from '../storage/stored-text';
+import { stepTextLimit, type Step, type StepTextField } from '../storage/models';
+import { clampStoredText, normalizeStoredLine, normalizeStoredText } from '../storage/stored-text';
 import {
   clearMatchingCommittedTextDrafts,
   TEXT_DRAFT_KEY_PREFIX,
@@ -102,9 +102,10 @@ export class DraftConfirmationRequiredError extends Error {
   }
 }
 
-/** A title is one line; a description keeps its line breaks. */
-function normalizeStepText(field: StepTextField, value: string): string {
-  return field === 'title' ? normalizeStoredLine(value) : normalizeStoredText(value);
+/** A title is one line; a description keeps its line breaks. Both are cut to
+ * storage's limit, because `maxLength` does not hold during IME composition. */
+function normalizeStepText(field: StepTextField, value: string, limit: number): string {
+  return clampStoredText(field === 'title' ? normalizeStoredLine(value) : normalizeStoredText(value), limit);
 }
 
 function logAutosaveFailure(message: string): (error: unknown) => void {
@@ -127,6 +128,7 @@ export function useStepTextAutosave(
   const { register } = useEditorSaveRegistry();
   const writerId = useRef(getTextDraftWriterId());
   const stored = step[field];
+  const limit = stepTextLimit(step, field);
   // Reading the journal scans all of localStorage and performs destructive
   // cleanup, so it must run once per mounted field, never per render. A plain
   // `useRef(readTextDrafts(...))` re-evaluates its argument on every
@@ -139,7 +141,7 @@ export function useStepTextAutosave(
     const restored = candidates.find((candidate) => candidate.belongsToCurrentWriter) ?? null;
     return {
       // A journal record can predate the stored-text rule; normalize it like typed text.
-      value: restored ? normalizeStepText(field, restored.value) : stored,
+      value: restored ? normalizeStepText(field, restored.value, limit) : stored,
       recoveries: candidates.filter((candidate) => !candidate.belongsToCurrentWriter),
       confirmationRequired: Boolean(restored?.conflictsWithPersistedValue),
     };
@@ -262,7 +264,7 @@ export function useStepTextAutosave(
   const setValue = useCallback(
     (typedValue: string) => {
       // Normalize as the user types, so the draft is exactly what storage will keep.
-      const nextValue = normalizeStepText(field, typedValue);
+      const nextValue = normalizeStepText(field, typedValue, limit);
       const journaled = writeTextDraft({ ...target(), value: persisted.current }, nextValue, writerId.current);
       draft.current = nextValue;
       setValueState(nextValue);
@@ -278,14 +280,14 @@ export function useStepTextAutosave(
         void flush().catch(logAutosaveFailure(`[howbeam] step ${field} autosave failed`));
       }, journaled ? delay : 0);
     },
-    [clearTimer, delay, field, flush, target],
+    [clearTimer, delay, field, flush, limit, target],
   );
 
   const restoreRecovery = useCallback((recoveryWriterId: string): boolean => {
     const recovery = recoveries.find((candidate) => candidate.writerId === recoveryWriterId);
     if (!recovery) return false;
     clearTimer();
-    const recovered = normalizeStepText(field, recovery.value);
+    const recovered = normalizeStepText(field, recovery.value, limit);
     const journaled = writeTextDraft({ ...target(), value: persisted.current }, recovered, writerId.current);
     // The journal write's integrity pass may have cleaned records that are
     // still on screen; re-read so the visible list matches storage.
@@ -295,7 +297,7 @@ export function useStepTextAutosave(
     setValueState(recovered);
     requireConfirmation('restored');
     return true;
-  }, [clearTimer, field, recoveries, refreshRecoveries, requireConfirmation, target]);
+  }, [clearTimer, field, limit, recoveries, refreshRecoveries, requireConfirmation, target]);
 
   const keepSaved = useCallback(() => {
     if (activeSave.current) return;

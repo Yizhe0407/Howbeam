@@ -3,6 +3,7 @@ import { type Step } from '@/lib/storage/models';
 import { useStepTextAutosave } from '@/lib/editor/editor-autosave';
 import TextDraftRecoveries from './TextDraftRecoveries';
 import TextSaveIssue from './TextSaveIssue';
+import TextLengthHint from './TextLengthHint';
 import { t } from '@/lib/shared/i18n';
 
 interface Props {
@@ -25,14 +26,17 @@ export default function StepTitleField({ step, number, disabled = false }: Props
     flush,
     confirmOverwrite,
   } = useStepTextAutosave(step, 'title');
+  const limit = PERSISTED_STEP_LIMITS.maxStepTitleLength;
+  const lengthId = `title-length-${step.id}`;
 
   return (
-    <div className="flex w-full flex-col gap-2">
+    <div className="group/text flex w-full flex-col gap-2">
       <input
         type="text"
         aria-label={t().editor.title.label(number)}
+        aria-describedby={lengthId}
         value={value}
-        maxLength={PERSISTED_STEP_LIMITS.maxStepTitleLength}
+        maxLength={limit}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
           if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
@@ -44,6 +48,7 @@ export default function StepTitleField({ step, number, disabled = false }: Props
         placeholder={t().editor.title.placeholder}
         className="h-10 w-full min-w-0 rounded-md border-2 border-transparent bg-transparent px-2 text-base font-bold text-foreground outline-none transition-colors focus-ring placeholder:font-normal placeholder:text-muted-foreground hover:border-border-soft focus:border-border focus:bg-card disabled:opacity-60"
       />
+      <TextLengthHint id={lengthId} length={value.length} limit={limit} visibility="focus" className="-mt-1" />
       <TextSaveIssue
         issue={saveIssue}
         savedValue={savedValue}
