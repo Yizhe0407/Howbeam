@@ -2,7 +2,7 @@ import { browser } from 'wxt/browser';
 import { describeElement } from '../../capture/element-description';
 import { pauseMotion } from '../../capture/page-motion';
 import { createRegionCapture } from '../../capture/region-capture';
-import { isOutOfViewport, readRegionScrollSnapshot, readScrollSnapshot } from '../../capture/scroll-snapshot';
+import { isOutOfViewport, pinScroll, readRegionScrollSnapshot, readScrollSnapshot } from '../../capture/scroll-snapshot';
 import { getHighlightBounds, getVisibleHighlightBounds } from '../../capture/selector/highlight-bounds';
 import { isInteractiveElement } from '../../capture/selector/interactive-element';
 import {
@@ -121,8 +121,7 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
   };
   // While a capture is in flight the stored rect is pinned to this scroll
   // position, so the screenshot pixels always match it. Null when idle.
-  let captureScrollLock: ScrollSnapshot | null = null;
-  const lockedScrollElements = new Set<Element>();
+  let releaseScrollPin: (() => void) | null = null;
 
   const preview = createStepHoverPreview({
     isPaused: () => session.paused,
@@ -132,34 +131,15 @@ export function installStepRecorder(deps: StepRecorderDeps): () => void {
   session.hoverPreview = preview;
 
   const onStepScroll = () => {
-    // A queued capture is pinned to one viewport and every nested scrollport.
-    // Snap any user scroll back so the eventual screenshot pixels still match
-    // the stored rect; otherwise fall through to refresh the hover preview.
-    if (captureScrollLock) {
-      let changed = window.scrollX !== captureScrollLock.x || window.scrollY !== captureScrollLock.y;
-      if (changed) window.scrollTo(captureScrollLock.x, captureScrollLock.y);
-      for (const container of captureScrollLock.containers ?? []) {
-        if (container.element.scrollLeft !== container.x || container.element.scrollTop !== container.y) {
-          container.element.scrollLeft = container.x;
-          container.element.scrollTop = container.y;
-          changed = true;
-        }
-      }
-      if (changed) return;
-    }
+    // While pinned, pinScroll snaps every scroll back; the hover preview stays
+    // put until the capture ends and resumePreview runs.
+    if (releaseScrollPin) return;
     preview.schedule();
   };
 
   const setCaptureScrollLock = (lock: ScrollSnapshot | null) => {
-    for (const element of lockedScrollElements) {
-      element.removeEventListener('scroll', onStepScroll);
-    }
-    lockedScrollElements.clear();
-    captureScrollLock = lock;
-    for (const container of lock?.containers ?? []) {
-      container.element.addEventListener('scroll', onStepScroll, { passive: true });
-      lockedScrollElements.add(container.element);
-    }
+    releaseScrollPin?.();
+    releaseScrollPin = lock ? pinScroll(lock) : null;
   };
 
   /** Starts a step capture and resolves `taken` true as soon as its

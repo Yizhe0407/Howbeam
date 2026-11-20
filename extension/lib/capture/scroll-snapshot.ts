@@ -47,6 +47,30 @@ export function readScrollSnapshot(target: Element): ScrollSnapshot {
   };
 }
 
+/** Snaps the viewport and every pinned container back whenever something
+ * scrolls them, until the returned release is called. */
+export function pinScroll(snapshot: ScrollSnapshot): () => void {
+  const restore = () => {
+    if (window.scrollX !== snapshot.x || window.scrollY !== snapshot.y) window.scrollTo(snapshot.x, snapshot.y);
+    for (const container of snapshot.containers ?? []) {
+      if (container.element.scrollLeft !== container.x) container.element.scrollLeft = container.x;
+      if (container.element.scrollTop !== container.y) container.element.scrollTop = container.y;
+    }
+  };
+  window.addEventListener('scroll', restore, { capture: true, passive: true });
+  // Scroll events are not composed: a container inside a shadow root never
+  // reaches the window listener.
+  for (const container of snapshot.containers ?? []) {
+    container.element.addEventListener('scroll', restore, { passive: true });
+  }
+  return () => {
+    window.removeEventListener('scroll', restore, { capture: true });
+    for (const container of snapshot.containers ?? []) {
+      container.element.removeEventListener('scroll', restore);
+    }
+  };
+}
+
 /**
  * Pins every scrollable container that intersects a user-selected region so a
  * programmatic scroll in a nested scroller cannot shift pixels out from under

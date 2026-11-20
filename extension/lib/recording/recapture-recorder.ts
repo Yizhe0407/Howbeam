@@ -3,6 +3,8 @@ import { resolveSnapshotTargetAtPoint } from './snapshot-targeting';
 import { installRecorderLifecycle } from './recorder-lifecycle';
 import { OVERLAY_LAYER, releaseTopLayer, showInTopLayer } from '../capture/overlay-layers';
 import { createStepPreview } from '../capture/step-preview';
+import { pauseMotion } from '../capture/page-motion';
+import { pinScroll, readScrollSnapshot } from '../capture/scroll-snapshot';
 import {
   isInScrollbarGutter,
   isPointInAnyScrollGutter,
@@ -153,12 +155,19 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
     hoverProbe.clearPending();
     const clientX = event.clientX;
     const clientY = event.clientY;
+    // Held from the press until the screenshot exists, so the rect read from
+    // the DOM and the captured pixels describe the same moment.
+    const releaseMotion = pauseMotion();
+    let releaseScroll = () => {};
     void (async () => {
       const target = await resolveSnapshotTargetAtPoint(runId, clientX, clientY);
       if (!target || removed) {
         busy = false;
         return;
       }
+      releaseScroll = pinScroll(
+        target.element ? readScrollSnapshot(target.element) : { x: window.scrollX, y: window.scrollY, containers: [] },
+      );
       await preview.prepareForCapture();
       if (removed) return;
       const captureId = crypto.randomUUID();
@@ -191,7 +200,10 @@ export async function installRecaptureRecorder(context: StepRecaptureContext): P
         console.error('[howbeam] recapture target failed', error);
         cancelWorkflow();
       }
-    })();
+    })().finally(() => {
+      releaseScroll();
+      releaseMotion();
+    });
   };
 
   const onFollowup = (event: Event) => {

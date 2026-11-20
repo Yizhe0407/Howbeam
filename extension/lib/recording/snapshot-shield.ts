@@ -418,8 +418,19 @@ export function createSnapshotShield(
       const moveBefore = (parent as HTMLElement & {
         moveBefore?: (node: Node, child: Node | null) => void;
       }).moveBefore;
-      if (host.isConnected && typeof moveBefore === 'function') moveBefore.call(parent, host, null);
-      else parent.append(host);
+      if (host.isConnected && typeof moveBefore === 'function') {
+        moveBefore.call(parent, host, null);
+      } else if (frame.src) {
+        // Re-inserting reloads the frame, and the shield page consumed its
+        // single-use token on the first load: park a fresh one first, or the
+        // reloaded page never initializes and the shield silently stalls.
+        frame.removeAttribute('src');
+        parent.append(host);
+        armReloadDeadline();
+        provisionFrame();
+      } else {
+        parent.append(host);
+      }
     }
     const showPopover = (host as HTMLElement & { showPopover?: () => void }).showPopover;
     if (typeof showPopover !== 'function') return;
@@ -434,6 +445,7 @@ export function createSnapshotShield(
     if (removed) return;
     removed = true;
     clearTimeout(readyTimeout);
+    clearTimeout(reloadTimeout);
     observer.disconnect();
     if (pendingRemountFrame !== null) cancelAnimationFrame(pendingRemountFrame);
     pendingRemountFrame = null;
@@ -464,6 +476,19 @@ export function createSnapshotShield(
     }
   };
 
+  // Whatever reloads the frame after it was ready, the reloaded page must
+  // answer READY in time; otherwise fail loudly (onFailure recovers the run)
+  // instead of leaving a dead shield over the page.
+  let reloadTimeout: ReturnType<typeof setTimeout> | undefined;
+  function armReloadDeadline(): void {
+    if (!ready) return;
+    clearTimeout(reloadTimeout);
+    reloadTimeout = setTimeout(
+      () => reportFailure('snapshot input shield did not become ready after reloading'),
+      SHIELD_READY_TIMEOUT_MS,
+    );
+  }
+
   const readyTimeout = setTimeout(
     () => reportFailure('snapshot input shield did not become ready before the startup timeout'),
     SHIELD_READY_TIMEOUT_MS,
@@ -473,19 +498,27 @@ export function createSnapshotShield(
   // cannot read extension storage, so only the extension-origin shield page
   // can recover the expected init token; the existing READY timeout above
   // still tears everything down if provisioning or the handshake stalls.
-  void (async () => {
-    try {
-      const record: SnapshotShieldTokenRecord = { token, createdAt: Date.now() };
-      await browser.storage.local.set({ [tokenStorageKey]: record });
-      if (removed) {
-        await browser.storage.local.remove(tokenStorageKey);
-        return;
+  let provisionGeneration = 0;
+  function provisionFrame(): void {
+    const generation = ++provisionGeneration;
+    void (async () => {
+      try {
+        const record: SnapshotShieldTokenRecord = { token, createdAt: Date.now() };
+        await browser.storage.local.set({ [tokenStorageKey]: record });
+        if (removed) {
+          await browser.storage.local.remove(tokenStorageKey);
+          return;
+        }
+        // Only the latest provisioning loads the page; an earlier one would
+        // consume the record the later load still needs.
+        if (generation !== provisionGeneration) return;
+        frame.src = frameUrl.href;
+      } catch (error) {
+        reportFailure('snapshot input shield token provisioning failed', error);
       }
-      frame.src = frameUrl.href;
-    } catch (error) {
-      reportFailure('snapshot input shield token provisioning failed', error);
-    }
-  })();
+    })();
+  }
+  provisionFrame();
   void sweepStaleShieldTokens(tokenStorageKey).catch(() => undefined);
 
   frame.addEventListener(
@@ -495,6 +528,7 @@ export function createSnapshotShield(
       // initial about:blank document (page origin) can fire load first;
       // posting the init there would neuter the transferred port.
       if (removed || !frame.contentWindow || !frame.src) return;
+      armReloadDeadline();
       const generation = ++channelGeneration;
       port?.close();
       const channel = new MessageChannel();
@@ -508,6 +542,7 @@ export function createSnapshotShield(
             clearTimeout(readyTimeout);
             resolveReady();
           }
+          clearTimeout(reloadTimeout);
           frame.focus({ preventScroll: true });
           for (const selection of committedSelections) {
             post({ type: SNAPSHOT_SHIELD_COMMIT, selection });

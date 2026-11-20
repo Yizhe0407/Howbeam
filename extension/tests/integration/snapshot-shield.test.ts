@@ -184,11 +184,15 @@ describe('createSnapshotShield', () => {
     modal.remove();
 
     onPoint.mockClear();
+    // The shield page consumes its single-use token on the first load.
+    mocks.stored.clear();
     host.remove();
     await vi.waitFor(() => expect(host.isConnected).toBe(true));
     // Token provisioning assigns src asynchronously; the load handler
     // ignores load events fired before src is set (about:blank guard).
     await vi.waitFor(() => expect(frame.src).not.toBe(''));
+    // The reloaded page must find a fresh token, or it never initializes.
+    expect([...mocks.stored.values()]).toContainEqual(expect.objectContaining({ token: initMessage.token }));
     frame.dispatchEvent(new Event('load'));
     const [, , replacementTransfer] = postMessage.mock.calls[1] as unknown as [
       { token: string },
@@ -272,6 +276,46 @@ describe('createSnapshotShield', () => {
       runItemCount: 0,
       error: null,
     });
+
+    await vi.waitFor(() => expect(onFailure).toHaveBeenCalledOnce());
+    expect(shadowRoot!.host.isConnected).toBe(false);
+    framePort.close();
+  });
+
+  it('reports a failure when a reloaded frame never answers READY', async () => {
+    silenceIntentionalErrorLogs();
+    let shadowRoot: ShadowRoot | null = null;
+    const originalAttachShadow = Element.prototype.attachShadow;
+    vi.spyOn(Element.prototype, 'attachShadow').mockImplementation(function (this: Element, init) {
+      shadowRoot = originalAttachShadow.call(this, { ...init, mode: 'open' });
+      return shadowRoot;
+    });
+    const postMessage = vi.fn();
+    vi.spyOn(HTMLIFrameElement.prototype, 'contentWindow', 'get').mockReturnValue({ postMessage } as unknown as Window);
+    const onFailure = vi.fn();
+    const shield = createSnapshotShield(vi.fn(), undefined, undefined, undefined, onFailure);
+    const frame = shadowRoot!.querySelector('iframe')!;
+
+    await vi.waitFor(() => expect(frame.src).not.toBe(''));
+    frame.dispatchEvent(new Event('load'));
+    const [initMessage, , transfer] = postMessage.mock.calls[0] as unknown as [
+      { token: string },
+      string,
+      Transferable[],
+    ];
+    const framePort = transfer![0] as MessagePort;
+    framePort.start();
+    framePort.postMessage({ type: SNAPSHOT_SHIELD_READY, token: initMessage.token });
+    await shield.ready;
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      // Reloaded for a reason the shield did not cause; the new page stays silent.
+      frame.dispatchEvent(new Event('load'));
+      vi.advanceTimersByTime(4_000);
+    } finally {
+      vi.useRealTimers();
+    }
 
     await vi.waitFor(() => expect(onFailure).toHaveBeenCalledOnce());
     expect(shadowRoot!.host.isConnected).toBe(false);

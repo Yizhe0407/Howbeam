@@ -145,7 +145,6 @@ export function createSnapshotRecorder(deps: SnapshotRecorderDeps) {
     };
     const label = await capture.commitSnapshotAnnotation(message.rect, target, 'region', Date.now());
     if (label === null) return null;
-    if (!interactionsActive) return null;
     selection.add(target);
     return {
       rect: message.rect,

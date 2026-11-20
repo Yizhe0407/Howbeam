@@ -33,6 +33,9 @@ vi.mock('@/lib/recording/snapshot-targeting', () => ({
 vi.mock('@/lib/capture/step-preview', () => ({
   createStepPreview: () => mocks.preview,
 }));
+vi.mock('@/lib/capture/page-motion', () => ({
+  pauseMotion: () => () => {},
+}));
 vi.mock('@/lib/runtime/keep-alive', () => ({
   KEEPALIVE_PORT_NAME: 'howbeam-keepalive',
   startKeepAlive: vi.fn(() => ({ stop: mocks.keepAliveStop })),
