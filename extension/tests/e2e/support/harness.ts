@@ -5,7 +5,7 @@ import type { Project } from '../../../lib/storage/models';
 import { firstItems, itemAt } from '../../setup/item-at';
 
 /** Browser 內的 page.evaluate 無法匯入 Node 模組，因此在此集中管理持久化契約字面值。 */
-const SCRIBE_DB = { name: 'howbeam', version: 3 } as const;
+const SCRIBE_DB = { name: 'howbeam', version: 4 } as const;
 // `as const` keeps the literal types non-widening so the typed chrome.storage.local.get overloads still apply inside evaluate bodies.
 export const RECORDING_STATE_KEY = 'howbeam:recordingState' as const;
 const ACTIVE_PROJECT_ID_KEY = 'howbeam:activeProjectId' as const;
@@ -186,6 +186,7 @@ export async function resetExtensionData(popup: Page): Promise<void> {
           const projects = db.createObjectStore('projects', { keyPath: 'id' });
           projects.createIndex('by-updated-at', 'updatedAt');
         }
+        if (!db.objectStoreNames.contains('series')) db.createObjectStore('series', { keyPath: 'id' });
       };
       request.onsuccess = () => {
         const db = request.result;
@@ -195,8 +196,9 @@ export async function resetExtensionData(popup: Page): Promise<void> {
           reject(new Error(`Howbeam IndexedDB v${scribeDb.version} stores are incomplete.`));
           return;
         }
-        const tx = db.transaction(storeNames, 'readwrite');
-        for (const storeName of storeNames) tx.objectStore(storeName).clear();
+        const clearedStores = db.objectStoreNames.contains('series') ? [...storeNames, 'series'] : storeNames;
+        const tx = db.transaction(clearedStores, 'readwrite');
+        for (const storeName of clearedStores) tx.objectStore(storeName).clear();
         tx.objectStore('projects').add({ id: projectId, ...projectTemplate });
         tx.oncomplete = () => {
           db.close();
