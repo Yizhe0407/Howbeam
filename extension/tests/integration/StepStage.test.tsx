@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render as rtlRender, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ReactNode } from 'react';
 import { type ScreenshotStep, type Step, type StepEntry } from '@/lib/storage/models';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -10,11 +9,9 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 function render(ui: Parameters<typeof rtlRender>[0], options?: Parameters<typeof rtlRender>[1]) {
   return rtlRender(ui, { wrapper: TooltipProvider, ...options });
 }
-vi.mock('@/components/editor/HighlightThumbnail', () => ({
-  default: ({ overlay }: { overlay?: ReactNode }) => <div data-testid="single-image-frame">{overlay}</div>,
-}));
-vi.mock('@/components/editor/MultiHighlightThumbnail', () => ({
-  default: ({ overlay }: { overlay?: ReactNode }) => <div data-testid="group-image-frame">{overlay}</div>,
+vi.mock('@/lib/export/entry-render', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/export/entry-render')>(),
+  renderEntryRaster: vi.fn(async () => new Blob(['preview'], { type: 'image/jpeg' })),
 }));
 vi.mock('@/components/editor/DescriptionField', () => ({ default: () => null }));
 vi.mock('@/components/editor/StepTitleField', () => ({ default: () => null }));
@@ -102,6 +99,8 @@ function renderStage(options: StageOptions = {}) {
 
 beforeEach(() => {
   database.getProjectSummaries.mockResolvedValue([]);
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:stage');
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -110,13 +109,20 @@ afterEach(() => {
 });
 
 describe('StepStage snapshots', () => {
-  it('puts the zoom target, hint included, inside the rendered image frame in both modes', () => {
-    for (const [entry, frame] of [[groupEntry(), 'group-image-frame'], [singleEntry(), 'single-image-frame']] as const) {
+  it('puts the zoom target, hint included, over the shown image in both modes', async () => {
+    for (const entry of [groupEntry(), singleEntry()]) {
       const onZoom = vi.fn();
-      const { unmount } = renderStage({ entry, onZoom });
-      const zoom = screen.getByRole('button', { name: '放大圖片' });
+      const { container, unmount } = renderStage({ entry, onZoom });
+      const image = await waitFor(() => {
+        const shown = container.querySelector('img');
+        if (!shown) throw new Error('the preview image is not shown yet');
+        return shown;
+      });
+      Object.defineProperties(image, { naturalWidth: { value: 1280 }, naturalHeight: { value: 720 } });
+      fireEvent.load(image);
+      const zoom = await screen.findByRole('button', { name: '放大圖片' });
 
-      expect(zoom.parentElement?.dataset.testid).toBe(frame);
+      expect(zoom.closest('[data-howbeam-image-content-frame]')).not.toBeNull();
       expect(zoom.contains(screen.getByText('點擊放大'))).toBe(true);
       fireEvent.click(zoom);
       expect(onZoom).toHaveBeenCalledTimes(1);

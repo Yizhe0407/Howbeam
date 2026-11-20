@@ -48,7 +48,7 @@ import { FIT_MARGIN, useImageEditViewport } from "@/lib/editor/use-image-edit-vi
 import { useStoredImageEdits } from "@/lib/editor/use-stored-image-edits";
 import { MIN_ZOOM } from "@/lib/editor/image-edit-viewport";
 import { t } from "@/lib/shared/i18n";
-import EntryThumbnail from "./EntryThumbnail";
+import LiveEntryImage from "./LiveEntryImage";
 import ImageEditLayer from "./ImageEditLayer";
 import ImageEditStylePanel, {
   ImageEditCropPanel,
@@ -461,17 +461,14 @@ export default function ImageEditWorkspace({
                   style={canvasStyle}
                 >
                   {canvasStyle && (
-                    <EntryThumbnail
+                    <LiveEntryImage
                       entry={entry}
-                      crop={null}
                       redactions={shown.redactions}
                       imageEdits={shown.imageEdits}
                       boxes={shownBoxes}
                       alt={copy.title(number)}
                       fit="contain"
                       exactBox
-                      liveMasks
-                      reviewing
                       className="h-full w-full"
                       imgClassName="h-full w-full rounded-md object-contain outline-2 outline-border"
                       overlay={

@@ -31,12 +31,7 @@ interface Props {
   exactBox?: boolean;
   /** Text, arrows and rectangles drawn on the image. */
   imageEdits?: ImageEdit[];
-  /** Image editor only: show the stored pixels with masks drawn live on top
-   * instead of burned in (see usePreviewImage). */
-  liveMasks?: boolean;
   screenshotScale: number;
-  /** False drops the marker numbers and their leader lines, for previews too small to read them. */
-  badges?: boolean;
   alt: string;
   className?: string;
   imgClassName?: string;
@@ -45,8 +40,6 @@ interface Props {
   /** 'cover' crops to fill a fixed box. 'contain' shows the full uncropped
    * screenshot at its natural aspect ratio (editor cards). */
   fit?: 'cover' | 'contain';
-  loading?: 'lazy' | 'eager';
-  decoding?: 'async' | 'sync' | 'auto';
 }
 
 interface BoxStyle {
@@ -83,19 +76,15 @@ export default function MultiHighlightThumbnail({
   privacyReviewRequired = false,
   exactBox = false,
   imageEdits = NO_EDITS,
-  liveMasks = false,
   mosaicOrigin,
   screenshotScale,
-  badges = true,
   alt,
   className,
   imgClassName,
   overlay,
   fit = 'cover',
-  loading = 'eager',
-  decoding = 'async',
 }: Props) {
-  const { url, masksBurnedIn, mosaicUrl, liveMosaic } = usePreviewImage(blob, { redactions, screenshotScale, privacyReviewRequired, liveMasks, mosaicOrigin });
+  const { url, liveMosaic } = usePreviewImage(blob, { redactions, screenshotScale, privacyReviewRequired, mosaicOrigin });
   const [boxes, setBoxes] = useState<BoxStyle[]>([]);
   const [imageSize, setImageSize] = useState<{ url: string; width: number; height: number } | null>(null);
   const annotationSignature = useMemo(
@@ -199,7 +188,6 @@ export default function MultiHighlightThumbnail({
     screenshotScale,
     redactions,
     privacyReviewRequired,
-    masksBurnedIn,
     exactBox,
     measure,
     mapOverlays,
@@ -223,11 +211,8 @@ export default function MultiHighlightThumbnail({
       imgRef={imgRef}
       showPixels={showPixels}
       privacyReviewRequired={privacyReviewRequired}
-      masksBurnedIn={masksBurnedIn}
       alt={alt}
       fit={fit}
-      loading={loading}
-      decoding={decoding}
       className={className}
       imgClassName={imgClassName}
       // Records natural size; the layout memo (depends on imageSize) drives the remap here,
@@ -235,7 +220,6 @@ export default function MultiHighlightThumbnail({
       onImageLoad={onImageLoad}
       contentFrame={contentFrame}
       redactions={redactions}
-      mosaicUrl={mosaicUrl}
       liveMosaic={liveMosaic}
       screenshotScale={screenshotScale}
       imageEdits={imageEdits}
@@ -245,7 +229,7 @@ export default function MultiHighlightThumbnail({
         <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden="true">
           {boxes.map(
             (box) =>
-              badges && box.calloutLeft !== null && box.calloutTop !== null && (
+              box.calloutLeft !== null && box.calloutTop !== null && (
                 <polyline
                   key={`leader-${box.order}`}
                   points={box.leaderPoints}
@@ -282,8 +266,7 @@ export default function MultiHighlightThumbnail({
                 />
               </div>
             ) : box.drawFrame && <HighlightFrame box={box} order={box.order} />}
-            {badges && (
-              <div
+            <div
                 className="pointer-events-none absolute flex items-center justify-center rounded-full font-semibold shadow"
                 style={{
                   left: box.calloutLeft ?? box.badgeAnchorLeft,
@@ -299,7 +282,6 @@ export default function MultiHighlightThumbnail({
               >
                 {box.order}
               </div>
-            )}
           </div>
         ))}
     </ThumbnailSurface>

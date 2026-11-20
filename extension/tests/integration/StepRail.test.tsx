@@ -4,7 +4,13 @@ import { act, fireEvent, render as rtlRender, screen, waitFor } from '@testing-l
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { installStepRailDomStubs, removeStepRailDomStubs } from '../setup/step-rail-dom';
 import StepRail from '@/components/editor/StepRail';
-import { type StepEntry } from '@/lib/storage/models';
+import { renderEntryRaster } from '@/lib/export/entry-render';
+
+vi.mock('@/lib/export/entry-render', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/export/entry-render')>(),
+  renderEntryRaster: vi.fn(async () => new Blob(['preview'], { type: 'image/jpeg' })),
+}));
+import { getEntryImageOwner, type StepEntry } from '@/lib/storage/models';
 import type { ProjectSection } from '@/lib/project/project-sections';
 import { makeEntry } from '../setup/step-entries';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -57,10 +63,13 @@ describe('StepRail keyboard navigation', () => {
       },
     );
     const createObjectURL = vi.spyOn(URL, 'createObjectURL');
+    const entries = [makeEntry('step-1', 0), makeEntry('step-2', 1), makeEntry('step-3', 2)];
+    const rendered = () => vi.mocked(renderEntryRaster).mock.calls.map(([input]) => input.screenshot);
+    vi.mocked(renderEntryRaster).mockClear();
 
     render(
       <StepRail
-        entries={[makeEntry('step-1', 0), makeEntry('step-2', 1), makeEntry('step-3', 2)]}
+        entries={entries}
         selectedEntryId="step-1"
         onSelect={vi.fn()}
         onReorder={vi.fn().mockResolvedValue(undefined)}
@@ -68,6 +77,7 @@ describe('StepRail keyboard navigation', () => {
     );
 
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1));
+    expect(rendered()).toEqual([getEntryImageOwner(itemAt(entries, 0)).screenshotBlob]);
     expect(observers).toHaveLength(2);
 
     act(() => {
@@ -75,6 +85,9 @@ describe('StepRail keyboard navigation', () => {
       record.callback([{ isIntersecting: true, target: record.target } as IntersectionObserverEntry], {} as IntersectionObserver);
     });
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(2));
+    expect(rendered()).toHaveLength(2);
+    // Rail previews are small rasters without a group's badges, never the full screenshot.
+    expect(vi.mocked(renderEntryRaster).mock.calls.every(([, options]) => options.maxPixelWidth === 480 && options.badges === false)).toBe(true);
   });
 
   it('handles arrows only while focus is inside the rail', () => {

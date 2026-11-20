@@ -11,14 +11,16 @@ vi.mock('@/lib/capture/raster-image-validation', () => ({
   }),
 }));
 
-import EntryThumbnail from '@/components/editor/EntryThumbnail';
+import EntryPreview from '@/components/editor/EntryPreview';
+import LiveEntryImage from '@/components/editor/LiveEntryImage';
 import { itemAt } from '../setup/item-at';
 
 /**
  * A tiny pixel-exact stand-in for the browser's raster pipeline: an "encoded
  * image" is JSON holding its RGB pixels, createImageBitmap decodes it (with the
  * optional source rectangle a crop uses), and OffscreenCanvas implements the
- * drawImage/fillRect the compositor needs. That lets these tests run the real
+ * drawImage/fillRect the compositor needs (the paths of highlight marks draw
+ * nothing). That lets these tests run the real
  * crop and mask compositor and inspect the pixels a preview <img> would show.
  */
 interface Raster {
@@ -74,6 +76,17 @@ class PixelCanvas {
         const y1 = Math.min(canvas.height, Math.ceil(top + height));
         for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) canvas.pixels[y * canvas.width + x] = [...color];
       },
+      beginPath() {},
+      roundRect() {},
+      arc() {},
+      moveTo() {},
+      lineTo() {},
+      fill() {},
+      stroke() {},
+      save() {},
+      restore() {},
+      fillText() {},
+      measureText: () => ({ width: 0, actualBoundingBoxAscent: 0, actualBoundingBoxDescent: 0 }),
     };
   }
   async convertToBlob(options?: { type?: string }) {
@@ -164,7 +177,7 @@ afterEach(() => {
 describe('preview masking', () => {
   it('shows a single step with its mask burned into the pixels, never the stored screenshot', async () => {
     const source = screenshot(12, 8);
-    const view = render(<EntryThumbnail entry={singleEntry(source)} alt="step" fit="contain" />);
+    const view = render(<EntryPreview entry={singleEntry(source)} alt="step" fit="contain" />);
 
     // Nothing at all while the masked image is being made.
     expect(view.container.querySelector('img')).toBeNull();
@@ -182,7 +195,7 @@ describe('preview masking', () => {
 
   it('burns the mask into a group screenshot as well', async () => {
     const source = screenshot(12, 8);
-    const view = render(<EntryThumbnail entry={groupEntry(source)} alt="group" fit="contain" />);
+    const view = render(<EntryPreview entry={groupEntry(source)} alt="group" fit="contain" />);
     await settle();
 
     const { raster } = await shownRaster(view.container);
@@ -194,7 +207,7 @@ describe('preview masking', () => {
   it('masks the cropped image with the mask shifted by the crop, and never shows the unmasked cut', async () => {
     const source = screenshot(12, 8);
     const view = render(
-      <EntryThumbnail entry={singleEntry(source, { crop: { x: 3, y: 2, width: 8, height: 5 } })} alt="cropped" fit="contain" />,
+      <EntryPreview entry={singleEntry(source, { crop: { x: 3, y: 2, width: 8, height: 5 } })} alt="cropped" fit="contain" />,
     );
     await settle();
 
@@ -212,12 +225,13 @@ describe('preview masking', () => {
   it('shows only black pixels while privacy review is pending', async () => {
     const source = screenshot(12, 8);
     const view = render(
-      <EntryThumbnail entry={singleEntry(source, { redactions: [], redactionReviewRequired: true })} alt="review" fit="contain" />,
+      <EntryPreview entry={singleEntry(source, { redactions: [], redactionReviewRequired: true })} alt="review" fit="contain" />,
     );
     await settle();
 
-    const { raster } = await shownRaster(view.container);
+    const { img, raster } = await shownRaster(view.container);
     expect(raster.pixels.every((pixel) => pixel.join() === '0,0,0')).toBe(true);
+    expect(img.getAttribute('alt')).toBe('');
     expectNeverShown(source);
   });
 
@@ -227,16 +241,17 @@ describe('preview masking', () => {
       throw new Error('decode failed');
     });
     const source = screenshot(12, 8);
-    const view = render(<EntryThumbnail entry={singleEntry(source)} alt="broken" fit="contain" />);
+    const view = render(<EntryPreview entry={singleEntry(source)} alt="broken" fit="contain" />);
     await settle();
 
     expect(view.container.querySelector('img')).toBeNull();
     expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 
-  it('shows the stored screenshot as-is when it has nothing to hide', async () => {
+  it('shows the stored screenshot as-is when nothing is drawn on it', async () => {
     const source = screenshot(12, 8);
-    const view = render(<EntryThumbnail entry={singleEntry(source, { redactions: [] })} alt="plain" fit="contain" />);
+    const view = render(<EntryPreview entry={singleEntry(source, { redactions: [], bounds: null })} alt="plain" fit="contain" />);
+    await settle();
 
     const { blob } = await shownRaster(view.container);
     expect(blob).toBe(source);
@@ -245,11 +260,11 @@ describe('preview masking', () => {
   it('never shows a stale image that lacks a newly added mask, but keeps one that hides more', async () => {
     const source = screenshot(12, 8);
     const second: Redaction = { id: 'mask-2', kind: 'solid', bounds: { x: 9, y: 5, width: 1, height: 1 } };
-    const view = render(<EntryThumbnail entry={singleEntry(source)} alt="step" fit="contain" />);
+    const view = render(<EntryPreview entry={singleEntry(source)} alt="step" fit="contain" />);
     await settle();
     const first = (await shownRaster(view.container)).blob;
 
-    view.rerender(<EntryThumbnail entry={singleEntry(source, { redactions: [mask, second] })} alt="step" fit="contain" />);
+    view.rerender(<EntryPreview entry={singleEntry(source, { redactions: [mask, second] })} alt="step" fit="contain" />);
     expect(view.container.querySelector('img')).toBeNull();
     await settle();
     const both = await shownRaster(view.container);
@@ -257,7 +272,7 @@ describe('preview masking', () => {
     expect(pixelAt(both.raster, 10, 6)).toEqual([0, 0, 0]);
 
     // Removing a mask: the image with both masks stays up until the new one is ready.
-    view.rerender(<EntryThumbnail entry={singleEntry(source, { redactions: [second] })} alt="step" fit="contain" />);
+    view.rerender(<EntryPreview entry={singleEntry(source, { redactions: [second] })} alt="step" fit="contain" />);
     expect((await shownRaster(view.container)).blob).toBe(both.blob);
     await settle();
     const onlySecond = await shownRaster(view.container);
@@ -266,28 +281,29 @@ describe('preview masking', () => {
     expectNeverShown(source);
   });
 
-  it('composites each image once for every preview showing it', async () => {
+  it('composites each image once for every preview showing it, and again for none when the same content reloads', async () => {
     const source = screenshot(12, 8);
-    const entry = singleEntry(source);
     const view = render(
       <>
-        <EntryThumbnail entry={entry} alt="rail" fit="contain" loading="lazy" />
-        <EntryThumbnail entry={entry} alt="stage" fit="contain" />
-        <EntryThumbnail entry={entry} alt="lightbox" fit="contain" />
+        <EntryPreview entry={singleEntry(source)} alt="stage" fit="contain" />
+        <EntryPreview entry={singleEntry(source)} alt="lightbox" fit="contain" />
       </>,
     );
     await settle();
 
     const images = [...view.container.querySelectorAll('img')];
-    expect(images).toHaveLength(3);
+    expect(images).toHaveLength(2);
     expect(new Set(images.map((img) => img.getAttribute('src'))).size).toBe(1);
     expect(URL.createObjectURL).toHaveBeenCalledOnce();
-    expect(itemAt(images, 0).getAttribute('loading')).toBe('lazy');
+
+    // A reload after a text edit hands over new objects with the same pixels: shown at once, nothing re-made.
+    view.rerender(<EntryPreview entry={singleEntry(source, { title: 'renamed' })} alt="stage" fit="contain" />);
+    expect(view.container.querySelector('img')?.getAttribute('src')).toBe(itemAt(images, 0).getAttribute('src'));
   });
 
   it('lets only the image editor show the stored pixels, under live masks, and not be dragged or saved from the menu', async () => {
     const source = screenshot(12, 8);
-    const view = render(<EntryThumbnail entry={singleEntry(source)} crop={null} alt="editor" fit="contain" exactBox liveMasks />);
+    const view = render(<LiveEntryImage entry={singleEntry(source)} alt="editor" fit="contain" exactBox />);
 
     const { img, blob } = await shownRaster(view.container);
     expect(blob).toBe(source);
@@ -298,15 +314,16 @@ describe('preview masking', () => {
     expect(view.container.querySelector('[data-howbeam-redactions] canvas')).not.toBeNull();
   });
 
-  it('keeps the editor fail-closed while privacy review is pending', async () => {
+  it('shows the image editor the stored pixels while privacy review is pending, since the masks are reviewed there', async () => {
     const source = screenshot(12, 8);
     const view = render(
-      <EntryThumbnail entry={singleEntry(source, { redactionReviewRequired: true })} crop={null} alt="editor" fit="contain" exactBox liveMasks />,
+      <LiveEntryImage entry={singleEntry(source, { redactionReviewRequired: true })} alt="editor" fit="contain" exactBox />,
     );
-    await settle();
 
-    const { raster } = await shownRaster(view.container);
-    expect(raster.pixels.every((pixel) => pixel.join() === '0,0,0')).toBe(true);
-    expectNeverShown(source);
+    const { img, blob } = await shownRaster(view.container);
+    expect(blob).toBe(source);
+    stubImageMetrics(img, { naturalWidth: 12, naturalHeight: 8, rendered: { width: 120, height: 80 } });
+    act(() => fireEvent.load(img));
+    expect(view.container.querySelector('[data-howbeam-redactions] canvas')).not.toBeNull();
   });
 });

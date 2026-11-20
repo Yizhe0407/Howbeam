@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { StepEntry } from '@/lib/storage/models';
 import { t } from '@/lib/shared/i18n';
 
-vi.mock('@/components/editor/EntryThumbnail', () => ({
+vi.mock('@/components/editor/EntryPreview', () => ({
   default: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 

@@ -120,7 +120,6 @@ describe('HighlightThumbnail', () => {
         blob={new Blob(['image'])}
         bounds={{ x: 40, y: 10, width: 40, height: 20 }}
         redactions={[{ id: 'mask-1', kind: 'solid', bounds: { x: 50, y: 20, width: 30, height: 40 } }]}
-        liveMasks
         screenshotScale={1}
         alt="redacted preview"
         fit="contain"
@@ -152,7 +151,6 @@ describe('HighlightThumbnail', () => {
         blob={new Blob(['image'])}
         bounds={{ x: 10, y: 10, width: 30, height: 20 }}
         redactions={[{ id: 'mask-1', kind: 'solid', bounds: { x: 50, y: 20, width: 30, height: 40 } }]}
-        liveMasks
         screenshotScale={1}
         alt="resizing redacted preview"
         fit="contain"
@@ -181,7 +179,6 @@ describe('HighlightThumbnail', () => {
         blob={blob}
         bounds={null}
         redactions={redactionAt(50)}
-        liveMasks
         screenshotScale={1}
         alt="edited preview"
         fit="contain"
@@ -198,7 +195,6 @@ describe('HighlightThumbnail', () => {
         blob={blob}
         bounds={null}
         redactions={redactionAt(100)}
-        liveMasks
         screenshotScale={1}
         alt="edited preview"
         fit="contain"
@@ -220,7 +216,6 @@ describe('HighlightThumbnail', () => {
         blob={new Blob(['image'])}
         bounds={null}
         redactions={[{ id: 'mask-1', kind: 'solid', bounds: { x: 50, y: 20, width: 30, height: 40 } }]}
-        liveMasks
         screenshotScale={1}
         alt="exact box"
         fit="contain"

@@ -208,7 +208,6 @@ describe('MultiHighlightThumbnail', () => {
         blob={new Blob(['image'])}
         annotations={[{ bounds: { x: 10, y: 20, width: 40, height: 30 }, order: 1 }]}
         redactions={[{ id: 'mask-1', kind: 'solid', bounds: { x: 50, y: 20, width: 30, height: 40 } }]}
-        liveMasks
         screenshotScale={1}
         alt="redacted preview"
         fit="contain"

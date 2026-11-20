@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { buildStepEntries, type StepEntry } from '@/lib/storage/models';
 import { getSteps } from '@/lib/storage/step-repository';
-import EntryThumbnail from '@/components/editor/EntryThumbnail';
+import EntryPreview from '@/components/editor/EntryPreview';
+
+/** Cover cards stay under 32rem wide before the grid adds a column; this covers them at 2 device pixels per CSS pixel. */
+const COVER_PIXEL_WIDTH = 1024;
 
 interface Props {
   projectId: string;
@@ -26,13 +29,12 @@ export default function ProjectCover({ projectId, revision }: Props) {
   return (
     <div className="aspect-[16/9] w-full overflow-hidden border-b-2 border-border bg-secondary">
       {entry && (
-        <EntryThumbnail
+        <EntryPreview
           entry={entry}
           alt=""
           fit="cover"
           badges={false}
-          loading="lazy"
-          decoding="async"
+          maxPixelWidth={COVER_PIXEL_WIDTH}
           className="size-full"
         />
       )}

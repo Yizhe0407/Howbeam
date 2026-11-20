@@ -754,6 +754,62 @@ describe('compositeMultiHighlight', () => {
     }
   });
 
+  it('leaves out badges and leaders for previews too small to read them, but keeps every marker', async () => {
+    const { calls, FakeOffscreenCanvas } = fakeCanvas();
+    stubBitmap(1_280, 800, FakeOffscreenCanvas);
+
+    try {
+      await compositeMultiHighlight(
+        new Blob(['source']),
+        [
+          { bounds: { x: 100, y: 100, width: 80, height: 32 }, order: 1 },
+          { bounds: { x: 104, y: 102, width: 80, height: 32 }, order: 2 },
+        ],
+        1,
+        'image/jpeg',
+        [],
+        false,
+        [],
+        undefined,
+        { badges: false },
+      );
+
+      expect(calls.filter(([name]) => name === 'arc')).toHaveLength(2 * 3);
+      expect(calls.some(([name]) => name === 'fillText')).toBe(false);
+      expect(calls.some(([name]) => name === 'lineTo')).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('draws everything at full size, then scales the finished image down to the asked width', async () => {
+    const { calls, FakeOffscreenCanvas } = fakeCanvas();
+    stubBitmap(1_280, 800, FakeOffscreenCanvas);
+
+    try {
+      await compositeMultiHighlight(
+        new Blob(['source']),
+        [{ bounds: { x: 100, y: 100, width: 80, height: 32 }, order: 1 }],
+        1,
+        'image/jpeg',
+        [{ id: 'mask', kind: 'solid', bounds: { x: 10, y: 10, width: 10, height: 10 } }],
+        false,
+        [],
+        undefined,
+        { maxPixelWidth: 480 },
+      );
+
+      const names = calls.map(([name]) => name);
+      const scale = calls.findLastIndex(([name]) => name === 'drawImage');
+      expect(calls[scale]?.slice(2)).toEqual([0, 0, 480, 300]);
+      expect(scale).toBeGreaterThan(names.lastIndexOf('fillRect'));
+      expect(scale).toBeGreaterThan(names.lastIndexOf('fillText'));
+      expect(calls.at(-1)).toEqual(['convertToBlob']);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('skips stroking annotations whose frames degenerate outside the viewport', async () => {
     const { calls, FakeOffscreenCanvas } = fakeCanvas();
     stubBitmap(200, 100, FakeOffscreenCanvas);

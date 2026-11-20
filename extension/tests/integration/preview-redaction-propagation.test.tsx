@@ -1,25 +1,12 @@
 import 'fake-indexeddb/auto';
 // @vitest-environment jsdom
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type ScreenshotStep, type Step, type StepEntry } from '@/lib/storage/models';
 
-const previewMocks = vi.hoisted(() => ({
-  highlight: vi.fn(),
-  multi: vi.fn(),
-}));
-
-vi.mock('@/components/editor/HighlightThumbnail', () => ({
-  default: (props: unknown) => {
-    previewMocks.highlight(props);
-    return null;
-  },
-}));
-vi.mock('@/components/editor/MultiHighlightThumbnail', () => ({
-  default: (props: unknown) => {
-    previewMocks.multi(props);
-    return null;
-  },
+vi.mock('@/lib/export/entry-render', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/export/entry-render')>(),
+  renderEntryRaster: vi.fn(async () => new Blob(['preview'], { type: 'image/jpeg' })),
 }));
 vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ children }: { children?: any }) => children,
@@ -59,6 +46,7 @@ vi.mock('@/components/editor/SortableItem', () => ({
 }));
 
 import Lightbox from '@/components/editor/Lightbox';
+import { renderEntryRaster, type EntryRasterInput } from '@/lib/export/entry-render';
 import StepRail from '@/components/editor/StepRail';
 import { itemAt } from '../setup/item-at';
 
@@ -107,12 +95,21 @@ function groupEntry(): StepEntry {
   };
 }
 
+/** What each preview was rendered from, in request order. */
+const renderedInputs = (): EntryRasterInput[] => vi.mocked(renderEntryRaster).mock.calls.map(([input]) => input);
+
+const singleMarks = { kind: 'single', bounds: { x: 40, y: 50, width: 60, height: 70 } };
+const groupMarks = { kind: 'group', annotations: [{ bounds: { x: 40, y: 50, width: 60, height: 70 }, order: 1 }] };
+
 describe('timeline preview propagation', () => {
-  beforeEach(() => previewMocks.highlight.mockClear());
-  beforeEach(() => previewMocks.multi.mockClear());
+  beforeEach(() => {
+    vi.mocked(renderEntryRaster).mockClear();
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  });
   afterEach(() => vi.restoreAllMocks());
 
-  it('StepRail passes manual-effective bounds and screenshot-owner masks for single and group entries', () => {
+  it('StepRail renders manual-effective bounds and screenshot-owner masks for single and group entries', async () => {
     const entries = [singleEntry(), groupEntry()];
     render(
       <StepRail
@@ -123,34 +120,25 @@ describe('timeline preview propagation', () => {
       />,
     );
 
-    expect(previewMocks.highlight).toHaveBeenCalledOnce();
-    expect(itemAt(previewMocks.highlight.mock.calls, 0)[0]).toMatchObject({
-      bounds: { x: 40, y: 50, width: 60, height: 70 },
-      redactions,
-    });
-    expect(previewMocks.multi).toHaveBeenCalledOnce();
-    expect(itemAt(previewMocks.multi.mock.calls, 0)[0]).toMatchObject({
-      annotations: [{ bounds: { x: 40, y: 50, width: 60, height: 70 }, order: 1 }],
-      redactions,
-    });
+    await waitFor(() => expect(renderedInputs()).toHaveLength(2));
+    expect(renderedInputs()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ marks: singleMarks, redactions }),
+      expect.objectContaining({ marks: groupMarks, redactions }),
+    ]));
   });
 
-  it('Lightbox passes manual-effective bounds and screenshot-owner masks for single and group entries', () => {
+  it('Lightbox renders manual-effective bounds and screenshot-owner masks for single and group entries', async () => {
     const single = singleEntry();
     const group = groupEntry();
     const onClose = () => {};
     const onNavigate = () => {};
     const { rerender } = render(<Lightbox entries={[single]} index={0} onClose={onClose} onNavigate={onNavigate} />);
 
-    expect(itemAt(previewMocks.highlight.mock.calls, 0)[0]).toMatchObject({
-      bounds: { x: 40, y: 50, width: 60, height: 70 },
-      redactions,
-    });
+    await waitFor(() => expect(renderedInputs()).toHaveLength(1));
+    expect(itemAt(renderedInputs(), 0)).toMatchObject({ marks: singleMarks, redactions });
 
     rerender(<Lightbox entries={[group]} index={0} onClose={onClose} onNavigate={onNavigate} />);
-    expect(itemAt(previewMocks.multi.mock.calls, 0)[0]).toMatchObject({
-      annotations: [{ bounds: { x: 40, y: 50, width: 60, height: 70 }, order: 1 }],
-      redactions,
-    });
+    await waitFor(() => expect(renderedInputs()).toHaveLength(2));
+    expect(itemAt(renderedInputs(), 1)).toMatchObject({ marks: groupMarks, redactions });
   });
 });

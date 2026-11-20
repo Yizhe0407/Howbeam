@@ -29,9 +29,6 @@ interface Props {
   exactBox?: boolean;
   /** Text, arrows and rectangles drawn on the image. */
   imageEdits?: ImageEdit[];
-  /** Image editor only: show the stored pixels with masks drawn live on top
-   * instead of burned in (see usePreviewImage). */
-  liveMasks?: boolean;
   screenshotScale: number;
   alt: string;
   className?: string;
@@ -41,8 +38,6 @@ interface Props {
   /** 'cover' crops to fill a fixed box (popup thumbnails). 'contain' shows the
    * full uncropped screenshot at its natural aspect ratio (editor cards). */
   fit?: 'cover' | 'contain';
-  loading?: 'lazy' | 'eager';
-  decoding?: 'async' | 'sync' | 'auto';
 }
 
 interface BoxStyle {
@@ -55,8 +50,8 @@ interface BoxStyle {
 }
 
 /**
- * Renders a screenshot, with its masks burned into the pixels (see usePreviewImage), and the
- * highlight box drawn as a CSS overlay (not baked into the image).
+ * Renders the stored screenshot with its masks painted live over it (see usePreviewImage) and the
+ * highlight box drawn as a CSS overlay, for the image editor where both move with every gesture.
  * Border width is scaled by (rendered width / natural width) so it matches the exported image's border proportionally.
  */
 export default function HighlightThumbnail({
@@ -66,7 +61,6 @@ export default function HighlightThumbnail({
   privacyReviewRequired = false,
   exactBox = false,
   imageEdits = NO_EDITS,
-  liveMasks = false,
   mosaicOrigin,
   screenshotScale,
   alt,
@@ -74,10 +68,8 @@ export default function HighlightThumbnail({
   imgClassName,
   overlay,
   fit = 'cover',
-  loading = 'eager',
-  decoding = 'async',
 }: Props) {
-  const { url, masksBurnedIn, mosaicUrl, liveMosaic } = usePreviewImage(blob, { redactions, screenshotScale, privacyReviewRequired, liveMasks, mosaicOrigin });
+  const { url, liveMosaic } = usePreviewImage(blob, { redactions, screenshotScale, privacyReviewRequired, mosaicOrigin });
   const [box, setBox] = useState<BoxStyle | null>(null);
 
   const measure = useCallback((img: HTMLImageElement) => (
@@ -115,7 +107,6 @@ export default function HighlightThumbnail({
     screenshotScale,
     redactions,
     privacyReviewRequired,
-    masksBurnedIn,
     exactBox,
     measure,
     mapOverlays,
@@ -128,18 +119,14 @@ export default function HighlightThumbnail({
       imgRef={imgRef}
       showPixels={showPixels}
       privacyReviewRequired={privacyReviewRequired}
-      masksBurnedIn={masksBurnedIn}
       alt={alt}
       fit={fit}
-      loading={loading}
-      decoding={decoding}
       className={className}
       imgClassName={imgClassName}
       // Single-image mode remaps synchronously on load, unlike MultiHighlightThumbnail.
       onImageLoad={remap}
       contentFrame={contentFrame}
       redactions={redactions}
-      mosaicUrl={mosaicUrl}
       liveMosaic={liveMosaic}
       screenshotScale={screenshotScale}
       imageEdits={imageEdits}

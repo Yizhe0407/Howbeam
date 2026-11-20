@@ -16,3 +16,15 @@ export function isValidImageBounds(bounds: ImageBounds): boolean {
     bounds.height > 0
   );
 }
+
+/**
+ * A 2D context for raster work: drawing a screenshot, reading its pixels back,
+ * encoding it. It is kept in CPU memory, because on a GPU-backed canvas every
+ * pixel read and encode is a synchronous readback through the GPU process,
+ * stalling the frames the page is drawing at the same time.
+ */
+export function rasterContext(canvas: OffscreenCanvas): OffscreenCanvasRenderingContext2D {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('Unable to create a 2D canvas context.');
+  return ctx;
+}

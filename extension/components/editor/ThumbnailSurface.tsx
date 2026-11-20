@@ -4,7 +4,6 @@ import type { ImageEdit } from '@/lib/storage/image-edit-model';
 import type { Redaction } from '@/lib/storage/models';
 import ImageEditsSvg from './ImageEditsSvg';
 import RedactionsCanvas from './RedactionsCanvas';
-import RedactionsSvg from './RedactionsSvg';
 import { getValidScreenshotScale } from '@/lib/media/image-utils';
 import type { ImageContentFrame } from './use-thumbnail-overlay-mapping';
 
@@ -15,22 +14,14 @@ interface Props {
    * (privacy review pending, or redaction positions not yet remapped). */
   showPixels: boolean;
   privacyReviewRequired: boolean;
-  /** False only in the image editor, where `url` is the stored screenshot with
-   * masks drawn on top: the image then refuses to be dragged out or opened
-   * from the context menu, which would bypass those masks. */
-  masksBurnedIn: boolean;
   alt: string;
   fit: 'cover' | 'contain';
-  loading: 'lazy' | 'eager';
-  decoding: 'async' | 'sync' | 'auto';
   className?: string;
   imgClassName?: string;
   onImageLoad: () => void;
   contentFrame: ImageContentFrame | null;
   /** Privacy masks in screenshot CSS coordinates; painted above highlights and image edits. */
   redactions: readonly Redaction[];
-  /** See usePreviewImage's `mosaicUrl`. */
-  mosaicUrl: string | null;
   /** See usePreviewImage's `liveMosaic`. */
   liveMosaic: ImageBitmap | null;
   /** Device pixels per CSS pixel of the screenshot. */
@@ -56,17 +47,13 @@ export default function ThumbnailSurface({
   imgRef,
   showPixels,
   privacyReviewRequired,
-  masksBurnedIn,
   alt,
   fit,
-  loading,
-  decoding,
   className,
   imgClassName,
   onImageLoad,
   contentFrame,
   redactions,
-  mosaicUrl,
   liveMosaic,
   screenshotScale,
   imageEdits,
@@ -82,13 +69,14 @@ export default function ThumbnailSurface({
         <img
           ref={imgRef}
           src={url}
-          loading={loading}
-          decoding={decoding}
+          decoding="async"
           alt={privacyReviewRequired ? '' : alt}
           aria-hidden={privacyReviewRequired || undefined}
           onLoad={onImageLoad}
           draggable={false}
-          onContextMenu={masksBurnedIn ? undefined : (event) => event.preventDefault()}
+          // `url` is the stored screenshot with the masks drawn over it: dragging it out or
+          // opening it from the context menu would hand out the pixels the masks cover.
+          onContextMenu={(event) => event.preventDefault()}
           className={cn('block', imgClassName ?? defaultImgClass)}
           style={{
             ...(imgClassName ? { objectFit: fit } : fit === 'cover' ? { objectFit: 'cover' } : {}),
@@ -104,18 +92,14 @@ export default function ThumbnailSurface({
       )}
       {!privacyReviewRequired && contentFrame && imageCssSize && redactions.length > 0 && (
         <div data-howbeam-redactions className="pointer-events-none absolute z-10" style={contentFrame}>
-          {masksBurnedIn ? (
-            <RedactionsSvg redactions={redactions} width={imageCssSize.width} height={imageCssSize.height} mosaicUrl={mosaicUrl} />
-          ) : (
-            // Live masks change with every brush movement: painted, not laid out.
-            <RedactionsCanvas
-              redactions={redactions}
-              width={imageCssSize.width}
-              height={imageCssSize.height}
-              dpr={getValidScreenshotScale(screenshotScale)}
-              mosaic={liveMosaic}
-            />
-          )}
+          {/* Live masks change with every brush movement: painted, not laid out. */}
+          <RedactionsCanvas
+            redactions={redactions}
+            width={imageCssSize.width}
+            height={imageCssSize.height}
+            dpr={getValidScreenshotScale(screenshotScale)}
+            mosaic={liveMosaic}
+          />
         </div>
       )}
       {overlay && contentFrame && (

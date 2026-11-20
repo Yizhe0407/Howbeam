@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import EntryThumbnail from './EntryThumbnail';
+import EntryPreview from './EntryPreview';
 import { t } from '@/lib/shared/i18n';
 import { getEntryPrivacyState, type StepEntry } from '@/lib/storage/models';
 
@@ -66,7 +66,7 @@ export default function Lightbox({ entries, index, onClose, onNavigate }: Props)
         </Button>
 
         <div className="relative flex items-center justify-center">
-          <EntryThumbnail
+          <EntryPreview
             entry={entry}
             alt={t().editor.lightbox.alt(index + 1)}
             fit="contain"

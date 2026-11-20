@@ -5,7 +5,7 @@ import type { Project } from '../../../lib/storage/models';
 import { firstItems, itemAt } from '../../setup/item-at';
 
 /** Browser 內的 page.evaluate 無法匯入 Node 模組，因此在此集中管理持久化契約字面值。 */
-const SCRIBE_DB = { name: 'howbeam', version: 2 } as const;
+const SCRIBE_DB = { name: 'howbeam', version: 3 } as const;
 // `as const` keeps the literal types non-widening so the typed chrome.storage.local.get overloads still apply inside evaluate bodies.
 export const RECORDING_STATE_KEY = 'howbeam:recordingState' as const;
 const ACTIVE_PROJECT_ID_KEY = 'howbeam:activeProjectId' as const;

@@ -80,13 +80,6 @@ interface UseThumbnailOverlayMappingOptions {
   redactions: readonly Redaction[];
   privacyReviewRequired: boolean;
   /**
-   * The image's pixels already have every mask burned in (usePreviewImage).
-   * The overlay masks then only keep drawings beneath them covered, as in an
-   * export, and a mask whose position is not yet known exposes nothing, so the
-   * image is never hidden for it.
-   */
-  masksBurnedIn: boolean;
-  /**
    * The image element is exactly the image's own box: it has the image's aspect
    * ratio, so nothing is letterboxed or cropped. Masks and the content frame are
    * then plain percentages of that box and cannot drift from the pixels they
@@ -122,7 +115,6 @@ export function useThumbnailOverlayMapping({
   screenshotScale,
   redactions,
   privacyReviewRequired,
-  masksBurnedIn,
   exactBox = false,
   measure,
   mapOverlays,
@@ -137,8 +129,8 @@ export function useThumbnailOverlayMapping({
 
   // The observer and frame callbacks outlive renders, so they read the latest
   // measure/redaction state through a ref instead of being re-subscribed.
-  // Only live masks over stored pixels gate what may be shown.
-  const gatesPixels = !masksBurnedIn && redactions.length > 0;
+  // Masks drawn over the stored pixels gate what may be shown.
+  const gatesPixels = redactions.length > 0;
   const latest = useRef({ measure, gatesPixels, exactBox });
   latest.current = { measure, gatesPixels, exactBox };
 

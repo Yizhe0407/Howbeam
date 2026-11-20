@@ -17,7 +17,7 @@ import {
 import { t } from '@/lib/shared/i18n';
 import { cn } from '@/lib/shared/utils';
 import { useAutoHideScrollbar } from '@/lib/editor/use-auto-hide-scrollbar';
-import EntryThumbnail from './EntryThumbnail';
+import EntryPreview from './EntryPreview';
 import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import ProjectSectionHeading from './ProjectSectionHeading';
 
@@ -85,7 +85,11 @@ function rowId(row: RailRow): string {
   return `${row.kind}:${row.id}`;
 }
 
-function LazyRailPreview({ eager, children }: { eager: boolean; children: ReactNode }) {
+/** The rail's thumbnails are 156 CSS px wide; this covers them at up to 3 device pixels per CSS pixel. */
+const RAIL_PREVIEW_PIXEL_WIDTH = 480;
+
+/** Holds off a thumbnail's rendering until it comes near the screen; `children` gets whether it has. */
+function LazyRailPreview({ eager, children }: { eager: boolean; children: (near: boolean) => ReactNode }) {
   const host = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(eager);
 
@@ -114,7 +118,8 @@ function LazyRailPreview({ eager, children }: { eager: boolean; children: ReactN
       aria-busy={!visible}
       className="relative size-full overflow-hidden"
     >
-      {visible ? children : <span className="sr-only">{t().editor.rail.thumbnailPending}</span>}
+      {children(visible)}
+      {!visible && <span className="sr-only">{t().editor.rail.thumbnailPending}</span>}
     </div>
   );
 }
@@ -130,15 +135,17 @@ function RailThumbnail({ entry, number, active }: { entry: StepEntry; number: nu
       active ? 'border-selected' : 'border-border',
     )}>
       <LazyRailPreview eager={active}>
-        <EntryThumbnail
-          entry={entry}
-          alt=""
-          fit="cover"
-          badges={false}
-          loading="lazy"
-          decoding="async"
-          className="size-full"
-        />
+        {(near) => (
+          <EntryPreview
+            entry={entry}
+            enabled={near}
+            alt=""
+            fit="cover"
+            badges={false}
+            maxPixelWidth={RAIL_PREVIEW_PIXEL_WIDTH}
+            className="size-full"
+          />
+        )}
       </LazyRailPreview>
       <span className={cn(
         'absolute top-1.5 left-1.5 z-30 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-border px-1 text-xs font-bold tabular-nums transition-colors',

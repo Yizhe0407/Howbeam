@@ -5,7 +5,7 @@ import ImageEditWorkspace from './ImageEditWorkspace';
 import { Badge } from '@/components/ui/badge';
 import { DashedOutline } from '@/components/ui/dashed-outline';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import EntryThumbnail from './EntryThumbnail';
+import EntryPreview from './EntryPreview';
 import StepActions from './StepActions';
 import DescriptionField from './DescriptionField';
 import StepTitleField from './StepTitleField';
@@ -138,7 +138,7 @@ export default function StepStage({
   function imageFrame(alt: string) {
     return (
       <div className="relative flex w-full items-center justify-center lg:h-full lg:max-h-full lg:max-w-full">
-        <EntryThumbnail
+        <EntryPreview
           entry={entry}
           alt={alt}
           fit="contain"

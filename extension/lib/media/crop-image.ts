@@ -1,5 +1,5 @@
 import type { Bounds } from '../storage/models';
-import { getValidScreenshotScale } from './image-utils';
+import { getValidScreenshotScale, rasterContext } from './image-utils';
 
 /**
  * Non-destructive crop. The stored screenshot is never touched; a crop is
@@ -43,8 +43,7 @@ async function cut(blob: Blob, crop: Bounds, screenshotScale: number): Promise<C
   const region = await createImageBitmap(blob, rect.sx, rect.sy, rect.sw, rect.sh);
   try {
     const canvas = new OffscreenCanvas(rect.sw, rect.sh);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Unable to create a 2D canvas context.');
+    const ctx = rasterContext(canvas);
     ctx.drawImage(region, 0, 0);
     return { blob: await canvas.convertToBlob({ type: 'image/png' }), origin: { x: rect.sx / dpr, y: rect.sy / dpr } };
   } finally {
@@ -55,12 +54,10 @@ async function cut(blob: Blob, crop: Bounds, screenshotScale: number): Promise<C
 interface CacheEntry {
   key: string;
   promise: Promise<CroppedImage | null>;
-  /** Set once the cut has finished, so renders can read it without waiting. */
-  settled?: { value: CroppedImage | null };
 }
 
-/** One result per source image: re-cutting on every render would be wasteful,
- * and a stable Blob identity lets every consumer share one object URL. */
+/** One result per source image, so rendering the same entry again (another
+ * preview size, a copy, an export) does not cut it again. */
 const cache = new WeakMap<Blob, CacheEntry>();
 
 const keyOf = (crop: Bounds, screenshotScale: number): string =>
@@ -71,12 +68,8 @@ export function getCroppedImage(blob: Blob, crop: Bounds, screenshotScale: numbe
   const existing = cache.get(blob);
   if (existing?.key === key) return existing.promise;
   const entry: CacheEntry = { key, promise: cut(blob, crop, screenshotScale) };
-  entry.promise = entry.promise.then(
-    (value) => {
-      entry.settled = { value };
-      return value;
-    },
-    (error) => {
+  entry.promise = entry.promise.catch(
+    (error: unknown) => {
       // A failed cut is not remembered, so the next request tries again.
       if (cache.get(blob) === entry) cache.delete(blob);
       throw error;
@@ -84,10 +77,4 @@ export function getCroppedImage(blob: Blob, crop: Bounds, screenshotScale: numbe
   );
   cache.set(blob, entry);
   return entry.promise;
-}
-
-/** The result if it has already been computed, so a render can use it immediately. */
-export function peekCroppedImage(blob: Blob, crop: Bounds, screenshotScale: number): { value: CroppedImage | null } | undefined {
-  const existing = cache.get(blob);
-  return existing?.key === keyOf(crop, screenshotScale) ? existing.settled : undefined;
 }

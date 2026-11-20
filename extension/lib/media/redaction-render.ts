@@ -1,7 +1,7 @@
 import type { Bounds, PixelateRedaction, Redaction, RedactionPoint } from '../storage/models';
 import { REDACTION_COLOR, REDACTION_EXPANSION } from './annotation-contract';
 import type { CropOrigin } from './crop-offset';
-import { isValidImageBounds } from './image-utils';
+import { isValidImageBounds, rasterContext } from './image-utils';
 
 /**
  * How privacy masks look, shared by the raster compositor (exports, clipboard,
@@ -85,8 +85,7 @@ type Canvas2D = OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
 export function pixelatedCopy(source: OffscreenCanvas, dpr: number, origin: CropOrigin): OffscreenCanvas {
   const { width, height } = source;
   const copy = new OffscreenCanvas(width, height);
-  const ctx = copy.getContext('2d');
-  if (!ctx) throw new Error('Unable to create a 2D canvas context.');
+  const ctx = rasterContext(copy);
   ctx.drawImage(source, 0, 0);
   const image = ctx.getImageData(0, 0, width, height);
   const offset = mosaicGridOffset(origin, dpr);

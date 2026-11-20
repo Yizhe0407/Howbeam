@@ -27,7 +27,7 @@ vi.mock('@/lib/storage/change-notifier', () => ({
   },
 }));
 vi.mock('@/lib/editor/use-image-css-size', () => ({ useImageCssSize: () => ({ width: 400, height: 200 }) }));
-vi.mock('@/components/editor/EntryThumbnail', () => ({
+vi.mock('@/components/editor/LiveEntryImage', () => ({
   default: ({ overlay }: { overlay?: ReactNode }) => <div data-testid="image">{overlay}</div>,
 }));
 

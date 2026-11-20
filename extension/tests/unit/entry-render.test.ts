@@ -14,7 +14,7 @@ vi.mock('@/lib/media/annotation-composite', () => ({
   compositeMultiHighlight: mocks.compositeMultiHighlight,
 }));
 
-import { compositeStepEntry } from '@/lib/export/entry-render';
+import { compositeStepEntry, entryRasterInput, entryRasterKey, renderEntryRaster } from '@/lib/export/entry-render';
 import { type Step, type StepEntry } from '@/lib/storage/models';
 import { itemAt } from '../setup/item-at';
 
@@ -60,6 +60,7 @@ describe('compositeStepEntry', () => {
       false,
       [],
       { x: 0, y: 0 },
+      {},
     );
     expect(mocks.compositeMultiHighlight).not.toHaveBeenCalled();
   });
@@ -97,6 +98,7 @@ describe('compositeStepEntry', () => {
       false,
       [],
       { x: 0, y: 0 },
+      {},
     );
     expect(mocks.compositeHighlight).not.toHaveBeenCalled();
   });
@@ -119,6 +121,7 @@ describe('compositeStepEntry', () => {
       true,
       [],
       { x: 0, y: 0 },
+      {},
     );
   });
 
@@ -129,7 +132,7 @@ describe('compositeStepEntry', () => {
 
     await compositeStepEntry(entry, 'image/png');
 
-    expect(mocks.compositeHighlight).toHaveBeenCalledWith(step.screenshotBlob, step.bounds, 1, 'image/png', [], false, edits, { x: 0, y: 0 });
+    expect(mocks.compositeHighlight).toHaveBeenCalledWith(step.screenshotBlob, step.bounds, 1, 'image/png', [], false, edits, { x: 0, y: 0 }, {});
   });
 
   describe('with a crop', () => {
@@ -159,6 +162,7 @@ describe('compositeStepEntry', () => {
         false,
         [{ id: 'e', kind: 'rect', bounds: { x: 100, y: 50, width: 20, height: 20 }, width: 2, fill: 'none' as const, color: '#ff4747' }],
         { x: 100, y: 50 },
+        {},
       );
     });
 
@@ -183,5 +187,42 @@ describe('compositeStepEntry', () => {
       expect(itemAt(mocks.compositeHighlight.mock.calls, 0)[0]).toBe(step.screenshotBlob);
       expect(itemAt(mocks.compositeHighlight.mock.calls, 0)[1]).toEqual(step.bounds);
     });
+  });
+});
+
+describe('entry previews', () => {
+  const single = (changes: Partial<Step> = {}): StepEntry => ({ kind: 'single', step: makeStep('single', 1, changes) as Step & { screenshotBlob: Blob } });
+
+  it('renders a preview through the same compositor as an export, with its size and badge options', async () => {
+    const entry = single({ screenshotScale: 2 });
+
+    await renderEntryRaster(entryRasterInput(entry), { format: 'image/jpeg', maxPixelWidth: 480, badges: false });
+
+    expect(mocks.compositeHighlight).toHaveBeenCalledWith(
+      (entry.kind === 'single' && entry.step.screenshotBlob) as Blob,
+      entry.kind === 'single' ? entry.step.bounds : null,
+      2,
+      'image/jpeg',
+      [],
+      false,
+      [],
+      { x: 0, y: 0 },
+      { maxPixelWidth: 480, badges: false },
+    );
+  });
+
+  it('keys a preview on everything drawn, not on the step object or its text', () => {
+    const options = { format: 'image/jpeg' as const, maxPixelWidth: 480 };
+    const mask = { id: 'mask', kind: 'solid' as const, bounds: { x: 1, y: 2, width: 3, height: 4 } };
+    const base = entryRasterKey(entryRasterInput(single()), options);
+
+    expect(entryRasterKey(entryRasterInput(single({ title: 'renamed', description: 'more' })), options)).toBe(base);
+    expect(entryRasterKey(entryRasterInput(single({ redactions: [mask] })), options)).not.toBe(base);
+    expect(entryRasterKey(entryRasterInput(single({ redactionReviewRequired: true, redactions: [mask] })), options))
+      .not.toBe(entryRasterKey(entryRasterInput(single({ redactions: [mask] })), options));
+    expect(entryRasterKey(entryRasterInput(single({ manualBounds: { x: 9, y: 9, width: 9, height: 9 } })), options)).not.toBe(base);
+    expect(entryRasterKey(entryRasterInput(single({ crop: { x: 0, y: 0, width: 5, height: 5 } })), options)).not.toBe(base);
+    expect(entryRasterKey(entryRasterInput(single()), { ...options, maxPixelWidth: 960 })).not.toBe(base);
+    expect(entryRasterKey(entryRasterInput(single()), { ...options, badges: false })).not.toBe(base);
   });
 });

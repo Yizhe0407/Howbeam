@@ -23,7 +23,7 @@ async function readActiveProjectId(page: import('@playwright/test').Page): Promi
 
 async function readProjectIds(page: import('@playwright/test').Page): Promise<string[]> {
   return page.evaluate(async () => new Promise<string[]>((resolve, reject) => {
-    const request = indexedDB.open('howbeam', 2);
+    const request = indexedDB.open('howbeam', 3);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const db = request.result;

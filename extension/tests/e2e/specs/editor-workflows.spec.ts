@@ -206,7 +206,7 @@ test.describe('editor workflows', () => {
     await recordSnapshotTargets(appPage, popupPage, ['#action-button', '#disabled-button']);
     await popupPage.evaluate(async () => {
       await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('howbeam', 2);
+        const request = indexedDB.open('howbeam', 3);
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {
           const db = request.result;
@@ -234,7 +234,9 @@ test.describe('editor workflows', () => {
     });
 
     const editor = await openEditor(extensionContext, extensionId, popupPage, 1);
-    const frames = editor.locator('main [data-howbeam-annotation-frame]');
+    // Previews show the finished raster; the image editor draws the frames live, from the same layout.
+    await editor.getByRole('button', { name: '編輯圖片', exact: true }).click();
+    const frames = editor.getByRole('dialog', { name: /^編輯圖片/ }).locator('[data-howbeam-annotation-frame]');
     await expect(frames).toHaveCount(2);
     const first = await frames.nth(0).boundingBox();
     const second = await frames.nth(1).boundingBox();

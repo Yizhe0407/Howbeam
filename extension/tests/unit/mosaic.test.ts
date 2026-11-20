@@ -15,7 +15,7 @@ import {
   pixelateImageData,
   redactionKey,
 } from '@/lib/media/redaction-render';
-import { maskedImageKey } from '@/lib/media/masked-image';
+import { entryRasterInput, entryRasterKey } from '@/lib/export/entry-render';
 import { NO_CROP_ORIGIN } from '@/lib/media/crop-offset';
 
 const stroke = (overrides: Partial<PixelateRedaction> = {}): PixelateRedaction => ({
@@ -147,9 +147,19 @@ describe('mask identity', () => {
   });
 
   it('makes a new burned-in preview when a stroke or the mosaic grid changes', () => {
-    const base = maskedImageKey([stroke()], 1, false, NO_CROP_ORIGIN);
-    expect(maskedImageKey([stroke()], 1, false, NO_CROP_ORIGIN)).toBe(base);
-    expect(maskedImageKey([stroke({ size: 48 })], 1, false, NO_CROP_ORIGIN)).not.toBe(base);
-    expect(maskedImageKey([stroke()], 1, false, { x: 4, y: 0 })).not.toBe(base);
+    const screenshotBlob = new Blob(['image'], { type: 'image/jpeg' });
+    const key = (redactions: Redaction[], crop?: Step['crop']) => entryRasterKey(entryRasterInput({
+      kind: 'single',
+      step: {
+        id: 'step', sessionId: 'project', order: 0, bounds: null, devicePixelRatio: 1,
+        title: '', description: '', url: 'https://example.test', timestamp: 0,
+        redactions, crop, screenshotBlob,
+      },
+    }), { format: 'image/jpeg' });
+    const base = key([stroke()]);
+    expect(key([stroke()])).toBe(base);
+    expect(key([stroke({ size: 48 })])).not.toBe(base);
+    // A crop moves where the image starts, and the mosaic grid with it.
+    expect(key([stroke()], { x: 4, y: 0, width: 50, height: 50 })).not.toBe(base);
   });
 });
