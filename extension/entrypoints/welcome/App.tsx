@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Camera, Check, Layers, ListOrdered, Pin, Puzzle, ShieldCheck } from 'lucide-react';
 import AppHeader from '@/components/shared/AppHeader';
+import PageHeading from '@/components/shared/PageHeading';
 import Mascot from '@/components/shared/Mascot';
 import { Button } from '@/components/ui/button';
 import { browser } from 'wxt/browser';
@@ -105,16 +106,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <AppHeader current={t().welcome.crumb} />
+      <AppHeader page="welcome" />
 
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-10 sm:px-10">
-        <div className="flex items-center gap-4">
-          <Mascot className="size-16 sm:size-20" />
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <h1 className="text-2xl leading-tight font-bold sm:text-3xl">{t().welcome.title}</h1>
-            <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">{t().welcome.intro}</p>
-          </div>
-        </div>
+        <PageHeading
+          title={t().welcome.title}
+          parent="library"
+          leading={<Mascot className="size-16 sm:size-20" />}
+          description={t().welcome.intro}
+        />
 
         <div className="grid gap-4 md:grid-cols-[1.15fr_1fr_1fr]">
           <PinStep />

@@ -12,7 +12,7 @@ import { initLocalePreference } from '@/lib/runtime/locale-preference';
 function Root() {
   useActiveLocale();
   return (
-    <ErrorBoundary label={t().welcome.crumb}>
+    <ErrorBoundary label={t().welcome.name}>
       <TooltipProvider>
         <App />
       </TooltipProvider>

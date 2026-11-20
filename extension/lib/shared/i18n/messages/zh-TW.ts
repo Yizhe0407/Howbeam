@@ -79,7 +79,7 @@ export const zhTW = {
   },
 
   welcome: {
-    crumb: '歡迎',
+    name: '歡迎',
     title: '歡迎使用 Howbeam',
     intro: '錄製網頁操作，自動產生逐步的圖文教學。',
     pinTitle: '將 Howbeam 釘選到工具列',

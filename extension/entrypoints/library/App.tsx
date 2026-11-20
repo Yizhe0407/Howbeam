@@ -22,6 +22,7 @@ import AppToaster from '@/components/shared/AppToaster';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import AppHeader from '@/components/shared/AppHeader';
 import OverflowTooltip from '@/components/shared/OverflowTooltip';
+import PageHeading from '@/components/shared/PageHeading';
 import Mascot from '@/components/shared/Mascot';
 import BackupPausedNotice from '@/components/shared/BackupPausedNotice';
 import { useAutoFolderBackup } from '@/lib/backup/use-folder-backup';
@@ -182,6 +183,7 @@ export default function App() {
     <div className="min-h-screen bg-background text-foreground [--content-gutter:1rem] sm:[--content-gutter:2rem] [--notice-lane:5rem]">
       <AppToaster />
       <AppHeader
+        page="library"
         actions={
           <>
             <input
@@ -218,7 +220,7 @@ export default function App() {
           shares its gutter; the project grid fills columns by a minimum card
           width instead of breakpoints. */}
       <main className="flex flex-col px-[var(--content-gutter,1rem)] pt-6 pb-[var(--notice-lane,5rem)]">
-        <h1 className="mb-5 text-2xl leading-tight font-bold text-foreground">{t().library.title}</h1>
+        <PageHeading title={t().library.title} className="mb-5" />
         <BackupPausedNotice />
         {operationLocked && (
           <Alert className="mb-4">

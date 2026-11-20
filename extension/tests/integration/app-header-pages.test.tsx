@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -35,18 +35,16 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-function breadcrumb() {
-  return within(screen.getByRole('navigation', { name: '目前位置' }));
-}
-
 describe('welcome page', () => {
-  it('sits under Howbeam in the shared header and closes its own tab when done', async () => {
+  it('titles itself in the body under a way back to the library, and closes its own tab when done', async () => {
     mocks.getCurrentTab.mockResolvedValue({ id: 42 });
     render(<WelcomeApp />);
 
     expect(mocks.registerPage).toHaveBeenCalled();
-    expect(breadcrumb().getByText('歡迎').closest('li')?.getAttribute('aria-current')).toBe('page');
-    expect(screen.getByRole('heading', { level: 1, name: '歡迎使用 Howbeam' })).toBeTruthy();
+    expect(screen.queryByRole('navigation', { name: '目前位置' })).toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: '歡迎使用 Howbeam' }).closest('header')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '回到專案庫' }));
+    expect(mocks.navigateInPlace).toHaveBeenCalledWith('library');
 
     fireEvent.click(screen.getByRole('button', { name: '知道了' }));
     await waitFor(() => expect(mocks.removeTab).toHaveBeenCalledWith(42));
@@ -79,20 +77,28 @@ describe('settings page', () => {
   it('marks the gear as the current location instead of a link to itself', () => {
     render(<OptionsApp />);
 
-    expect(breadcrumb().getByRole('heading', { level: 1, name: '設定' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: '設定' }).closest('header')).toBeNull();
     const gear = screen.getByRole('button', { name: '設定' });
     expect(gear.getAttribute('aria-current')).toBe('page');
     fireEvent.click(gear);
     expect(mocks.navigateInPlace).not.toHaveBeenCalled();
   });
 
-  it('returns to the library in the same tab from the Howbeam crumb', async () => {
+  it('returns to the library in the same tab from the Howbeam brand', async () => {
     render(<OptionsApp />);
 
     expect(mocks.registerPage).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Howbeam 專案庫' }));
 
     await waitFor(() => expect(mocks.navigateInPlace).toHaveBeenCalledWith('library'));
+  });
+
+  it('returns to the library in the same tab from the link above its title', () => {
+    render(<OptionsApp />);
+
+    fireEvent.click(screen.getByRole('button', { name: '回到專案庫' }));
+
+    expect(mocks.navigateInPlace).toHaveBeenCalledWith('library');
   });
 
   it('turns into the welcome page on request', () => {

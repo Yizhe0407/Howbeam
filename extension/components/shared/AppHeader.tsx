@@ -1,32 +1,16 @@
 import type { ReactNode } from 'react';
 import { ChevronRight, Settings } from 'lucide-react';
+import BrandMark from './BrandMark';
 import Mascot from './Mascot';
-import OverflowTooltip from './OverflowTooltip';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { navigateInPlace, type InPlacePage } from '@/lib/runtime/page-navigation';
 import { t } from '@/lib/shared/i18n';
 import { cn } from '@/lib/shared/utils';
 
-interface Props {
-  /**
-   * This page's crumb after Howbeam. Omitted on the library, which is the
-   * extension's home: there the brand itself is the current location.
-   */
-  current?: string;
-  /** Replaces the plain `current` text with an interactive crumb, such as an editable title. */
-  currentContent?: ReactNode;
-  /**
-   * Render the current crumb as the page's <h1>. `id` lets the page move focus
-   * to it (the editor does after opening a requested step).
-   */
-  currentHeading?: { id?: string };
-  /** Live status shown right after the crumbs (e.g. a recording badge). */
-  status?: ReactNode;
+interface CommonProps {
   /** The page's own actions; the settings button always comes last. */
   actions?: ReactNode;
-  /** On the settings page the gear marks the location instead of navigating. */
-  isSettingsPage?: boolean;
   /**
    * Asked before the tab leaves this page; resolving false keeps the page
    * (the editor uses it to save step text, and shows why it stayed).
@@ -34,74 +18,80 @@ interface Props {
   beforeNavigate?: () => Promise<boolean>;
 }
 
-const crumbClass = 'flex min-w-0 items-center gap-2 rounded-sm px-1.5 py-1 text-base font-bold';
+/**
+ * Content pages keep the bar identical everywhere and title themselves in the
+ * body (see PageHeading). The editor is a workspace: its document's title sits
+ * in the bar, so the canvas keeps the vertical room.
+ */
+type Props = CommonProps & (
+  | { page: InPlacePage }
+  | {
+      page: 'editor';
+      /** The page's <h1>, shown after the home crumb. */
+      title: ReactNode;
+      /** Live status shown right after the title (e.g. a recording badge). */
+      status?: ReactNode;
+    }
+);
+
+const brandClass = 'flex shrink-0 items-center rounded-sm px-1.5 py-1';
 
 /**
- * The one header every full-page surface shares. It answers "where am I" with
- * a breadcrumb rooted at the library (Howbeam › page) and keeps settings in
- * the same corner everywhere, so any page reaches any other in one step —
- * within the same tab.
+ * The one bar every full-page surface shares: the brand leads home, settings
+ * keeps the same corner, and both navigate within the same tab.
  */
-export default function AppHeader({ current, currentContent, currentHeading, status, actions, isSettingsPage = false, beforeNavigate }: Props) {
-  const isHome = current === undefined;
+export default function AppHeader(props: Props) {
+  const { page, actions, beforeNavigate } = props;
 
-  async function navigate(page: InPlacePage): Promise<void> {
+  async function navigate(target: InPlacePage): Promise<void> {
     if (beforeNavigate && !(await beforeNavigate())) return;
-    navigateInPlace(page);
+    navigateInPlace(target);
   }
 
+  const brandMark = page === 'editor' ? <Mascot /> : <BrandMark />;
+  const homeButton = (
+    <button
+      type="button"
+      aria-label={t().nav.homeLabel}
+      onClick={() => void navigate('library')}
+      className={cn(brandClass, 'outline-none transition-colors focus-ring hover:bg-secondary')}
+    >
+      {brandMark}
+    </button>
+  );
+  // Pulled left by its own hover padding, so the mascot sits exactly on the
+  // page gutter that the content below aligns to.
   const brand = (
-    <>
-      <Mascot />
-      <span className={cn('shrink-0', !isHome && 'hidden min-[420px]:inline')}>{isHome ? 'Howbeam' : t().common.library}</span>
-    </>
+    <div className="-ml-1.5 flex shrink-0 items-center">
+      {page === 'library' ? (
+        <span className={brandClass}>{brandMark}</span>
+      ) : page === 'editor' ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{homeButton}</TooltipTrigger>
+          <TooltipContent>{t().nav.homeLabel}</TooltipContent>
+        </Tooltip>
+      ) : (
+        homeButton
+      )}
+    </div>
   );
 
   return (
     <header className="flex h-16 min-h-16 shrink-0 items-center gap-2 border-b-2 border-border bg-card px-4 sm:gap-3 sm:px-8">
-      <nav aria-label={t().nav.breadcrumb} className="min-w-0 flex-1">
-        <ol className="flex min-w-0 items-center gap-1">
-          {/* Pulled left by its own hover padding, so the mascot sits exactly on
-              the page gutter that the content below aligns to. */}
-          <li className="-ml-1.5 flex shrink-0 items-center">
-            {isHome ? (
-              <span aria-current="page" className={cn(crumbClass, 'text-foreground')}>{brand}</span>
-            ) : (
-              <button
-                type="button"
-                aria-label={t().nav.homeLabel}
-                onClick={() => void navigate('library')}
-                className={cn(crumbClass, 'text-foreground outline-none transition-colors focus-ring hover:bg-secondary')}
-              >
-                {brand}
-              </button>
-            )}
-          </li>
-          {!isHome && (
+      {props.page === 'editor' ? (
+        <nav aria-label={t().nav.breadcrumb} className="min-w-0 flex-1">
+          <ol className="flex min-w-0 items-center gap-1">
+            <li className="flex shrink-0 items-center">{brand}</li>
             <li aria-current="page" className="flex min-w-0 items-center gap-1">
               <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              {currentContent ? (
-                // Named by the location alone, not by the control's own label inside it.
-                <h1 id={currentHeading?.id} tabIndex={currentHeading?.id ? -1 : undefined} aria-label={current} className="flex min-w-0 text-base font-bold text-foreground outline-none">
-                  {currentContent}
-                </h1>
-              ) : currentHeading ? (
-                // The crumb truncates on narrow windows; the tooltip keeps the full name reachable.
-                <OverflowTooltip content={current}>
-                  <h1 id={currentHeading.id} tabIndex={currentHeading.id ? -1 : undefined} className={cn(crumbClass, 'block min-w-0 truncate text-foreground outline-none')}>
-                    {current}
-                  </h1>
-                </OverflowTooltip>
-              ) : (
-                <OverflowTooltip content={current}>
-                  <span className={cn(crumbClass, 'block min-w-0 truncate text-foreground')}>{current}</span>
-                </OverflowTooltip>
-              )}
+              {props.title}
             </li>
-          )}
-          {status && <li className="ml-1 flex min-w-0 items-center">{status}</li>}
-        </ol>
-      </nav>
+            {props.status && <li className="ml-1 flex min-w-0 items-center">{props.status}</li>}
+          </ol>
+        </nav>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center">{brand}</div>
+      )}
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         {actions && (
           <>
@@ -115,9 +105,9 @@ export default function AppHeader({ current, currentContent, currentHeading, sta
               variant="ghost"
               size="icon"
               aria-label={t().settings.open}
-              aria-current={isSettingsPage ? 'page' : undefined}
-              onClick={isSettingsPage ? undefined : () => void navigate('options')}
-              className={cn(isSettingsPage && 'border-border bg-selected text-on-accent hover:bg-selected hover:text-on-accent')}
+              aria-current={page === 'options' ? 'page' : undefined}
+              onClick={page === 'options' ? undefined : () => void navigate('options')}
+              className={cn(page === 'options' && 'border-border bg-selected text-on-accent hover:bg-selected hover:text-on-accent')}
             >
               <Settings />
             </Button>

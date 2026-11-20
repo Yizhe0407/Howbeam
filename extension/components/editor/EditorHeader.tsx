@@ -9,6 +9,7 @@ import { t } from '@/lib/shared/i18n';
 import { projectDisplayTitle } from '@/lib/storage/models';
 import { PERSISTED_PROJECT_LIMITS } from '@/lib/storage/persistence-limits';
 import EditableTitle from '../shared/EditableTitle';
+import OverflowTooltip from '../shared/OverflowTooltip';
 
 interface Props {
   operationActive: boolean;
@@ -16,9 +17,9 @@ interface Props {
   operation?: ActiveOperation;
   /** Whether the Project has anything to export. */
   hasSteps: boolean;
-  /** The open project's title, shown as the current crumb; null before it loads. */
+  /** The open project's title, shown as the page title in the header; null before it loads. */
   projectTitle?: string | null;
-  /** Renames the project from its crumb; a rejection reverts the crumb and goes to `onTitleError`. */
+  /** Renames the project from its title; a rejection reverts the title and goes to `onTitleError`. */
   onTitleChange?: (title: string) => Promise<void>;
   onTitleError?: (error: unknown) => void;
   /** False when there is no project to act on (a missing project): only the way
@@ -58,10 +59,11 @@ export default function EditorHeader({
     </Button>
   );
 
-  return (
-    <AppHeader
-      current={projectTitle == null ? t().common.editor : projectDisplayTitle(projectTitle)}
-      currentContent={projectTitle != null && onTitleChange && (
+  const location = projectTitle == null ? t().common.editor : projectDisplayTitle(projectTitle);
+  const title = (
+    // Named by the location alone, not by the rename control's own label inside it.
+    <h1 id="howbeam-editor-title" tabIndex={-1} aria-label={location} className="flex min-w-0 text-base font-bold text-foreground outline-none">
+      {projectTitle != null && onTitleChange ? (
         <EditableTitle
           value={projectTitle}
           maxLength={PERSISTED_PROJECT_LIMITS.maxTitleLength}
@@ -72,8 +74,19 @@ export default function EditorHeader({
           onCommitError={onTitleError}
           className="block min-w-0 max-w-full truncate rounded-sm border-2 border-transparent px-1.5 py-0.5 text-base font-bold text-foreground outline-none transition-colors focus-ring hover:border-border-soft focus:border-border focus:bg-background [field-sizing:content]"
         />
+      ) : (
+        // Truncates on narrow windows; the tooltip keeps the full name reachable.
+        <OverflowTooltip content={location}>
+          <span className="block min-w-0 truncate px-1.5 py-1">{location}</span>
+        </OverflowTooltip>
       )}
-      currentHeading={{ id: 'howbeam-editor-title' }}
+    </h1>
+  );
+
+  return (
+    <AppHeader
+      page="editor"
+      title={title}
       beforeNavigate={beforeNavigate}
       status={operationActive && (
         <Tooltip>

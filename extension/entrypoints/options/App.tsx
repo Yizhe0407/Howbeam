@@ -2,6 +2,7 @@ import { Sparkles } from 'lucide-react';
 import BackupSettingsSection from '@/components/shared/BackupSettingsSection';
 import { useAutoFolderBackup } from '@/lib/backup/use-folder-backup';
 import AppHeader from '@/components/shared/AppHeader';
+import PageHeading from '@/components/shared/PageHeading';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
 import { Button } from '@/components/ui/button';
 import { navigateInPlace } from '@/lib/runtime/page-navigation';
@@ -25,9 +26,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <AppHeader current={t().settings.title} currentHeading={{}} isSettingsPage />
+      <AppHeader page="options" />
 
       <main className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-8 sm:px-10">
+        <PageHeading title={t().settings.title} parent="library" className="mb-2" />
+
         <section aria-labelledby="settings-language" className={sectionClass}>
           <h2 id="settings-language" className="text-base font-bold">{t().language.label}</h2>
           <LanguageSwitcher className="h-10 w-full shrink-0 data-[size=default]:h-10 sm:w-56" />

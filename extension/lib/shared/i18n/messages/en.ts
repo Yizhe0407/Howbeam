@@ -75,7 +75,7 @@ export const en: Messages = {
   },
 
   welcome: {
-    crumb: 'Welcome',
+    name: 'Welcome',
     title: 'Welcome to Howbeam',
     intro: 'Record your actions in the browser and get a step-by-step visual guide.',
     pinTitle: 'Pin Howbeam to the toolbar',
