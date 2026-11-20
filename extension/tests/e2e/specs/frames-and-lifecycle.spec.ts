@@ -315,7 +315,8 @@ test.describe('frames and recording lifecycle', () => {
 
     await captureNavigatedHeadingStep(appPage, popupPage);
     await expectStepCount(popupPage, 1);
-    expect((await readSteps(popupPage))[0]?.description).toBe('標記頁面區域');
+    // The heading is not a control, so it lands as a mark, which starts untitled.
+    expect((await readSteps(popupPage))[0]).toMatchObject({ title: '', description: '' });
     await stopRecording(popupPage);
   });
 
@@ -326,7 +327,8 @@ test.describe('frames and recording lifecycle', () => {
   }) => {
     await captureNavLinkClickStep(appPage, popupPage);
     const linkStep = itemAt(await readSteps(popupPage), 0);
-    expect(linkStep.description).toBe('開啟連結');
+    // A link is titled by its own text ("開啟連結"), with the action in front.
+    expect(linkStep).toMatchObject({ title: '開啟 開啟連結', description: '' });
     expect(linkStep.hasScreenshot).toBe(true);
 
     // The run survives the navigation and the re-injected recorder captures the next step on the new document.

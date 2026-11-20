@@ -562,9 +562,11 @@ test.describe('editor workflows', () => {
     const editor = await openEditor(extensionContext, extensionId, popupPage, 3);
     const nameField = editor.getByRole('textbox', { name: '章節名稱' });
 
-    // From the stage, on the Mark entry: the dialog takes focus, Enter creates.
+    // From the stage's section menu, on the Mark entry: the dialog takes focus, Enter creates.
     await editor.getByRole('button', { name: '開啟步驟 3' }).click();
-    await editor.getByRole('button', { name: '新增章節' }).click();
+    await editor.getByRole('main').getByRole('button', { name: '未分章節' }).click();
+    // The rail's seam before step 3 carries the same label, so take the one in the open menu.
+    await editor.getByRole('dialog').getByRole('button', { name: '從第 3 步開始新章節' }).click();
     await expect(editor.getByRole('dialog', { name: '新增章節' })).toContainText('從第 3 步開始新章節');
     await expect(nameField).toBeFocused();
     await editor.keyboard.type('標註重點');

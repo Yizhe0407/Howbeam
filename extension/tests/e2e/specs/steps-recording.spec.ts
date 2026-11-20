@@ -41,7 +41,8 @@ test.describe('step recording', () => {
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
 
     const step = itemAt(await readSteps(popupPage), 0);
-    expect(step.description).toBe('標記頁面區域');
+    // Plain text is not a control, so it lands as a mark, which starts untitled.
+    expect(step).toMatchObject({ title: '', description: '' });
     expect(step.bounds).toMatchObject({ width: expect.any(Number), height: expect.any(Number) });
     expect(step.hasScreenshot).toBe(true);
     expect(await rawScreenshotRosePixels(popupPage, step.id)).toBe(0);
@@ -74,7 +75,7 @@ test.describe('step recording', () => {
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
     const step = itemAt(await readSteps(popupPage), 0);
     // A region carries no DOM target, so it lands as a mark with no text.
-    expect(step.description).toBe('標記頁面區域');
+    expect(step).toMatchObject({ title: '', description: '' });
     expect(step.hasScreenshot).toBe(true);
     expect(Math.round(step.bounds!.width)).toBe(180);
     expect(Math.round(step.bounds!.height)).toBe(120);
@@ -126,7 +127,8 @@ test.describe('step recording', () => {
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
     await expect.poll(() => appPage.evaluate(() => window.fixtureState.actionClicks)).toBe(1);
     const step = itemAt(await readSteps(popupPage), 0);
-    expect(step.description).toBe('點擊按鈕');
+    // A click is titled by the control's own name; the description is left for the person to write.
+    expect(step).toMatchObject({ title: '點擊 執行操作', description: '' });
 
     await stopRecording(popupPage);
   });
@@ -146,7 +148,7 @@ test.describe('step recording', () => {
     await expect.poll(() => appPage.evaluate(() => window.fixtureState.actionClicks)).toBe(2);
 
     const steps = await readSteps(popupPage);
-    expect(steps.map((step) => step.description)).toEqual(['點擊按鈕', '點擊按鈕']);
+    expect(steps.map((step) => step.title)).toEqual(['點擊 執行操作', '點擊 執行操作']);
 
     await stopRecording(popupPage);
   });
@@ -166,7 +168,8 @@ test.describe('step recording', () => {
     await expect.poll(() => appPage.evaluate(() => window.fixtureState.actionClicks)).toBe(1);
 
     const steps = await readSteps(popupPage);
-    expect(steps.map((step) => step.description)).toEqual(['點擊按鈕', '標記頁面區域']);
+    // The click is titled by its button; the plain text after it is a mark and stays untitled.
+    expect(steps.map((step) => step.title)).toEqual(['點擊 執行操作', '']);
 
     await stopRecording(popupPage);
   });
@@ -335,7 +338,7 @@ test.describe('step recording', () => {
     await clickTarget(appPage, '#below-fold');
     await expect.poll(async () => (await readSteps(popupPage)).length).toBe(1);
     const belowFoldStep = itemAt(await readSteps(popupPage), 0);
-    expect(belowFoldStep.description).toBe('標記頁面區域');
+    expect(belowFoldStep).toMatchObject({ title: '', description: '' });
     const viewport = await appPage.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
     expect(belowFoldStep.bounds).toMatchObject({
       x: expect.any(Number),
@@ -446,13 +449,10 @@ test.describe('step recording', () => {
       await appPage.waitForTimeout(420);
     }
 
-    const descriptions = (await readSteps(popupPage)).map((step) => step.description);
-    expect(descriptions).toEqual([
-      '標記頁面區域',
-      '標記頁面區域',
-      '標記頁面區域',
-      '標記頁面區域',
-    ]);
+    // None of these can be clicked through, so each lands as a mark, untitled.
+    const steps = await readSteps(popupPage);
+    expect(steps.map((step) => ({ title: step.title, description: step.description })))
+      .toEqual(selectors.map(() => ({ title: '', description: '' })));
     expect(await appPage.evaluate(
       () => (window.fixtureState as typeof window.fixtureState & { disabledEvents: number }).disabledEvents,
     )).toBe(0);
@@ -520,7 +520,7 @@ test.describe('step recording', () => {
 
     // The step boxes the suggestion, so the menu was still open when the screenshot was taken.
     const step = itemAt(await readSteps(popupPage), 1);
-    expect(step.description).toBe('開啟連結');
+    expect(step).toMatchObject({ title: '開啟 台北101', description: '' });
     expect(step.bounds!.x).toBeCloseTo(suggestion!.x, 0);
     expect(step.bounds!.width).toBeCloseTo(suggestion!.width, 0);
     await stopRecording(popupPage);
