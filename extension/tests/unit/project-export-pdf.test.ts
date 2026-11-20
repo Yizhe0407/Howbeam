@@ -139,7 +139,7 @@ describe('generateProjectPdf', () => {
       expect(text).toContain(`${index + 1}.`);
       expect(text).toContain('Footer test');
       expect(text).toContain('Made with Howbeam');
-      expect(text).toContain(`第 ${index + 1} 頁`);
+      expect(page.lines.at(-1)).toBe(`Footer test Made with Howbeam ${index + 1}`);
     });
   });
 
@@ -205,7 +205,7 @@ describe('generateProjectPdf', () => {
       const text = read.pages.flatMap((page) => page.lines).join('\n');
 
       expect(text).toContain('Made with Howbeam');
-      expect(text).not.toContain('第 1 頁');
+      expect(read.pages.map((page) => page.lines.at(-1))).toEqual(['Made with Howbeam', 'Made with Howbeam', 'Made with Howbeam']);
       // The title still opens the document; it is just no longer repeated per page.
       expect(text.match(/Quiet footer/g)).toHaveLength(1);
     });
@@ -394,7 +394,6 @@ describe('generateProjectPdf', () => {
 
       const tagged = read.structure.flatMap((page) => flat(page)).map((node) => node.text).join('');
       expect(tagged).not.toContain('Made with Howbeam');
-      expect(tagged).not.toMatch(/第 \d 頁/);
       expect(read.pages.flatMap((page) => page.lines).join('')).toContain('Made with Howbeam');
     });
 
