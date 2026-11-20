@@ -4,15 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getProjectSummaries: vi.fn(),
+  getAllSeries: vi.fn(),
   listeners: new Set<() => void>(),
 }));
 
 vi.mock('@/lib/storage/project-repository', () => ({ getProjectSummaries: mocks.getProjectSummaries }));
+vi.mock('@/lib/storage/series-repository', () => ({ getAllSeries: mocks.getAllSeries }));
 vi.mock('@/lib/storage/change-notifier', () => ({
   subscribeProjectsChanged: (listener: () => void) => {
     mocks.listeners.add(listener);
     return () => mocks.listeners.delete(listener);
   },
+  subscribeSeriesChanged: () => () => undefined,
 }));
 
 import RecordTargetPicker from '@/components/popup/RecordTargetPicker';
@@ -23,6 +26,7 @@ const summary = (id: string, title: string) => ({ id, title, entryCount: 1, step
 beforeEach(() => {
   mocks.listeners.clear();
   mocks.getProjectSummaries.mockReset().mockResolvedValue([summary('a', '專案 A'), summary('b', '專案 B')]);
+  mocks.getAllSeries.mockReset().mockResolvedValue([]);
 });
 
 afterEach(cleanup);

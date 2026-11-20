@@ -1,4 +1,4 @@
-import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from 'idb';
+import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction, type StoreNames } from 'idb';
 import { notifyProjectsChanged } from './change-notifier';
 import {
   STEP_STORAGE_LIMITS,
@@ -11,6 +11,7 @@ import {
   type Project,
   type Step,
 } from './models';
+import type { ProjectSeries } from './series-model';
 
 export interface HowbeamDB extends DBSchema {
   steps: {
@@ -22,6 +23,10 @@ export interface HowbeamDB extends DBSchema {
     key: string;
     value: Project;
     indexes: { 'by-updated-at': number };
+  };
+  series: {
+    key: string;
+    value: ProjectSeries;
   };
 }
 
@@ -221,7 +226,7 @@ export async function recordStepEdit(tx: ProjectStepsTransaction, project: Proje
   }));
 }
 
-async function abortTransaction(tx: ProjectStepsTransaction, error: unknown): Promise<never> {
+async function abortTransaction(tx: { abort(): void; done: Promise<void> }, error: unknown): Promise<never> {
   try {
     tx.abort();
   } catch {
@@ -232,10 +237,11 @@ async function abortTransaction(tx: ProjectStepsTransaction, error: unknown): Pr
 }
 
 // Version 3 cut step titles and marker labels from 500 and 200 characters to 60.
-export const DATABASE_VERSION = 3;
+// Version 4 added the `series` store.
+export const DATABASE_VERSION = 4;
 
 /** Cuts every step's text saved under the longer limits, so no stored row is over the current ones. */
-async function clampStoredStepTexts(tx: IDBPTransaction<HowbeamDB, ('projects' | 'steps')[], 'versionchange'>) {
+async function clampStoredStepTexts(tx: IDBPTransaction<HowbeamDB, StoreNames<HowbeamDB>[], 'versionchange'>) {
   let cursor = await tx.objectStore('steps').openCursor();
   while (cursor) {
     const clamped = clampStepTexts(cursor.value);
@@ -251,14 +257,15 @@ function getDatabase(): Promise<IDBPDatabase<HowbeamDB>> {
   if (databasePromise) return databasePromise;
   databasePromise = openDB<HowbeamDB>('howbeam', DATABASE_VERSION, {
     async upgrade(db, oldVersion, _newVersion, tx) {
-      if (oldVersion >= 1) {
-        if (oldVersion < 3) await clampStoredStepTexts(tx);
-        return;
+      if (oldVersion < 1) {
+        const steps = db.createObjectStore('steps', { keyPath: 'id' });
+        steps.createIndex('by-session', 'sessionId');
+        const projects = db.createObjectStore('projects', { keyPath: 'id' });
+        projects.createIndex('by-updated-at', 'updatedAt');
+      } else if (oldVersion < 3) {
+        await clampStoredStepTexts(tx);
       }
-      const steps = db.createObjectStore('steps', { keyPath: 'id' });
-      steps.createIndex('by-session', 'sessionId');
-      const projects = db.createObjectStore('projects', { keyPath: 'id' });
-      projects.createIndex('by-updated-at', 'updatedAt');
+      if (oldVersion < 4) db.createObjectStore('series', { keyPath: 'id' });
     },
     blocked(currentVersion, blockedVersion) {
       console.warn(`Howbeam database upgrade to ${blockedVersion ?? 'unknown'} is blocked by version ${currentVersion}.`);
@@ -310,23 +317,32 @@ export async function runWithDatabase<T>(
   }
 }
 
-/** Standard projects+steps readwrite transaction: closed-connection retry, one
- * commit, and rollback through abortTransaction so a failing body can never
- * leak an unhandled tx.done rejection. */
-export async function runProjectStepsWrite<T>(
-  operation: (tx: ProjectStepsTransaction) => Promise<T>,
+/** One readwrite transaction over `stores`: closed-connection retry, one
+ * commit, `onCommitted` once it lands, and rollback through abortTransaction
+ * so a failing body can never leak an unhandled tx.done rejection. */
+export async function runDatabaseWrite<Names extends StoreNames<HowbeamDB>[], T>(
+  stores: [...Names],
+  operation: (tx: IDBPTransaction<HowbeamDB, Names, 'readwrite'>) => Promise<T>,
+  onCommitted: () => void,
 ): Promise<T> {
   return runWithDatabase(async (db) => {
-    const tx = db.transaction(['projects', 'steps'], 'readwrite');
+    const tx = db.transaction(stores, 'readwrite');
     try {
       const result = await operation(tx);
       await tx.done;
-      notifyProjectsChanged();
+      onCommitted();
       return result;
     } catch (error) {
       return abortTransaction(tx, error);
     }
   });
+}
+
+/** Standard projects+steps readwrite transaction (see runDatabaseWrite). */
+export async function runProjectStepsWrite<T>(
+  operation: (tx: ProjectStepsTransaction) => Promise<T>,
+): Promise<T> {
+  return runDatabaseWrite(['projects', 'steps'], operation, notifyProjectsChanged);
 }
 
 /** Closes the shared connection. Primarily useful for tests and graceful teardown. */

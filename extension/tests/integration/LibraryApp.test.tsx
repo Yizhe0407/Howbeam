@@ -35,6 +35,15 @@ const storage = vi.hoisted(() => {
   };
 });
 const changes = vi.hoisted(() => ({ listeners: new Set<() => void>() }));
+const seriesStore = vi.hoisted(() => ({
+  addProjectToSeries: vi.fn(),
+  createSeries: vi.fn(),
+  deleteSeries: vi.fn(),
+  getAllSeries: vi.fn(),
+  removeProjectFromSeries: vi.fn(),
+  renameSeries: vi.fn(),
+  reorderSeries: vi.fn(),
+}));
 const downloads = vi.hoisted(() => ({ download: vi.fn() }));
 const archive = vi.hoisted(() => ({
   exportProjectArchive: vi.fn(),
@@ -50,6 +59,7 @@ vi.mock('@/lib/storage/project-repository', () => ({
   updateProject: database.updateProject,
 }));
 vi.mock('@/lib/storage/step-repository', () => ({ getSteps: database.getSteps }));
+vi.mock('@/lib/storage/series-repository', () => seriesStore);
 vi.mock('@/lib/project/project-actions', () => projectActions);
 vi.mock('@/lib/storage/storage', () => storage);
 vi.mock('@/lib/export/project-archive-serialize', () => ({ exportProjectArchive: archive.exportProjectArchive }));
@@ -60,6 +70,10 @@ vi.mock('@/lib/export/project-archive-contract', async (importActual) => ({
 }));
 vi.mock('@/lib/storage/change-notifier', () => ({
   subscribeProjectsChanged: (listener: () => void) => {
+    changes.listeners.add(listener);
+    return () => changes.listeners.delete(listener);
+  },
+  subscribeSeriesChanged: (listener: () => void) => {
     changes.listeners.add(listener);
     return () => changes.listeners.delete(listener);
   },
@@ -90,6 +104,7 @@ const project = {
 beforeEach(() => {
   vi.clearAllMocks();
   database.getProjectSummaries.mockResolvedValue([project]);
+  seriesStore.getAllSeries.mockResolvedValue([]);
   database.getSteps.mockResolvedValue([]);
   storage.getRecordingState.mockResolvedValue({ operation: null, isRecording: false });
   database.deleteProjectPermanently.mockResolvedValue(undefined);
@@ -208,13 +223,105 @@ describe('專案庫', () => {
     await waitFor(() => expect(screen.queryByText(project.title)).toBeNull());
   });
 
-  it('點專案標題就開啟專案', async () => {
+  it('點專案標題直接改名，不開啟專案', async () => {
+    database.updateProject.mockResolvedValue(undefined);
     render(<LibraryApp />);
 
-    fireEvent.click(await screen.findByRole('button', { name: '安全教學' }));
+    fireEvent.click(await screen.findByRole('button', { name: /專案標題\s*安全教學/ }));
+    const field = screen.getByRole('textbox', { name: '專案標題' });
+    fireEvent.change(field, { target: { value: '新名稱' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
 
-    await waitFor(() => expect(projectActions.openSelectedProjectInEditor).toHaveBeenCalledWith('project-1', { inPlace: true }));
-    expect(database.updateProject).not.toHaveBeenCalled();
+    await waitFor(() => expect(database.updateProject).toHaveBeenCalledWith('project-1', { title: '新名稱' }));
+    expect(projectActions.openSelectedProjectInEditor).not.toHaveBeenCalled();
+  });
+
+  describe('系列', () => {
+    const member = { ...project, id: 'project-2', title: '成員專案', updatedAt: 5 };
+    const series = { id: 'series-1', title: 'M-Role', projectIds: ['project-2'], createdAt: 1, updatedAt: 1 };
+
+    afterEach(() => window.history.replaceState(null, '', window.location.pathname));
+
+    it('系列裡的專案只透過系列卡片出現', async () => {
+      database.getProjectSummaries.mockResolvedValue([member, project]);
+      seriesStore.getAllSeries.mockResolvedValue([series]);
+      render(<LibraryApp />);
+
+      expect(await screen.findByRole('button', { name: /系列名稱\s*M-Role/ })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /專案標題\s*安全教學/ })).toBeTruthy();
+      expect(screen.queryByText('成員專案')).toBeNull();
+      expect(screen.getByText(/1 個專案/)).toBeTruthy();
+    });
+
+    it('從專案卡片加入既有系列', async () => {
+      seriesStore.getAllSeries.mockResolvedValue([{ ...series, projectIds: [] }]);
+      seriesStore.addProjectToSeries.mockResolvedValue(undefined);
+      render(<LibraryApp />);
+
+      fireEvent.click(await screen.findByRole('button', { name: '把「安全教學」加入系列' }));
+      fireEvent.click(screen.getByRole('button', { name: /M-Role/ }));
+
+      await waitFor(() => expect(seriesStore.addProjectToSeries).toHaveBeenCalledWith('series-1', 'project-1'));
+    });
+
+    it('從專案卡片建立新系列', async () => {
+      seriesStore.createSeries.mockResolvedValue(series);
+      render(<LibraryApp />);
+
+      fireEvent.click(await screen.findByRole('button', { name: '把「安全教學」加入系列' }));
+      fireEvent.change(screen.getByRole('textbox', { name: '新系列名稱' }), { target: { value: '入職' } });
+      fireEvent.click(screen.getByRole('button', { name: '建立' }));
+
+      await waitFor(() => expect(seriesStore.createSeries).toHaveBeenCalledWith('入職', ['project-1']));
+    });
+
+    it('開啟系列後列出成員，並可移出系列', async () => {
+      database.getProjectSummaries.mockResolvedValue([member]);
+      seriesStore.getAllSeries.mockResolvedValue([series]);
+      seriesStore.removeProjectFromSeries.mockResolvedValue(undefined);
+      render(<LibraryApp />);
+
+      fireEvent.click(await screen.findByRole('button', { name: '開啟' }));
+
+      expect(await screen.findByRole('button', { name: /專案標題\s*成員專案/ })).toBeTruthy();
+      expect(window.location.hash).toBe('#series=series-1');
+      fireEvent.click(screen.getByRole('button', { name: '把「成員專案」移出系列' }));
+      await waitFor(() => expect(seriesStore.removeProjectFromSeries).toHaveBeenCalledWith('series-1', 'project-2'));
+    });
+
+    it('加入專案失敗時在對話框內顯示錯誤', async () => {
+      silenceIntentionalErrorLogs();
+      seriesStore.getAllSeries.mockResolvedValue([{ ...series, projectIds: [] }]);
+      seriesStore.addProjectToSeries.mockRejectedValue(new Error('write failed'));
+      window.history.replaceState(null, '', `${window.location.pathname}#series=series-1`);
+      render(<LibraryApp />);
+
+      fireEvent.click(await screen.findByRole('button', { name: '加入專案' }));
+      fireEvent.click(screen.getByRole('button', { name: /安全教學/ }));
+
+      const dialog = screen.getByRole('dialog');
+      await waitFor(() => expect(dialog.textContent).toContain('操作失敗，請再試一次。'));
+    });
+
+    it('解散系列要先確認', async () => {
+      seriesStore.getAllSeries.mockResolvedValue([{ ...series, projectIds: [] }]);
+      seriesStore.deleteSeries.mockResolvedValue(undefined);
+      render(<LibraryApp />);
+
+      fireEvent.click(await screen.findByRole('button', { name: '解散系列' }));
+      expect(seriesStore.deleteSeries).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: '解散' }));
+
+      await waitFor(() => expect(seriesStore.deleteSeries).toHaveBeenCalledWith('series-1'));
+    });
+
+    it('找不到網址上的系列時回到專案庫', async () => {
+      window.history.replaceState(null, '', `${window.location.pathname}#series=gone`);
+      render(<LibraryApp />);
+
+      expect(await screen.findByRole('button', { name: /專案標題\s*安全教學/ })).toBeTruthy();
+      await waitFor(() => expect(window.location.hash).toBe(''));
+    });
   });
 
   it('視窗重新取得焦點時在背景重新整理專案庫', async () => {

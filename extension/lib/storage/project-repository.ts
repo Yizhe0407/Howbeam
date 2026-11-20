@@ -15,6 +15,7 @@ import {
   isPristineProject,
   ProjectNotFoundError,
   newProject,
+  runDatabaseWrite,
   runProjectStepsWrite,
   runWithDatabase,
   summarizeSteps,
@@ -23,7 +24,8 @@ import {
 } from './database';
 import { clearActiveProjectId } from './storage';
 import { assertStorableScreenshots } from './screenshot-rules';
-import { notifyProjectsChanged } from './change-notifier';
+import { notifyProjectsChanged, notifySeriesChanged } from './change-notifier';
+import { detachProjectsFromSeries } from './series-repository';
 import { t } from '../shared/i18n';
 
 export async function createProject(initial?: Partial<Pick<Project, 'title' | 'description'>>): Promise<Project> {
@@ -211,14 +213,20 @@ export async function discardPristineProject(projectId: string): Promise<boolean
   return true;
 }
 
+/** Deletes the Project, its steps and its place in a Series in one transaction. */
 export async function deleteProjectPermanently(id: string): Promise<void> {
-  await runProjectStepsWrite(async (tx) => {
+  let seriesChanged = false;
+  await runDatabaseWrite(['projects', 'steps', 'series'], async (tx) => {
     let cursor = await tx.objectStore('steps').index('by-session').openCursor(id);
     while (cursor) {
       await cursor.delete();
       cursor = await cursor.continue();
     }
     await tx.objectStore('projects').delete(id);
+    seriesChanged = await detachProjectsFromSeries(tx.objectStore('series'), new Set([id]));
+  }, () => {
+    notifyProjectsChanged();
+    if (seriesChanged) notifySeriesChanged();
   });
 }
 

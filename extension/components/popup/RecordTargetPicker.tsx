@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { FolderOpen, Plus } from 'lucide-react';
+import { FolderOpen, Layers, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getProjectSummaries } from '@/lib/storage/project-repository';
-import { subscribeProjectsChanged } from '@/lib/storage/change-notifier';
+import { subscribeProjectsChanged, subscribeSeriesChanged } from '@/lib/storage/change-notifier';
+import { getAllSeries } from '@/lib/storage/series-repository';
+import { seriesDisplayTitle } from '@/lib/storage/series-model';
+import { seriesByProject } from '@/lib/project/library-items';
 import { projectDisplayTitle, type ProjectSummary } from '@/lib/storage/models';
 import { t } from '@/lib/shared/i18n';
 import { cn } from '@/lib/shared/utils';
@@ -33,6 +36,8 @@ interface Props {
  */
 export default function RecordTargetPicker({ value, onChange, disabled = false, className }: Props) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  /** Series title by Project id, for the Projects that are in one. */
+  const [seriesTitles, setSeriesTitles] = useState<ReadonlyMap<string, string>>(new Map());
 
   useEffect(() => {
     let active = true;
@@ -53,11 +58,27 @@ export default function RecordTargetPicker({ value, onChange, disabled = false, 
           console.warn('[howbeam] failed to read projects for the record target', error);
         });
     };
+    // Which Series a Project is in is only a label here: a failed read leaves the labels off, never the list.
+    const loadSeries = () => {
+      void getAllSeries()
+        .then((series) => {
+          if (!active) return;
+          const titles = new Map<string, string>();
+          for (const [projectId, entry] of seriesByProject(series)) titles.set(projectId, seriesDisplayTitle(entry.title));
+          setSeriesTitles(titles);
+        })
+        .catch((error) => {
+          console.warn('[howbeam] failed to read series for the record target', error);
+        });
+    };
     load();
+    loadSeries();
     const unsubscribe = subscribeProjectsChanged(load);
+    const unsubscribeSeries = subscribeSeriesChanged(loadSeries);
     return () => {
       active = false;
       unsubscribe();
+      unsubscribeSeries();
     };
     // `onChange` is a setState in the caller; the list re-reads when the selection changes.
   }, [value, onChange]);
@@ -102,11 +123,19 @@ export default function RecordTargetPicker({ value, onChange, disabled = false, 
         <SelectItem value={NEW_VALUE} className="font-bold">{t().popup.recordTargetNew}</SelectItem>
         {projects.map((project) => (
           <SelectItem key={project.id} value={`${PROJECT_PREFIX}${project.id}`} className="font-bold">
-            <OverflowTooltip content={projectDisplayTitle(project.title)}>
-              <span className="line-clamp-2 min-w-0 flex-1 break-words">
-                {projectDisplayTitle(project.title)}
-              </span>
-            </OverflowTooltip>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <OverflowTooltip content={projectDisplayTitle(project.title)}>
+                <span className="line-clamp-2 min-w-0 break-words">
+                  {projectDisplayTitle(project.title)}
+                </span>
+              </OverflowTooltip>
+              {seriesTitles.has(project.id) && (
+                <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                  <Layers className="size-3 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{seriesTitles.get(project.id)}</span>
+                </span>
+              )}
+            </span>
             <span className="shrink-0 text-xs font-bold text-muted-foreground">
               {t().popup.recordTargetCount(project.entryCount)}
             </span>
