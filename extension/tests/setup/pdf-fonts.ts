@@ -1,14 +1,26 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { PdfFontData } from '@/lib/export/pdf/pdf-fonts';
 
 const fontDirectory = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../../public/fonts/pdf');
 
-const read = (file: string) => new Uint8Array(readFileSync(path.join(fontDirectory, file)));
+/** The chain build.py recorded; reading it here keeps this helper free of the module tests mock. */
+const { chain } = JSON.parse(readFileSync(path.join(fontDirectory, 'manifest.json'), 'utf8')) as {
+  chain: Record<'Regular' | 'Bold', string[]>;
+};
 
-/** The PDF fonts as the extension package ships them, read from public/fonts/pdf. */
-export async function readDiskFonts() {
-  return { regular: read('HowbeamSansTC-Regular.ttf'), bold: read('HowbeamSansTC-Bold.ttf') };
+const cache = new Map<string, Uint8Array>();
+/** One shared copy per file, as the extension's loader hands both styles the same bytes. */
+const read = (file: string) => {
+  let bytes = cache.get(file);
+  if (!bytes) cache.set(file, (bytes = new Uint8Array(readFileSync(path.join(fontDirectory, file)))));
+  return bytes;
+};
+
+/** The PDF font chain as the extension package ships it, read from public/fonts/pdf. */
+export async function readDiskFonts(): Promise<PdfFontData> {
+  return { regular: chain.Regular.map(read), bold: chain.Bold.map(read) };
 }
 
 /**

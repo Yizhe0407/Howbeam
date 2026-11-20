@@ -1,8 +1,10 @@
+import type { Font } from 'fontkit';
 import { throwIfAborted } from '../../shared/abort';
 import { ProjectExportLimitError } from '../project-export-contract';
-import { readTypographicMetrics, type PdfFontData, type TypographicMetrics } from './pdf-fonts';
+import { FontChain, type FontRun } from './pdf-font-chain';
+import { typographicMetrics, type PdfFontData, type TypographicMetrics } from './pdf-fonts';
 import type { PdfBlock, PdfImage, PdfOutlineEntry, PdfPage, PdfRule, PdfText } from './pdf-layout';
-import { PDF_COLORS, PDF_SPEC, POINTS_PER_PIXEL, type PdfTextStyle } from './pdf-spec';
+import { PDF_COLORS, PDF_SPEC, POINTS_PER_PIXEL, type PdfTextStyle, type PdfWeight } from './pdf-spec';
 
 export interface PdfWriterOptions {
   title: string;
@@ -40,7 +42,9 @@ export class PdfWriter {
   private bytes = 0;
   private overLimit = false;
   private pages = 0;
-  private readonly metrics: Record<'regular' | 'bold', TypographicMetrics>;
+  private readonly chains: Record<PdfWeight, FontChain>;
+  /** The first font's metrics: every run on a line shares its baseline. */
+  private readonly metrics: Record<PdfWeight, TypographicMetrics>;
   private readonly structure: StructureElement;
   /** The latest top-level bookmark, which step bookmarks nest under. */
   private bookmarkParent: OutlineItem | undefined;
@@ -49,8 +53,10 @@ export class PdfWriter {
     private readonly document: PdfKitDocument,
     private readonly ended: Promise<void>,
     private readonly options: PdfWriterOptions,
+    fonts: Record<PdfWeight, Font[]>,
   ) {
-    this.metrics = { regular: readTypographicMetrics(options.fonts.regular), bold: readTypographicMetrics(options.fonts.bold) };
+    this.chains = { regular: new FontChain(fonts.regular), bold: new FontChain(fonts.bold) };
+    this.metrics = { regular: typographicMetrics(fonts.regular[0]!), bold: typographicMetrics(fonts.bold[0]!) };
     document.on('data', (chunk: Uint8Array) => {
       this.bytes += chunk.byteLength;
       if (this.bytes > options.maxBytes) this.overLimit = true;
@@ -61,7 +67,8 @@ export class PdfWriter {
   }
 
   static async create(options: PdfWriterOptions): Promise<PdfWriter> {
-    const pdfkit = (await import('pdfkit')) as unknown as PdfKitModule;
+    // Loaded on first export, like PDFKit itself, so the editor does not carry the font engine.
+    const [pdfkit, fontkit] = await Promise.all([import('pdfkit') as unknown as Promise<PdfKitModule>, import('fontkit')]);
     // A document opens its default font (Helvetica) when it is created, so that one must be registered.
     const { default: helvetica } = (await import('pdfkit/standard-fonts/Helvetica')) as { default: unknown };
     pdfkit.registerStdFonts(helvetica);
@@ -78,15 +85,23 @@ export class PdfWriter {
       info: { Title: options.title, Creator: 'Howbeam' },
     });
     const ended = new Promise<void>((resolve) => document.on('end', () => resolve()));
-    document.registerFont('Regular', options.fonts.regular as unknown as ArrayBuffer);
-    document.registerFont('Bold', options.fonts.bold as unknown as ArrayBuffer);
-    return new PdfWriter(document, ended, options);
+    // Each file is decoded once, even when both styles use it; PDFKit embeds the decoded font as it is.
+    const decoded = new Map<Uint8Array, Font>();
+    const open = (bytes: Uint8Array) => {
+      let font = decoded.get(bytes);
+      if (!font) decoded.set(bytes, (font = fontkit.create(bytes as Buffer) as Font));
+      return font;
+    };
+    const fonts = { regular: options.fonts.regular.map(open), bold: options.fonts.bold.map(open) };
+    for (const style of ['regular', 'bold'] as const) {
+      fonts[style].forEach((font, index) => document.registerFont(fontName(style, index), font as unknown as ArrayBuffer));
+    }
+    return new PdfWriter(document, ended, options, fonts);
   }
 
   /** Width of `text` in layout pixels when set in `style`. */
   measure(text: string, style: PdfTextStyle): number {
-    this.document.font(fontName(style)).fontSize(style.fontSize * k);
-    return this.document.widthOfString(text) / k;
+    return this.runs(text, style).reduce((width, run) => width + this.runWidth(run, style), 0) / k;
   }
 
   writePage(page: PdfPage): void {
@@ -166,11 +181,22 @@ export class PdfWriter {
     if (!text) return;
     const { ascent, descent } = this.metrics[style.weight];
     const baseline = top + (style.lineHeight - (ascent + descent) * style.fontSize) / 2 + ascent * style.fontSize;
-    this.document
-      .font(fontName(style))
-      .fontSize(style.fontSize * k)
-      .fillColor(style.color)
-      .text(text, x * k, baseline * k, { lineBreak: false, baseline: 'alphabetic' });
+    let left = x * k;
+    for (const run of this.runs(text, style)) {
+      const width = this.runWidth(run, style);
+      this.document.fillColor(style.color).text(run.text, left, baseline * k, { lineBreak: false, baseline: 'alphabetic' });
+      left += width;
+    }
+  }
+
+  private runs(text: string, style: PdfTextStyle): FontRun[] {
+    return this.chains[style.weight].runs(text);
+  }
+
+  /** Width in points of `run`, leaving its font selected at the style's size for drawing. */
+  private runWidth(run: FontRun, style: PdfTextStyle): number {
+    this.document.font(fontName(style.weight, run.font)).fontSize(style.fontSize * k);
+    return this.document.widthOfString(run.text);
   }
 
   private drawRule({ x, y, width, height, color }: PdfRule): void {
@@ -192,4 +218,4 @@ export class PdfWriter {
   }
 }
 
-const fontName = (style: PdfTextStyle) => (style.weight === 'bold' ? 'Bold' : 'Regular');
+const fontName = (style: PdfWeight, index: number) => `${style}-${index}`;

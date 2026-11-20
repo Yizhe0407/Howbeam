@@ -3,15 +3,50 @@
   "rawBase": "https://raw.githubusercontent.com/google/fonts",
   "commit": "3be1884c48c3e45b52ecc725676a08f87776373e",
   "files": {
-    "font": {
+    "tc": {
       "path": "ofl/notosanstc/NotoSansTC[wght].ttf",
       "bytes": 11941968,
       "sha256": "864727d210d54f2537bbe23b3a839436c3992af72de9322af5270897246bd44f"
     },
-    "license": {
+    "sc": {
+      "path": "ofl/notosanssc/NotoSansSC[wght].ttf",
+      "bytes": 17772300,
+      "sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da"
+    },
+    "jp": {
+      "path": "ofl/notosansjp/NotoSansJP[wght].ttf",
+      "bytes": 9589900,
+      "sha256": "c2f3b4d463500a2ddcd3849cded1fceeb9fd6d1c32e6cbecd568453ba50fc68f"
+    },
+    "symbols": {
+      "path": "ofl/notosanssymbols/NotoSansSymbols[wght].ttf",
+      "bytes": 372684,
+      "sha256": "f7e7e04b4a24b6c78893d50cbfd2b2f6cae49617ab047bfef668d252adb128f7"
+    },
+    "symbols2": {
+      "path": "ofl/notosanssymbols2/NotoSansSymbols2-Regular.ttf",
+      "bytes": 1233128,
+      "sha256": "7d5fb73b7ca67a6798101741f5d280a3d016a56a197afcd4199dbb57b4b82a21"
+    },
+    "emoji": {
+      "path": "ofl/notoemoji/NotoEmoji[wght].ttf",
+      "bytes": 1982596,
+      "sha256": "de6c18832938afc99caf132b39d6a30a19bac7f2e812e28db2535b4608d27551"
+    },
+    "license-adobe": {
       "path": "ofl/notosanstc/OFL.txt",
       "bytes": 4388,
       "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+    },
+    "license-symbols": {
+      "path": "ofl/notosanssymbols/OFL.txt",
+      "bytes": 4383,
+      "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+    },
+    "license-emoji": {
+      "path": "ofl/notoemoji/OFL.txt",
+      "bytes": 4330,
+      "sha256": "500bb1ccf43df7bbb522112f9133a52b16e1c35e809632f5d8609b179152de5b"
     }
   }
 }

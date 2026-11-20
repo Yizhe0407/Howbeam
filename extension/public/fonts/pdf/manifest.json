@@ -5,41 +5,220 @@
     "repository": "https://github.com/google/fonts",
     "commit": "3be1884c48c3e45b52ecc725676a08f87776373e",
     "files": {
-      "font": {
+      "tc": {
         "path": "ofl/notosanstc/NotoSansTC[wght].ttf",
         "bytes": 11941968,
         "sha256": "864727d210d54f2537bbe23b3a839436c3992af72de9322af5270897246bd44f"
       },
-      "license": {
+      "sc": {
+        "path": "ofl/notosanssc/NotoSansSC[wght].ttf",
+        "bytes": 17772300,
+        "sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da"
+      },
+      "jp": {
+        "path": "ofl/notosansjp/NotoSansJP[wght].ttf",
+        "bytes": 9589900,
+        "sha256": "c2f3b4d463500a2ddcd3849cded1fceeb9fd6d1c32e6cbecd568453ba50fc68f"
+      },
+      "symbols": {
+        "path": "ofl/notosanssymbols/NotoSansSymbols[wght].ttf",
+        "bytes": 372684,
+        "sha256": "f7e7e04b4a24b6c78893d50cbfd2b2f6cae49617ab047bfef668d252adb128f7"
+      },
+      "symbols2": {
+        "path": "ofl/notosanssymbols2/NotoSansSymbols2-Regular.ttf",
+        "bytes": 1233128,
+        "sha256": "7d5fb73b7ca67a6798101741f5d280a3d016a56a197afcd4199dbb57b4b82a21"
+      },
+      "emoji": {
+        "path": "ofl/notoemoji/NotoEmoji[wght].ttf",
+        "bytes": 1982596,
+        "sha256": "de6c18832938afc99caf132b39d6a30a19bac7f2e812e28db2535b4608d27551"
+      },
+      "license-adobe": {
         "path": "ofl/notosanstc/OFL.txt",
         "bytes": 4388,
         "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+      },
+      "license-symbols": {
+        "path": "ofl/notosanssymbols/OFL.txt",
+        "bytes": 4383,
+        "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+      },
+      "license-emoji": {
+        "path": "ofl/notoemoji/OFL.txt",
+        "bytes": 4330,
+        "sha256": "500bb1ccf43df7bbb522112f9133a52b16e1c35e809632f5d8609b179152de5b"
       }
     }
   },
-  "codepoints": 6575,
-  "license": {
-    "file": "OFL.txt",
-    "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+  "chain": {
+    "Regular": [
+      "HowbeamSansTC-Regular.woff2",
+      "HowbeamSansSC-Regular.woff2",
+      "HowbeamSansJP-Regular.woff2",
+      "HowbeamSymbols-Regular.woff2",
+      "HowbeamSymbols2-Regular.woff2",
+      "HowbeamEmoji-Regular.woff2"
+    ],
+    "Bold": [
+      "HowbeamSansTC-Bold.woff2",
+      "HowbeamSansSC-Bold.woff2",
+      "HowbeamSansJP-Bold.woff2",
+      "HowbeamSymbols-Bold.woff2",
+      "HowbeamSymbols2-Regular.woff2",
+      "HowbeamEmoji-Bold.woff2"
+    ]
   },
+  "licenses": [
+    {
+      "file": "OFL.txt",
+      "source": "license-adobe",
+      "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+    },
+    {
+      "file": "OFL-Symbols.txt",
+      "source": "license-symbols",
+      "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+    },
+    {
+      "file": "OFL-Emoji.txt",
+      "source": "license-emoji",
+      "sha256": "500bb1ccf43df7bbb522112f9133a52b16e1c35e809632f5d8609b179152de5b"
+    }
+  ],
   "fonts": [
     {
-      "file": "HowbeamSansTC-Regular.ttf",
+      "file": "HowbeamSansTC-Regular.woff2",
       "family": "Howbeam Sans TC",
       "style": "Regular",
       "weight": 400,
-      "glyphs": 6387,
-      "bytes": 2006676,
-      "sha256": "ae360b6cc49106ed017fe7fdca11bd9664a61254c421f4798a231fb0efe8ec7e"
+      "source": "tc",
+      "license": "OFL.txt",
+      "codepoints": 20745,
+      "glyphs": 20340,
+      "bytes": 3350108,
+      "sha256": "f068e6028bbe632ded2f0abe88a9e94e612dc822216e546782be57d4a9139563"
     },
     {
-      "file": "HowbeamSansTC-Bold.ttf",
+      "file": "HowbeamSansTC-Bold.woff2",
       "family": "Howbeam Sans TC",
       "style": "Bold",
       "weight": 700,
-      "glyphs": 6387,
-      "bytes": 2003876,
-      "sha256": "d8a0b1967b8697912253b3b8962eade4af834eb92b4d37237958a19c54cae370"
+      "source": "tc",
+      "license": "OFL.txt",
+      "codepoints": 20745,
+      "glyphs": 20340,
+      "bytes": 3415088,
+      "sha256": "b8fc0c5e15b8f3bf560b50f63f3a849e44b364b29755f26b0fa12ba3c5ebc5a6"
+    },
+    {
+      "file": "HowbeamSansSC-Regular.woff2",
+      "family": "Howbeam Sans SC",
+      "style": "Regular",
+      "weight": 400,
+      "source": "sc",
+      "license": "OFL.txt",
+      "codepoints": 11856,
+      "glyphs": 11849,
+      "bytes": 2179648,
+      "sha256": "eada1c63f953501448349a4100c67bd966db90db5cb4bfd4b0c6d278effa4d45"
+    },
+    {
+      "file": "HowbeamSansSC-Bold.woff2",
+      "family": "Howbeam Sans SC",
+      "style": "Bold",
+      "weight": 700,
+      "source": "sc",
+      "license": "OFL.txt",
+      "codepoints": 11856,
+      "glyphs": 11849,
+      "bytes": 2222860,
+      "sha256": "7cf4ac03502b47183f0b483a89ddf3852e583e7eef29cd2df4e70fb342f4db73"
+    },
+    {
+      "file": "HowbeamSansJP-Regular.woff2",
+      "family": "Howbeam Sans JP",
+      "style": "Regular",
+      "weight": 400,
+      "source": "jp",
+      "license": "OFL.txt",
+      "codepoints": 616,
+      "glyphs": 609,
+      "bytes": 129480,
+      "sha256": "936929e1dcaf54ff8a408d86a1fcaf148ec466eb8bcee370004640c467b8206e"
+    },
+    {
+      "file": "HowbeamSansJP-Bold.woff2",
+      "family": "Howbeam Sans JP",
+      "style": "Bold",
+      "weight": 700,
+      "source": "jp",
+      "license": "OFL.txt",
+      "codepoints": 616,
+      "glyphs": 609,
+      "bytes": 131124,
+      "sha256": "1e940e699bec911dd7064babd8da184c9b7b282303ed2124e2d0eaaa2c9ab1ef"
+    },
+    {
+      "file": "HowbeamSymbols-Regular.woff2",
+      "family": "Howbeam Symbols",
+      "style": "Regular",
+      "weight": 400,
+      "source": "symbols",
+      "license": "OFL-Symbols.txt",
+      "codepoints": 1107,
+      "glyphs": 1110,
+      "bytes": 75396,
+      "sha256": "890dbec9995eca0c4518d0693f6eea84adb368fa6f4bc626aaa020f5e7c7b483"
+    },
+    {
+      "file": "HowbeamSymbols-Bold.woff2",
+      "family": "Howbeam Symbols",
+      "style": "Bold",
+      "weight": 700,
+      "source": "symbols",
+      "license": "OFL-Symbols.txt",
+      "codepoints": 1107,
+      "glyphs": 1110,
+      "bytes": 79664,
+      "sha256": "7612e6cd61c2abf208aab6021f984648c55bad6ac7e8c28157c44f31c623b1d0"
+    },
+    {
+      "file": "HowbeamSymbols2-Regular.woff2",
+      "family": "Howbeam Symbols 2",
+      "style": "Regular",
+      "weight": 400,
+      "source": "symbols2",
+      "license": "OFL-Symbols.txt",
+      "codepoints": 2955,
+      "glyphs": 2976,
+      "bytes": 269396,
+      "sha256": "e1fcfff12376f5121f64d257e6d3ba618cd7a619c10f919ea383c70188ff63d2"
+    },
+    {
+      "file": "HowbeamEmoji-Regular.woff2",
+      "family": "Howbeam Emoji",
+      "style": "Regular",
+      "weight": 400,
+      "source": "emoji",
+      "license": "OFL-Emoji.txt",
+      "codepoints": 1489,
+      "glyphs": 1887,
+      "bytes": 512360,
+      "sha256": "530321efa56abcba2be7e36999dcfc62f12d0b7289aad9c7ca3a86c6a3d2f5e1"
+    },
+    {
+      "file": "HowbeamEmoji-Bold.woff2",
+      "family": "Howbeam Emoji",
+      "style": "Bold",
+      "weight": 700,
+      "source": "emoji",
+      "license": "OFL-Emoji.txt",
+      "codepoints": 1489,
+      "glyphs": 1887,
+      "bytes": 508032,
+      "sha256": "22a40581bbeef79d3eb49cc0063391f3e83d6f38d799cf1dd3f07ad3efd48b6e"
     }
   ]
 }

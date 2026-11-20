@@ -143,7 +143,7 @@ describe('generateProjectPdf', () => {
     });
   });
 
-  it('embeds the two fonts as subsets and the screenshots untouched, so a document costs kilobytes', async () => {
+  it('embeds the fonts it uses as subsets and the screenshots untouched, so a document costs kilobytes', async () => {
     const pdf = await generateProjectPdf([entry('step-1', 1, '設定 Settings'), entry('step-2', 2, 'Second')], { title: 'Size' });
     const bytes = Buffer.from(await pdf.arrayBuffer()).toString('latin1');
 
@@ -336,8 +336,19 @@ describe('generateProjectPdf', () => {
     expect(lines.join('').replace(/\s/g, '')).toContain(description);
   });
 
-  it('does not fail on characters the fonts do not cover', async () => {
-    const read = await readPdf(await generateProjectPdf([entry('step-1', 1, 'Rocket 🚀 简体字 한국어')], { title: 'T' }));
+  it('draws emoji, symbols and Simplified Chinese with the fallback fonts as real text', async () => {
+    const pdf = await generateProjectPdf([entry('step-1', 1, 'Rocket 🚀 ⚠️ ✅ 这是简体字')], { title: 'T' });
+    const read = await readPdf(pdf);
+    const bytes = Buffer.from(await pdf.arrayBuffer()).toString('latin1');
+
+    // pdf.js places the spaces between runs in different fonts by its own reckoning, so they are left out of the comparison.
+    expect(itemAt(read.pages, 0).lines.join('').replace(/\s/g, '')).toContain('Rocket🚀⚠️✅这是简体字');
+    expect(bytes).toMatch(/\+HowbeamEmoji-Bold/);
+    expect(bytes).toMatch(/\+HowbeamSansSC-Bold/);
+  });
+
+  it('does not fail on characters no font covers', async () => {
+    const read = await readPdf(await generateProjectPdf([entry('step-1', 1, 'Rocket 한국어')], { title: 'T' }));
 
     expect(read.pages).toHaveLength(1);
     expect(itemAt(read.pages, 0).lines.join('\n')).toContain('Rocket');
