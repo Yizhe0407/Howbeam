@@ -13,6 +13,7 @@ function render(ui: Parameters<typeof rtlRender>[0], options?: Parameters<typeof
 
 const database = vi.hoisted(() => ({
   createProjectFromSteps: vi.fn(),
+  createSeriesWithProjects: vi.fn(),
   deleteProjectPermanently: vi.fn(),
   duplicateProject: vi.fn(),
   getProjectSummaries: vi.fn(),
@@ -53,6 +54,7 @@ const archive = vi.hoisted(() => ({
 
 vi.mock('@/lib/storage/project-repository', () => ({
   createProjectFromSteps: database.createProjectFromSteps,
+  createSeriesWithProjects: database.createSeriesWithProjects,
   deleteProjectPermanently: database.deleteProjectPermanently,
   duplicateProject: database.duplicateProject,
   getProjectSummaries: database.getProjectSummaries,
@@ -61,6 +63,15 @@ vi.mock('@/lib/storage/project-repository', () => ({
 vi.mock('@/lib/storage/step-repository', () => ({ getSteps: database.getSteps }));
 vi.mock('@/lib/storage/series-repository', () => seriesStore);
 const seriesExport = vi.hoisted(() => ({ generateSeriesExport: vi.fn() }));
+const seriesArchive = vi.hoisted(() => ({
+  exportStoredSeriesArchive: vi.fn(),
+  importSeriesArchive: vi.fn(),
+  isSeriesArchive: vi.fn(),
+}));
+vi.mock('@/lib/export/series-archive', async (importActual) => ({
+  ...(await importActual<typeof import('@/lib/export/series-archive')>()),
+  ...seriesArchive,
+}));
 vi.mock('@/lib/export/series-export', async (importActual) => ({
   ...(await importActual<typeof import('@/lib/export/series-export')>()),
   generateSeriesExport: seriesExport.generateSeriesExport,
@@ -110,6 +121,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   database.getProjectSummaries.mockResolvedValue([project]);
   seriesStore.getAllSeries.mockResolvedValue([]);
+  seriesArchive.isSeriesArchive.mockReturnValue(false);
   database.getSteps.mockResolvedValue([]);
   storage.getRecordingState.mockResolvedValue({ operation: null, isRecording: false });
   database.deleteProjectPermanently.mockResolvedValue(undefined);
@@ -353,6 +365,44 @@ describe('專案庫', () => {
       expect(downloads.download).not.toHaveBeenCalled();
     });
 
+    it('下載系列備份，內含所有專案', async () => {
+      database.getProjectSummaries.mockResolvedValue([member]);
+      seriesStore.getAllSeries.mockResolvedValue([series]);
+      seriesArchive.exportStoredSeriesArchive.mockResolvedValue(new Blob(['series']));
+      render(<LibraryApp />);
+
+      fireEvent.click(await screen.findByRole('button', { name: '下載系列備份' }));
+      fireEvent.click(screen.getByRole('button', { name: '下載 .howbeam-series' }));
+
+      await waitFor(() => expect(downloads.download).toHaveBeenCalledWith(expect.objectContaining({ filename: 'm-role.howbeam-series' })));
+      expect(seriesArchive.exportStoredSeriesArchive).toHaveBeenCalledWith(series);
+    });
+
+    it('匯入系列檔會建立所有專案與系列並打開系列頁', async () => {
+      const restored = { id: 'series-restored', title: 'M-Role', projectIds: ['project-2'], createdAt: 1, updatedAt: 1 };
+      seriesArchive.isSeriesArchive.mockReturnValue(true);
+      seriesArchive.importSeriesArchive.mockResolvedValue({
+        title: 'M-Role',
+        projects: [{ version: 4, steps: [], metadata: { title: 'HR', description: 'd', sections: [] } }],
+      });
+      database.createSeriesWithProjects.mockImplementation(async () => {
+        database.getProjectSummaries.mockResolvedValue([member]);
+        seriesStore.getAllSeries.mockResolvedValue([restored]);
+        return restored;
+      });
+      const { container } = render(<LibraryApp />);
+      await screen.findByRole('button', { name: /專案標題\s*安全教學/ });
+
+      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(input, { target: { files: [new File(['series'], 'm-role.howbeam-series')] } });
+
+      await waitFor(() => expect(database.createSeriesWithProjects).toHaveBeenCalledWith('M-Role', [
+        { steps: [], initial: { title: 'HR', description: 'd' }, sections: [] },
+      ]));
+      await waitFor(() => expect(window.location.hash).toBe('#series=series-restored'));
+      expect(archive.importProjectArchive).not.toHaveBeenCalled();
+    });
+
     it('解散系列要先確認', async () => {
       seriesStore.getAllSeries.mockResolvedValue([{ ...series, projectIds: [] }]);
       seriesStore.deleteSeries.mockResolvedValue(undefined);
@@ -519,7 +569,9 @@ describe('專案庫', () => {
     const file = new File(['archive'], 'fallback.howbeam', { type: 'application/vnd.howbeam.project+zip' });
     fireEvent.change(input!, { target: { files: [file] } });
 
-    await waitFor(() => expect(archive.importProjectArchive).toHaveBeenCalledWith(file));
+    // Read once: the same bytes decide project-or-series and are then imported.
+    await waitFor(() => expect(archive.importProjectArchive).toHaveBeenCalledTimes(1));
+    expect(new TextDecoder().decode(archive.importProjectArchive.mock.calls[0]![0] as Uint8Array)).toBe('archive');
     expect(database.createProjectFromSteps).toHaveBeenCalledWith(
       imported.steps,
       { title: '匯入標題', description: '匯入說明' },

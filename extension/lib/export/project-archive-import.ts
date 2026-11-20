@@ -38,31 +38,32 @@ import {
 
 const SCREENSHOT_ID = /^[0-9a-f]{64}$/;
 
-async function sourceToBytes(source: ProjectArchiveSource, signal?: AbortSignal): Promise<Uint8Array> {
+/** An archive's bytes, refused before reading when larger than `maxBytes`. Shared by the project and series archives. */
+export async function readArchiveBytes(
+  source: ProjectArchiveSource,
+  maxBytes: number,
+  signal?: AbortSignal,
+): Promise<Uint8Array> {
   throwIfAborted(signal);
   let bytes: Uint8Array;
   if (source instanceof Blob) {
-    if (source.size > PROJECT_ARCHIVE_LIMITS.maxArchiveBytes) {
-      fail('ARCHIVE_TOO_LARGE', 'The project archive is too large.');
-    }
+    if (source.size > maxBytes) fail('ARCHIVE_TOO_LARGE', 'The archive is too large.');
     bytes = new Uint8Array(await source.arrayBuffer());
   } else if (source instanceof ArrayBuffer) {
     bytes = new Uint8Array(source);
   } else if (ArrayBuffer.isView(source)) {
     bytes = new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
   } else {
-    fail('INVALID_ARCHIVE', 'The project archive source has an unsupported type.');
+    fail('INVALID_ARCHIVE', 'The archive source has an unsupported type.');
   }
   throwIfAborted(signal);
-  if (bytes.byteLength > PROJECT_ARCHIVE_LIMITS.maxArchiveBytes) {
-    fail('ARCHIVE_TOO_LARGE', 'The project archive is too large.');
-  }
+  if (bytes.byteLength > maxBytes) fail('ARCHIVE_TOO_LARGE', 'The archive is too large.');
   return bytes;
 }
 
 /** Reads the ZIP's entries. Only stored (uncompressed) entries are accepted,
  * so no entry can expand beyond the archive's own size limit. */
-function readEntries(bytes: Uint8Array): Map<string, Uint8Array> {
+export function readArchiveEntries(bytes: Uint8Array): Map<string, Uint8Array> {
   const names = new Set<string>();
   let files: Record<string, Uint8Array>;
   try {
@@ -83,8 +84,9 @@ function readEntries(bytes: Uint8Array): Map<string, Uint8Array> {
   return new Map(Object.entries(files));
 }
 
-function parseManifest(bytes: Uint8Array | undefined): JsonRecord {
-  if (!bytes) fail('INVALID_ARCHIVE', `The archive has no ${ARCHIVE_MANIFEST_PATH}.`);
+/** Parses the JSON manifest stored at `path` in an archive. */
+export function parseArchiveManifest(bytes: Uint8Array | undefined, path: string): JsonRecord {
+  if (!bytes) fail('INVALID_ARCHIVE', `The archive has no ${path}.`);
   let text: string;
   try {
     text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -167,9 +169,9 @@ export async function importProjectArchive(
   options: ProjectArchiveImportOptions = {},
 ): Promise<ImportedProjectArchive> {
   const { signal } = options;
-  const entries = readEntries(await sourceToBytes(source, signal));
+  const entries = readArchiveEntries(await readArchiveBytes(source, PROJECT_ARCHIVE_LIMITS.maxArchiveBytes, signal));
   throwIfAborted(signal);
-  const manifest = parseManifest(entries.get(ARCHIVE_MANIFEST_PATH));
+  const manifest = parseArchiveManifest(entries.get(ARCHIVE_MANIFEST_PATH), ARCHIVE_MANIFEST_PATH);
 
   // Read format/version before applying a concrete schema so future versions
   // fail explicitly instead of being misreported as an unknown-field error.

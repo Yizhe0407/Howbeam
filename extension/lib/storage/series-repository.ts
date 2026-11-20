@@ -60,18 +60,22 @@ export async function getAllSeries(): Promise<ProjectSeries[]> {
   return rows.map(sanitizeSeries);
 }
 
+/** A new Series row; the caller stores it in the same write that makes its Projects members. */
+export function newSeries(title: string, projectIds: readonly string[]): ProjectSeries {
+  const now = Date.now();
+  return withProjects(
+    { id: crypto.randomUUID(), title: sanitizeSeriesTitle(title), projectIds: [], createdAt: now, updatedAt: now },
+    [...new Set(projectIds)],
+  );
+}
+
 /** Creates a Series holding `projectIds` in that order, moving each out of any Series it was in. */
 export async function createSeries(title = '', projectIds: readonly string[] = []): Promise<ProjectSeries> {
   return runSeriesWrite(async (tx) => {
-    const ids = [...new Set(projectIds)];
-    for (const id of ids) await requireProject(tx, id);
-    const now = Date.now();
-    const series = withProjects(
-      { id: crypto.randomUUID(), title: sanitizeSeriesTitle(title), projectIds: [], createdAt: now, updatedAt: now },
-      ids,
-    );
+    const series = newSeries(title, projectIds);
+    for (const id of series.projectIds) await requireProject(tx, id);
     const store = tx.objectStore('series');
-    await detachProjectsFromSeries(store, new Set(ids));
+    await detachProjectsFromSeries(store, new Set(series.projectIds));
     await store.add(series);
     return series;
   });

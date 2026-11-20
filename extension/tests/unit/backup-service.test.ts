@@ -11,12 +11,16 @@ vi.mock('@/lib/backup/directory-handle', () => ({ queryBackupPermission: async (
 vi.mock('@/lib/backup/backup-store', () => ({
   getBackupConfig: mocks.getBackupConfig,
   getBackupManifest: vi.fn(),
+  getSeriesBackupManifest: vi.fn(),
   putBackupManifestEntry: vi.fn(),
+  putSeriesBackupManifestEntry: vi.fn(),
   saveBackupLastRun: mocks.saveBackupLastRun,
 }));
 vi.mock('@/lib/storage/project-repository', () => ({ getProjectSummaries: vi.fn() }));
 vi.mock('@/lib/storage/step-repository', () => ({ getSteps: vi.fn() }));
 vi.mock('@/lib/export/project-archive-serialize', () => ({ exportProjectArchive: vi.fn() }));
+vi.mock('@/lib/export/series-archive', () => ({ exportStoredSeriesArchive: vi.fn() }));
+vi.mock('@/lib/storage/series-repository', () => ({ getAllSeries: vi.fn() }));
 
 /** Just enough of navigator.locks: one holder at a time, FIFO waiters, ifAvailable. */
 function installFakeLocks() {

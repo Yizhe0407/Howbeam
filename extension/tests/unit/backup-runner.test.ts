@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { backupFilename, fallbackBackupFilename, runBackup, type BackupRunDeps } from '@/lib/backup/backup-runner';
-import type { BackupManifestEntry } from '@/lib/backup/backup-store';
+import { backupFilename, fallbackBackupFilename, runBackup, seriesBackupFilename, type BackupRunDeps } from '@/lib/backup/backup-runner';
+import type { BackupManifestEntry, SeriesBackupManifestEntry } from '@/lib/backup/backup-store';
+import type { ProjectSeries } from '@/lib/storage/series-model';
 import type { ProjectSummary } from '@/lib/storage/models';
 import { itemAt } from '../setup/item-at';
 
@@ -36,18 +37,23 @@ function project(id: string, title: string, contentRevision: number, metadataRev
   return { id, title, description: '', sections: [], createdAt: 0, updatedAt: 0, contentRevision, stepEditRevision, metadataRevision, stepCount: 0, entryCount: 0, storageBytes: 0 };
 }
 
-function setup(projects: ProjectSummary[], failOn?: string, asciiOnly = false) {
+function setup(projects: ProjectSummary[], failOn?: string, asciiOnly = false, series: ProjectSeries[] = []) {
   const { directory, files } = fakeDirectory(failOn, asciiOnly);
   const manifest = new Map<string, BackupManifestEntry>();
+  const seriesManifest = new Map<string, SeriesBackupManifestEntry>();
   const deps: BackupRunDeps = {
     directory,
     listProjects: async () => projects,
     buildArchive: vi.fn(async (p: ProjectSummary) => new Blob([`archive:${p.id}:${p.contentRevision}`])),
     getManifest: async () => new Map(manifest),
     putManifestEntry: async (id, entry) => void manifest.set(id, entry),
+    listSeries: async () => series,
+    buildSeriesArchive: vi.fn(async (s: ProjectSeries) => new Blob([`series:${s.id}`])),
+    getSeriesManifest: async () => new Map(seriesManifest),
+    putSeriesManifestEntry: async (id, entry) => void seriesManifest.set(id, entry),
     now: () => 1_000,
   };
-  return { deps, files, manifest };
+  return { deps, files, manifest, seriesManifest };
 }
 
 describe('backupFilename', () => {
@@ -188,5 +194,48 @@ describe('runBackup', () => {
     expect([...files.keys()]).toEqual([fallbackBackupFilename(itemAt(projects, 0))]);
 
     expect(await runBackup(deps)).toMatchObject({ written: 0, skipped: 1, failed: 0 });
+  });
+});
+
+describe('runBackup with series', () => {
+  const series = (id: string, projectIds: string[], title = 'M-Role'): ProjectSeries => ({ id, title, projectIds, createdAt: 0, updatedAt: 0 });
+
+  it('writes one file per series after its projects, and skips it while nothing in it changed', async () => {
+    const projects = [project('aaaaaaaa-1', 'HR', 1)];
+    const { deps, files } = setup(projects, undefined, false, [series('ssssssss-1', ['aaaaaaaa-1'])]);
+
+    expect(await runBackup(deps)).toMatchObject({ written: 2, failed: 0 });
+    expect([...files.keys()]).toEqual([backupFilename(projects[0]!), seriesBackupFilename({ id: 'ssssssss-1', title: 'M-Role' })]);
+    expect(await runBackup(deps)).toMatchObject({ written: 0, skipped: 2 });
+  });
+
+  it('rewrites the series file when a member is edited, but not the other projects', async () => {
+    const projects = [project('aaaaaaaa-1', 'HR', 1), project('bbbbbbbb-2', 'Other', 1)];
+    const { deps } = setup(projects, undefined, false, [series('ssssssss-1', ['aaaaaaaa-1'])]);
+    await runBackup(deps);
+
+    projects[0] = project('aaaaaaaa-1', 'HR', 2);
+
+    expect(await runBackup(deps)).toMatchObject({ written: 2, skipped: 1 });
+    expect(deps.buildSeriesArchive).toHaveBeenCalledTimes(2);
+  });
+
+  it('rewrites the series file when the series is reordered or renamed', async () => {
+    const projects = [project('aaaaaaaa-1', 'HR', 1), project('bbbbbbbb-2', 'APEX', 1)];
+    const list = [series('ssssssss-1', ['aaaaaaaa-1', 'bbbbbbbb-2'])];
+    const { deps, files } = setup(projects, undefined, false, list);
+    await runBackup(deps);
+
+    list[0] = series('ssssssss-1', ['bbbbbbbb-2', 'aaaaaaaa-1'], 'Renamed');
+
+    expect(await runBackup(deps)).toMatchObject({ written: 1, skipped: 2 });
+    expect([...files.keys()]).toContain(seriesBackupFilename({ id: 'ssssssss-1', title: 'Renamed' }));
+    expect([...files.keys()]).not.toContain(seriesBackupFilename({ id: 'ssssssss-1', title: 'M-Role' }));
+  });
+
+  it('leaves out a series with no projects', async () => {
+    const { deps, files } = setup([], undefined, false, [series('ssssssss-1', [])]);
+    expect(await runBackup(deps)).toMatchObject({ written: 0, failed: 0 });
+    expect(files.size).toBe(0);
   });
 });

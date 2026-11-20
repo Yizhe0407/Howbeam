@@ -123,6 +123,7 @@ export const en: Messages = {
   popup: {
     recordTarget: 'Record into',
     recordTargetNew: 'New project',
+    recordTargetNewInSeries: (series: string) => `New project · ${series}`,
     recordTargetCount: (count: number) => `${count} ${count === 1 ? 'step' : 'steps'}`,
     continueRecording: 'Continue recording',
     editorServiceUnavailable: 'Couldn’t reach the editor. Reopen Howbeam and try again.',
@@ -142,7 +143,7 @@ export const en: Messages = {
     loadFailed: 'Couldn’t read the local library.',
     operationFailed: 'Something went wrong. Please try again.',
     exportStarted: (title: string) => `Downloading the backup of “${title}”.`,
-    importTooLarge: 'This file is over the 128 MB import limit.',
+    importTooLarge: (megabytes: number) => `This file is over the ${megabytes} MB import limit.`,
     archiveErrors: {
       ARCHIVE_TOO_LARGE: 'This project file is over the 128 MB safety limit.',
       BROKEN_GROUP_REFERENCE: 'The project file’s step groups are damaged.',
@@ -198,6 +199,8 @@ export const en: Messages = {
       missing: 'Series not found',
       export: 'Export',
       exportTitle: 'Export series',
+      backupLabel: 'Download a backup of the series',
+      backupConfirm: 'Download .howbeam-series',
       exportLabel: 'Download ZIP',
       exportMode: 'Mode',
       exportMerged: 'One document',

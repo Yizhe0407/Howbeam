@@ -127,6 +127,7 @@ export const zhTW = {
   popup: {
     recordTarget: '錄到哪裡',
     recordTargetNew: '新專案',
+    recordTargetNewInSeries: (series: string) => `新專案 · ${series}`,
     recordTargetCount: (count: number) => `${count} 個步驟`,
     continueRecording: '接續錄製',
     editorServiceUnavailable: '無法連接編輯器，請重新開啟 Howbeam 後再試一次。',
@@ -146,7 +147,7 @@ export const zhTW = {
     loadFailed: '無法讀取本機專案庫。',
     operationFailed: '操作失敗，請再試一次。',
     exportStarted: (title: string) => `「${title}」的備份已開始下載。`,
-    importTooLarge: '匯入檔案超過 128 MB 安全上限。',
+    importTooLarge: (megabytes: number) => `匯入檔案超過 ${megabytes} MB 安全上限。`,
     // Keyed by ProjectArchiveError.code, so the archive layer keeps its English
     // diagnostics for logs while the UI speaks the active language.
     archiveErrors: {
@@ -204,6 +205,8 @@ export const zhTW = {
       missing: '找不到這個系列',
       export: '匯出',
       exportTitle: '匯出系列',
+      backupLabel: '下載系列備份',
+      backupConfirm: '下載 .howbeam-series',
       exportLabel: '下載 ZIP',
       exportMode: '方式',
       exportMerged: '合併成一份',

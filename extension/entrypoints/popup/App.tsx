@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { NEW_PROJECT_TARGET, type RecordTarget } from '@/lib/project/record-target';
 import { browser } from 'wxt/browser';
 import { AlertCircle, Library, Settings } from 'lucide-react';
 import { useRecordingSession } from '@/lib/recording/use-recording-session';
@@ -19,8 +20,8 @@ function App() {
   const { recording, isRecording, sessionId, error, recoverableError, dataError } = useRecordingSession();
   const [openingEditor, setOpeningEditor] = useState(false);
   const [editorOpenError, setEditorOpenError] = useState<string | null>(null);
-  // The 「錄到哪裡」 selection (null = 新專案).
-  const [targetProjectId, setTargetProjectId] = useState<string | null>(null);
+  // The 「錄到哪裡」 selection.
+  const [target, setTarget] = useState<RecordTarget>(NEW_PROJECT_TARGET);
   const editorRecovery = needsEditorRecovery(recoverableError);
 
   async function openSettingsPage() {
@@ -115,8 +116,8 @@ function App() {
         onStarted={handleStarted}
         onOpenEditor={openEditor}
         openingEditor={openingEditor}
-        targetProjectId={targetProjectId}
-        onTargetProjectChange={setTargetProjectId}
+        target={target}
+        onTargetChange={setTarget}
       />
 
       {!editorRecovery && !isRecording && <div className="h-0.5 w-full rounded-full bg-border-soft" aria-hidden="true" />}

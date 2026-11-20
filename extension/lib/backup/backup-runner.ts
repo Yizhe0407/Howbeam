@@ -1,6 +1,9 @@
 import { projectFilenameStem } from '../export/project-export-contract';
 import { projectDisplayTitle, type ProjectSummary } from '../storage/models';
-import type { BackupManifestEntry } from './backup-store';
+import { seriesDisplayTitle, type ProjectSeries } from '../storage/series-model';
+import type { BackupManifestEntry, SeriesBackupManifestEntry } from './backup-store';
+
+const SERIES_EXTENSION = 'howbeam-series';
 
 /** One backup file per project, named so a person can recognise it and so two
  * projects with the same title never collide. The id part is what keeps the
@@ -13,6 +16,29 @@ export function backupFilename(project: Pick<ProjectSummary, 'id' | 'title'>): s
  * one (some systems cannot store non-Latin names). Still unique per project. */
 export function fallbackBackupFilename(project: Pick<ProjectSummary, 'id'>): string {
   return `howbeam-${project.id.slice(0, 8)}.howbeam`;
+}
+
+/** Like backupFilename, for the Series file that holds every member Project in full. */
+export function seriesBackupFilename(series: Pick<ProjectSeries, 'id' | 'title'>): string {
+  return `${projectFilenameStem({ title: seriesDisplayTitle(series.title) })}-${series.id.slice(0, 8)}.${SERIES_EXTENSION}`;
+}
+
+export function fallbackSeriesBackupFilename(series: Pick<ProjectSeries, 'id'>): string {
+  return `howbeam-series-${series.id.slice(0, 8)}.${SERIES_EXTENSION}`;
+}
+
+/**
+ * What a Series file reflects: its title, its order and each member's
+ * revisions. Any change to one of them makes the file out of date.
+ */
+export function seriesBackupFingerprint(series: ProjectSeries, projectsById: ReadonlyMap<string, ProjectSummary>): string {
+  return JSON.stringify([
+    series.title,
+    series.projectIds.flatMap((id) => {
+      const project = projectsById.get(id);
+      return project ? [[id, project.contentRevision, project.stepEditRevision, project.metadataRevision]] : [];
+    }),
+  ]);
 }
 
 function isFilenameRejection(error: unknown): boolean {
@@ -34,6 +60,10 @@ export interface BackupRunDeps {
   buildArchive: (project: ProjectSummary) => Promise<Blob>;
   getManifest: () => Promise<Map<string, BackupManifestEntry>>;
   putManifestEntry: (projectId: string, entry: BackupManifestEntry) => Promise<void>;
+  listSeries: () => Promise<ProjectSeries[]>;
+  buildSeriesArchive: (series: ProjectSeries) => Promise<Blob>;
+  getSeriesManifest: () => Promise<Map<string, SeriesBackupManifestEntry>>;
+  putSeriesManifestEntry: (seriesId: string, entry: SeriesBackupManifestEntry) => Promise<void>;
   now?: () => number;
 }
 
@@ -58,6 +88,26 @@ async function writeFile(directory: FileSystemDirectoryHandle, name: string, blo
   }
   // The browser commits the temporary swap file on close, so a failed write never leaves a half-written backup.
   await writable.close();
+}
+
+/** Writes under the readable name, or the plain one when the folder rejects it, and drops a file the item had under another name. Returns the name used. */
+async function writeBackupFile(
+  directory: FileSystemDirectoryHandle,
+  names: { preferred: string; fallback: string; previous?: string },
+  blob: Blob,
+): Promise<string> {
+  let filename = names.preferred;
+  try {
+    await writeFile(directory, names.preferred, blob);
+  } catch (error) {
+    if (!isFilenameRejection(error)) throw error;
+    filename = names.fallback;
+    await writeFile(directory, names.fallback, blob);
+  }
+  if (names.previous && names.previous !== filename) {
+    await directory.removeEntry(names.previous).catch(() => undefined);
+  }
+  return filename;
 }
 
 /**
@@ -89,16 +139,7 @@ export async function runBackup(deps: BackupRunDeps): Promise<BackupResult> {
         continue;
       }
       const archive = await deps.buildArchive(project);
-      try {
-        await writeFile(directory, preferred, archive);
-      } catch (error) {
-        if (!isFilenameRejection(error)) throw error;
-        filename = fallback;
-        await writeFile(directory, fallback, archive);
-      }
-      if (previous && previous.filename !== filename) {
-        await directory.removeEntry(previous.filename).catch(() => undefined);
-      }
+      filename = await writeBackupFile(directory, { preferred, fallback, previous: previous?.filename }, archive);
       await deps.putManifestEntry(project.id, {
         contentRevision: project.contentRevision,
         stepEditRevision: project.stepEditRevision,
@@ -112,6 +153,35 @@ export async function runBackup(deps: BackupRunDeps): Promise<BackupResult> {
       result.failedTitles.push(projectDisplayTitle(project.title));
       result.error = error instanceof Error ? error.message : String(error);
       console.warn('[howbeam] backup of a project failed', project.id, filename, error);
+    }
+  }
+
+  // Each Series also gets a file holding every member in full, so one file restores it whole.
+  // Projects are written first: a Series file is only as fresh as the revisions it records.
+  const [seriesList, seriesManifest] = await Promise.all([deps.listSeries(), deps.getSeriesManifest()]);
+  const projectsById = new Map(projects.map((project) => [project.id, project]));
+  for (const series of seriesList) {
+    if (!series.projectIds.some((id) => projectsById.has(id))) continue;
+    const preferred = seriesBackupFilename(series);
+    const fallback = fallbackSeriesBackupFilename(series);
+    const previous = seriesManifest.get(series.id);
+    const fingerprint = seriesBackupFingerprint(series, projectsById);
+    try {
+      if (previous && previous.fingerprint === fingerprint
+        && (previous.filename === preferred || previous.filename === fallback)
+        && await fileExists(directory, previous.filename)) {
+        result.skipped += 1;
+        continue;
+      }
+      const archive = await deps.buildSeriesArchive(series);
+      const filename = await writeBackupFile(directory, { preferred, fallback, previous: previous?.filename }, archive);
+      await deps.putSeriesManifestEntry(series.id, { fingerprint, filename, backedUpAt: now() });
+      result.written += 1;
+    } catch (error) {
+      result.failed += 1;
+      result.failedTitles.push(seriesDisplayTitle(series.title));
+      result.error = error instanceof Error ? error.message : String(error);
+      console.warn('[howbeam] backup of a series failed', series.id, error);
     }
   }
   return result;

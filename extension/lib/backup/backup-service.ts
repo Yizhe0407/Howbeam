@@ -1,4 +1,6 @@
 import { exportProjectArchive } from '../export/project-archive-serialize';
+import { exportStoredSeriesArchive } from '../export/series-archive';
+import { getAllSeries } from '../storage/series-repository';
 import { getProjectSummaries } from '../storage/project-repository';
 import { getSteps } from '../storage/step-repository';
 import type { ProjectSummary } from '../storage/models';
@@ -7,7 +9,9 @@ import { runBackup, type BackupResult } from './backup-runner';
 import {
   getBackupConfig,
   getBackupManifest,
+  getSeriesBackupManifest,
   putBackupManifestEntry,
+  putSeriesBackupManifestEntry,
   saveBackupLastRun,
 } from './backup-store';
 
@@ -55,6 +59,10 @@ export async function runFolderBackup(): Promise<BackupResult | null> {
       buildArchive,
       getManifest: getBackupManifest,
       putManifestEntry: putBackupManifestEntry,
+      listSeries: getAllSeries,
+      buildSeriesArchive: (series) => exportStoredSeriesArchive(series),
+      getSeriesManifest: getSeriesBackupManifest,
+      putSeriesManifestEntry: putSeriesBackupManifestEntry,
     });
     await saveBackupLastRun({
       at: Date.now(),

@@ -44,7 +44,8 @@ const PROJECT_ROW = (id: string) => ({ id, title: id, entryCount: 0, stepCount: 
 let storedState: RecordingState;
 
 function parkPending(projectId: string | null, mode: 'steps' | 'snapshot' = 'steps'): void {
-  extra.local.set(PENDING_START_KEY, { mode, tabId: 7, projectId, createdAt: Date.now() });
+  const target = projectId === null ? { kind: 'new' } : { kind: 'project', projectId };
+  extra.local.set(PENDING_START_KEY, { mode, tabId: 7, target, createdAt: Date.now() });
 }
 
 /** Fires the grant the way the browser does once the user accepts the dialog. */

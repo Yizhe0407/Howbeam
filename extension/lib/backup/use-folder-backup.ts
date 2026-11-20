@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDeferredBusy } from '../shared/use-deferred-busy';
-import { subscribeProjectsChanged } from '../storage/change-notifier';
+import { subscribeProjectsChanged, subscribeSeriesChanged } from '../storage/change-notifier';
 import { isFolderBackupSupported, pickBackupDirectory, requestBackupPermission } from './directory-handle';
 import {
   clearBackupConfig,
@@ -51,6 +51,8 @@ export function useAutoFolderBackup(): void {
     const { schedule, cancel } = createBackupScheduler(run);
     run();
     const unsubscribe = subscribeProjectsChanged(schedule);
+    // A Series file changes with the Series too (title, order, members), not only with its Projects.
+    const unsubscribeSeries = subscribeSeriesChanged(schedule);
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') {
         cancel();
@@ -61,6 +63,7 @@ export function useAutoFolderBackup(): void {
     return () => {
       cancel();
       unsubscribe();
+      unsubscribeSeries();
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);

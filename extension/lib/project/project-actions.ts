@@ -15,6 +15,8 @@ import {
   requireRuntimeMessageResult,
 } from '../runtime/runtime-message-result';
 import { t } from '@/lib/shared/i18n';
+import { NEW_PROJECT_TARGET, type RecordTarget } from './record-target';
+import { addProjectToSeries } from '../storage/series-repository';
 
 // Preserve invocation order across async IndexedDB lookups. Without this, a
 // slow earlier select could overwrite a newer selection after its lookup ends.
@@ -102,40 +104,50 @@ function restoreSelection(previousProjectId: string | null, claimedProjectId: st
 
 /**
  * Picks the Project a popup-initiated run records into and makes it the UI
- * selection. `null` creates a brand-new Project; an id appends to that existing
- * one (the same append the editor's 接續錄製 performs). Shared by the popup
- * and the background's permission-resumed start so both resolve a target the
- * same way.
+ * selection. A new target creates a brand-new Project, placed at the end of its
+ * Series when it names one; a Project target appends to that existing one (the
+ * same append the editor's 接續錄製 performs). Shared by the popup and the
+ * background's permission-resumed start so both resolve a target the same way.
  */
-export async function claimRecordingProject(targetProjectId: string | null): Promise<RecordingProjectClaim> {
+export async function claimRecordingProject(target: RecordTarget): Promise<RecordingProjectClaim> {
   // The pre-claim selection is remembered so a failed start is invisible.
   const previousProjectId = (await getSelectedProject())?.id ?? null;
-  if (targetProjectId === null) {
+  if (target.kind === 'new') {
     const project = await createAndSelectProject();
-    return {
+    const claim: RecordingProjectClaim = {
       project,
       autoCreated: true,
       release: async () => {
+        // Deleting the untouched shell also takes it out of its Series.
         await discardUntouchedProject(project.id, previousProjectId);
       },
     };
+    if (target.seriesId) {
+      try {
+        await addProjectToSeries(target.seriesId, project.id);
+      } catch (error) {
+        await claim.release();
+        throw error;
+      }
+    }
+    return claim;
   }
-  const project = await selectProject(targetProjectId);
+  const project = await selectProject(target.projectId);
   return { project, autoCreated: false, release: () => restoreSelection(previousProjectId, project.id) };
 }
 
 /**
  * The popup's start transaction. By default every start records into a
- * brand-new Project (Scribe/Tango convention); passing `targetProjectId` is the
+ * brand-new Project (Scribe/Tango convention); a Project target is the
  * explicit opt-in to append to an existing one. Claims the Project, asks the
  * background to start recording into it, and on failure rolls the world back
  * to exactly how it was. Returns the Project the live run records into.
  */
 export async function startRecordingIntoProject(
   mode: RecordingMode,
-  targetProjectId: string | null = null,
+  target: RecordTarget = NEW_PROJECT_TARGET,
 ): Promise<Project> {
-  const claim = await claimRecordingProject(targetProjectId);
+  const claim = await claimRecordingProject(target);
   const { project } = claim;
   try {
     const result = requireRuntimeMessageResult<StartRecordingResult>(

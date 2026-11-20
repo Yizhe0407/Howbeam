@@ -421,7 +421,7 @@ export default defineBackground(() => {
       if (!pending) return;
       await clearCrossTabRecordingDecline();
       const tab = await browser.tabs.get(pending.tabId);
-      const claim = await claimRecordingProject(pending.projectId);
+      const claim = await claimRecordingProject(pending.target);
       const result = await queueLifecycle(() =>
         runLifecycle.startRecording(
           {

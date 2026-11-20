@@ -14,6 +14,13 @@ export interface BackupManifestEntry {
   backedUpAt: number;
 }
 
+/** What a Series file on disk reflects: the Series and each member's revisions, as one comparable string. */
+export interface SeriesBackupManifestEntry {
+  fingerprint: string;
+  filename: string;
+  backedUpAt: number;
+}
+
 export interface BackupLastRun {
   at: number;
   written: number;
@@ -37,6 +44,10 @@ interface BackupDB extends DBSchema {
     key: string;
     value: BackupManifestEntry;
   };
+  seriesManifest: {
+    key: string;
+    value: SeriesBackupManifestEntry;
+  };
 }
 
 const CONFIG_KEY = 'config';
@@ -45,10 +56,14 @@ const LAST_RUN_KEY = 'lastRun';
 let databasePromise: Promise<IDBPDatabase<BackupDB>> | null = null;
 
 function database(): Promise<IDBPDatabase<BackupDB>> {
-  databasePromise ??= openDB<BackupDB>('howbeam-backup', 1, {
-    upgrade(db) {
-      db.createObjectStore('kv');
-      db.createObjectStore('manifest');
+  // Version 2 added the Series manifest; an existing folder's Series files are simply written on the next run.
+  databasePromise ??= openDB<BackupDB>('howbeam-backup', 2, {
+    upgrade(db, oldVersion) {
+      if (oldVersion < 1) {
+        db.createObjectStore('kv');
+        db.createObjectStore('manifest');
+      }
+      if (oldVersion < 2) db.createObjectStore('seriesManifest');
     },
   });
   return databasePromise;
@@ -66,14 +81,15 @@ export async function getBackupConfig(): Promise<BackupConfig | null> {
   return value && 'directory' in value ? value : null;
 }
 
-/** Choosing a folder starts a fresh manifest, so every project is written to the new place. */
+/** Choosing a folder starts fresh manifests, so every project and series is written to the new place. */
 export async function saveBackupConfig(config: BackupConfig): Promise<void> {
   const db = await database();
-  const tx = db.transaction(['kv', 'manifest'], 'readwrite');
+  const tx = db.transaction(['kv', 'manifest', 'seriesManifest'], 'readwrite');
   await Promise.all([
     tx.objectStore('kv').put(config, CONFIG_KEY),
     tx.objectStore('kv').delete(LAST_RUN_KEY),
     tx.objectStore('manifest').clear(),
+    tx.objectStore('seriesManifest').clear(),
     tx.done,
   ]);
 }
@@ -81,8 +97,8 @@ export async function saveBackupConfig(config: BackupConfig): Promise<void> {
 /** Stops backing up. Files already in the folder are left alone. */
 export async function clearBackupConfig(): Promise<void> {
   const db = await database();
-  const tx = db.transaction(['kv', 'manifest'], 'readwrite');
-  await Promise.all([tx.objectStore('kv').clear(), tx.objectStore('manifest').clear(), tx.done]);
+  const tx = db.transaction(['kv', 'manifest', 'seriesManifest'], 'readwrite');
+  await Promise.all([tx.objectStore('kv').clear(), tx.objectStore('manifest').clear(), tx.objectStore('seriesManifest').clear(), tx.done]);
 }
 
 export async function getBackupManifest(): Promise<Map<string, BackupManifestEntry>> {
@@ -96,6 +112,19 @@ export async function getBackupManifest(): Promise<Map<string, BackupManifestEnt
 
 export async function putBackupManifestEntry(projectId: string, entry: BackupManifestEntry): Promise<void> {
   await (await database()).put('manifest', entry, projectId);
+}
+
+export async function getSeriesBackupManifest(): Promise<Map<string, SeriesBackupManifestEntry>> {
+  const db = await database();
+  const manifest = new Map<string, SeriesBackupManifestEntry>();
+  for (let cursor = await db.transaction('seriesManifest').store.openCursor(); cursor; cursor = await cursor.continue()) {
+    manifest.set(cursor.key, cursor.value);
+  }
+  return manifest;
+}
+
+export async function putSeriesBackupManifestEntry(seriesId: string, entry: SeriesBackupManifestEntry): Promise<void> {
+  await (await database()).put('seriesManifest', entry, seriesId);
 }
 
 export async function getBackupLastRun(): Promise<BackupLastRun | null> {

@@ -1,7 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ArchiveRestore, Layers, Loader2, Search } from 'lucide-react';
-import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
+import { createProjectFromSteps, createSeriesWithProjects, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
 import { projectDisplayTitle, type ProjectSummary } from '@/lib/storage/models';
 import { clearSelectedProject, openSelectedProjectInEditor } from '@/lib/project/project-actions';
@@ -33,9 +33,18 @@ import { usePendingAction } from '@/components/shared/use-pending-action';
 import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 import { intlLocale, t } from '@/lib/shared/i18n';
 import { exportProjectArchive } from '@/lib/export/project-archive-serialize';
+import {
+  SERIES_ARCHIVE_EXTENSION,
+  SERIES_ARCHIVE_LIMITS,
+  SERIES_ARCHIVE_MIME_TYPE,
+  exportStoredSeriesArchive,
+  importSeriesArchive,
+  isSeriesArchive,
+} from '@/lib/export/series-archive';
+import { seriesDisplayTitle } from '@/lib/storage/series-model';
 import { importProjectArchive } from '@/lib/export/project-archive-import';
 import { PROJECT_ARCHIVE_LIMITS, ProjectArchiveError } from '@/lib/export/project-archive-contract';
-import { projectExportFilename } from '@/lib/export/project-export-contract';
+import { projectExportFilename, projectFilenameStem } from '@/lib/export/project-export-contract';
 import { downloadBlobViaBrowser } from '@/lib/export/download-utils';
 import { useExtensionPageRegistration } from '@/lib/runtime/use-extension-page-registration';
 import ProjectCard from './ProjectCard';
@@ -46,6 +55,10 @@ import SeriesExportDialog from './SeriesExportDialog';
 import type { RunExport } from '@/components/editor/use-export-runner';
 import { EditingBlockedError } from '@/lib/editor/editor-app-model';
 import { useSeriesRoute } from './use-series-route';
+
+function megabytes(bytes: number): number {
+  return Math.round(bytes / (1024 * 1024));
+}
 
 /** Derives the .howbeam archive name from the same stem the publication
  * exporters use; strips the extension the (unexported) stem helper's facade appends. */
@@ -65,7 +78,8 @@ export default function App() {
   const loadingShown = useDeferredBusy(loading);
   const { pendingKey: pendingId, shownKey: shownId, runExclusive } = usePendingAction<string>();
   const [deleteTarget, setDeleteTarget] = useState<ProjectSummary | null>(null);
-  const [exportTarget, setExportTarget] = useState<ProjectSummary | null>(null);
+  /** What 下載備份 is about to save: one Project's file, or a Series file holding all of its Projects. */
+  const [exportTarget, setExportTarget] = useState<{ kind: 'project'; project: ProjectSummary } | { kind: 'series'; series: ProjectSeries } | null>(null);
   const [seriesTarget, setSeriesTarget] = useState<ProjectSummary | null>(null);
   const [dissolveTarget, setDissolveTarget] = useState<ProjectSeries | null>(null);
   const [exportSeriesTarget, setExportSeriesTarget] = useState<ProjectSeries | null>(null);
@@ -158,6 +172,16 @@ export default function App() {
     return outcome ?? false;
   }
 
+  async function exportSeriesBackup(target: ProjectSeries) {
+    await run(seriesKey(target.id), async () => {
+      const title = seriesDisplayTitle(target.title);
+      const blob = await exportStoredSeriesArchive(target);
+      await downloadBlobViaBrowser(blob, `${projectFilenameStem({ title })}.${SERIES_ARCHIVE_EXTENSION}`);
+      toast.success(t().library.exportStarted(title));
+    }, { refreshAfter: false });
+    setExportTarget(null);
+  }
+
   async function exportProject(project: ProjectSummary) {
     await run(project.id, async () => {
       const blob = await exportProjectArchive(await getSteps(project.id), {
@@ -189,13 +213,28 @@ export default function App() {
     setDeleteTarget(null);
   }
 
-  async function importProjectFile(file: File) {
-    if (file.size > PROJECT_ARCHIVE_LIMITS.maxArchiveBytes) {
-      setError(t().library.importTooLarge);
+  /** A Series file restores the Series with all its Projects; anything else is read as one Project. */
+  async function importLibraryFile(file: File) {
+    if (file.size > SERIES_ARCHIVE_LIMITS.maxArchiveBytes) {
+      setError(t().library.importTooLarge(megabytes(SERIES_ARCHIVE_LIMITS.maxArchiveBytes)));
       return;
     }
+    let importedSeriesId: string | null = null;
     await run('import', async () => {
-      const imported = await importProjectArchive(file);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (isSeriesArchive(bytes)) {
+        const imported = await importSeriesArchive(bytes);
+        importedSeriesId = (await createSeriesWithProjects(imported.title, imported.projects.map((project) => ({
+          steps: project.steps,
+          initial: { title: project.metadata.title, description: project.metadata.description },
+          sections: project.metadata.sections,
+        })))).id;
+        return;
+      }
+      if (bytes.byteLength > PROJECT_ARCHIVE_LIMITS.maxArchiveBytes) {
+        throw new ProjectArchiveError('ARCHIVE_TOO_LARGE', 'The project archive is too large.');
+      }
+      const imported = await importProjectArchive(bytes);
       const project = await createProjectFromSteps(
         imported.steps,
         {
@@ -207,6 +246,8 @@ export default function App() {
       );
       await openSelectedProjectInEditor(project.id, { inPlace: true });
     });
+    // Opened once the refresh above has read it, so the page has the Series to show.
+    if (importedSeriesId) openSeries(importedSeriesId);
   }
 
   const openProject = (projectId: string) => void run(projectId, () => openSelectedProjectInEditor(projectId, { inPlace: true }));
@@ -269,11 +310,11 @@ export default function App() {
               // the accessibility tree it would be an unlabeled first stop.
               tabIndex={-1}
               aria-hidden="true"
-              accept=".howbeam,application/vnd.howbeam.project+zip"
+              accept={`.howbeam,.${SERIES_ARCHIVE_EXTENSION},application/vnd.howbeam.project+zip,${SERIES_ARCHIVE_MIME_TYPE}`}
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.currentTarget.value = '';
-                if (file) void importProjectFile(file);
+                if (file) void importLibraryFile(file);
               }}
             />
             {/* Icon always shows; label appears from `sm` up, like the editor's actions. */}
@@ -385,6 +426,7 @@ export default function App() {
                 onOpen={() => openSeries(item.series.id)}
                 onRename={(title) => renameSeriesTo(item.series.id, title)}
                 onExport={() => setExportSeriesTarget(item.series)}
+                onBackup={() => setExportTarget({ kind: 'series', series: item.series })}
                 onDissolve={() => setDissolveTarget(item.series)}
               />
             ) : (
@@ -399,7 +441,7 @@ export default function App() {
                 onRename={(title) => renameProject(item.project.id, title)}
                 onDuplicate={() => void run(item.project.id, async () => { await duplicateProject(item.project.id); })}
                 onAddToSeries={() => setSeriesTarget(item.project)}
-                onExport={() => setExportTarget(item.project)}
+                onExport={() => setExportTarget({ kind: 'project', project: item.project })}
                 onDelete={() => setDeleteTarget(item.project)}
               />
             )))}
@@ -413,12 +455,15 @@ export default function App() {
         open={exportTarget !== null}
         title={t().library.exportDialogTitle}
         description={t().library.exportDialogDescription}
-        confirmLabel={t().library.exportDialogConfirm}
+        confirmLabel={exportTarget?.kind === 'series' ? t().library.series.backupConfirm : t().library.exportDialogConfirm}
         confirmVariant="default"
         pendingLabel={t().library.exportDialogPending}
-        pending={exportTarget ? pendingId === exportTarget.id : false}
+        pending={exportTarget ? pendingId === (exportTarget.kind === 'series' ? seriesKey(exportTarget.series.id) : exportTarget.project.id) : false}
         onOpenChange={(open) => { if (!open) setExportTarget(null); }}
-        onConfirm={() => { if (exportTarget) void exportProject(exportTarget); }}
+        onConfirm={() => {
+          if (exportTarget?.kind === 'series') void exportSeriesBackup(exportTarget.series);
+          else if (exportTarget) void exportProject(exportTarget.project);
+        }}
       />
 
       <AddToSeriesDialog

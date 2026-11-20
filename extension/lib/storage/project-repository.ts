@@ -1,4 +1,4 @@
-import type { IDBPTransaction } from 'idb';
+import type { IDBPTransaction, StoreNames } from 'idb';
 import { repairProjectSections, type ProjectSection } from '../project/project-sections';
 import {
   buildCompleteStepEntries,
@@ -20,12 +20,12 @@ import {
   runWithDatabase,
   summarizeSteps,
   type HowbeamDB,
-  type ProjectStepsTransaction,
 } from './database';
 import { clearActiveProjectId } from './storage';
 import { assertStorableScreenshots } from './screenshot-rules';
 import { notifyProjectsChanged, notifySeriesChanged } from './change-notifier';
-import { detachProjectsFromSeries } from './series-repository';
+import { detachProjectsFromSeries, newSeries } from './series-repository';
+import type { ProjectSeries } from './series-model';
 import { t } from '../shared/i18n';
 
 export async function createProject(initial?: Partial<Pick<Project, 'title' | 'description'>>): Promise<Project> {
@@ -162,7 +162,10 @@ function prepareProjectClone(
   return { project, steps };
 }
 
-async function storePreparedProject(tx: ProjectStepsTransaction, prepared: PreparedProjectClone): Promise<void> {
+async function storePreparedProject(
+  tx: IDBPTransaction<HowbeamDB, ArrayLike<StoreNames<HowbeamDB>>, 'readwrite'>,
+  prepared: PreparedProjectClone,
+): Promise<void> {
   await tx.objectStore('projects').add(prepared.project);
   for (const step of prepared.steps) await tx.objectStore('steps').add(step);
 }
@@ -177,6 +180,28 @@ export async function createProjectFromSteps(
   return runProjectStepsWrite(async (tx) => {
     await storePreparedProject(tx, prepared);
     return prepared.project;
+  });
+}
+
+export interface SeriesProjectSource {
+  steps: readonly Step[];
+  initial?: Partial<Pick<Project, 'title' | 'description'>>;
+  sections?: readonly ProjectSection[];
+}
+
+/** Creates every Project and the Series that holds them, in order, in one
+ * transaction: an imported Series lands whole or not at all. */
+export async function createSeriesWithProjects(title: string, sources: readonly SeriesProjectSource[]): Promise<ProjectSeries> {
+  const prepared = sources.map((source) => prepareProjectClone(source.steps, source.initial, { sections: source.sections }));
+  await assertStorableScreenshots(prepared.flatMap((project) => project.steps.map((step) => step.screenshotBlob)));
+  return runDatabaseWrite(['projects', 'steps', 'series'], async (tx) => {
+    for (const project of prepared) await storePreparedProject(tx, project);
+    const series = newSeries(title, prepared.map((project) => project.project.id));
+    await tx.objectStore('series').add(series);
+    return series;
+  }, () => {
+    notifyProjectsChanged();
+    notifySeriesChanged();
   });
 }
 

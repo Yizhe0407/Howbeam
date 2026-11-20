@@ -5,6 +5,7 @@ import { buttonVariants } from '@/components/ui/button';
 import InlineAlert from '@/components/shared/InlineAlert';
 import OpenEditorButton from '@/components/popup/OpenEditorButton';
 import RecordTargetPicker from '@/components/popup/RecordTargetPicker';
+import { NEW_PROJECT_TARGET, type RecordTarget } from '@/lib/project/record-target';
 import { reportError } from '@/components/shared/report-error';
 import { cn } from '@/lib/shared/utils';
 import type { RecordingMode, RecordingState } from '@/lib/storage/recording-state';
@@ -33,9 +34,9 @@ interface Props {
   onStarted?: () => void;
   onOpenEditor?: () => void | Promise<void>;
   openingEditor?: boolean;
-  /** The 「錄到哪裡」 selection (null = 新專案). Pass both to let the parent act on the same target (e.g. reset). */
-  targetProjectId?: string | null;
-  onTargetProjectChange?: (projectId: string | null) => void;
+  /** The 「錄到哪裡」 selection. Pass both to let the parent act on the same target (e.g. reset). */
+  target?: RecordTarget;
+  onTargetChange?: (target: RecordTarget) => void;
   className?: string;
 }
 
@@ -114,18 +115,18 @@ export default function RecordControls({
   onStarted,
   onOpenEditor,
   openingEditor = false,
-  targetProjectId: controlledTargetProjectId,
-  onTargetProjectChange,
+  target: controlledTarget,
+  onTargetChange,
   className,
 }: Props) {
   const [mode, setMode] = useState<RecordingMode>('steps');
   // null = brand-new project. Never persisted: every popup open starts at 新專案.
-  const [localTargetProjectId, setLocalTargetProjectId] = useState<string | null>(null);
-  const targetProjectId = controlledTargetProjectId === undefined ? localTargetProjectId : controlledTargetProjectId;
-  const setTargetProjectId = useCallback((projectId: string | null) => {
-    setLocalTargetProjectId(projectId);
-    onTargetProjectChange?.(projectId);
-  }, [onTargetProjectChange]);
+  const [localTarget, setLocalTarget] = useState<RecordTarget>(NEW_PROJECT_TARGET);
+  const target = controlledTarget ?? localTarget;
+  const setTarget = useCallback((next: RecordTarget) => {
+    setLocalTarget(next);
+    onTargetChange?.(next);
+  }, [onTargetChange]);
   const [pending, setPending] = useState(false);
   const pendingShown = useDeferredBusy(pending);
   const [finishing, setFinishing] = useState(false);
@@ -139,7 +140,7 @@ export default function RecordControls({
    * once; a later grant clears it so a reconsidered user gets asked again.
    */
   async function requestCrossTabPermission(
-    resumeStart?: { mode: RecordingMode; tabId: number; projectId: string | null },
+    resumeStart?: { mode: RecordingMode; tabId: number; target: RecordTarget },
   ): Promise<{ granted: boolean; parked: boolean }> {
     try {
       // Not awaited: Firefox needs permissions.request to run synchronously within the click.
@@ -174,7 +175,7 @@ export default function RecordControls({
       // continues single-tab. Must be the first await here — see requestCrossTabPermission.
       if (mode === 'steps' && crossTab !== 'granted' && crossTab !== 'declined') {
         const { granted, parked } = await requestCrossTabPermission(
-          activeTabId != null ? { mode, tabId: activeTabId, projectId: targetProjectId } : undefined,
+          activeTabId != null ? { mode, tabId: activeTabId, target } : undefined,
         );
         if (granted && parked && !(await claimPendingStart())) {
           onStarted?.();
@@ -187,7 +188,7 @@ export default function RecordControls({
         setRestrictedPage(true);
         throw new Error(t().popup.restrictedPageError);
       }
-      await startRecordingIntoProject(mode, targetProjectId);
+      await startRecordingIntoProject(mode, target);
       onStarted?.();
     } catch (error) {
       setControlError(reportError('[howbeam] failed to start recording', error, t().popup.startFailed));
@@ -371,7 +372,7 @@ export default function RecordControls({
             );
           })}
         </div>
-        <RecordTargetPicker value={targetProjectId} onChange={setTargetProjectId} disabled={pendingShown} />
+        <RecordTargetPicker value={target} onChange={setTarget} disabled={pendingShown} />
         {/* Passive affordance, never a nag: shown whenever the grant is absent
             (even after a remembered decline), and the request runs directly in
             the click handler so the browser accepts it as a user gesture. */}
@@ -416,7 +417,7 @@ export default function RecordControls({
         )}
         {pendingShown
           ? activeMode.startingLabel
-          : targetProjectId === null
+          : target.kind === 'new'
             ? t().common.startRecording
             : t().popup.continueRecording}
       </button>

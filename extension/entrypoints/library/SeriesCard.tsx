@@ -1,4 +1,4 @@
-import { Download, Layers, Ungroup } from 'lucide-react';
+import { Archive, Download, Layers, Ungroup } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import EditableTitle from '@/components/shared/EditableTitle';
@@ -17,11 +17,12 @@ interface Props {
   onOpen: () => void;
   onRename: (title: string) => Promise<void>;
   onExport: () => void;
+  onBackup: () => void;
   onDissolve: () => void;
 }
 
 /** A Series in the Library grid: its first Project's cover on a stack, and the way into the Series. */
-export default function SeriesCard({ entry, meta, locked, lockedTitle, onOpen, onRename, onExport, onDissolve }: Props) {
+export default function SeriesCard({ entry, meta, locked, lockedTitle, onOpen, onRename, onExport, onBackup, onDissolve }: Props) {
   const { series, projects } = entry;
   const first = projects[0];
   return (
@@ -74,6 +75,14 @@ export default function SeriesCard({ entry, meta, locked, lockedTitle, onOpen, o
             disabled={locked || projects.length === 0}
           >
             <Download />
+          </CardIconButton>
+          <CardIconButton
+            label={t().library.series.backupLabel}
+            tooltip={lockedTitle(t().library.exportArchiveTooltip)}
+            onClick={onBackup}
+            disabled={locked || projects.length === 0}
+          >
+            <Archive />
           </CardIconButton>
           <CardIconButton
             label={t().library.series.dissolve}

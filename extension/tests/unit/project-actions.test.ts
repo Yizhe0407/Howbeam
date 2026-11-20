@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   clearActiveProjectId: vi.fn(),
   getRecordingState: vi.fn(),
   sendMessage: vi.fn(),
+  addProjectToSeries: vi.fn(),
 }));
 
 vi.mock('wxt/browser', () => ({ browser: { runtime: { sendMessage: mocks.sendMessage } } }));
@@ -17,6 +18,7 @@ vi.mock('@/lib/storage/project-repository', () => ({
   getProject: mocks.getProject,
   discardPristineProject: mocks.discardPristineProject,
 }));
+vi.mock('@/lib/storage/series-repository', () => ({ addProjectToSeries: mocks.addProjectToSeries }));
 vi.mock('@/lib/storage/storage', () => ({
   getActiveProjectId: mocks.getActiveProjectId,
   setActiveProjectId: mocks.setActiveProjectId,
@@ -193,6 +195,26 @@ describe('popup start transaction (startRecordingIntoProject)', () => {
     expect(mocks.discardPristineProject).not.toHaveBeenCalled();
   });
 
+  it('places the fresh project at the end of the chosen series before recording', async () => {
+    mocks.sendMessage.mockResolvedValue({ ok: true, sessionId: 'project-new', runId: 'run-1' });
+    mocks.addProjectToSeries.mockResolvedValue(undefined);
+
+    await startRecordingIntoProject('steps', { kind: 'new', seriesId: 'series-1' });
+
+    expect(mocks.addProjectToSeries).toHaveBeenCalledWith('series-1', 'project-new');
+    expect(mocks.addProjectToSeries.mock.invocationCallOrder[0]).toBeLessThan(mocks.sendMessage.mock.invocationCallOrder[0]!);
+  });
+
+  it('does not start, and discards the fresh project, when its series is gone', async () => {
+    mocks.addProjectToSeries.mockRejectedValue(new Error('Series not found.'));
+    mocks.discardPristineProject.mockResolvedValue(true);
+
+    await expect(startRecordingIntoProject('steps', { kind: 'new', seriesId: 'series-gone' })).rejects.toThrow('Series not found.');
+
+    expect(mocks.sendMessage).not.toHaveBeenCalled();
+    expect(mocks.discardPristineProject).toHaveBeenCalledWith('project-new');
+  });
+
   it('rolls back the fresh project and restores the previous selection on failure', async () => {
     mocks.sendMessage.mockResolvedValue({ ok: false, error: '此頁面不允許錄製。' });
     mocks.discardPristineProject.mockResolvedValue(true);
@@ -223,7 +245,7 @@ describe('popup start transaction into an existing project', () => {
   it('selects the target and starts without creating a project or marking it reclaimable', async () => {
     mocks.sendMessage.mockResolvedValue({ ok: true, sessionId: 'project-target', runId: 'run-1' });
 
-    await expect(startRecordingIntoProject('steps', 'project-target')).resolves.toMatchObject({ id: 'project-target' });
+    await expect(startRecordingIntoProject('steps', { kind: 'project', projectId: 'project-target' })).resolves.toMatchObject({ id: 'project-target' });
 
     expect(mocks.createProject).not.toHaveBeenCalled();
     expect(mocks.setActiveProjectId).toHaveBeenCalledWith('project-target');
@@ -238,7 +260,7 @@ describe('popup start transaction into an existing project', () => {
   it('restores the previous selection and never deletes the project when start fails', async () => {
     mocks.sendMessage.mockResolvedValue({ ok: false, error: '此頁面不允許錄製。' });
 
-    await expect(startRecordingIntoProject('steps', 'project-target')).rejects.toThrow('此頁面不允許錄製');
+    await expect(startRecordingIntoProject('steps', { kind: 'project', projectId: 'project-target' })).rejects.toThrow('此頁面不允許錄製');
 
     expect(mocks.discardPristineProject).not.toHaveBeenCalled();
     expect(mocks.setActiveProjectId).toHaveBeenLastCalledWith('project-old');
@@ -248,7 +270,7 @@ describe('popup start transaction into an existing project', () => {
     mocks.sendMessage.mockResolvedValue(undefined);
     mocks.getRecordingState.mockResolvedValue({ isRecording: true, sessionId: 'project-target' });
 
-    await expect(startRecordingIntoProject('steps', 'project-target')).rejects.toThrow('無法連接錄製功能');
+    await expect(startRecordingIntoProject('steps', { kind: 'project', projectId: 'project-target' })).rejects.toThrow('無法連接錄製功能');
 
     expect(mocks.setActiveProjectId).toHaveBeenCalledExactlyOnceWith('project-target');
   });
@@ -256,7 +278,7 @@ describe('popup start transaction into an existing project', () => {
   it('fails without starting when the target project no longer exists', async () => {
     mocks.getProject.mockImplementation(async (id: string) => (id === 'project-old' ? project(id) : undefined));
 
-    await expect(startRecordingIntoProject('steps', 'project-gone')).rejects.toThrow('找不到這個專案');
+    await expect(startRecordingIntoProject('steps', { kind: 'project', projectId: 'project-gone' })).rejects.toThrow('找不到這個專案');
 
     expect(mocks.sendMessage).not.toHaveBeenCalled();
   });
