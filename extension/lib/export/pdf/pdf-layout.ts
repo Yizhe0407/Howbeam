@@ -77,7 +77,6 @@ export interface PdfLayouterOptions {
   measure: (text: string, style: PdfTextStyle) => number;
   footerTitle: string;
   labels: {
-    pageNumber: (page: number) => string;
     credit: string;
   };
   signal?: AbortSignal;
@@ -306,6 +305,7 @@ export class PdfLayouter {
       lines,
       height: style.gapBefore + lines.length * style.lineHeight + style.gapAfter,
     }));
+    this.cursorY += PDF_SPEC.annotationListGapBefore;
     let runStart = 0;
     for (const [index, marker] of markers.entries()) {
       if (layout.columns > 1 && !layout.spans[index]) continue;
@@ -414,7 +414,7 @@ export class PdfLayouter {
       alt,
       image: { bytes: image.bytes, x: PDF_SPEC.margin + PDF_SPEC.stepIndent, y: this.cursorY, width, height },
     });
-    this.cursorY += height + PDF_SPEC.imageGapAfter;
+    this.cursorY += height;
     this.hasContent = true;
   }
 
@@ -457,7 +457,7 @@ export class PdfLayouter {
     }
     texts.push({ text: labels.credit, x: (widthPixels - creditWidth) / 2, top, style });
     if (settings.showFooter) {
-      const pageLabel = labels.pageNumber(this.pageNumber);
+      const pageLabel = String(this.pageNumber);
       texts.push({ text: pageLabel, x: widthPixels - PDF_SPEC.margin - measure(pageLabel), top, style });
     }
     this.pushBlock({ kind: 'artifact', role: 'pagination', rules: [rule], texts });

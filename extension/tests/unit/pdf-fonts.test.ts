@@ -128,7 +128,7 @@ describe('PDF export fonts', () => {
       settings: DEFAULT_PDF_EXPORT_SETTINGS,
       measure: (text, style) => writer.measure(text, style),
       footerTitle: 'Fonts',
-      labels: { pageNumber: (page) => `Page ${page}`, credit: 'Made with Howbeam' },
+      labels: { credit: 'Made with Howbeam' },
     });
     layouter.addTitleBlock('安裝指南 Setup Guide', '點擊瀏覽器工具列上的擴充功能圖示，開啟設定頁面。');
     layouter.finish();

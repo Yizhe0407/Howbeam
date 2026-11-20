@@ -56,8 +56,9 @@ export const PDF_SPEC = Object.freeze({
   imageMinHeight: 320,
   imageMaxHeight: 1_040,
   imageBottomClearance: 8,
-  imageGapAfter: 30,
   imageBorderWidth: 2,
+  /** With each marker's own gapBefore, the HTML export's 12px between screenshot and list. */
+  annotationListGapBefore: 12,
   annotationColumnGap: 48,
   /** The theme radius is in CSS pixels; the page runs at ~150dpi against CSS's 96. */
   imageRadius: Math.round(PROJECT_EXPORT_THEME.imageRadius * (150 / 96)),
@@ -92,6 +93,6 @@ export const PDF_TEXT = Object.freeze({
   section: { fontSize: 36, lineHeight: 56, color: PDF_COLORS.text, weight: 'bold', gapBefore: 0, gapAfter: 10 },
   stepTitle: { fontSize: 30, lineHeight: 52, color: PDF_COLORS.text, weight: 'bold', gapBefore: 0, gapAfter: 22 },
   annotation: { fontSize: 28, lineHeight: 48, color: PDF_COLORS.secondary, weight: 'regular', gapBefore: 6, gapAfter: 6 },
-  stepDescription: { fontSize: 28, lineHeight: 48, color: PDF_COLORS.text, weight: 'regular', gapBefore: 18, gapAfter: 0 },
+  stepDescription: { fontSize: 28, lineHeight: 48, color: PDF_COLORS.text, weight: 'regular', gapBefore: 22, gapAfter: 0 },
   footer: { fontSize: PDF_SPEC.footerFontSize, lineHeight: PDF_SPEC.footerLineHeight, color: PDF_COLORS.muted, weight: 'regular', gapBefore: 0, gapAfter: 0 },
 } satisfies Record<string, PdfTextStyle>);

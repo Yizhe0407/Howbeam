@@ -53,7 +53,7 @@ export async function generateProjectPdf(
     settings,
     measure: (text, style) => writer.measure(text, style),
     footerTitle: title,
-    labels: { pageNumber: copy.pageNumber, credit: MADE_WITH },
+    labels: { credit: MADE_WITH },
     signal,
   });
   const writePages = () => {

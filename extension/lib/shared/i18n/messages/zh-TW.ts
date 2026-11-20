@@ -647,7 +647,6 @@ export const zhTW = {
   /** Text inside exported HTML, PDF and Markdown documents. */
   export: {
     imageAlt: '步驟截圖',
-    pageNumber: (page: number) => `第 ${page} 頁`,
     downloadNotStarted: '瀏覽器沒有開始下載，請再試一次。',
   },
 

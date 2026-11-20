@@ -647,7 +647,6 @@ export const en: Messages = {
 
   export: {
     imageAlt: 'Step screenshot',
-    pageNumber: (page: number) => `Page ${page}`,
     downloadNotStarted: 'The browser didn’t start the download. Please try again.',
   },
 

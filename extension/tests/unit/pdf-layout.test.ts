@@ -12,7 +12,7 @@ function newLayouter(settings: Partial<PdfExportSettings> = {}, signal?: AbortSi
     settings: { ...DEFAULT_PDF_EXPORT_SETTINGS, ...settings },
     measure,
     footerTitle: 'My project',
-    labels: { pageNumber: (page) => `Page ${page}`, credit: 'Made with Howbeam' },
+    labels: { credit: 'Made with Howbeam' },
     signal,
   });
 }
@@ -113,8 +113,18 @@ describe('PdfLayouter', () => {
 
       const [first, second] = firstItems(images(page), 2);
       expect(second.y - (first.y + first.height)).toBe(
-        PDF_SPEC.imageGapAfter + PDF_SPEC.continuousStepGap + 52 + 22,
+        PDF_SPEC.continuousStepGap + 52 + 22,
       );
+    });
+
+    it('puts the step description one paragraph gap below its screenshot', () => {
+      const layouter = newLayouter({ stepLayout: 'continuous' });
+      layouter.addStep(step(1, { description: 'Then click Preview.' }));
+      const page = itemAt(laidOut(layouter), 0);
+
+      const image = itemAt(images(page), 0);
+      const description = itemAt(ofKind(page, 'paragraph'), 0);
+      expect(itemAt(description.lines, 0).top - (image.y + image.height)).toBe(PDF_TEXT.stepDescription.gapBefore);
     });
 
     it('does not squeeze a tall screenshot into the leftover strip of a page', () => {
@@ -412,7 +422,7 @@ describe('PdfLayouter', () => {
       const pages = laidOut(layouter);
 
       pages.forEach((page, index) => {
-        expect(artifactTexts(page, 'pagination')).toEqual(['My project', 'Made with Howbeam', `Page ${index + 1}`]);
+        expect(artifactTexts(page, 'pagination')).toEqual(['My project', 'Made with Howbeam', String(index + 1)]);
       });
     });
 
@@ -432,7 +442,7 @@ describe('PdfLayouter', () => {
 
       const footer = artifacts(page).find((block) => block.role === 'pagination')!.texts;
       const credit = footer.find((text) => text.text === 'Made with Howbeam')!;
-      const label = footer.find((text) => text.text === 'Page 1')!;
+      const label = footer.find((text) => text.text === '1')!;
       expect(credit.x + measure(credit.text) / 2).toBeCloseTo(page.size.widthPixels / 2);
       expect(label.x + measure(label.text)).toBeCloseTo(page.size.widthPixels - PDF_SPEC.margin);
     });
@@ -442,7 +452,7 @@ describe('PdfLayouter', () => {
         settings: DEFAULT_PDF_EXPORT_SETTINGS,
         measure,
         footerTitle: 'x'.repeat(500),
-        labels: { pageNumber: (page) => `Page ${page}`, credit: 'Made with Howbeam' },
+        labels: { credit: 'Made with Howbeam' },
       });
       layouter.addStep(step(1));
       const page = itemAt(laidOut(layouter), 0);
