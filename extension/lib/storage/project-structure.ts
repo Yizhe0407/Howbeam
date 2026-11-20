@@ -29,8 +29,11 @@ import {
 import {
   ProjectNotFoundError,
   requireWritableProject,
+  refreshProjectSummaryFromRows,
+  runDatabaseWrite,
   runProjectStepsWrite,
   runWithDatabase,
+  writeDenseOrder,
   summarizeSteps,
   type ProjectStepsTransaction,
   type ReadonlyProjectStepsTransaction,
@@ -300,19 +303,31 @@ export async function getProjectStructureSnapshot(sessionId: string): Promise<Pr
  * sure no recording is still adding to this Project. Returns how many were removed.
  */
 export async function repairEmptySnapshotAnchors(sessionId: string): Promise<number> {
-  return runWithDatabase(async (db) => {
-    const tx = db.transaction(['steps'], 'readwrite');
+  let removed = 0;
+  // The editor runs this on every open and reloads on change notifications, so
+  // a no-op repair must not notify.
+  await runDatabaseWrite(['projects', 'steps'], async (tx) => {
     const store = tx.objectStore('steps');
     const steps = await store.index('by-session').getAll(sessionId);
     const annotated = new Set(
       steps.filter((step) => step.groupId && stepRole(step) === 'annotation').map((step) => step.groupId),
     );
-    const orphans = steps.filter((step) => step.groupId === step.id && stepRole(step) === 'anchor' && !annotated.has(step.id));
-    for (const orphan of orphans) await store.delete(orphan.id);
-    await tx.done;
-    if (orphans.length > 0) notifyProjectsChanged();
-    return orphans.length;
+    const orphanIds = new Set(
+      steps
+        .filter((step) => step.groupId === step.id && stepRole(step) === 'anchor' && !annotated.has(step.id))
+        .map((step) => step.id),
+    );
+    if (orphanIds.size === 0) return;
+    const project = await requireWritableProject(tx, sessionId);
+    for (const id of orphanIds) await store.delete(id);
+    const remaining = steps.filter((step) => !orphanIds.has(step.id));
+    await writeDenseOrder(tx, remaining, []);
+    await refreshProjectSummaryFromRows(tx, project, remaining);
+    removed = orphanIds.size;
+  }, () => {
+    if (removed > 0) notifyProjectsChanged();
   });
+  return removed;
 }
 
 export async function reorderProjectEntriesAtomically(

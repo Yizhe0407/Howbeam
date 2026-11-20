@@ -2,8 +2,8 @@ import 'fake-indexeddb/auto';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectContentConflictError, addProjectSectionAtomically, deleteProjectAnnotationAtomically, deleteProjectEntriesAtomically, deleteProjectSectionAtomically, getProjectStructureSnapshot, moveProjectEntriesAtomically, repairEmptySnapshotAnchors, renameProjectSectionAtomically, reorderProjectAnnotationsAtomically, reorderProjectEntriesAtomically, restoreProjectAnnotationAtomically, restoreProjectEntriesAtomically } from '@/lib/storage/project-structure';
 import { ProjectStructureIntegrityError, type ProjectSection, type Step } from '@/lib/storage/models';
-import { closeDatabase, runWithDatabase } from '@/lib/storage/database';
-import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
+import { closeDatabase, refreshProjectSummary, requireWritableProject, runProjectStepsWrite, runWithDatabase, summarizeSteps } from '@/lib/storage/database';
+import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
 import { pngBlob } from '../setup/raster-fixtures';
 import { itemAt } from '../setup/item-at';
@@ -80,16 +80,21 @@ describe('Project entry-safe atomic structure', () => {
   it('removes only the snapshot anchors that never got an annotation', async () => {
     const { project, snapshot } = await createTrackedProject(makeMixedSteps());
     const orphanId = crypto.randomUUID();
-    await runWithDatabase(async (db) => {
-      const tx = db.transaction(['steps'], 'readwrite');
+    await runProjectStepsWrite(async (tx) => {
       await tx.objectStore('steps').put(makeStep({
         id: orphanId, sessionId: project.id, groupId: orphanId, bounds: null, order: 5,
       }));
-      await tx.done;
+      await refreshProjectSummary(tx, await requireWritableProject(tx, project.id));
     });
 
+    const before = await getProject(project.id);
     expect(await repairEmptySnapshotAnchors(project.id)).toBe(1);
+    const repaired = await getProject(project.id);
+    expect(repaired?.storageBytes).toBe(summarizeSteps(await getSteps(project.id)).storageBytes);
+    expect(repaired?.storageBytes).toBeLessThan(before?.storageBytes ?? 0);
+    expect(repaired?.contentRevision).toBe((before?.contentRevision ?? 0) + 1);
     expect(await repairEmptySnapshotAnchors(project.id)).toBe(0);
+    expect((await getProject(project.id))?.contentRevision).toBe(repaired?.contentRevision);
     expect((await getSteps(project.id)).some((step) => step.id === orphanId)).toBe(false);
     expect((await getProjectStructureSnapshot(project.id)).entryIds).toEqual(snapshot.entryIds);
   });
