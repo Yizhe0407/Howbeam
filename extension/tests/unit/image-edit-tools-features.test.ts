@@ -51,13 +51,13 @@ describe('tool registry', () => {
   });
 
   it('draws an ellipse and a numbered marker', () => {
-    const input = { from: { x: 10, y: 10 }, to: { x: 80, y: 50 }, size, style: DEFAULT_IMAGE_EDIT_STYLE, nextNumber: 3 };
+    const input = { id: 'new', from: { x: 10, y: 10 }, to: { x: 80, y: 50 }, size, style: DEFAULT_IMAGE_EDIT_STYLE, nextNumber: 3 };
     expect(imageEditTool('ellipse').create!(input)).toMatchObject({ kind: 'ellipse', bounds: { x: 10, y: 10, width: 70, height: 40 }, fill: 'none' });
     expect(imageEditTool('step').create!(input)).toMatchObject({ kind: 'step', center: { x: 80, y: 50 }, number: 3, radius: 16 });
   });
 
   it('starts text with the chosen look', () => {
-    const created = imageEditTool('text').create!({ from: { x: 5, y: 5 }, to: { x: 5, y: 5 }, size, style: { ...DEFAULT_IMAGE_EDIT_STYLE, look: 'outline' }, nextNumber: 1 });
+    const created = imageEditTool('text').create!({ id: 'new', from: { x: 5, y: 5 }, to: { x: 5, y: 5 }, size, style: { ...DEFAULT_IMAGE_EDIT_STYLE, look: 'outline' }, nextNumber: 1 });
     expect(created).toMatchObject({ kind: 'text', look: 'outline', text: '' });
   });
 });

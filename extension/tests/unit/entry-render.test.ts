@@ -59,6 +59,7 @@ describe('compositeStepEntry', () => {
       step.redactions,
       false,
       [],
+      { x: 0, y: 0 },
     );
     expect(mocks.compositeMultiHighlight).not.toHaveBeenCalled();
   });
@@ -95,6 +96,7 @@ describe('compositeStepEntry', () => {
       anchor.redactions,
       false,
       [],
+      { x: 0, y: 0 },
     );
     expect(mocks.compositeHighlight).not.toHaveBeenCalled();
   });
@@ -116,6 +118,7 @@ describe('compositeStepEntry', () => {
       step.redactions,
       true,
       [],
+      { x: 0, y: 0 },
     );
   });
 
@@ -126,7 +129,7 @@ describe('compositeStepEntry', () => {
 
     await compositeStepEntry(entry, 'image/png');
 
-    expect(mocks.compositeHighlight).toHaveBeenCalledWith(step.screenshotBlob, step.bounds, 1, 'image/png', [], false, edits);
+    expect(mocks.compositeHighlight).toHaveBeenCalledWith(step.screenshotBlob, step.bounds, 1, 'image/png', [], false, edits, { x: 0, y: 0 });
   });
 
   describe('with a crop', () => {
@@ -155,6 +158,7 @@ describe('compositeStepEntry', () => {
         [{ id: 'm', kind: 'solid', bounds: { x: 20, y: 20, width: 10, height: 10 } }],
         false,
         [{ id: 'e', kind: 'rect', bounds: { x: 100, y: 50, width: 20, height: 20 }, width: 2, fill: 'none' as const, color: '#ff4747' }],
+        { x: 100, y: 50 },
       );
     });
 

@@ -1,7 +1,9 @@
 import { validateRasterImageBlob } from '../capture/raster-image-validation';
 import type { Bounds, ImageEdit, Redaction } from '../storage/models';
 import { drawImageEdits } from './image-edit-render';
-import { getValidScreenshotScale, isValidImageBounds } from './image-utils';
+import { getValidScreenshotScale } from './image-utils';
+import { NO_CROP_ORIGIN, type CropOrigin } from './crop-offset';
+import { drawRedactions, hasMosaic, pixelatedCopy } from './redaction-render';
 import {
   BADGE_FONT_FAMILY,
   BADGE_TEXT_COLOR,
@@ -15,7 +17,6 @@ import {
   MARKER_RADIUS,
   MARKER_RING_WIDTH,
   REDACTION_COLOR,
-  REDACTION_EXPANSION,
   isDrawableHighlightFrame,
   type Annotation,
   type AnnotationPoint,
@@ -115,38 +116,6 @@ function drawLeader(ctx: OffscreenCanvasRenderingContext2D, points: AnnotationPo
   ctx.stroke();
 }
 
-/** Returns a redaction's expanded CSS-pixel rect clipped to the screenshot.
- * `null` means the mask lies wholly outside the drawable bitmap. */
-export function getExpandedRedactionBounds(
-  bounds: Bounds,
-  viewportWidth: number,
-  viewportHeight: number,
-): Bounds | null {
-  if (!isValidImageBounds(bounds) || !Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight) || viewportWidth <= 0 || viewportHeight <= 0) {
-    return null;
-  }
-  const left = Math.max(0, bounds.x - REDACTION_EXPANSION);
-  const top = Math.max(0, bounds.y - REDACTION_EXPANSION);
-  const right = Math.min(viewportWidth, bounds.x + bounds.width + REDACTION_EXPANSION);
-  const bottom = Math.min(viewportHeight, bounds.y + bounds.height + REDACTION_EXPANSION);
-  if (right <= left || bottom <= top) return null;
-  return { x: left, y: top, width: right - left, height: bottom - top };
-}
-
-function drawRedactions(
-  ctx: OffscreenCanvasRenderingContext2D,
-  redactions: readonly Redaction[],
-  viewportWidth: number,
-  viewportHeight: number,
-  dpr: number,
-): void {
-  ctx.fillStyle = REDACTION_COLOR;
-  for (const redaction of redactions) {
-    const bounds = getExpandedRedactionBounds(redaction.bounds, viewportWidth, viewportHeight);
-    if (bounds) ctx.fillRect(bounds.x * dpr, bounds.y * dpr, bounds.width * dpr, bounds.height * dpr);
-  }
-}
-
 type RasterFormat = 'image/jpeg' | 'image/png';
 
 /** High enough that annotation strokes and text stay artifact-free while a
@@ -169,6 +138,7 @@ async function compositeRaster(
   imageEdits: readonly ImageEdit[],
   privacyBlockRequired: boolean,
   format: RasterFormat,
+  mosaicOrigin: CropOrigin,
   drawAnnotations:
     | ((
         ctx: OffscreenCanvasRenderingContext2D,
@@ -202,12 +172,14 @@ async function compositeRaster(
     const dpr = getValidScreenshotScale(screenshotScale);
     const viewportWidth = width / dpr;
     const viewportHeight = height / dpr;
+    // Taken from the bare screenshot: a mosaic shows the page, never the marks drawn over it.
+    const mosaic = hasMosaic(redactions) ? pixelatedCopy(canvas, dpr, mosaicOrigin) : null;
     drawAnnotations?.(ctx, dpr, viewportWidth, viewportHeight);
     // The person's own drawings sit above the automatic highlights but below every mask.
     drawImageEdits(ctx, imageEdits, dpr);
     // Must remain last: a redaction is privacy-critical and intentionally
     // covers highlight strokes, callouts, markers, and badges beneath it.
-    drawRedactions(ctx, redactions, viewportWidth, viewportHeight, dpr);
+    drawRedactions(ctx, redactions, viewportWidth, viewportHeight, dpr, mosaic);
     if (privacyBlockRequired) {
       ctx.fillStyle = REDACTION_COLOR;
       ctx.fillRect(0, 0, width, height);
@@ -233,13 +205,15 @@ export async function compositeHighlight(
   redactions: readonly Redaction[] = [],
   privacyBlockRequired = false,
   imageEdits: readonly ImageEdit[] = [],
+  /** Where `screenshot` was cut from the stored screenshot, so mosaic cells stay on the stored image's grid. */
+  mosaicOrigin: CropOrigin = NO_CROP_ORIGIN,
 ): Promise<Blob> {
   const drawHighlight = bounds
     ? (ctx: OffscreenCanvasRenderingContext2D, dpr: number, viewportWidth: number, viewportHeight: number) => {
         strokeBox(ctx, fitHighlightFrame(bounds, viewportWidth, viewportHeight), dpr);
       }
     : null;
-  return compositeRaster(screenshot, screenshotScale, redactions, imageEdits, privacyBlockRequired, format, drawHighlight);
+  return compositeRaster(screenshot, screenshotScale, redactions, imageEdits, privacyBlockRequired, format, mosaicOrigin, drawHighlight);
 }
 
 /**
@@ -255,11 +229,13 @@ export async function compositeMultiHighlight(
   redactions: readonly Redaction[] = [],
   privacyBlockRequired = false,
   imageEdits: readonly ImageEdit[] = [],
+  /** Where `screenshot` was cut from the stored screenshot, so mosaic cells stay on the stored image's grid. */
+  mosaicOrigin: CropOrigin = NO_CROP_ORIGIN,
 ): Promise<Blob> {
   if (annotations.length === 0) {
-    return compositeRaster(screenshot, screenshotScale, redactions, imageEdits, privacyBlockRequired, format, null);
+    return compositeRaster(screenshot, screenshotScale, redactions, imageEdits, privacyBlockRequired, format, mosaicOrigin, null);
   }
-  return compositeRaster(screenshot, screenshotScale, redactions, imageEdits, privacyBlockRequired, format, (ctx, dpr, viewportWidth, viewportHeight) => {
+  return compositeRaster(screenshot, screenshotScale, redactions, imageEdits, privacyBlockRequired, format, mosaicOrigin, (ctx, dpr, viewportWidth, viewportHeight) => {
     const layouts = layoutAnnotations(annotations, viewportWidth, viewportHeight);
     for (const layout of layouts) {
       if (layout.markerOnly) {

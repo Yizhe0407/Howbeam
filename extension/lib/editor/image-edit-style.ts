@@ -1,6 +1,7 @@
 import type { ImageEdit, ImageEditColor, ShapeFill, TextLook } from '@/lib/storage/image-edit-model';
 import { fitTextHeight } from './image-edit-item-geometry';
-import type { ImageEditItem } from './image-edit-items';
+import { isMask, type ImageEditItem } from './image-edit-items';
+import { MOSAIC_BRUSH_LIMITS } from '@/lib/storage/models';
 
 /** How the next thing drawn will look; remembered across the session. */
 export interface ImageEditStyle {
@@ -12,6 +13,8 @@ export interface ImageEditStyle {
   fill: ShapeFill;
   /** Radius of numbered markers, in CSS px. */
   markerRadius: number;
+  /** Width of the mosaic brush, in CSS px. */
+  brushSize: number;
 }
 
 export const DEFAULT_IMAGE_EDIT_STYLE: ImageEditStyle = {
@@ -21,10 +24,16 @@ export const DEFAULT_IMAGE_EDIT_STYLE: ImageEditStyle = {
   look: 'outline',
   fill: 'none',
   markerRadius: 16,
+  brushSize: 32,
 };
 
+/** A brush width kept inside what storage accepts, as a whole number of CSS px. */
+export function clampBrushSize(size: number): number {
+  return Math.min(Math.max(Math.round(size), MOSAIC_BRUSH_LIMITS.minSize), MOSAIC_BRUSH_LIMITS.maxSize);
+}
+
 /** The style controls an item offers, in the order they are shown. `number` only exists on a selected marker. */
-export type StyleField = 'color' | 'width' | 'fontSize' | 'look' | 'fill' | 'radius' | 'number';
+export type StyleField = 'color' | 'width' | 'fontSize' | 'look' | 'fill' | 'radius' | 'number' | 'brushSize';
 
 export const STYLE_FIELDS: Record<ImageEdit['kind'], readonly StyleField[]> = {
   text: ['color', 'look', 'fontSize'],
@@ -38,7 +47,7 @@ export const STYLE_FIELDS: Record<ImageEdit['kind'], readonly StyleField[]> = {
 export type StylePatch = Partial<ImageEditStyle> & { number?: number };
 
 export function isStyledItem(item: ImageEditItem): item is ImageEdit {
-  return item.kind !== 'redaction' && item.kind !== 'crop' && item.kind !== 'highlight';
+  return !isMask(item) && item.kind !== 'crop' && item.kind !== 'highlight';
 }
 
 /** Applies the parts of a patch that this kind of item has, leaving the rest alone. */

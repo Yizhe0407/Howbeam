@@ -28,6 +28,7 @@ import {
 } from "@/lib/editor/image-edit-clipboard";
 import {
   applyStylePatch,
+  clampBrushSize,
   DEFAULT_IMAGE_EDIT_STYLE,
   isStyledItem,
   STYLE_FIELDS,
@@ -43,9 +44,9 @@ import {
   type ImageEditToolId,
 } from "@/lib/editor/image-edit-tools";
 import { useImageCssSize } from "@/lib/editor/use-image-css-size";
-import { useImageEditViewport } from "@/lib/editor/use-image-edit-viewport";
+import { FIT_MARGIN, useImageEditViewport } from "@/lib/editor/use-image-edit-viewport";
 import { useStoredImageEdits } from "@/lib/editor/use-stored-image-edits";
-import { MIN_ZOOM, nativeZoom } from "@/lib/editor/image-edit-viewport";
+import { MIN_ZOOM } from "@/lib/editor/image-edit-viewport";
 import { t } from "@/lib/shared/i18n";
 import EntryThumbnail from "./EntryThumbnail";
 import ImageEditLayer from "./ImageEditLayer";
@@ -91,8 +92,15 @@ export default function ImageEditWorkspace({
     owner.screenshotBlob,
     owner.screenshotScale ?? owner.devicePixelRatio,
   );
-  const viewport = useImageEditViewport(imageSize);
-  const { fit, zoom, maxZoom, scroller } = viewport;
+  /** Alt + wheel sizes the brush, whichever tool is active: the wheel means the same thing everywhere. */
+  const viewport = useImageEditViewport(imageSize, {
+    onAltWheel: (factor) =>
+      setStyle((current) => {
+        const brushSize = clampBrushSize(current.brushSize * factor);
+        return brushSize === current.brushSize ? current : { ...current, brushSize };
+      }),
+  });
+  const { zoom, maxZoom, scroller } = viewport;
 
   // --- editing ----------------------------------------------------------------
   const { items } = session;
@@ -160,7 +168,8 @@ export default function ImageEditWorkspace({
     }
     const settled = settle(item);
     if (!settled) return;
-    setSelectedId(settled.kind === "crop" ? null : settled.id);
+    // A brush keeps painting: what it painted is not picked up, so no frame appears around it.
+    setSelectedId(settled.kind === "crop" || activeTool.gesture === "stroke" ? null : settled.id);
     commit(appendItem(items, settled));
   };
   const startTextEdit = (id: string) => {
@@ -355,7 +364,6 @@ export default function ImageEditWorkspace({
               onUndo={session.undo}
               onRedo={session.redo}
               zoom={zoom}
-              nativeZoom={nativeZoom(zoom, fit, imageSize)}
               canZoomIn={zoom < maxZoom}
               canZoomOut={zoom > MIN_ZOOM}
               onZoomIn={viewport.zoomIn}
@@ -446,7 +454,7 @@ export default function ImageEditWorkspace({
               tabIndex={-1}
               {...viewport.scrollerHandlers}
             >
-              <div className="flex min-h-full min-w-full">
+              <div className="flex min-h-full w-max min-w-full" style={{ padding: FIT_MARGIN }}>
                 <div
                   ref={viewport.canvasRef}
                   className="relative m-auto shrink-0"

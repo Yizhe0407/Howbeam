@@ -5,7 +5,6 @@ import {
   fitSize,
   MAX_ZOOM,
   maxZoomFor,
-  nativeZoom,
   MIN_ZOOM,
   scrollDeltaForAnchor,
   wheelZoomFactor,
@@ -41,12 +40,10 @@ describe('zoom', () => {
     expect(clampZoom(1_000, max)).toBeGreaterThan(MAX_ZOOM);
   });
 
-  it('reads zoom out as a share of the image’s own size', () => {
+  it('lets a long page fitted far below its own size zoom to twice that size', () => {
     const image = { width: 1280, height: 16_000 };
     const fit = fitSize({ width: 1400, height: 848 }, image, 24);
-    expect(nativeZoom(maxZoomFor(fit, image), fit, image)).toBeCloseTo(2);
-    expect(nativeZoom(1, { width: 640, height: 400 }, { width: 1280, height: 800 })).toBe(0.5);
-    expect(nativeZoom(3, null, null)).toBe(3);
+    expect((maxZoomFor(fit, image) * fit.width) / image.width).toBeCloseTo(2);
   });
 
   it('keeps 8x the fit for ordinary images and before anything is measured', () => {

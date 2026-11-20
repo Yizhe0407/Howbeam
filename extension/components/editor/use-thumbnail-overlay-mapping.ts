@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { getExpandedRedactionBounds } from '@/lib/media/annotation-composite';
 import { getValidScreenshotScale } from '@/lib/media/image-utils';
 import { type Redaction } from '@/lib/storage/models';
 
@@ -8,14 +7,6 @@ export { isDrawableHighlightFrame } from '@/lib/media/annotation-contract';
 
 /** CSS lengths: pixels (numbers) once measured, or percentages of the image box when the box is exact. */
 export interface ImageContentFrame {
-  left: number | string;
-  top: number | string;
-  width: number | string;
-  height: number | string;
-}
-
-export interface RedactionStyle {
-  id: string;
   left: number | string;
   top: number | string;
   width: number | string;
@@ -85,8 +76,8 @@ interface UseThumbnailOverlayMappingOptions {
   url: string | null;
   fit: 'cover' | 'contain';
   screenshotScale: number;
-  /** Opaque masks in screenshot CSS coordinates. */
-  redactions: Redaction[];
+  /** Privacy masks in screenshot CSS coordinates. */
+  redactions: readonly Redaction[];
   privacyReviewRequired: boolean;
   /**
    * The image's pixels already have every mask burned in (usePreviewImage).
@@ -110,37 +101,6 @@ interface UseThumbnailOverlayMappingOptions {
   clearOverlays: () => void;
 }
 
-/** Where each mask lands for the measured geometry. Pure, so a mask edit is
- * reflected in the very render that receives it. */
-function mapRedactionBoxes(
-  redactions: readonly Redaction[],
-  geometry: OverlayGeometry,
-  exactBox: boolean,
-): RedactionStyle[] {
-  const cssWidth = geometry.naturalWidth / geometry.dpr;
-  const cssHeight = geometry.naturalHeight / geometry.dpr;
-  return redactions.flatMap<RedactionStyle>((redaction) => {
-    const expanded = getExpandedRedactionBounds(redaction.bounds, cssWidth, cssHeight);
-    if (!expanded) return [];
-    if (exactBox) {
-      return [{
-        id: redaction.id,
-        left: `${(expanded.x / cssWidth) * 100}%`,
-        top: `${(expanded.y / cssHeight) * 100}%`,
-        width: `${(expanded.width / cssWidth) * 100}%`,
-        height: `${(expanded.height / cssHeight) * 100}%`,
-      }];
-    }
-    return [{
-      id: redaction.id,
-      left: geometry.mapX(expanded.x),
-      top: geometry.mapY(expanded.y),
-      width: expanded.width * geometry.dpr * geometry.scale,
-      height: expanded.height * geometry.dpr * geometry.scale,
-    }];
-  });
-}
-
 const EXACT_CONTENT_FRAME: ImageContentFrame = { left: 0, top: 0, width: '100%', height: '100%' };
 
 /**
@@ -148,7 +108,7 @@ const EXACT_CONTENT_FRAME: ImageContentFrame = { left: 0, top: 0, width: '100%',
  * piece of state, the measured `geometry` of the image on screen, and derives
  * everything else from it:
  *
- * - The mask boxes are computed from `geometry` and `redactions` during render,
+ * - Masks are drawn over the content frame in the image's own coordinates,
  *   so adding, moving or deleting a mask never leaves a frame where the
  *   image is hidden or a mask sits at a stale position.
  * - The fail-closed contract is about *geometry*: while the image has not been
@@ -234,10 +194,6 @@ export function useThumbnailOverlayMapping({
     else clearOverlays();
   }, [geometry, mapOverlays, clearOverlays]);
 
-  const redactionBoxes = useMemo(
-    () => (geometry ? mapRedactionBoxes(redactions, geometry, exactBox) : []),
-    [geometry, redactions, exactBox],
-  );
   const showPixels = !privacyReviewRequired && (!gatesPixels || (geometry !== null && (exactBox || !stale)));
   const contentFrame = geometry ? (exactBox ? EXACT_CONTENT_FRAME : geometry.contentFrame) : null;
 
@@ -246,5 +202,5 @@ export function useThumbnailOverlayMapping({
     [geometry],
   );
 
-  return { imgRef, contentFrame, imageCssSize, redactionBoxes, showPixels, remap };
+  return { imgRef, contentFrame, imageCssSize, showPixels, remap };
 }

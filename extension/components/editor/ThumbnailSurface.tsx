@@ -1,8 +1,12 @@
 import type { ReactNode, RefObject } from 'react';
 import { cn } from '@/lib/shared/utils';
 import type { ImageEdit } from '@/lib/storage/image-edit-model';
+import type { Redaction } from '@/lib/storage/models';
 import ImageEditsSvg from './ImageEditsSvg';
-import type { ImageContentFrame, RedactionStyle } from './use-thumbnail-overlay-mapping';
+import RedactionsCanvas from './RedactionsCanvas';
+import RedactionsSvg from './RedactionsSvg';
+import { getValidScreenshotScale } from '@/lib/media/image-utils';
+import type { ImageContentFrame } from './use-thumbnail-overlay-mapping';
 
 interface Props {
   url: string | null;
@@ -23,7 +27,14 @@ interface Props {
   imgClassName?: string;
   onImageLoad: () => void;
   contentFrame: ImageContentFrame | null;
-  redactionBoxes: RedactionStyle[];
+  /** Privacy masks in screenshot CSS coordinates; painted above highlights and image edits. */
+  redactions: readonly Redaction[];
+  /** See usePreviewImage's `mosaicUrl`. */
+  mosaicUrl: string | null;
+  /** See usePreviewImage's `liveMosaic`. */
+  liveMosaic: ImageBitmap | null;
+  /** Device pixels per CSS pixel of the screenshot. */
+  screenshotScale: number;
   /** Text, arrows and rectangles drawn on the image; painted above highlights and below masks. */
   imageEdits: readonly ImageEdit[];
   /** The screenshot's size in CSS pixels, the coordinate space of `imageEdits`. */
@@ -36,7 +47,7 @@ interface Props {
 
 /**
  * Rendered surface shared by the highlight thumbnails: screenshot img, component-specific overlays,
- * image edits, redaction boxes, and content-frame slot. Layer order is load-bearing: image edits (z-5)
+ * image edits, privacy masks, and content-frame slot. Layer order is load-bearing: image edits (z-5)
  * sit above the highlight overlays, redactions (z-10) must cover both, and the content frame (z-20)
  * sits above all of them.
  */
@@ -54,7 +65,10 @@ export default function ThumbnailSurface({
   imgClassName,
   onImageLoad,
   contentFrame,
-  redactionBoxes,
+  redactions,
+  mosaicUrl,
+  liveMosaic,
+  screenshotScale,
   imageEdits,
   imageCssSize,
   overlay,
@@ -88,20 +102,22 @@ export default function ThumbnailSurface({
           <ImageEditsSvg edits={imageEdits} width={imageCssSize.width} height={imageCssSize.height} />
         </div>
       )}
-      {!privacyReviewRequired && redactionBoxes.map((redaction) => (
-        <div
-          key={redaction.id}
-          data-howbeam-redaction={redaction.id}
-          className="pointer-events-none absolute z-10"
-          style={{
-            left: redaction.left,
-            top: redaction.top,
-            width: redaction.width,
-            height: redaction.height,
-            backgroundColor: '#000',
-          }}
-        />
-      ))}
+      {!privacyReviewRequired && contentFrame && imageCssSize && redactions.length > 0 && (
+        <div data-howbeam-redactions className="pointer-events-none absolute z-10" style={contentFrame}>
+          {masksBurnedIn ? (
+            <RedactionsSvg redactions={redactions} width={imageCssSize.width} height={imageCssSize.height} mosaicUrl={mosaicUrl} />
+          ) : (
+            // Live masks change with every brush movement: painted, not laid out.
+            <RedactionsCanvas
+              redactions={redactions}
+              width={imageCssSize.width}
+              height={imageCssSize.height}
+              dpr={getValidScreenshotScale(screenshotScale)}
+              mosaic={liveMosaic}
+            />
+          )}
+        </div>
+      )}
       {overlay && contentFrame && (
         <div
           data-howbeam-image-content-frame

@@ -34,6 +34,7 @@ export async function compositeStepEntry(entry: StepEntry, format: CompositeImag
       redactions,
       privacy.reviewRequired,
       imageEdits,
+      origin,
     );
   }
 
@@ -45,5 +46,6 @@ export async function compositeStepEntry(entry: StepEntry, format: CompositeImag
     redactions,
     privacy.reviewRequired,
     imageEdits,
+    origin,
   );
 }

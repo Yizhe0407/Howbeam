@@ -295,7 +295,7 @@ describe('preview masking', () => {
     expect(fireEvent.contextMenu(img)).toBe(false);
     stubImageMetrics(img, { naturalWidth: 12, naturalHeight: 8, rendered: { width: 120, height: 80 } });
     act(() => fireEvent.load(img));
-    expect(view.container.querySelector('[data-howbeam-redaction="mask-1"]')).not.toBeNull();
+    expect(view.container.querySelector('[data-howbeam-redactions] canvas')).not.toBeNull();
   });
 
   it('keeps the editor fail-closed while privacy review is pending', async () => {

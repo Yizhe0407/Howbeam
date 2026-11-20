@@ -4,7 +4,8 @@ vi.mock('@/lib/capture/raster-image-validation', () => ({
   validateRasterImageBlob: vi.fn().mockResolvedValue({ width: 100, height: 100, mediaType: 'image/png' }),
 }));
 import { BADGE_RADIUS, HIGHLIGHT_PADDING, LEADER_LINE_WIDTH, MARKER_RADIUS, REDACTION_COLOR, REDACTION_EXPANSION, type AnnotationLayout } from '@/lib/media/annotation-contract';
-import { compositeHighlight, compositeMultiHighlight, getExpandedRedactionBounds } from '@/lib/media/annotation-composite';
+import { compositeHighlight, compositeMultiHighlight } from '@/lib/media/annotation-composite';
+import { getExpandedRedactionBounds } from '@/lib/media/redaction-render';
 import { distanceToBounds, getBadgeFontSize } from '@/lib/media/annotation-geometry';
 import { layoutAnnotations, layoutWithProvisional } from '@/lib/media/annotation-layout';
 import { itemAt } from '../setup/item-at';

@@ -229,3 +229,70 @@ describe('ImageEditWorkspace recorded boxes', () => {
     expect(savedBoxes().map((saved: { id: string }) => saved.id)).toEqual(['note-2']);
   });
 });
+
+describe('ImageEditWorkspace mosaic brush', () => {
+  const scroller = () => document.querySelector('[data-howbeam-edit-scroller]') as HTMLElement;
+  const brushSlider = () => screen.getByRole('slider', { name: '筆刷大小' }) as HTMLInputElement;
+  const zoomReadout = () => screen.getByText(/^\d+%$/);
+
+  it('paints a stroke along the pointer path and stores it as a pixelate mask', async () => {
+    storage.save.mockResolvedValue(1);
+    const { onClose } = open(entry());
+
+    fireEvent.keyDown(layer(), { key: 'b' });
+    expect(toolButton('馬賽克').getAttribute('aria-pressed')).toBe('true');
+    fireEvent.pointerDown(layer(), { clientX: 20, clientY: 20, button: 0 });
+    fireEvent.pointerMove(layer(), { clientX: 60, clientY: 20 });
+    fireEvent.pointerMove(layer(), { clientX: 60, clientY: 70 });
+    fireEvent.pointerUp(layer(), { clientX: 60, clientY: 70 });
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    const [, saved] = itemAt(storage.save.mock.calls, 0);
+    expect(saved.redactions).toEqual([
+      { id: expect.any(String), kind: 'pixelate', points: [{ x: 20, y: 20 }, { x: 60, y: 20 }, { x: 60, y: 70 }], size: 32 },
+    ]);
+  });
+
+  it('sizes the brush with Alt + wheel, which never zooms, while the plain wheel always zooms', () => {
+    open(entry());
+    fireEvent.click(toolButton('馬賽克'));
+    expect(brushSlider().value).toBe('32');
+    expect(zoomReadout().textContent).toBe('100%');
+
+    fireEvent.wheel(scroller(), { deltaY: -200, altKey: true });
+    expect(Number(brushSlider().value)).toBeGreaterThan(32);
+    expect(zoomReadout().textContent).toBe('100%');
+
+    fireEvent.wheel(scroller(), { deltaY: -200 });
+    expect(zoomReadout().textContent).not.toBe('100%');
+  });
+
+  it('treats strokes as paint: nothing picks one up, and undo takes the last one back', async () => {
+    storage.save.mockResolvedValue(1);
+    const earlier = { id: 'earlier', kind: 'pixelate' as const, points: [{ x: 50, y: 50 }, { x: 150, y: 50 }], size: 32 };
+    const { onClose } = open(entry({ redactions: [earlier] }));
+    expect(editItem('earlier')).toBeNull();
+
+    fireEvent.click(toolButton('馬賽克'));
+    const paint = (y: number) => {
+      fireEvent.pointerDown(layer(), { clientX: 20, clientY: y, button: 0 });
+      fireEvent.pointerUp(layer(), { clientX: 80, clientY: y });
+    };
+    paint(120);
+    paint(160);
+    expect(document.querySelector('[data-howbeam-edit-item][aria-pressed="true"]')).toBeNull();
+
+    // Even the pointer tool finds nothing to pick up on a stroke.
+    fireEvent.click(toolButton('選取'));
+    expect(document.querySelectorAll('[data-howbeam-edit-item]')).toHaveLength(0);
+
+    fireEvent.keyDown(layer(), { key: 'z', ctrlKey: true });
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    const saved = itemAt(storage.save.mock.calls, 0)[1].redactions;
+    expect(saved.map((redaction: { id: string }) => redaction.id).slice(0, 1)).toEqual(['earlier']);
+    expect(saved).toHaveLength(2);
+    expect(itemAt(saved, 1)).toMatchObject({ kind: 'pixelate', points: [{ x: 20, y: 120 }, { x: 80, y: 120 }] });
+  });
+});

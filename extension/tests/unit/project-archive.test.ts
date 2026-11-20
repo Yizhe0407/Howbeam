@@ -90,6 +90,7 @@ describe('project archive', () => {
       manualBounds: { x: 10, y: 11, width: 90, height: 45 },
       redactions: [
         { id: 'mask-1', kind: 'solid', bounds: { x: 2, y: 3, width: 20, height: 10 } },
+        { id: 'mosaic-1', kind: 'pixelate', points: [{ x: 4, y: 5 }, { x: 40.5, y: 9.25 }], size: 32 },
       ],
       redactionReviewRequired: false,
       screenshotScale: 1.5,
@@ -146,6 +147,7 @@ describe('project archive', () => {
       expect(itemAt(restored, index).screenshotBlob?.type).toBe(itemAt(expected, index).screenshotBlob?.type);
       if (itemAt(expected, index).screenshotBlob) expect(itemAt(restored, index).screenshotBlob).not.toBe(itemAt(expected, index).screenshotBlob);
     }
+    expect(itemAt(restored, 0).redactions).toEqual(ordinary.redactions);
     expect(itemAt(restored, 0).description).toContain('onerror=');
     expect((globalThis as { executed?: boolean }).executed).toBeUndefined();
   });
@@ -411,6 +413,22 @@ describe('project archive', () => {
       { id: 'mask', kind: 'solid', bounds: { x: 0, y: 0, width: 0, height: 1 } },
     ];
     await expect(importProjectArchive(pack(zeroWidth))).rejects.toMatchObject({ code: 'INVALID_REDACTION' });
+
+    const thinBrush = await archiveObject();
+    thinBrush.manifest.steps[0].redactions = [
+      { id: 'mosaic', kind: 'pixelate', points: [{ x: 1, y: 1 }], size: 8 },
+    ];
+    await expect(importProjectArchive(pack(thinBrush))).rejects.toMatchObject({ code: 'INVALID_REDACTION' });
+
+    const noPoints = await archiveObject();
+    noPoints.manifest.steps[0].redactions = [{ id: 'mosaic', kind: 'pixelate', points: [], size: 32 }];
+    await expect(importProjectArchive(pack(noPoints))).rejects.toMatchObject({ code: 'INVALID_REDACTION' });
+
+    const strayField = await archiveObject();
+    strayField.manifest.steps[0].redactions = [
+      { id: 'mosaic', kind: 'pixelate', points: [{ x: 1, y: 1 }], size: 32, bounds: { x: 0, y: 0, width: 1, height: 1 } },
+    ];
+    await expect(importProjectArchive(pack(strayField))).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' });
 
     const hugeBounds = await archiveObject();
     hugeBounds.manifest.steps[0].bounds.width = PROJECT_ARCHIVE_LIMITS.maxBoundsDimension + 1;

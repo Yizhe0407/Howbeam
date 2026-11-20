@@ -1,6 +1,8 @@
 import type { Redaction } from '../storage/models';
 import { compositeHighlight } from './annotation-composite';
+import type { CropOrigin } from './crop-offset';
 import { getValidScreenshotScale } from './image-utils';
+import { pixelatedCopy, redactionKey } from './redaction-render';
 
 /**
  * Preview rasters with every privacy mask burned into the pixels. Previews
@@ -28,17 +30,17 @@ interface CacheEntry {
  * long as the source lives and is collected with it. */
 const cache = new WeakMap<Blob, Map<string, CacheEntry>>();
 
-/** Identifies everything that changes the masked pixels: the masks' boxes, the
- * capture scale they are mapped with, and whether the whole image is blocked. */
+/** Identifies everything that changes the masked pixels: the masks, the
+ * capture scale they are mapped with, where the mosaic grid starts, and
+ * whether the whole image is blocked. */
 export function maskedImageKey(
   redactions: readonly Redaction[],
   screenshotScale: number,
   privacyBlockRequired: boolean,
+  mosaicOrigin: CropOrigin,
 ): string {
-  const masks = redactions
-    .map(({ bounds }) => `${bounds.x},${bounds.y},${bounds.width},${bounds.height}`)
-    .join('|');
-  return `${privacyBlockRequired ? 'blocked' : 'open'}@${getValidScreenshotScale(screenshotScale)}:${masks}`;
+  const masks = redactions.map(redactionKey).join('|');
+  return `${privacyBlockRequired ? 'blocked' : 'open'}@${getValidScreenshotScale(screenshotScale)}#${mosaicOrigin.x},${mosaicOrigin.y}:${masks}`;
 }
 
 /**
@@ -54,8 +56,9 @@ export function getMaskedImage(
   redactions: readonly Redaction[],
   screenshotScale: number,
   privacyBlockRequired: boolean,
+  mosaicOrigin: CropOrigin,
 ): Promise<Blob> {
-  const key = maskedImageKey(redactions, screenshotScale, privacyBlockRequired);
+  const key = maskedImageKey(redactions, screenshotScale, privacyBlockRequired, mosaicOrigin);
   let results = cache.get(source);
   const existing = results?.get(key);
   if (existing) {
@@ -77,6 +80,8 @@ export function getMaskedImage(
       PREVIEW_FORMAT,
       redactions,
       privacyBlockRequired,
+      [],
+      mosaicOrigin,
     ),
   };
   entry.promise = entry.promise.then(
@@ -99,4 +104,42 @@ export function getMaskedImage(
 /** The finished result if it has already been computed, so a render can use it immediately. */
 export function peekMaskedImage(source: Blob, key: string): Blob | undefined {
   return cache.get(source)?.get(key)?.settled;
+}
+
+/**
+ * The whole source image pixelated on the mosaic grid, for the image editor:
+ * there the masks are painted live over the stored pixels, and a mosaic stroke
+ * shows this bitmap through its shape. One result per source and grid; a
+ * failure is not remembered.
+ */
+const mosaicCache = new WeakMap<Blob, Map<string, Promise<ImageBitmap>>>();
+
+export function getMosaicBitmap(source: Blob, screenshotScale: number, mosaicOrigin: CropOrigin): Promise<ImageBitmap> {
+  const dpr = getValidScreenshotScale(screenshotScale);
+  const key = `${dpr}#${mosaicOrigin.x},${mosaicOrigin.y}`;
+  let results = mosaicCache.get(source);
+  if (!results) {
+    results = new Map();
+    mosaicCache.set(source, results);
+  }
+  const owner = results;
+  const existing = owner.get(key);
+  if (existing) return existing;
+  const promise = (async () => {
+    const bitmap = await createImageBitmap(source);
+    try {
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Unable to create a 2D canvas context.');
+      ctx.drawImage(bitmap, 0, 0);
+      return await createImageBitmap(pixelatedCopy(canvas, dpr, mosaicOrigin));
+    } finally {
+      bitmap.close();
+    }
+  })();
+  promise.catch(() => {
+    if (owner.get(key) === promise) owner.delete(key);
+  });
+  owner.set(key, promise);
+  return promise;
 }

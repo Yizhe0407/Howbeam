@@ -1,11 +1,12 @@
-import type { Bounds, Redaction } from '@/lib/storage/models';
+import type { Bounds, Redaction, RedactionPoint } from '@/lib/storage/models';
 import type { ImageEdit } from '@/lib/storage/image-edit-model';
 import { PERSISTED_STEP_LIMITS } from '@/lib/storage/persistence-limits';
 
 /**
  * Everything the image editor can place on a screenshot, as one list. Privacy
- * masks are stored in their own field (they have their own review rules and
- * always paint last); text, arrows and rectangles are `ImageEdit`s; the boxes
+ * masks (solid boxes and mosaic strokes) are stored in their own field (they
+ * have their own review rules and always paint last); text, arrows and
+ * rectangles are `ImageEdit`s; the boxes
  * recorded with the screenshot live on their steps. This module
  * is the only place that converts between that storage and the flat list the
  * edit layer works with, so a new tool adds a kind here, a tool in
@@ -15,6 +16,14 @@ interface RedactionItem {
   id: string;
   kind: 'redaction';
   bounds: Bounds;
+}
+
+/** A mosaic brush stroke: the line through `points`, `size` CSS px wide. */
+export interface MosaicItem {
+  id: string;
+  kind: 'mosaic';
+  points: RedactionPoint[];
+  size: number;
 }
 
 /** The crop, as an item so it shares selection, handles, undo and redo with everything else.
@@ -37,7 +46,7 @@ export interface HighlightItem {
 
 export type Highlight = Pick<HighlightItem, 'id' | 'bounds'>;
 
-export type ImageEditItem = RedactionItem | CropItem | HighlightItem | ImageEdit;
+export type ImageEditItem = RedactionItem | MosaicItem | CropItem | HighlightItem | ImageEdit;
 export type ImageEditItemKind = ImageEditItem['kind'];
 
 /** Items in the order they are drawn: recorded boxes first, then the person's edits, masks last (always on top). */
@@ -52,9 +61,23 @@ export function toItems(
     ...cropItems,
     ...highlights.map((highlight): HighlightItem => ({ id: highlight.id, kind: 'highlight', bounds: highlight.bounds })),
     ...edits,
-    ...redactions.map((redaction): RedactionItem => ({ id: redaction.id, kind: 'redaction', bounds: redaction.bounds })),
+    ...redactions.map((redaction): RedactionItem | MosaicItem => (
+      redaction.kind === 'solid'
+        ? { id: redaction.id, kind: 'redaction', bounds: redaction.bounds }
+        : { id: redaction.id, kind: 'mosaic', points: redaction.points, size: redaction.size }
+    )),
   ];
 }
+
+/** Everything that can be picked up, moved and copied. Mosaic strokes are paint: once
+ * painted they are only taken back by undo, like a brush in any image editor. */
+export type PlacedItem = Exclude<ImageEditItem, MosaicItem>;
+
+export const isPlaced = (item: ImageEditItem): item is PlacedItem => item.kind !== 'mosaic';
+
+/** Privacy masks: solid boxes and mosaic strokes. They share one drawing group, always above everything else. */
+export const isMask = (item: ImageEditItem): item is RedactionItem | MosaicItem =>
+  item.kind === 'redaction' || item.kind === 'mosaic';
 
 export interface SplitItems {
   redactions: Redaction[];
@@ -72,6 +95,7 @@ export function splitItems(items: readonly ImageEditItem[]): SplitItems {
   let crop: Bounds | null = null;
   for (const item of items) {
     if (item.kind === 'redaction') redactions.push({ id: item.id, kind: 'solid', bounds: { ...item.bounds } });
+    else if (item.kind === 'mosaic') redactions.push({ id: item.id, kind: 'pixelate', points: item.points.map(({ x, y }) => ({ x, y })), size: item.size });
     else if (item.kind === 'crop') crop = { ...item.bounds };
     else if (item.kind === 'highlight') highlights.push({ id: item.id, bounds: { ...item.bounds } });
     else imageEdits.push(item);
@@ -81,13 +105,13 @@ export function splitItems(items: readonly ImageEditItem[]): SplitItems {
 
 /** Drawn edits: everything the person added, as opposed to masks, the crop and recorded boxes. */
 const isDrawnEdit = (item: ImageEditItem): boolean =>
-  item.kind !== 'redaction' && item.kind !== 'crop' && item.kind !== 'highlight';
+  !isMask(item) && item.kind !== 'crop' && item.kind !== 'highlight';
 
 /** Keeps the draw order rule when something is added: masks stay last. A new crop replaces the old one. */
 export function appendItem(items: readonly ImageEditItem[], item: ImageEditItem): ImageEditItem[] {
   if (item.kind === 'crop') return [item, ...items.filter((existing) => existing.kind !== 'crop')];
-  if (item.kind === 'redaction') return [...items, item];
-  const firstMask = items.findIndex((existing) => existing.kind === 'redaction');
+  if (isMask(item)) return [...items, item];
+  const firstMask = items.findIndex(isMask);
   if (firstMask === -1) return [...items, item];
   return [...items.slice(0, firstMask), item, ...items.slice(firstMask)];
 }
@@ -108,7 +132,7 @@ export function reorderItem(items: readonly ImageEditItem[], id: string, to: 'fr
   const item = items.find((candidate) => candidate.id === id);
   if (!item || item.kind === 'crop' || item.kind === 'highlight') return [...items];
   const group = (candidate: ImageEditItem): boolean =>
-    candidate.kind !== 'highlight' && candidate.kind !== 'crop' && (candidate.kind === 'redaction') === (item.kind === 'redaction');
+    candidate.kind !== 'highlight' && candidate.kind !== 'crop' && isMask(candidate) === isMask(item);
   const others = items.filter((candidate) => candidate.id !== id);
   const members = others.filter(group);
   const anchor = to === 'front' ? members.at(-1) : members[0];
@@ -135,7 +159,7 @@ export function itemRoom(items: readonly ImageEditItem[]): ItemRoom {
   let masks = 0;
   let edits = 0;
   for (const item of items) {
-    if (item.kind === 'redaction') masks += 1;
+    if (isMask(item)) masks += 1;
     else if (isDrawnEdit(item)) edits += 1;
   }
   return { masks: masks < IMAGE_ITEM_LIMITS.maxMasks, edits: edits < IMAGE_ITEM_LIMITS.maxEdits };
@@ -143,15 +167,14 @@ export function itemRoom(items: readonly ImageEditItem[]): ItemRoom {
 
 /** Whether `added` fit next to `items` without going past a storage limit. A crop always fits: it replaces the old one. */
 export function hasRoomFor(items: readonly ImageEditItem[], added: readonly ImageEditItem[]): boolean {
-  const masks = items.filter((item) => item.kind === 'redaction').length
-    + added.filter((item) => item.kind === 'redaction').length;
+  const masks = items.filter(isMask).length + added.filter(isMask).length;
   const edits = items.filter(isDrawnEdit).length + added.filter(isDrawnEdit).length;
   return masks <= IMAGE_ITEM_LIMITS.maxMasks && edits <= IMAGE_ITEM_LIMITS.maxEdits;
 }
 
 /** Whether one more item of `kind` fits. */
 export function roomForKind(kind: ImageEditItemKind, room: ItemRoom): boolean {
-  if (kind === 'redaction') return room.masks;
+  if (kind === 'redaction' || kind === 'mosaic') return room.masks;
   if (kind === 'crop' || kind === 'highlight') return true;
   return room.edits;
 }

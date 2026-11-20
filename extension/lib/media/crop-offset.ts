@@ -28,7 +28,12 @@ export function offsetAnnotations(annotations: Annotation[], origin: CropOrigin)
 }
 
 export function offsetRedactions(redactions: Redaction[], origin: CropOrigin): Redaction[] {
-  return isZero(origin) ? redactions : redactions.map((redaction) => ({ ...redaction, bounds: shiftBounds(redaction.bounds, origin) }));
+  if (isZero(origin)) return redactions;
+  return redactions.map((redaction): Redaction => (
+    redaction.kind === 'solid'
+      ? { ...redaction, bounds: shiftBounds(redaction.bounds, origin) }
+      : { ...redaction, points: redaction.points.map((point) => ({ x: point.x - origin.x, y: point.y - origin.y })) }
+  ));
 }
 
 export function offsetImageEdits(edits: ImageEdit[], origin: CropOrigin): ImageEdit[] {

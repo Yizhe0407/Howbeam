@@ -2,6 +2,7 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { HIGHLIGHT_LINE_WIDTH, HIGHLIGHT_RADIUS } from '@/lib/media/annotation-contract';
 import { fitHighlightFrame } from '@/lib/media/annotation-geometry';
 import { usePreviewImage } from '@/lib/editor/use-preview-image';
+import type { CropOrigin } from '@/lib/media/crop-offset';
 import { type Bounds, type ImageEdit, type Redaction } from '@/lib/storage/models';
 import ThumbnailSurface from './ThumbnailSurface';
 import HighlightFrame from './HighlightFrame';
@@ -18,8 +19,10 @@ const NO_EDITS: ImageEdit[] = [];
 interface Props {
   blob: Blob;
   bounds: Bounds | null;
-  /** Opaque masks in screenshot CSS coordinates. */
+  /** Privacy masks in screenshot CSS coordinates. */
   redactions?: Redaction[];
+  /** Where `blob` was cut from the stored screenshot, so mosaic cells stay on its grid. */
+  mosaicOrigin?: CropOrigin;
   /** Hide all source pixels until privacy metadata is explicitly reviewed. */
   privacyReviewRequired?: boolean;
   /** The image element is exactly the image's box (see useThumbnailOverlayMapping). */
@@ -64,6 +67,7 @@ export default function HighlightThumbnail({
   exactBox = false,
   imageEdits = NO_EDITS,
   liveMasks = false,
+  mosaicOrigin,
   screenshotScale,
   alt,
   className,
@@ -73,7 +77,7 @@ export default function HighlightThumbnail({
   loading = 'eager',
   decoding = 'async',
 }: Props) {
-  const { url, masksBurnedIn } = usePreviewImage(blob, { redactions, screenshotScale, privacyReviewRequired, liveMasks });
+  const { url, masksBurnedIn, mosaicUrl, liveMosaic } = usePreviewImage(blob, { redactions, screenshotScale, privacyReviewRequired, liveMasks, mosaicOrigin });
   const [box, setBox] = useState<BoxStyle | null>(null);
 
   const measure = useCallback((img: HTMLImageElement) => (
@@ -105,7 +109,7 @@ export default function HighlightThumbnail({
 
   const clearOverlays = useCallback(() => setBox(null), []);
 
-  const { imgRef, contentFrame, imageCssSize, redactionBoxes, showPixels, remap } = useThumbnailOverlayMapping({
+  const { imgRef, contentFrame, imageCssSize, showPixels, remap } = useThumbnailOverlayMapping({
     url,
     fit,
     screenshotScale,
@@ -134,7 +138,10 @@ export default function HighlightThumbnail({
       // Single-image mode remaps synchronously on load, unlike MultiHighlightThumbnail.
       onImageLoad={remap}
       contentFrame={contentFrame}
-      redactionBoxes={redactionBoxes}
+      redactions={redactions}
+      mosaicUrl={mosaicUrl}
+      liveMosaic={liveMosaic}
+      screenshotScale={screenshotScale}
       imageEdits={imageEdits}
       imageCssSize={imageCssSize}
       overlay={overlay}

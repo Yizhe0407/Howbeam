@@ -35,12 +35,36 @@ function isValidBounds(bounds: Bounds): boolean {
   );
 }
 
-export interface Redaction {
+/** A fully opaque black box. */
+export interface SolidRedaction {
   id: string;
-  bounds: Bounds;
-  /** Privacy-safe v1 intentionally supports only a fully opaque fill. */
   kind: 'solid';
+  bounds: Bounds;
 }
+
+/** A brush stroke that shows the screenshot pixelated beneath it: the line
+ * through `points`, `size` CSS px wide with round ends and joins. */
+export interface PixelateRedaction {
+  id: string;
+  kind: 'pixelate';
+  points: RedactionPoint[];
+  size: number;
+}
+
+export interface RedactionPoint {
+  x: number;
+  y: number;
+}
+
+/** A privacy mask. Every kind hides what is beneath it in every preview and export. */
+export type Redaction = SolidRedaction | PixelateRedaction;
+
+/** The mosaic brush: its width in CSS px, and how many points one stroke keeps. */
+export const MOSAIC_BRUSH_LIMITS = Object.freeze({
+  minSize: 16,
+  maxSize: 160,
+  maxPoints: 2_000,
+});
 
 export interface OrderedAnnotation {
   bounds: Bounds;
@@ -63,7 +87,7 @@ export interface Step {
   /** The person removed this ordinary step's box. Snapshot annotations are
    * never marked: removing one deletes the annotation. */
   highlightRemoved?: true;
-  /** Opaque privacy masks in screenshot CSS coordinates. Ordinary steps own
+  /** Privacy masks (solid boxes and mosaic strokes) in screenshot CSS coordinates. Ordinary steps own
    * their masks; snapshot groups store them only on the shared anchor. */
   redactions?: Redaction[];
   /** Blocks normal preview/copy/export until masks are explicitly reviewed.
@@ -315,19 +339,54 @@ export function getEntryImageOwner(entry: StepEntry): ScreenshotStep {
   return entry.kind === 'single' ? entry.step : entry.anchor;
 }
 
+const isRedactionCoordinate = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= STEP_STORAGE_LIMITS.maxCoordinateMagnitude;
+
+const isRedactionPoint = (value: unknown): value is RedactionPoint =>
+  isRecord(value) && isRedactionCoordinate(value.x) && isRedactionCoordinate(value.y);
+
+export const isMosaicBrushSize = (value: unknown): value is number =>
+  Number.isInteger(value)
+  && (value as number) >= MOSAIC_BRUSH_LIMITS.minSize
+  && (value as number) <= MOSAIC_BRUSH_LIMITS.maxSize;
+
 export function isValidRedaction(value: unknown): value is Redaction {
   if (!isRecord(value)) return false;
-  const redaction = value as Partial<Redaction>;
-  return (
-    typeof redaction.id === 'string' &&
-    redaction.id.length > 0 &&
-    redaction.id.length <= STEP_STORAGE_LIMITS.maxIdLength &&
-    redaction.id.trim() === redaction.id &&
-    !/[\u0000-\u001f\u007f-\u009f]/u.test(redaction.id) &&
-    redaction.kind === 'solid' &&
-    Boolean(redaction.bounds) &&
-    isValidBounds(redaction.bounds as Bounds)
-  );
+  const { id } = value;
+  if (
+    typeof id !== 'string' ||
+    id.length === 0 ||
+    id.length > STEP_STORAGE_LIMITS.maxIdLength ||
+    id.trim() !== id ||
+    /[\u0000-\u001f\u007f-\u009f]/u.test(id)
+  ) {
+    return false;
+  }
+  switch (value.kind) {
+    case 'solid':
+      return isRecord(value.bounds) && isValidBounds(value.bounds as unknown as Bounds);
+    case 'pixelate':
+      return (
+        isMosaicBrushSize(value.size) &&
+        Array.isArray(value.points) &&
+        value.points.length > 0 &&
+        value.points.length <= MOSAIC_BRUSH_LIMITS.maxPoints &&
+        value.points.every(isRedactionPoint)
+      );
+    default:
+      return false;
+  }
+}
+
+/** Copies only the known fields, so nothing unexpected can ride along into storage or an archive. */
+export function cloneRedaction(redaction: Redaction): Redaction {
+  if (redaction.kind === 'solid') return { id: redaction.id, kind: 'solid', bounds: { ...redaction.bounds } };
+  return {
+    id: redaction.id,
+    kind: 'pixelate',
+    points: redaction.points.map(({ x, y }) => ({ x, y })),
+    size: redaction.size,
+  };
 }
 
 export interface EntryPrivacyState {
@@ -416,7 +475,7 @@ export function sanitizeStepForStorage(step: Step): Step {
           continue;
         }
         seen.add(redaction.id);
-        redactions.push({ id: redaction.id, kind: 'solid', bounds: { ...redaction.bounds } });
+        redactions.push(cloneRedaction(redaction));
       }
     }
   }

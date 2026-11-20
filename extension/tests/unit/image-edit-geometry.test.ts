@@ -7,7 +7,7 @@ import {
   moveBounds,
   resizeBounds,
 } from '@/lib/editor/image-edit-geometry';
-import { appendItem, itemRoom, reorderItem, splitItems, toItems, type ImageEditItem } from '@/lib/editor/image-edit-items';
+import { appendItem, isPlaced, itemRoom, reorderItem, splitItems, toItems, type ImageEditItem } from '@/lib/editor/image-edit-items';
 import { itemBounds, translateItem } from '@/lib/editor/image-edit-item-geometry';
 import { isCopyable } from '@/lib/editor/image-edit-clipboard';
 import { highlightFrame } from '@/lib/media/annotation-geometry';
@@ -85,6 +85,7 @@ describe('recorded boxes as items', () => {
 
   it('are framed and kept inside the image where they are drawn, padded out from their target', () => {
     const item = itemAt(toItems([], [], null, [recorded]), 0);
+    if (!isPlaced(item)) throw new Error('A recorded box is placed.');
     expect(itemBounds(item)).toEqual(highlightFrame(recorded.bounds));
     const pushed = translateItem(item, -100, 0, size);
     expect(itemBounds(pushed).x).toBe(0);

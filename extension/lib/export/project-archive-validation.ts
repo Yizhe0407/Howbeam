@@ -1,5 +1,5 @@
 import { isRecord } from '../shared/validation';
-import { buildStepEntries, stepDescriptionLimit, stepRole, stepTextLimit, type Bounds, type ImageEdit, type Redaction, type Step } from '../storage/models';
+import { buildStepEntries, cloneRedaction, isValidRedaction, stepDescriptionLimit, stepRole, stepTextLimit, type Bounds, type ImageEdit, type Redaction, type Step } from '../storage/models';
 import {
   IMAGE_EDIT_LIMITS,
   isImageEditColor,
@@ -192,11 +192,16 @@ function expectRedactions(value: unknown, path: string): Redaction[] {
   return input.map((item, index) => {
     const itemPath = `${path}[${index}]`;
     const record = expectRecord(item, itemPath);
-    assertExactKeys(record, REDACTION_KEYS, itemPath);
     const id = expectIdentifier(record.id, `${itemPath}.id`);
     if (ids.has(id)) fail('DUPLICATE_ID', `${path} contains duplicate redaction id ${JSON.stringify(id)}.`);
     ids.add(id);
-    if (record.kind !== 'solid') fail('INVALID_REDACTION', `${itemPath}.kind must be "solid".`);
+    if (record.kind === 'pixelate') {
+      assertExactKeys(record, REDACTION_KEYS.pixelate, itemPath);
+      if (!isValidRedaction(record)) fail('INVALID_REDACTION', `${itemPath} is not a valid mosaic stroke.`);
+      return cloneRedaction(record);
+    }
+    if (record.kind !== 'solid') fail('INVALID_REDACTION', `${itemPath}.kind must be "solid" or "pixelate".`);
+    assertExactKeys(record, REDACTION_KEYS.solid, itemPath);
     let bounds: Bounds;
     try {
       bounds = expectBounds(record.bounds, `${itemPath}.bounds`);
@@ -206,7 +211,7 @@ function expectRedactions(value: unknown, path: string): Redaction[] {
       }
       throw error;
     }
-    return { id, bounds, kind: 'solid' };
+    return { id, kind: 'solid', bounds };
   });
 }
 

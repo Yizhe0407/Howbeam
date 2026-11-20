@@ -5,7 +5,7 @@ import type { ImageCssSize } from './image-edit-geometry';
  * transforms), so handles and outlines keep their on-screen size at any zoom
  * and scrolling provides panning. */
 
-/** Zoom is relative to the fitted size: 1 shows the whole image. */
+/** Zoom is relative to the fitted size: 1 shows the whole image, and reads as 100%. */
 export const MIN_ZOOM = 1;
 /** How far past the fit any image can be zoomed. */
 export const MAX_ZOOM = 8;
@@ -19,12 +19,6 @@ export const ZOOM_STEP = 1.25;
 export function maxZoomFor(fit: ImageCssSize | null, image: ImageCssSize | null): number {
   if (!fit || !image || fit.width <= 0 || image.width <= 0) return MAX_ZOOM;
   return Math.max(MAX_ZOOM, (MAX_NATIVE_ZOOM * image.width) / fit.width);
-}
-
-/** The zoom as a share of the image's own size, which is what a percentage readout should mean. */
-export function nativeZoom(zoom: number, fit: ImageCssSize | null, image: ImageCssSize | null): number {
-  if (!fit || !image || fit.width <= 0 || image.width <= 0) return zoom;
-  return (zoom * fit.width) / image.width;
 }
 
 export function clampZoom(zoom: number, maxZoom: number = MAX_ZOOM): number {

@@ -77,7 +77,7 @@ describe('resizeItem', () => {
 });
 
 describe('creating items from a drag', () => {
-  const input = (from: { x: number; y: number }, to: { x: number; y: number }) => ({ from, to, size, style: DEFAULT_IMAGE_EDIT_STYLE, nextNumber: 1 });
+  const input = (from: { x: number; y: number }, to: { x: number; y: number }) => ({ id: 'new', from, to, size, style: DEFAULT_IMAGE_EDIT_STYLE, nextNumber: 1 });
 
   it('makes a box from a usable drag and nothing from a stray click', () => {
     expect(imageEditTool('rect').create!(input({ x: 10, y: 10 }, { x: 60, y: 40 }))).toMatchObject({ kind: 'rect', bounds: { x: 10, y: 10, width: 50, height: 30 }, fill: 'none' as const, color: '#ff4747', width: 4 });

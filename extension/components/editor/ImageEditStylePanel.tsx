@@ -9,7 +9,8 @@ import {
   TEXT_LOOKS,
 } from '@/lib/storage/image-edit-model';
 import { IMAGE_EDIT_LIMITS } from '@/lib/storage/image-edit-model';
-import type { ImageEditStyle, StyleField, StylePatch } from '@/lib/editor/image-edit-style';
+import { clampBrushSize, type ImageEditStyle, type StyleField, type StylePatch } from '@/lib/editor/image-edit-style';
+import { MOSAIC_BRUSH_LIMITS } from '@/lib/storage/models';
 import { EDIT_SHADOW, contrastColor, textOutlineWidth } from '@/lib/media/image-edit-render';
 import { cn } from '@/lib/shared/utils';
 import { t } from '@/lib/shared/i18n';
@@ -264,6 +265,22 @@ export default function ImageEditStylePanel({ fields, style, number, onChange }:
                   onSelect={(markerRadius) => onChange({ markerRadius })}
                   options={IMAGE_EDIT_MARKER_RADII.map((value) => ({ value, title: copy.radii[value], content: copy.radii[value] }))}
                 />
+              </Group>
+            );
+          case 'brushSize':
+            return (
+              <Group key={field} label={copy.brushSizeLabel}>
+                <input
+                  type="range"
+                  aria-label={copy.brushSizeLabel}
+                  min={MOSAIC_BRUSH_LIMITS.minSize}
+                  max={MOSAIC_BRUSH_LIMITS.maxSize}
+                  step={1}
+                  value={style.brushSize}
+                  onChange={(event) => onChange({ brushSize: clampBrushSize(Number(event.target.value)) })}
+                  className="w-32 accent-selected"
+                />
+                <span className="w-8 text-xs font-bold text-foreground tabular-nums" aria-hidden="true">{style.brushSize}</span>
               </Group>
             );
           case 'number':

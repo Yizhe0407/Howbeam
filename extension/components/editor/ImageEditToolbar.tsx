@@ -18,10 +18,8 @@ interface HeaderProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
-  /** Current zoom relative to the fitted size, 1 = whole image. */
+  /** Current zoom relative to the fitted size: 1 = whole image = 100%. */
   zoom: number;
-  /** The same zoom relative to the image's own size, for the percentage readout. */
-  nativeZoom: number;
   canZoomIn: boolean;
   canZoomOut: boolean;
   onZoomIn: () => void;
@@ -121,7 +119,7 @@ export function ImageEditHeaderActions(props: HeaderProps) {
         <div className="flex items-center gap-0.5 rounded-md border-2 border-border bg-card p-0.5">
           <IconButton tooltip={false} label={copy.zoomOut} onClick={props.onZoomOut} disabled={!props.canZoomOut}><ZoomOut className="size-4" /></IconButton>
           <span className="min-w-12 text-center text-xs font-bold text-foreground tabular-nums" aria-live="polite">
-            {copy.zoomLevel(Math.round(props.nativeZoom * 100))}
+            {copy.zoomLevel(Math.round(props.zoom * 100))}
           </span>
           <IconButton tooltip={false} label={copy.zoomIn} onClick={props.onZoomIn} disabled={!props.canZoomIn}><ZoomIn className="size-4" /></IconButton>
           <IconButton tooltip={false} label={copy.zoomFit} onClick={props.onZoomFit} disabled={props.zoom === 1}><Maximize className="size-4" /></IconButton>

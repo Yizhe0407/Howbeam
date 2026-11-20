@@ -36,7 +36,12 @@ describe('crop offset', () => {
     expect(offsetBounds({ x: 120, y: 70, width: 10, height: 20 }, origin)).toEqual({ x: 20, y: 20, width: 10, height: 20 });
     expect(offsetBounds(null, origin)).toBeNull();
     expect(itemAt(offsetAnnotations([{ bounds: { x: 110, y: 60, width: 5, height: 5 }, order: 1 }], origin), 0).bounds).toEqual({ x: 10, y: 10, width: 5, height: 5 });
-    expect(itemAt(offsetRedactions([{ id: 'm', kind: 'solid', bounds: { x: 100, y: 50, width: 8, height: 8 } }], origin), 0).bounds).toEqual({ x: 0, y: 0, width: 8, height: 8 });
+    expect(offsetRedactions([{ id: 'm', kind: 'solid', bounds: { x: 100, y: 50, width: 8, height: 8 } }], origin)).toEqual([
+      { id: 'm', kind: 'solid', bounds: { x: 0, y: 0, width: 8, height: 8 } },
+    ]);
+    expect(offsetRedactions([{ id: 'p', kind: 'pixelate', points: [{ x: 110, y: 60 }, { x: 130, y: 90 }], size: 32 }], origin)).toEqual([
+      { id: 'p', kind: 'pixelate', points: [{ x: 10, y: 10 }, { x: 30, y: 40 }], size: 32 },
+    ]);
 
     const edits: ImageEdit[] = [
       { id: 'a', kind: 'arrow', from: { x: 110, y: 60 }, to: { x: 210, y: 160 }, width: 4, color: '#ff4747' },

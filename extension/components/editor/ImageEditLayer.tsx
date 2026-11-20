@@ -14,9 +14,10 @@ import {
   translateItem,
   type ItemHandle,
 } from '@/lib/editor/image-edit-item-geometry';
-import { nextStepNumber, type ImageEditItem } from '@/lib/editor/image-edit-items';
+import { isPlaced, newItemId, nextStepNumber, type ImageEditItem, type PlacedItem } from '@/lib/editor/image-edit-items';
 import type { ImageEditStyle } from '@/lib/editor/image-edit-style';
-import { constrainDragEnd, imageEditTool, type ImageEditTool, type ImageEditToolId } from '@/lib/editor/image-edit-tools';
+import { brushCursor } from '@/lib/editor/brush-cursor';
+import { constrainDragEnd, extendStroke, imageEditTool, type ImageEditTool, type ImageEditToolId } from '@/lib/editor/image-edit-tools';
 import {
   IMAGE_EDIT_FONT_FAMILY,
   IMAGE_EDIT_FONT_WEIGHT,
@@ -51,9 +52,11 @@ interface Props {
 }
 
 type Session =
-  | { mode: 'create'; tool: ImageEditTool; origin: Point }
-  | { mode: 'move'; start: ImageEditItem; origin: Point }
-  | { mode: 'resize'; start: ImageEditItem; handle: ItemHandle; origin: Point };
+  /** `path` collects every pointer position for a stroke tool. */
+  /** `id` is what the gesture makes, fixed for the whole gesture. */
+  | { mode: 'create'; tool: ImageEditTool; id: string; origin: Point; path: Point[] }
+  | { mode: 'move'; start: PlacedItem; origin: Point }
+  | { mode: 'resize'; start: PlacedItem; handle: ItemHandle; origin: Point };
 
 const HANDLE_POSITION: Record<string, string> = {
   nw: 'left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize',
@@ -76,7 +79,7 @@ const DOUBLE_PRESS_MS = 350;
 
 const percent = (value: number, total: number): string => `${(value / total) * 100}%`;
 
-function boxStyle(item: ImageEditItem, size: ImageCssSize) {
+function boxStyle(item: PlacedItem, size: ImageCssSize) {
   const box = itemBounds(item);
   return {
     left: percent(box.x, size.width),
@@ -87,7 +90,7 @@ function boxStyle(item: ImageEditItem, size: ImageCssSize) {
 }
 
 /** Where an arrow's end handle sits inside the arrow's own box. */
-function arrowHandleStyle(item: Extract<ImageEditItem, { kind: 'arrow' }>, handle: 'from' | 'to') {
+function arrowHandleStyle(item: Extract<PlacedItem, { kind: 'arrow' }>, handle: 'from' | 'to') {
   const box = itemBounds(item);
   const point = handle === 'from' ? item.from : item.to;
   return {
@@ -97,7 +100,7 @@ function arrowHandleStyle(item: Extract<ImageEditItem, { kind: 'arrow' }>, handl
 }
 
 /** Shapes that are grabbed by their outline, so clicking inside reaches whatever is under them. */
-const isStrokeHit = (item: ImageEditItem): boolean => item.kind === 'rect' || item.kind === 'ellipse' || item.kind === 'arrow';
+const isStrokeHit = (item: PlacedItem): boolean => item.kind === 'rect' || item.kind === 'ellipse' || item.kind === 'arrow';
 
 /** Dims everything outside the crop, so the area that will be kept stands out. */
 function CropShade({ bounds, size }: { bounds: { x: number; y: number; width: number; height: number }; size: ImageCssSize }) {
@@ -239,6 +242,12 @@ export default function ImageEditLayer({
   const [scale, setScale] = useState(1);
   const lastDownRef = useRef<{ id: string; time: number } | null>(null);
   const activeTool = imageEditTool(tool);
+  const paintsStrokes = activeTool.gesture === 'stroke' && !disabled;
+  /** The brush outline as the system cursor, which moves with the hand; null when the brush is too big on screen for one. */
+  const systemBrush = paintsStrokes ? brushCursor(style.brushSize * scale, window.devicePixelRatio) : null;
+  /** Too big for a system cursor: the page draws the outline here, where the pointer is over the image. */
+  const drawsBrushOutline = paintsStrokes && systemBrush === null;
+  const [brushAt, setBrushAt] = useState<Point | null>(null);
   /** A drawing tool draws, even when the press lands on something already there: only the
    * pointer moves items. (The crop tool is the exception: it works on the one crop.) */
   const drawsOverItems = activeTool.create !== undefined && tool !== 'crop';
@@ -278,10 +287,11 @@ export default function ImageEditLayer({
 
   function beginCreate(event: PointerEvent) {
     onSelect(null);
-    begin(event, { mode: 'create', tool: activeTool, origin: pointFromEvent(event) });
+    const origin = pointFromEvent(event);
+    begin(event, { mode: 'create', tool: activeTool, id: newItemId(), origin, path: [origin] });
   }
 
-  function beginMove(event: PointerEvent, item: ImageEditItem) {
+  function beginMove(event: PointerEvent, item: PlacedItem) {
     if (disabled) return;
     if (drawsOverItems) {
       // Items let presses through to the image while drawing; should one still land here, it draws too.
@@ -317,8 +327,12 @@ export default function ImageEditLayer({
   /** What the gesture produces with the pointer at `point`; Shift reshapes it. */
   function draftFor(session: Session, point: Point, shift: boolean): ImageEditItem | null {
     if (session.mode === 'create') {
+      if (session.tool.gesture === 'stroke') {
+        // The stroke is what has been kept of the path so far; the pointer joins it as it moves on.
+        return session.tool.create?.({ id: session.id, from: session.origin, to: point, path: [...session.path], size, style, nextNumber: 0 }) ?? null;
+      }
       const to = shift ? constrainDragEnd(session.tool, session.origin, point, size) : point;
-      return session.tool.create?.({ from: session.origin, to, size, style, nextNumber: nextStepNumber(items) }) ?? null;
+      return session.tool.create?.({ id: session.id, from: session.origin, to, size, style, nextNumber: nextStepNumber(items) }) ?? null;
     }
     let dx = point.x - session.origin.x;
     let dy = point.y - session.origin.y;
@@ -343,7 +357,11 @@ export default function ImageEditLayer({
   }
 
   function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
-    refreshDraft(pointFromEvent(event), event.shiftKey);
+    const point = pointFromEvent(event);
+    if (drawsBrushOutline) setBrushAt(point);
+    const session = sessionRef.current;
+    if (session?.mode === 'create' && session.tool.gesture === 'stroke') extendStroke(session.path, point);
+    refreshDraft(point, event.shiftKey);
   }
 
   // Pressing or releasing Shift mid-drag reshapes the gesture without waiting for the next pointer move.
@@ -369,13 +387,15 @@ export default function ImageEditLayer({
     setDraft(null);
     onDraft(null);
     if (!event || !session) return;
-    const result = draftFor(session, pointFromEvent(event), event.shiftKey);
+    const released = pointFromEvent(event);
+    if (session.mode === 'create' && session.tool.gesture === 'stroke') extendStroke(session.path, released, true);
+    const result = draftFor(session, released, event.shiftKey);
     if (!result) return;
     if (session.mode === 'create') onCreate(result);
     else if (JSON.stringify(result) !== JSON.stringify(session.start)) onUpdate(result);
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>, item: ImageEditItem) {
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>, item: PlacedItem) {
     if (disabled) return;
     if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault();
@@ -400,21 +420,23 @@ export default function ImageEditLayer({
     onUpdate(translateItem(item, move.x, move.y, size));
   }
 
+  // Only placed items can be picked up: mosaic strokes are paint and have no chrome.
   // The item being gestured over shows its draft; a brand-new draft has no stored counterpart yet.
-  const shown = items.map((item) => (draft && draft.id === item.id ? draft : item));
-  const isNewDraft = draft !== null && !items.some((item) => item.id === draft.id);
-  const chromeItems = isNewDraft && draft ? [...shown, draft] : shown;
+  const placedDraft = draft && isPlaced(draft) ? draft : null;
+  const shown = items.filter(isPlaced).map((item) => (placedDraft && placedDraft.id === item.id ? placedDraft : item));
+  const isNewDraft = placedDraft !== null && !items.some((item) => item.id === placedDraft.id);
+  const chromeItems = isNewDraft && placedDraft ? [...shown, placedDraft] : shown;
   const typingId = editingText?.id;
   const hitSvgItems = chromeItems.filter((item) => isStrokeHit(item) && item.id !== typingId);
 
-  function renderChrome(item: ImageEditItem) {
+  function renderChrome(item: PlacedItem) {
     const isCrop = item.kind === 'crop';
     // The crop tool is modal: only the crop can be touched, and the crop can only be touched in it.
     const inert = tool === 'crop' ? !isCrop : isCrop;
     // Drawing tools reach through items to the image beneath (the selected item's handles stay usable).
     const passThrough = inert || drawsOverItems;
     const selected = isCrop ? tool === 'crop' : item.id === selectedId;
-    const isNew = isNewDraft && draft?.id === item.id;
+    const isNew = isNewDraft && placedDraft?.id === item.id;
     const strokeOnly = isStrokeHit(item);
     // An ellipse is framed by its bounding box: `rounded-full` on a wide box draws a pill, not the ellipse, and the handles then float off the frame.
     const round = item.kind === 'step';
@@ -475,10 +497,14 @@ export default function ImageEditLayer({
           ? 'cursor-not-allowed'
           : tool === 'text'
             ? 'cursor-text'
-            : activeTool.create ? 'cursor-crosshair' : 'cursor-default',
+            : drawsBrushOutline
+              ? 'cursor-none'
+              : paintsStrokes ? '' : activeTool.create ? 'cursor-crosshair' : 'cursor-default',
       )}
+      style={systemBrush ? { cursor: systemBrush } : undefined}
       onPointerDown={handleLayerPointerDown}
       onPointerMove={handlePointerMove}
+      onPointerLeave={() => setBrushAt(null)}
       onPointerUp={finish}
       onPointerCancel={() => finish(null)}
     >
@@ -527,6 +553,19 @@ export default function ImageEditLayer({
           <CropShade bounds={cropItem.bounds} size={size} />
           {renderChrome(cropItem)}
         </>
+      )}
+      {drawsBrushOutline && brushAt && (
+        <div
+          aria-hidden="true"
+          data-howbeam-brush-outline
+          className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgb(0_0_0/0.6),inset_0_0_0_1px_rgb(0_0_0/0.6)]"
+          style={{
+            left: percent(brushAt.x, size.width),
+            top: percent(brushAt.y, size.height),
+            width: style.brushSize * scale,
+            height: style.brushSize * scale,
+          }}
+        />
       )}
       {editingText && <TextEditor key={editingText.id} item={editingText} scale={scale} size={size} onFinish={onFinishTextEdit} />}
     </div>

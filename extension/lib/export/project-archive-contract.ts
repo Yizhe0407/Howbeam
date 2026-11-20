@@ -147,7 +147,10 @@ export const METADATA_KEYS = ['title', 'description', 'sections'] as const;
 export const SECTION_KEYS = ['id', 'title', 'startEntryId'] as const;
 export const SCREENSHOT_KEYS = ['id', 'mediaType', 'size'] as const;
 export const BOUNDS_KEYS = ['x', 'y', 'width', 'height'] as const;
-export const REDACTION_KEYS = ['id', 'bounds', 'kind'] as const;
+export const REDACTION_KEYS = {
+  solid: ['id', 'kind', 'bounds'],
+  pixelate: ['id', 'kind', 'points', 'size'],
+} as const;
 export const IMAGE_EDIT_KEYS = {
   text: ['id', 'kind', 'bounds', 'text', 'fontSize', 'color', 'look'],
   arrow: ['id', 'kind', 'from', 'to', 'width', 'color'],

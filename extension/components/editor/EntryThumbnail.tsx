@@ -68,8 +68,8 @@ export default function EntryThumbnail({ entry, redactions, imageEdits, crop, bo
 
   const sourceRedactions = redactions ?? privacy.redactions;
   const sourceImageEdits = imageEdits ?? getEntryImageEdits(entry);
+  const origin = useMemo(() => ({ x: originX, y: originY }), [originX, originY]);
   const shown = useMemo(() => {
-    const origin = { x: originX, y: originY };
     return {
       redactions: offsetRedactions(sourceRedactions, origin),
       imageEdits: offsetImageEdits(sourceImageEdits, origin),
@@ -83,7 +83,7 @@ export default function EntryThumbnail({ entry, redactions, imageEdits, crop, bo
         )
         : [],
     };
-  }, [entry, originX, originY, sourceRedactions, sourceImageEdits, boxes]);
+  }, [entry, origin, sourceRedactions, sourceImageEdits, boxes]);
 
   // The first cut of a cropped image is still running; never show the uncropped screenshot meanwhile.
   if (!view) return null;
@@ -94,6 +94,7 @@ export default function EntryThumbnail({ entry, redactions, imageEdits, crop, bo
         blob={view.blob}
         bounds={shown.bounds}
         redactions={shown.redactions}
+        mosaicOrigin={origin}
         imageEdits={shown.imageEdits}
         privacyReviewRequired={privacyReviewRequired}
         screenshotScale={screenshotScale}
@@ -106,6 +107,7 @@ export default function EntryThumbnail({ entry, redactions, imageEdits, crop, bo
       blob={view.blob}
       annotations={shown.annotations}
       redactions={shown.redactions}
+      mosaicOrigin={origin}
       imageEdits={shown.imageEdits}
       privacyReviewRequired={privacyReviewRequired}
       screenshotScale={screenshotScale}

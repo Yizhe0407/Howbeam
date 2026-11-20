@@ -162,6 +162,7 @@ export interface StoredStep {
   screenshotScale?: number;
   devicePixelRatio: number;
   hasScreenshot: boolean;
+  redactions?: Array<{ id: string; kind: string; size?: number; points?: Array<{ x: number; y: number }> }>;
 }
 
 export async function resetExtensionData(popup: Page): Promise<void> {
@@ -276,6 +277,7 @@ export async function readSteps(popup: Page): Promise<StoredStep[]> {
               screenshotScale: step.screenshotScale,
               devicePixelRatio: step.devicePixelRatio,
               hasScreenshot: step.screenshotBlob instanceof Blob,
+              redactions: step.redactions,
             })).sort((first, second) => first.order - second.order),
           );
           db.close();

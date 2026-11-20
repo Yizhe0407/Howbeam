@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import HighlightThumbnail from '@/components/editor/HighlightThumbnail';
 import { installThumbnailDomStubs, stubImageMetrics, type ThumbnailDomStubs } from '../setup/thumbnail-dom';
+import { recordCanvasFills } from '../setup/canvas-paint';
 
 describe('HighlightThumbnail', () => {
   let stubs: ThumbnailDomStubs;
@@ -113,6 +114,7 @@ describe('HighlightThumbnail', () => {
   // Redactions use the same CSS-coordinate-to-image mapping as highlights, but
   // render last so privacy masks always cover the annotation chrome beneath.
   it('maps opaque redactions from screenshot CSS coordinates above the highlight', () => {
+    const fills = recordCanvasFills();
     const view = render(
       <HighlightThumbnail
         blob={new Blob(['image'])}
@@ -134,14 +136,14 @@ describe('HighlightThumbnail', () => {
     expect(image.style.visibility).toBe('');
 
     const highlight = view.container.querySelector<HTMLElement>('.pointer-events-none.absolute.box-border')!;
-    const redaction = view.container.querySelector<HTMLElement>('[data-howbeam-redaction="mask-1"]')!;
-    expect(redaction.style.left).toBe('24px');
-    expect(redaction.style.top).toBe('9px');
-    expect(redaction.style.width).toBe('17px');
-    expect(redaction.style.height).toBe('22px');
-    expect(redaction.style.backgroundColor).toBe('rgb(0, 0, 0)');
-    expect(redaction.className).toContain('z-10');
-    expect(highlight.compareDocumentPosition(redaction) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    const layer = view.container.querySelector<HTMLElement>('[data-howbeam-redactions]')!;
+    // The layer covers the image's pixels at the screenshot's own resolution; the mask is grown by its 2px safety margin.
+    expect([layer.style.left, layer.style.top, layer.style.width, layer.style.height]).toEqual(['0px', '0px', '100px', '50px']);
+    const canvas = layer.querySelector('canvas')!;
+    expect([canvas.width, canvas.height]).toEqual([200, 100]);
+    expect(fills).toEqual([{ rect: [48, 18, 34, 44], fill: '#000000' }]);
+    expect(layer.className).toContain('z-10');
+    expect(highlight.compareDocumentPosition(layer) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   });
 
   it('hides source pixels while a resize remaps a redaction overlay', () => {
@@ -171,6 +173,7 @@ describe('HighlightThumbnail', () => {
   // list is applied in the same render, with the image never hidden and no
   // remap frame needed.
   it('applies added and moved redactions immediately without hiding the image', () => {
+    const fills = recordCanvasFills();
     const redactionAt = (x: number) => [{ id: 'mask-1', kind: 'solid' as const, bounds: { x, y: 20, width: 30, height: 40 } }];
     const blob = new Blob(['image']);
     const view = render(
@@ -188,7 +191,7 @@ describe('HighlightThumbnail', () => {
     stubImageMetrics(image, { naturalWidth: 200, naturalHeight: 100, rendered: { width: 100, height: 50 } });
     act(() => fireEvent.load(image));
     act(() => stubs.flushAnimationFrames());
-    const initialLeft = view.container.querySelector<HTMLElement>('[data-howbeam-redaction="mask-1"]')!.style.left;
+    expect(fills.map(({ rect }) => rect[0])).toEqual([48]);
 
     view.rerender(
       <HighlightThumbnail
@@ -204,13 +207,14 @@ describe('HighlightThumbnail', () => {
 
     expect(image.style.visibility).toBe('');
     expect(stubs.animationFrames.size).toBe(0);
-    expect(view.container.querySelector<HTMLElement>('[data-howbeam-redaction="mask-1"]')!.style.left).not.toBe(initialLeft);
+    expect(fills.map(({ rect }) => rect[0])).toEqual([98]);
   });
 
   // When the image element is exactly the image's box (the zoomable editor), a
   // mask is a percentage of that box: resizing it can never separate mask and
   // pixels, so the image is never hidden and nothing is remeasured for masks.
   it('places masks as percentages in an exact box and survives resizes without hiding the image', () => {
+    const fills = recordCanvasFills();
     const view = render(
       <HighlightThumbnail
         blob={new Blob(['image'])}
@@ -227,15 +231,14 @@ describe('HighlightThumbnail', () => {
     stubImageMetrics(image, { naturalWidth: 200, naturalHeight: 100, rendered: { width: 400, height: 200 } });
     act(() => fireEvent.load(image));
 
-    const mask = view.container.querySelector<HTMLElement>('[data-howbeam-redaction="mask-1"]')!;
-    // The 2px safety margin around the mask is part of the box: (50-2)/200, (20-2)/100, (30+4)/200, (40+4)/100.
-    expect(mask.style.left).toBe('24%');
-    expect(mask.style.top).toBe('18%');
-    expect(mask.style.width).toBe('17%');
-    expect(mask.style.height).toBe('44%');
+    const layer = view.container.querySelector<HTMLElement>('[data-howbeam-redactions]')!;
+    expect([layer.style.left, layer.style.top, layer.style.width, layer.style.height]).toEqual(['0px', '0px', '100%', '100%']);
+    const mask = layer.querySelector('canvas')!;
+    // The 2px safety margin around the mask is part of the box.
+    expect(fills.map(({ rect }) => rect)).toEqual([[48, 18, 34, 44]]);
 
     act(() => stubs.triggerResize());
     expect(image.style.visibility).toBe('');
-    expect(view.container.querySelector('[data-howbeam-redaction="mask-1"]')).toBe(mask);
+    expect(view.container.querySelector('[data-howbeam-redactions] canvas')).toBe(mask);
   });
 });

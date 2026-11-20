@@ -397,6 +397,122 @@ test.describe('editor workflows', () => {
     expect(snapshotPng.size).toBeGreaterThan(10_000);
   });
 
+  test('paints a mosaic that copies keep, sizing the brush with Alt + wheel and keeping the image edge reachable when zoomed', async ({
+    appPage,
+    popupPage,
+    extensionContext,
+    extensionId,
+    browserErrors: _browserErrors,
+  }) => {
+    await recordStepTargets(appPage, popupPage, ['#plain-text']);
+    const editor = await openEditor(extensionContext, extensionId, popupPage, 1);
+    const [step] = await readSteps(popupPage);
+    const dpr = step!.screenshotScale ?? step!.devicePixelRatio;
+    const target = step!.bounds!;
+    // The middle of the recorded text, in screenshot CSS px.
+    const centre = { x: target.x + target.width / 2, y: target.y + target.height / 2 };
+
+    /** Whether the 16 CSS px mosaic cell holding `centre` is one colour in the copied PNG. */
+    const copiedCellIsUniform = async () => {
+      await copyAndReadPng(editor, editor.getByRole('button', { name: '複製圖片' }));
+      return editor.evaluate(async ({ point, scale }) => {
+        const items = await navigator.clipboard.read();
+        const blob = await items.find((item) => item.types.includes('image/png'))!.getType('image/png');
+        const bitmap = await createImageBitmap(blob);
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(bitmap, 0, 0);
+        const cell = Math.round(16 * scale);
+        const left = Math.floor((point.x * scale) / cell) * cell;
+        const top = Math.floor((point.y * scale) / cell) * cell;
+        const { data } = ctx.getImageData(left, top, cell, cell);
+        for (let index = 4; index < data.length; index += 4) {
+          for (let channel = 0; channel < 4; channel += 1) {
+            if (data[index + channel] !== data[channel]) return false;
+          }
+        }
+        return true;
+      }, { point: centre, scale: dpr });
+    };
+    expect(await copiedCellIsUniform()).toBe(false);
+
+    await editor.getByRole('button', { name: '編輯圖片', exact: true }).click();
+    const workspace = editor.getByRole('dialog', { name: '編輯圖片 · 步驟 1' });
+    const zoomReadout = workspace.getByText(/^\d+%$/);
+    await expect(zoomReadout).toHaveText('100%');
+    const scroller = workspace.locator('[data-howbeam-edit-scroller]');
+    const image = workspace.locator('[data-howbeam-edit-scroller] img');
+
+    // Zoomed in, the image keeps a margin on every side once scrolled to that side.
+    for (let press = 0; press < 3; press += 1) await editor.keyboard.press('+');
+    await expect(zoomReadout).toHaveText('195%');
+    const margins = async (to: 'start' | 'end') => {
+      await scroller.evaluate((element, edge) => {
+        element.scrollTo(edge === 'start' ? 0 : element.scrollWidth, edge === 'start' ? 0 : element.scrollHeight);
+      }, to);
+      return image.evaluate((img) => {
+        const view = img.closest('[data-howbeam-edit-scroller]')!;
+        const frame = view.getBoundingClientRect();
+        const box = img.getBoundingClientRect();
+        return {
+          left: box.left - frame.left,
+          top: box.top - frame.top,
+          right: frame.left + view.clientWidth - box.right,
+          bottom: frame.top + view.clientHeight - box.bottom,
+        };
+      });
+    };
+    const start = await margins('start');
+    expect(start.left).toBeCloseTo(24, 0);
+    expect(start.top).toBeCloseTo(24, 0);
+    const end = await margins('end');
+    expect(end.right).toBeCloseTo(24, 0);
+    expect(end.bottom).toBeCloseTo(24, 0);
+    await editor.keyboard.press('0');
+    await expect(zoomReadout).toHaveText('100%');
+
+    // Alt + wheel sizes the brush and never zooms.
+    await editor.keyboard.press('b');
+    const brush = workspace.getByRole('slider', { name: '筆刷大小' });
+    await expect(brush).toHaveValue('32');
+    const frame = (await scroller.boundingBox())!;
+    await editor.mouse.move(frame.x + frame.width / 2, frame.y + frame.height / 2);
+    await editor.keyboard.down('Alt');
+    await editor.mouse.wheel(0, -300);
+    await editor.keyboard.up('Alt');
+    await expect.poll(async () => Number(await brush.inputValue())).toBeGreaterThanOrEqual(48);
+    await expect(zoomReadout).toHaveText('100%');
+
+    // Paint across the recorded text.
+    const box = (await image.boundingBox())!;
+    const cssWidth = await image.evaluate((img, scale) => (img as HTMLImageElement).naturalWidth / scale, dpr);
+    const toScreen = (x: number, y: number) => ({ x: box.x + (x / cssWidth) * box.width, y: box.y + (y / cssWidth) * box.width });
+    const from = toScreen(centre.x - 40, centre.y);
+    const to = toScreen(centre.x + 40, centre.y);
+    await editor.mouse.move(from.x, from.y);
+    await editor.mouse.down();
+    await editor.mouse.move(to.x, to.y, { steps: 10 });
+    await editor.mouse.up();
+    // A stroke is paint: there is nothing to pick up, so no frame appears around it.
+    await expect(workspace.locator('[data-howbeam-edit-item][aria-pressed="true"]')).toHaveCount(0);
+    const undo = workspace.getByRole('button', { name: '復原' });
+    const redo = workspace.getByRole('button', { name: '重做' });
+    await expect(undo).toBeEnabled();
+    await editor.keyboard.press('Control+z');
+    await expect(undo).toBeDisabled();
+    await expect(redo).toBeEnabled();
+    await editor.keyboard.press('Control+Shift+z');
+    await expect(redo).toBeDisabled();
+
+    await workspace.getByRole('button', { name: '完成' }).click();
+    await expect(workspace).toBeHidden();
+    const stored = (await readSteps(popupPage))[0]!.redactions!;
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({ kind: 'pixelate' });
+    expect(stored[0]!.size).toBeGreaterThanOrEqual(48);
+    expect(await copiedCellIsUniform()).toBe(true);
+  });
+
   test('exports one valid JPEG per timeline entry in the ZIP archive', async ({
     appPage,
     popupPage,

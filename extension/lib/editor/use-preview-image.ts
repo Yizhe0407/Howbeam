@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getMaskedImage, maskedImageKey, peekMaskedImage } from '@/lib/media/masked-image';
-import type { Bounds, Redaction } from '@/lib/storage/models';
+import { getMaskedImage, getMosaicBitmap, maskedImageKey, peekMaskedImage } from '@/lib/media/masked-image';
+import { NO_CROP_ORIGIN, type CropOrigin } from '@/lib/media/crop-offset';
+import { hasMosaic, redactionKey } from '@/lib/media/redaction-render';
+import type { Redaction } from '@/lib/storage/models';
 import { useObjectUrl } from './use-object-url';
 
 export interface PreviewImageOptions {
@@ -15,6 +17,9 @@ export interface PreviewImageOptions {
    * show what they cover; everywhere else the masks are burned in.
    */
   liveMasks?: boolean;
+  /** Where the source was cut from the stored screenshot, so mosaic cells stay on its grid.
+   * Keep its identity stable while it is unchanged: a new object makes a new mosaic. */
+  mosaicOrigin?: CropOrigin;
 }
 
 export interface PreviewImage {
@@ -23,6 +28,14 @@ export interface PreviewImage {
   /** True when the pixels behind `url` already have every mask applied, so
    * overlay masks are decoration rather than the only thing hiding them. */
   masksBurnedIn: boolean;
+  /** With masks burned in: the same image, whose pixels under every mosaic
+   * stroke are the mosaic, for the overlay that keeps drawings beneath a
+   * stroke covered. Null while it is being made: strokes are painted solid. */
+  mosaicUrl: string | null;
+  /** With live masks: the source pixelated on the mosaic grid, for painting
+   * strokes over the stored pixels. Null while it is being made (or not
+   * needed): strokes are painted solid. */
+  liveMosaic: ImageBitmap | null;
 }
 
 interface Settled {
@@ -34,15 +47,32 @@ interface Settled {
   blob: Blob | null;
 }
 
-const sameBounds = (a: Bounds, b: Bounds): boolean =>
-  a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
-
 /** Whether an earlier masked result of the same source hides at least what the
  * new masks hide, so it can stay on screen while the new result is made. */
 function hidesAtLeast(previous: Settled, redactions: readonly Redaction[], privacyReviewRequired: boolean): boolean {
   if (previous.privacyReviewRequired) return true;
   if (privacyReviewRequired) return false;
-  return redactions.every((redaction) => previous.redactions.some((old) => sameBounds(old.bounds, redaction.bounds)));
+  const hidden = new Set(previous.redactions.map(redactionKey));
+  return redactions.every((redaction) => hidden.has(redactionKey(redaction)));
+}
+
+/** The source pixelated on the mosaic grid, while `wanted`. */
+function useMosaicBitmap(source: Blob, screenshotScale: number, origin: CropOrigin, wanted: boolean): ImageBitmap | null {
+  const [made, setMade] = useState<{ source: Blob; screenshotScale: number; origin: CropOrigin; bitmap: ImageBitmap } | null>(null);
+  useEffect(() => {
+    if (!wanted) return undefined;
+    let cancelled = false;
+    getMosaicBitmap(source, screenshotScale, origin).then(
+      (bitmap) => {
+        if (!cancelled) setMade({ source, screenshotScale, origin, bitmap });
+      },
+      (error) => console.error('[howbeam] failed to pixelate the image', error),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [source, screenshotScale, origin, wanted]);
+  return wanted && made?.source === source && made.screenshotScale === screenshotScale && made.origin === origin ? made.bitmap : null;
 }
 
 /**
@@ -54,11 +84,11 @@ function hidesAtLeast(previous: Settled, redactions: readonly Redaction[], priva
  */
 export function usePreviewImage(
   source: Blob,
-  { redactions, screenshotScale, privacyReviewRequired, liveMasks = false }: PreviewImageOptions,
+  { redactions, screenshotScale, privacyReviewRequired, liveMasks = false, mosaicOrigin = NO_CROP_ORIGIN }: PreviewImageOptions,
 ): PreviewImage {
   const live = liveMasks && !privacyReviewRequired;
   const needsMasking = !live && (privacyReviewRequired || redactions.length > 0);
-  const key = needsMasking ? maskedImageKey(redactions, screenshotScale, privacyReviewRequired) : '';
+  const key = needsMasking ? maskedImageKey(redactions, screenshotScale, privacyReviewRequired, mosaicOrigin) : '';
   const [settled, setSettled] = useState<Settled | null>(null);
 
   useEffect(() => {
@@ -67,14 +97,14 @@ export function usePreviewImage(
     const done = (blob: Blob | null) => {
       if (!cancelled) setSettled({ source, key, redactions, privacyReviewRequired, blob });
     };
-    getMaskedImage(source, redactions, screenshotScale, privacyReviewRequired).then(done, (error) => {
+    getMaskedImage(source, redactions, screenshotScale, privacyReviewRequired, mosaicOrigin).then(done, (error) => {
       console.error('[howbeam] failed to mask the preview image', error);
       done(null);
     });
     return () => {
       cancelled = true;
     };
-  }, [source, key, needsMasking, redactions, screenshotScale, privacyReviewRequired]);
+  }, [source, key, needsMasking, redactions, screenshotScale, privacyReviewRequired, mosaicOrigin]);
 
   let shown: Blob | null;
   if (!needsMasking) {
@@ -87,6 +117,7 @@ export function usePreviewImage(
     }
   }
 
-  const url = useObjectUrl(shown);
-  return { url: url || null, masksBurnedIn: !live };
+  const url = useObjectUrl(shown) || null;
+  const liveMosaic = useMosaicBitmap(source, screenshotScale, mosaicOrigin, live && hasMosaic(redactions));
+  return { url, masksBurnedIn: !live, mosaicUrl: live ? null : url, liveMosaic };
 }

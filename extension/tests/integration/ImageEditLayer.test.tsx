@@ -280,3 +280,37 @@ describe('ImageEditLayer crop', () => {
   });
 });
 
+
+describe('ImageEditLayer gesture identity', () => {
+  // A painted stroke is drawn one stretch at a time, which only works while the
+  // stroke keeps its identity: a new id on every move repaints everything.
+  it.each(['mosaic', 'rect', 'arrow'] as const)('keeps one id for what a %s gesture makes, from first draft to the created item', (tool) => {
+    const { layer, onCreate, onDraft } = setup({ tool, items: [] });
+    fireEvent.pointerDown(layer, { clientX: 10, clientY: 10, button: 0 });
+    for (const x of [40, 80, 120, 160]) fireEvent.pointerMove(layer, { clientX: x, clientY: 60 });
+    fireEvent.pointerUp(layer, { clientX: 200, clientY: 60 });
+
+    const drafts = onDraft.mock.calls.map(([draft]) => draft).filter(Boolean) as Array<{ id: string }>;
+    expect(drafts.length).toBeGreaterThan(1);
+    const ids = new Set([...drafts.map((draft) => draft.id), onCreate.mock.calls[0]![0].id]);
+    expect(ids.size).toBe(1);
+  });
+});
+
+describe('ImageEditLayer brush cursor', () => {
+  // The system cursor moves with the hand; an outline drawn by the page trails it.
+  it('shows the brush outline as the system cursor while it fits one', () => {
+    const { layer, container } = setup({ tool: 'mosaic', items: [], style: { ...DEFAULT_IMAGE_EDIT_STYLE, brushSize: 32 } });
+    expect(layer.style.cursor).toMatch(/^url\("data:image\/svg\+xml,.+"\) 19 19, crosshair$/);
+    fireEvent.pointerMove(layer, { clientX: 50, clientY: 50 });
+    expect(container.querySelector('[data-howbeam-brush-outline]')).toBeNull();
+  });
+
+  it('draws the outline on the page for a brush too big for a cursor, with the system cursor hidden', () => {
+    const { layer, container } = setup({ tool: 'mosaic', items: [], style: { ...DEFAULT_IMAGE_EDIT_STYLE, brushSize: 160 } });
+    expect(layer.style.cursor).toBe('');
+    expect(layer.className).toContain('cursor-none');
+    fireEvent.pointerMove(layer, { clientX: 50, clientY: 50 });
+    expect(container.querySelector('[data-howbeam-brush-outline]')).not.toBeNull();
+  });
+});

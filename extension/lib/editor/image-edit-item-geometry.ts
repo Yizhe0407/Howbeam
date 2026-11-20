@@ -11,7 +11,7 @@ import {
   type Point,
   type ResizeHandle,
 } from './image-edit-geometry';
-import type { ImageEditItem } from './image-edit-items';
+import type { PlacedItem } from './image-edit-items';
 
 /** Per-kind move/resize rules, so the edit layer treats every item the same way. */
 
@@ -31,7 +31,7 @@ const NO_HANDLES: readonly ItemHandle[] = [];
 const round = (value: number): number => Math.round(value * 100) / 100;
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 
-export function itemHandles(item: ImageEditItem): readonly ItemHandle[] {
+export function itemHandles(item: PlacedItem): readonly ItemHandle[] {
   if (item.kind === 'arrow') return ARROW_HANDLES;
   if (item.kind === 'text') return TEXT_HANDLES;
   if (item.kind === 'step') return NO_HANDLES;
@@ -40,7 +40,7 @@ export function itemHandles(item: ImageEditItem): readonly ItemHandle[] {
 
 /** The box an item occupies, for its selection frame and for keeping it inside the image.
  * A recorded box is stored around its target and drawn padded out from it, so it is framed where it is drawn. */
-export function itemBounds(item: ImageEditItem): Bounds {
+export function itemBounds(item: PlacedItem): Bounds {
   if (item.kind === 'highlight') return highlightFrame(item.bounds);
   if (item.kind === 'arrow') {
     const x = Math.min(item.from.x, item.to.x);
@@ -60,7 +60,7 @@ export function fitTextHeight<T extends TextEdit>(edit: T, measure: TextMeasure 
 }
 
 /** Moves an item, keeping all of it inside the image. */
-export function translateItem(item: ImageEditItem, dx: number, dy: number, size: ImageCssSize): ImageEditItem {
+export function translateItem(item: PlacedItem, dx: number, dy: number, size: ImageCssSize): PlacedItem {
   const box = itemBounds(item);
   const moveX = round(clamp(dx, -box.x, Math.max(size.width - (box.x + box.width), -box.x)));
   const moveY = round(clamp(dy, -box.y, Math.max(size.height - (box.y + box.height), -box.y)));
@@ -98,13 +98,13 @@ export interface ResizeOptions {
 
 /** Drags one handle by (dx, dy) from the item's state when the drag began. */
 export function resizeItem(
-  item: ImageEditItem,
+  item: PlacedItem,
   handle: ItemHandle,
   dx: number,
   dy: number,
   size: ImageCssSize,
   { constrain = false, measure = measureTextWidth }: ResizeOptions = {},
-): ImageEditItem {
+): PlacedItem {
   if (item.kind === 'arrow') {
     if (handle !== 'from' && handle !== 'to') return item;
     const moved = movePoint(handle === 'from' ? item.from : item.to, dx, dy, size);

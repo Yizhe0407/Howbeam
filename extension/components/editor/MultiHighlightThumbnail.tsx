@@ -3,6 +3,7 @@ import { BADGE_RADIUS, BADGE_TEXT_COLOR, HIGHLIGHT_COLOR, HIGHLIGHT_LINE_WIDTH, 
 import { getBadgeFontSize } from '@/lib/media/annotation-geometry';
 import { layoutAnnotations } from '@/lib/media/annotation-layout';
 import { usePreviewImage } from '@/lib/editor/use-preview-image';
+import type { CropOrigin } from '@/lib/media/crop-offset';
 import { type ImageEdit, type Redaction } from '@/lib/storage/models';
 import { getValidScreenshotScale } from '@/lib/media/image-utils';
 import ThumbnailSurface from './ThumbnailSurface';
@@ -20,8 +21,10 @@ const NO_EDITS: ImageEdit[] = [];
 interface Props {
   blob: Blob;
   annotations: Annotation[];
-  /** Opaque masks in screenshot CSS coordinates. */
+  /** Privacy masks in screenshot CSS coordinates. */
   redactions?: Redaction[];
+  /** Where `blob` was cut from the stored screenshot, so mosaic cells stay on its grid. */
+  mosaicOrigin?: CropOrigin;
   /** Hide all source pixels until privacy metadata is explicitly reviewed. */
   privacyReviewRequired?: boolean;
   /** The image element is exactly the image's box (see useThumbnailOverlayMapping). */
@@ -81,6 +84,7 @@ export default function MultiHighlightThumbnail({
   exactBox = false,
   imageEdits = NO_EDITS,
   liveMasks = false,
+  mosaicOrigin,
   screenshotScale,
   badges = true,
   alt,
@@ -91,7 +95,7 @@ export default function MultiHighlightThumbnail({
   loading = 'eager',
   decoding = 'async',
 }: Props) {
-  const { url, masksBurnedIn } = usePreviewImage(blob, { redactions, screenshotScale, privacyReviewRequired, liveMasks });
+  const { url, masksBurnedIn, mosaicUrl, liveMosaic } = usePreviewImage(blob, { redactions, screenshotScale, privacyReviewRequired, liveMasks, mosaicOrigin });
   const [boxes, setBoxes] = useState<BoxStyle[]>([]);
   const [imageSize, setImageSize] = useState<{ url: string; width: number; height: number } | null>(null);
   const annotationSignature = useMemo(
@@ -189,7 +193,7 @@ export default function MultiHighlightThumbnail({
 
   const clearOverlays = useCallback(() => setBoxes([]), []);
 
-  const { imgRef, contentFrame, imageCssSize, redactionBoxes, showPixels } = useThumbnailOverlayMapping({
+  const { imgRef, contentFrame, imageCssSize, showPixels } = useThumbnailOverlayMapping({
     url,
     fit,
     screenshotScale,
@@ -230,7 +234,10 @@ export default function MultiHighlightThumbnail({
       // unlike HighlightThumbnail's synchronous remap on load.
       onImageLoad={onImageLoad}
       contentFrame={contentFrame}
-      redactionBoxes={redactionBoxes}
+      redactions={redactions}
+      mosaicUrl={mosaicUrl}
+      liveMosaic={liveMosaic}
+      screenshotScale={screenshotScale}
       imageEdits={imageEdits}
       imageCssSize={imageCssSize}
       overlay={overlay}

@@ -2,6 +2,7 @@
 import { act, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installThumbnailDomStubs, stubImageMetrics, type ThumbnailDomStubs } from '../setup/thumbnail-dom';
+import { recordCanvasFills } from '../setup/canvas-paint';
 
 const annotateMocks = vi.hoisted(() => ({
   layoutAnnotations: vi.fn(),
@@ -201,6 +202,7 @@ describe('MultiHighlightThumbnail', () => {
   });
 
   it('maps opaque redactions above all annotation frames and badges', () => {
+    const fills = recordCanvasFills();
     const view = render(
       <MultiHighlightThumbnail
         blob={new Blob(['image'])}
@@ -229,14 +231,12 @@ describe('MultiHighlightThumbnail', () => {
 
     const frame = view.container.querySelector<HTMLElement>('[data-howbeam-annotation-frame="1"]')!;
     const badge = view.container.querySelector<HTMLElement>('.pointer-events-none.font-semibold.shadow')!;
-    const redaction = view.container.querySelector<HTMLElement>('[data-howbeam-redaction="mask-1"]')!;
-    expect(redaction.style.left).toBe('24px');
-    expect(redaction.style.top).toBe('9px');
-    expect(redaction.style.width).toBe('17px');
-    expect(redaction.style.height).toBe('22px');
-    expect(redaction.style.backgroundColor).toBe('rgb(0, 0, 0)');
-    expect(redaction.className).toContain('z-10');
-    expect(frame.compareDocumentPosition(redaction) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
-    expect(badge.compareDocumentPosition(redaction) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    const layer = view.container.querySelector<HTMLElement>('[data-howbeam-redactions]')!;
+    expect([layer.style.left, layer.style.top, layer.style.width, layer.style.height]).toEqual(['0px', '0px', '100px', '50px']);
+    expect([layer.querySelector('canvas')!.width, layer.querySelector('canvas')!.height]).toEqual([200, 100]);
+    expect(fills).toEqual([{ rect: [48, 18, 34, 44], fill: '#000000' }]);
+    expect(layer.className).toContain('z-10');
+    expect(frame.compareDocumentPosition(layer) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(badge.compareDocumentPosition(layer) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   });
 });

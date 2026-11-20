@@ -19,16 +19,24 @@ import {
   type ZoomAnchor,
 } from './image-edit-viewport';
 
-/** Breathing room kept around the fitted image so edge masks are easy to reach. */
-const FIT_MARGIN = 24;
+/** Breathing room kept around the image at every zoom, so edge masks are easy to reach and its edges show when scrolled to. */
+export const FIT_MARGIN = 24;
+
+interface ViewportOptions {
+  /** Alt + wheel: called with the factor the wheel would have zoomed by. Never zooms. */
+  onAltWheel?: (factor: number) => void;
+}
 
 /**
  * The image editor's viewport: the image is laid out at the fitted size times
  * the zoom inside a scrollable box, so scrolling pans, the wheel zooms around
- * the pointer, and middle button, Space + drag, or the pointer tool on empty
- * space pans.
+ * the pointer (Alt + wheel is handed to `onAltWheel` instead, for every tool
+ * alike), and middle button, Space + drag, or the pointer tool on empty space
+ * pans.
  */
-export function useImageEditViewport(imageSize: ImageCssSize | null) {
+export function useImageEditViewport(imageSize: ImageCssSize | null, { onAltWheel }: ViewportOptions = {}) {
+  const onAltWheelRef = useRef(onAltWheel);
+  onAltWheelRef.current = onAltWheel;
   // The dialog content mounts through a portal after the editor first renders,
   // so the elements are tracked as state: effects re-run when they actually exist.
   const [frame, setFrame] = useState<HTMLDivElement | null>(null);
@@ -91,7 +99,12 @@ export function useImageEditViewport(imageSize: ImageCssSize | null) {
   useEffect(() => {
     if (!scroller) return undefined;
     const onWheel = (event: WheelEvent) => {
+      // Also keeps the browser's own Alt + wheel action (history navigation in some browsers) from running.
       event.preventDefault();
+      if (event.altKey) {
+        onAltWheelRef.current?.(wheelZoomFactor(event.deltaY, event.deltaMode));
+        return;
+      }
       zoomTo(zoomRef.current * wheelZoomFactor(event.deltaY, event.deltaMode), {
         x: event.clientX,
         y: event.clientY,

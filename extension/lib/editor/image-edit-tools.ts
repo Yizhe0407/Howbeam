@@ -18,12 +18,23 @@ import {
   type Point,
 } from './image-edit-geometry';
 import { fitTextHeight, MIN_ARROW_LENGTH, MIN_TEXT_WIDTH } from './image-edit-item-geometry';
-import { CROP_ITEM_ID, newItemId, type ImageEditItem, type ImageEditItemKind } from './image-edit-items';
+import { CROP_ITEM_ID, type ImageEditItem, type ImageEditItemKind } from './image-edit-items';
 import { STYLE_FIELDS, type ImageEditStyle, type StyleField } from './image-edit-style';
+import { MOSAIC_BRUSH_LIMITS } from '@/lib/storage/models';
 
 // A solid bar, drawn the way a redaction renders in the export.
 const RedactIcon = createLucideIcon('Redact', [
   ['rect', { x: '3', y: '8', width: '18', height: '8', rx: '1.5', fill: 'currentColor', key: 'bar' }],
+]);
+
+// A checkerboard of soft and solid cells, the way a mosaic stroke renders.
+const MosaicIcon = createLucideIcon('Mosaic', [
+  ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', key: 'frame' }],
+  ['rect', { x: '3', y: '3', width: '6', height: '6', fill: 'currentColor', stroke: 'none', key: 'a' }],
+  ['rect', { x: '15', y: '3', width: '6', height: '6', fill: 'currentColor', stroke: 'none', key: 'b' }],
+  ['rect', { x: '9', y: '9', width: '6', height: '6', fill: 'currentColor', stroke: 'none', key: 'c' }],
+  ['rect', { x: '3', y: '15', width: '6', height: '6', fill: 'currentColor', stroke: 'none', key: 'd' }],
+  ['rect', { x: '15', y: '15', width: '6', height: '6', fill: 'currentColor', stroke: 'none', key: 'e' }],
 ]);
 
 // A numbered circle, the marker this tool draws.
@@ -32,14 +43,18 @@ const StepIcon = createLucideIcon('Step', [
   ['path', { d: 'M10.5 9 12.5 7.5V16.5', key: 'one' }],
 ]);
 
-export type ImageEditToolId = 'select' | 'text' | 'arrow' | 'rect' | 'ellipse' | 'step' | 'redact' | 'crop';
+export type ImageEditToolId = 'select' | 'text' | 'arrow' | 'rect' | 'ellipse' | 'step' | 'redact' | 'mosaic' | 'crop';
 
 /** Width of a text box made by a plain click instead of a drag. */
 const DEFAULT_TEXT_WIDTH = 240;
 
 interface CreateInput {
+  /** The identity of what the gesture makes: one per gesture, from its first draft to the stored item. */
+  id: string;
   from: Point;
   to: Point;
+  /** Every point the pointer passed through, given to tools whose gesture is a stroke. */
+  path?: readonly Point[];
   size: ImageCssSize;
   style: ImageEditStyle;
   /** The number a new marker would take. */
@@ -62,6 +77,8 @@ export interface ImageEditTool {
   create?: (input: CreateInput) => ImageEditItem | null;
   /** How Shift reshapes the drag. */
   constraint?: DragConstraint;
+  /** 'stroke' paints along the pointer's path instead of spanning from where it was pressed to where it is. */
+  gesture?: 'drag' | 'stroke';
   /** Style controls shown while this tool is active and nothing is selected. */
   styleFields: readonly StyleField[];
 }
@@ -73,14 +90,14 @@ function boxFromDrag({ from, to, size }: CreateInput) {
 
 /** A text box dragged out takes the dragged width; a click makes a default-width box at that spot. */
 function textFromDrag(input: CreateInput): ImageEditItem {
-  const { from, to, size, style } = input;
+  const { id, from, to, size, style } = input;
   const dragged = boundsFromPoints(from, to, size);
   const width = Math.min(dragged.width >= MIN_TEXT_WIDTH ? dragged.width : DEFAULT_TEXT_WIDTH, size.width);
   const x = dragged.width >= MIN_TEXT_WIDTH ? dragged.x : Math.min(from.x, Math.max(size.width - width, 0));
   const y = dragged.width >= MIN_TEXT_WIDTH ? dragged.y : from.y;
   // Empty until typed: the workspace holds it as a draft and stores it only once it has text.
   return fitTextHeight({
-    id: newItemId(),
+    id,
     kind: 'text',
     bounds: { x, y, width, height: style.fontSize },
     text: '',
@@ -88,6 +105,36 @@ function textFromDrag(input: CreateInput): ImageEditItem {
     color: style.color,
     look: style.look,
   });
+}
+
+/** Closest two consecutive points of a stored stroke may be, in CSS px: denser input adds nothing visible. */
+const MIN_STROKE_STEP = 2;
+
+/**
+ * Adds a pointer position to a stroke being painted, in place. Positions closer
+ * than a visible step to the last one kept are skipped, except the one where
+ * the stroke ends (`end`), which is always kept; storage's point limit is never
+ * passed (the end then takes the last place). A stroke only ever grows at its
+ * end while it is painted, so what is already painted never has to change.
+ */
+export function extendStroke(points: Point[], point: Point, end = false): void {
+  const last = points.at(-1);
+  const kept = { x: point.x, y: point.y };
+  if (!last) {
+    points.push(kept);
+    return;
+  }
+  const moved = end ? point.x !== last.x || point.y !== last.y : Math.hypot(point.x - last.x, point.y - last.y) >= MIN_STROKE_STEP;
+  if (!moved) return;
+  if (points.length < MOSAIC_BRUSH_LIMITS.maxPoints) points.push(kept);
+  else if (end) points[points.length - 1] = kept;
+}
+
+/** The points a stroke keeps from a whole pointer path, by the same rule as painting it. */
+export function strokePoints(path: readonly Point[]): Point[] {
+  const kept: Point[] = [];
+  path.forEach((point, index) => extendStroke(kept, point, index === path.length - 1));
+  return kept;
 }
 
 /** Applies Shift to a drag end point for tools that have a constraint. */
@@ -126,10 +173,10 @@ export const IMAGE_EDIT_TOOLS: readonly [ImageEditTool, ...ImageEditTool[]] = [
     shortcut: 'a',
     creates: 'arrow',
     constraint: 'angle',
-    create: ({ from, to, style }) => (
+    create: ({ id, from, to, style }) => (
       Math.hypot(to.x - from.x, to.y - from.y) < MIN_ARROW_LENGTH
         ? null
-        : { id: newItemId(), kind: 'arrow', from, to, width: style.strokeWidth, color: style.color }
+        : { id, kind: 'arrow', from, to, width: style.strokeWidth, color: style.color }
     ),
     styleFields: STYLE_FIELDS.arrow,
   },
@@ -144,7 +191,7 @@ export const IMAGE_EDIT_TOOLS: readonly [ImageEditTool, ...ImageEditTool[]] = [
     create: (input) => {
       const bounds = boxFromDrag(input);
       return bounds
-        ? { id: newItemId(), kind: 'rect', bounds, width: input.style.strokeWidth, color: input.style.color, fill: input.style.fill }
+        ? { id: input.id, kind: 'rect', bounds, width: input.style.strokeWidth, color: input.style.color, fill: input.style.fill }
         : null;
     },
     styleFields: STYLE_FIELDS.rect,
@@ -160,7 +207,7 @@ export const IMAGE_EDIT_TOOLS: readonly [ImageEditTool, ...ImageEditTool[]] = [
     create: (input) => {
       const bounds = boxFromDrag(input);
       return bounds
-        ? { id: newItemId(), kind: 'ellipse', bounds, width: input.style.strokeWidth, color: input.style.color, fill: input.style.fill }
+        ? { id: input.id, kind: 'ellipse', bounds, width: input.style.strokeWidth, color: input.style.color, fill: input.style.fill }
         : null;
     },
     styleFields: STYLE_FIELDS.ellipse,
@@ -173,8 +220,8 @@ export const IMAGE_EDIT_TOOLS: readonly [ImageEditTool, ...ImageEditTool[]] = [
     shortcut: 'n',
     creates: 'step',
     // The marker follows the pointer until it is released, so it can be placed precisely.
-    create: ({ to, style, nextNumber }) => ({
-      id: newItemId(),
+    create: ({ id, to, style, nextNumber }) => ({
+      id,
       kind: 'step',
       center: to,
       radius: style.markerRadius,
@@ -193,9 +240,23 @@ export const IMAGE_EDIT_TOOLS: readonly [ImageEditTool, ...ImageEditTool[]] = [
     constraint: 'square',
     create: (input) => {
       const bounds = boxFromDrag(input);
-      return bounds ? { id: newItemId(), kind: 'redaction', bounds } : null;
+      return bounds ? { id: input.id, kind: 'redaction', bounds } : null;
     },
     styleFields: [],
+  },
+  {
+    id: 'mosaic',
+    icon: MosaicIcon,
+    label: () => t().editor.imageEdit.tools.mosaic,
+    hint: () => t().editor.imageEdit.hints.mosaic,
+    shortcut: 'b',
+    creates: 'mosaic',
+    gesture: 'stroke',
+    create: ({ id, from, to, path, style }) => {
+      const points = strokePoints(path ?? [from, to]);
+      return points.length === 0 ? null : { id, kind: 'mosaic', points, size: style.brushSize };
+    },
+    styleFields: ['brushSize'],
   },
   {
     id: 'crop',
