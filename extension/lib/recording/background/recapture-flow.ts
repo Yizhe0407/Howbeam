@@ -433,8 +433,12 @@ export function createRecaptureFlow(deps: RecaptureFlowDeps) {
     if (expectedControlVersion !== control.controlVersion) {
       throw new StaleCaptureError('Recapture control changed before the screenshot could be taken.');
     }
-    const state = await getRecordingState();
-    const [activeTab] = await browser.tabs.query({ active: true, windowId });
+    // Runs before (and on every retry of) each screenshot inside the serial
+    // capture queue, so the two independent reads overlap.
+    const [state, [activeTab]] = await Promise.all([
+      getRecordingState(),
+      browser.tabs.query({ active: true, windowId }),
+    ]);
     if (
       expectedControlVersion !== control.controlVersion ||
       state.operation !== 'recapture' ||

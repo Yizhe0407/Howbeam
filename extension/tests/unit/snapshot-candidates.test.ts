@@ -52,6 +52,18 @@ describe('orderKeyboardCandidates', () => {
     const many = Array.from({ length: KEYBOARD_CANDIDATE_LIMIT + 50 }, (_, i) => rect(0, i * 30, 20, 20, `n${i}`));
     expect(orderKeyboardCandidates(many, 800, 100_000)).toHaveLength(KEYBOARD_CANDIDATE_LIMIT);
   });
+
+  it('carries non-string labels through untouched so callers can describe only kept anchors', () => {
+    const first = { id: 'first' };
+    const second = { id: 'second' };
+    const anchors = orderKeyboardCandidates(
+      [{ x: 0, y: 100, width: 20, height: 20, label: second }, { x: 0, y: 0, width: 20, height: 20, label: first }],
+      800,
+      600,
+    );
+    expect(anchors.map((anchor) => anchor.label)).toEqual([first, second]);
+    expect(anchors[0]!.label).toBe(first);
+  });
 });
 
 describe('nextCandidateIndex', () => {

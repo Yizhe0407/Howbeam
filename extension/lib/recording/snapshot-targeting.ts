@@ -47,7 +47,7 @@ export function waitForNextFrame(): Promise<void> {
  * scope for this flag-gated first pass and remain pointer-reachable.
  */
 export function collectKeyboardCandidateAnchors(): SnapshotShieldKeyboardAnchor[] {
-  const raw: RawKeyboardCandidate[] = [];
+  const raw: RawKeyboardCandidate<Element>[] = [];
   const seen = new Set<Element>();
   for (const el of document.querySelectorAll(INTERACTIVE_CANDIDATE_SELECTOR)) {
     if (seen.has(el) || !isInteractiveElement(el)) continue;
@@ -59,10 +59,15 @@ export function collectKeyboardCandidateAnchors(): SnapshotShieldKeyboardAnchor[
       y: rect.y,
       width: rect.width,
       height: rect.height,
-      label: (describeElement(el) || el.tagName.toLowerCase()).slice(0, SNAPSHOT_KEYBOARD_LABEL_LIMIT),
+      label: el,
     });
   }
-  return orderKeyboardCandidates(raw, window.innerWidth, window.innerHeight);
+  // Described after the cap: describeElement walks each subtree (innerText),
+  // and a large page holds far more candidates than the cap keeps.
+  return orderKeyboardCandidates(raw, window.innerWidth, window.innerHeight).map((anchor) => ({
+    ...anchor,
+    label: (describeElement(anchor.label) || anchor.label.tagName.toLowerCase()).slice(0, SNAPSHOT_KEYBOARD_LABEL_LIMIT),
+  }));
 }
 
 interface SnapshotProbeResult {
@@ -106,18 +111,30 @@ function isSnapshotProbeResult(value: unknown): value is SnapshotProbeResult {
   );
 }
 
+/** Hover resolves a target every frame but never reads its text, and
+ * describeElement walks the whole subtree (innerText); it runs on first read. */
+function withLazyText(
+  target: Omit<ResolvedSnapshotTarget, 'text'>,
+  describedElement: Element,
+): ResolvedSnapshotTarget {
+  let text: string | undefined;
+  return Object.defineProperty(target, 'text', {
+    enumerable: true,
+    get: () => (text ??= describeElement(describedElement)),
+  }) as ResolvedSnapshotTarget;
+}
+
 function resolvedElement(
   el: Element,
   rect: SnapshotShieldRect | null,
 ): ResolvedSnapshotTarget | null {
   if (!rect) return null;
-  return {
+  return withLazyText({
     element: el,
     rect,
     identity: buildSnapshotTargetIdentity(el),
-    text: describeElement(el),
     tagName: el.tagName.toLowerCase(),
-  };
+  }, el);
 }
 
 function resolvedImageMapTarget(
@@ -125,14 +142,13 @@ function resolvedImageMapTarget(
   image: HTMLImageElement,
   rect: SnapshotShieldRect,
 ): ResolvedSnapshotTarget {
-  return {
+  return withLazyText({
     element: area,
     dedupeElement: null,
     rect,
     identity: `${buildSnapshotTargetIdentity(area)}::image-map::${buildSnapshotTargetIdentity(image)}`,
-    text: describeElement(area),
     tagName: area.tagName.toLowerCase(),
-  };
+  }, area);
 }
 
 async function probeChildFrame(

@@ -4,20 +4,22 @@
  * this module keeps the geometry decisions unit-testable.
  */
 
-/** A viewport-space candidate rect plus its accessible label. */
-export interface RawKeyboardCandidate {
+/** A viewport-space candidate rect plus its label. The label is carried
+ * through untouched, so a caller can pass something it describes only for the
+ * anchors that survive the cap. */
+export interface RawKeyboardCandidate<Label = string> {
   x: number;
   y: number;
   width: number;
   height: number;
-  label: string;
+  label: Label;
 }
 
 /** A resolved keyboard anchor: the point handed to the existing probe engine. */
-export interface KeyboardAnchor {
+export interface KeyboardAnchor<Label = string> {
   x: number;
   y: number;
-  label: string;
+  label: Label;
 }
 
 /** Ceiling on the traversable list so huge pages cannot stall startup (§9.5). */
@@ -36,12 +38,12 @@ function clamp(value: number, min: number, max: number): number {
  * the result. Anchors are the rect centre clamped one pixel inside the
  * viewport so `elementFromPoint` still resolves them.
  */
-export function orderKeyboardCandidates(
-  candidates: readonly RawKeyboardCandidate[],
+export function orderKeyboardCandidates<Label>(
+  candidates: readonly RawKeyboardCandidate<Label>[],
   viewportWidth: number,
   viewportHeight: number,
   limit: number = KEYBOARD_CANDIDATE_LIMIT,
-): KeyboardAnchor[] {
+): KeyboardAnchor<Label>[] {
   const visible = candidates.filter(
     (candidate) =>
       candidate.width > 0 &&
@@ -64,7 +66,7 @@ export function orderKeyboardCandidates(
   });
 
   const seen = new Set<string>();
-  const ordered: KeyboardAnchor[] = [];
+  const ordered: KeyboardAnchor<Label>[] = [];
   for (const anchor of anchored) {
     const key = `${Math.round(anchor.x)}:${Math.round(anchor.y)}`;
     if (seen.has(key)) continue;

@@ -73,8 +73,12 @@ export function createCaptureFlow(deps: CaptureFlowDependencies) {
     if (expectedControlVersion !== control.controlVersion) {
       throw new StaleCaptureError('Recording control changed before the screenshot could be taken.');
     }
-    const state = await getRecordingState();
-    const [activeTab] = await browser.tabs.query({ active: true, windowId });
+    // Runs before (and on every retry of) each screenshot inside the serial
+    // capture queue, so the two independent reads overlap.
+    const [state, [activeTab]] = await Promise.all([
+      getRecordingState(),
+      browser.tabs.query({ active: true, windowId }),
+    ]);
     const failure = getCaptureGuardFailure({
       expectedControlVersion,
       currentControlVersion: control.controlVersion,
