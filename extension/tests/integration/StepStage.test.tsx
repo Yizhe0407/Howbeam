@@ -27,8 +27,10 @@ interface StageOptions {
   entry?: StepEntry;
   editingDisabled?: boolean;
   onZoom?: () => void;
-  sectionTitle?: string;
+  section?: { id: string; title: string; startStep: number };
   onStartSection?: () => void;
+  onRenameSection?: (sectionId: string) => void;
+  onDeleteSection?: (sectionId: string) => Promise<void>;
 }
 
 function makeStep(changes: Partial<Step> = {}): Step {
@@ -74,15 +76,19 @@ function stage({
   entry = groupEntry(),
   editingDisabled = false,
   onZoom = vi.fn(),
-  sectionTitle,
+  section,
   onStartSection,
+  onRenameSection,
+  onDeleteSection,
 }: StageOptions = {}) {
   return (
     <StepStage
       entry={entry}
       index={0}
-      sectionTitle={sectionTitle}
+      section={section}
       onStartSection={onStartSection}
+      onRenameSection={onRenameSection}
+      onDeleteSection={onDeleteSection}
       onDelete={vi.fn().mockResolvedValue(undefined)}
       onDeleteAnnotation={vi.fn().mockResolvedValue(undefined)}
       onZoom={onZoom}
@@ -148,24 +154,57 @@ describe('StepStage image editing', () => {
 describe('StepStage sections', () => {
   afterEach(cleanup);
 
-  it('shows the section the step belongs to', () => {
-    renderStage({ entry: singleEntry(), sectionTitle: '條目頁面' });
-    expect(screen.getByText('所屬章節：條目頁面')).toBeTruthy();
+  const registration = { id: 'section-1', title: '條目頁面', startStep: 1 };
+
+  it('shows nothing when the step has no section and cannot start one', () => {
+    renderStage({ entry: singleEntry() });
+    expect(screen.queryByRole('button', { name: /章節/ })).toBeNull();
   });
 
-  it('offers to start a section here only when the owner allows it, and not while editing is disabled', async () => {
+  it('labels a step before any section and offers only to start one', async () => {
     const onStartSection = vi.fn();
-    const { rerender } = renderStage({ entry: singleEntry(), onStartSection });
-    const button = screen.getByRole('button', { name: '新增章節' });
-    fireEvent.focus(button);
-    expect((await screen.findByRole('tooltip')).textContent).toBe('從第 1 步開始新章節');
-    fireEvent.click(button);
+    renderStage({ entry: singleEntry(), onStartSection });
+    fireEvent.click(screen.getByRole('button', { name: '未分章節' }));
+    expect(await screen.findByText('前面還沒有章節，可以從這一步開始一個。')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '重新命名章節' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '從第 1 步開始新章節' }));
     expect(onStartSection).toHaveBeenCalledOnce();
+  });
 
-    rerender(stage({ entry: singleEntry(), onStartSection, editingDisabled: true }));
-    expect((screen.getByRole('button', { name: '新增章節' }) as HTMLButtonElement).disabled).toBe(true);
+  it('on the first step of a section, offers rename and delete but not another start', async () => {
+    const onRenameSection = vi.fn();
+    const onDeleteSection = vi.fn().mockResolvedValue(undefined);
+    renderStage({ entry: singleEntry(), section: registration, onRenameSection, onDeleteSection });
+    fireEvent.click(screen.getByRole('button', { name: '所屬章節：條目頁面' }));
+    expect(await screen.findByText('從這一步開始')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /開始新章節/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '重新命名章節' }));
+    expect(onRenameSection).toHaveBeenCalledWith('section-1');
 
-    rerender(stage({ entry: singleEntry() }));
-    expect(screen.queryByRole('button', { name: '新增章節' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '所屬章節：條目頁面' }));
+    fireEvent.click(await screen.findByRole('button', { name: '刪除章節' }));
+    await waitFor(() => expect(onDeleteSection).toHaveBeenCalledWith('section-1'));
+  });
+
+  it('inside a section, can split it at this step and says where it began', async () => {
+    const onStartSection = vi.fn();
+    renderStage({
+      entry: singleEntry(),
+      section: { ...registration, startStep: 0 },
+      onStartSection,
+      onRenameSection: vi.fn(),
+      onDeleteSection: vi.fn().mockResolvedValue(undefined),
+    });
+    fireEvent.click(screen.getByRole('button', { name: '所屬章節：條目頁面' }));
+    expect(await screen.findByText('從第 0 步開始')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '從第 1 步開始新章節' }));
+    expect(onStartSection).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the section readable but closed while editing is disabled', () => {
+    renderStage({ entry: singleEntry(), section: registration, onRenameSection: vi.fn(), onDeleteSection: vi.fn(), editingDisabled: true });
+    const chip = screen.getByRole('button', { name: '所屬章節：條目頁面' }) as HTMLButtonElement;
+    expect(chip.disabled).toBe(true);
+    expect(chip.textContent).toContain('條目頁面');
   });
 });

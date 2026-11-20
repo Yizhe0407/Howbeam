@@ -365,6 +365,18 @@ function EditorApp() {
     onDismiss: clearUndo,
   });
 
+  function openRenameSection(sectionId: string) {
+    const section = sections.find((candidate) => candidate.id === sectionId);
+    if (section) setSectionDialog({ kind: 'rename', sectionId, title: section.title });
+  }
+
+  const currentSection = sectionOfEntry(sections, entries, selectedIndex);
+  const stageSection = currentSection && {
+    id: currentSection.id,
+    title: currentSection.title,
+    startStep: entries.findIndex((entry) => entryId(entry) === currentSection.startEntryId) + 1,
+  };
+
   return (
     // The editor's layout numbers, read by the stage, the step rail and the notices alike: the content gutter,
     // the step strip fixed along the bottom below lg, and the room the stage keeps clear for notices.
@@ -490,10 +502,7 @@ function EditorApp() {
               selectedEntryId={selectedEntryId}
               sections={sections}
               onSelect={selectEntrySafely}
-              onRenameSection={(sectionId) => {
-                const section = sections.find((candidate) => candidate.id === sectionId);
-                if (section) setSectionDialog({ kind: 'rename', sectionId, title: section.title });
-              }}
+              onRenameSection={openRenameSection}
               onDeleteSection={deleteSection}
               onStartSection={(startEntryId) => setSectionDialog({
                 kind: 'add',
@@ -509,12 +518,14 @@ function EditorApp() {
                 key={entryId(selectedEntry)}
                 entry={selectedEntry}
                 index={selectedIndex}
-                sectionTitle={sectionOfEntry(sections, entries, selectedIndex)?.title}
+                section={stageSection}
                 onStartSection={
                   sections.some((section) => section.startEntryId === entryId(selectedEntry))
                     ? undefined
                     : () => setSectionDialog({ kind: 'add', startEntryId: entryId(selectedEntry), step: selectedIndex + 1 })
                 }
+                onRenameSection={openRenameSection}
+                onDeleteSection={deleteSection}
                 onDelete={deleteEntry}
                 onDeleteAnnotation={handleDeleteAnnotation}
                 onZoom={() => setZoomOpen(true)}

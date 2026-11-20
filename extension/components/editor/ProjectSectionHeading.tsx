@@ -73,7 +73,7 @@ function ProjectSectionHeading({
         <PopoverContent
           align="end"
           sideOffset={4}
-          className="flex w-36 flex-col p-0.5"
+          className="flex w-max min-w-36 max-w-64 flex-col p-0.5"
           onCloseAutoFocus={(event) => {
             // Returning focus to the menu button would pull it out of the dialog's name field.
             if (handingOffFocus.current) event.preventDefault();

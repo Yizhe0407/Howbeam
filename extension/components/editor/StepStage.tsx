@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { Bookmark, Plus, PencilRuler, ZoomIn } from 'lucide-react';
+import { PencilRuler, ZoomIn } from 'lucide-react';
 import { getEntryPrivacyState, type Step, type StepEntry } from '@/lib/storage/models';
 import ImageEditWorkspace from './ImageEditWorkspace';
-import { Badge } from '@/components/ui/badge';
-import { DashedOutline } from '@/components/ui/dashed-outline';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import EntryPreview from './EntryPreview';
 import StepActions from './StepActions';
+import SectionChip, { type SectionChipSection } from './SectionChip';
 import DescriptionField from './DescriptionField';
 import StepTitleField from './StepTitleField';
 import AnnotationList from './AnnotationList';
@@ -16,9 +14,11 @@ interface Props {
   entry: StepEntry;
   index: number;
   /** The section this entry falls under, if any. */
-  sectionTitle?: string;
+  section?: SectionChipSection;
   /** Present when a section can start at this entry. */
   onStartSection?: () => void;
+  onRenameSection?: (sectionId: string) => void;
+  onDeleteSection?: (sectionId: string) => Promise<void>;
   onDelete: () => Promise<void>;
   onDeleteAnnotation: (step: Step) => Promise<void>;
   onZoom: () => void;
@@ -30,8 +30,10 @@ interface Props {
 export default function StepStage({
   entry,
   index,
-  sectionTitle,
+  section,
   onStartSection,
+  onRenameSection,
+  onDeleteSection,
   onDelete,
   onDeleteAnnotation,
   onZoom,
@@ -47,39 +49,16 @@ export default function StepStage({
   // One row for everything above the image, the step's title included, so the screenshot gets the rest of the height.
   const headerRow = (
     <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
-      {(sectionTitle || onStartSection) && (
-        <div className="flex min-w-0 items-center gap-2">
-          {sectionTitle && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  // No outline: in this UI an ink outline marks something you can press, and this only labels.
-                  className="flex min-w-0 max-w-[16rem] items-center gap-1 rounded-full bg-matcha px-3 py-1 text-xs font-bold text-on-accent"
-                >
-                  <Bookmark className="size-3 shrink-0" aria-hidden="true" />
-                  <span className="sr-only">{t().editor.sections.current(sectionTitle)}</span>
-                  <span aria-hidden="true" className="min-w-0 truncate">{sectionTitle}</span>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{t().editor.sections.current(sectionTitle)}</TooltipContent>
-            </Tooltip>
-          )}
-          {/* Sits with the section chip: a section is where this step stands in the document, not an image action. */}
-          {onStartSection && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge asChild variant="dashedAction" className="shrink-0 disabled:opacity-50">
-                  <button type="button" onClick={onStartSection} disabled={editingDisabled}>
-                    <DashedOutline radius="full" outset={2} hideOnHover />
-                    <Plus className="size-3.5 stroke-[2.5]" />
-                    {t().editor.sections.add}
-                  </button>
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>{t().editor.sections.addAt(index + 1)}</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
+      {/* Sits before the title: a section is where this step stands in the document, not an image action. */}
+      {(section || onStartSection) && (
+        <SectionChip
+          section={section}
+          step={index + 1}
+          onStartSection={onStartSection}
+          onRenameSection={onRenameSection}
+          onDeleteSection={onDeleteSection}
+          disabled={editingDisabled}
+        />
       )}
       <div className="min-w-[12rem] flex-1">
         {/* Keyed by the row, so switching steps never carries one step's draft into another. */}
