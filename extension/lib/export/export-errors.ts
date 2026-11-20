@@ -37,3 +37,14 @@ export class DownloadFailedError extends Error {
     this.name = 'DownloadFailedError';
   }
 }
+
+/** One Project of a Series failed to export; `cause` is that Project's own failure. */
+export class SeriesProjectExportError extends Error {
+  readonly projectTitle: string;
+
+  constructor(projectTitle: string, cause: unknown) {
+    super(`Project "${projectTitle}" could not be exported.`, { cause });
+    this.name = 'SeriesProjectExportError';
+    this.projectTitle = projectTitle;
+  }
+}

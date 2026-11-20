@@ -1,7 +1,7 @@
 import { throwIfAborted } from '../shared/abort';
 import { strToU8 } from 'fflate';
 import { type StepEntry } from '../storage/models';
-import { buildZipBlob, paddedZipOrdinal } from './streaming-zip';
+import { buildZipBlob, paddedZipOrdinal, type ZipFileWriter } from './streaming-zip';
 import {
   DEFAULT_TITLE,
   escapeProjectMarkdown,
@@ -32,27 +32,44 @@ export async function generateProjectMarkdownArchive(
   options: ProjectExportOptions = {},
 ): Promise<ProjectMarkdownArchive> {
   const { signal } = options;
-  const markdownEntries: RenderedMarkdownEntry[] = [];
-  const markdownFilename = projectExportFilename(metadata, 'markdown');
-
+  let imageCount = 0;
   const blob = await buildZipBlob(async (addFile) => {
-    for await (const rendered of renderEntryImages(entries, signal)) {
-      const imageReference = `images/${paddedZipOrdinal(rendered.content.ordinal, entries.length)}.jpg`;
-      addFile(imageReference, rendered.imageBytes);
-      markdownEntries.push({ ...rendered.content, imageReference });
-    }
-
-    throwIfAborted(signal);
-    const markdown = renderProjectMarkdown(
-      markdownEntries,
-      entries,
-      metadata,
-      (entry) => entry.imageReference,
-    );
-    addFile(markdownFilename, strToU8(markdown));
+    imageCount = await writeProjectMarkdown(addFile, entries, metadata, options);
   });
   throwIfAborted(signal);
-  return { blob, markdownFilename, imageCount: markdownEntries.length };
+  return { blob, markdownFilename: projectExportFilename(metadata, 'markdown'), imageCount };
+}
+
+/**
+ * Writes one Project's Markdown document and images into an archive being
+ * built, under `folder/` when given, so several Projects can share one ZIP.
+ * The Markdown's image paths are relative to its own folder. Returns how many
+ * images were written.
+ */
+export async function writeProjectMarkdown(
+  addFile: ZipFileWriter,
+  entries: readonly StepEntry[],
+  metadata: ProjectExportMetadata = {},
+  options: ProjectExportOptions & { folder?: string } = {},
+): Promise<number> {
+  const { signal, folder } = options;
+  const prefix = folder ? `${folder}/` : '';
+  const markdownEntries: RenderedMarkdownEntry[] = [];
+  for await (const rendered of renderEntryImages(entries, signal)) {
+    const imageReference = `images/${paddedZipOrdinal(rendered.content.ordinal, entries.length)}.jpg`;
+    addFile(`${prefix}${imageReference}`, rendered.imageBytes);
+    markdownEntries.push({ ...rendered.content, imageReference });
+  }
+
+  throwIfAborted(signal);
+  const markdown = renderProjectMarkdown(
+    markdownEntries,
+    entries,
+    metadata,
+    (entry) => entry.imageReference,
+  );
+  addFile(`${prefix}${projectExportFilename(metadata, 'markdown')}`, strToU8(markdown));
+  return markdownEntries.length;
 }
 
 function renderProjectMarkdown<T extends RenderedEntryContent>(

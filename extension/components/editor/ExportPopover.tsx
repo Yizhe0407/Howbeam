@@ -1,27 +1,19 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Download, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useRef, useState, type ReactNode } from 'react';
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import PdfExportOptions from '@/components/editor/PdfExportOptions';
-import InlineAlert from '@/components/shared/InlineAlert';
+import { ExportActions, ExportFormatTabs } from '@/components/editor/ExportControls';
+import { useExportRunner, type RunExport } from '@/components/editor/use-export-runner';
 import { generateProjectHtml } from '@/lib/export/project-export-html';
 import { generateProjectMarkdownArchive } from '@/lib/export/project-export-markdown';
 import { generateProjectPdf } from '@/lib/export/project-export-pdf';
 import { projectExportFilename, type ProjectExportMetadata } from '@/lib/export/project-export-contract';
 import { DEFAULT_PDF_EXPORT_SETTINGS, type PdfExportSettings } from '@/lib/export/pdf-export-settings';
 import { type StepEntry } from '@/lib/storage/models';
-import { EditingBlockedError } from '@/lib/editor/editor-app-model';
 import { downloadBlobViaBrowser } from '@/lib/export/download-utils';
-import {
-  DownloadFailedError,
-  RedactionReviewRequiredError,
-  StepImageError,
-} from '@/lib/export/export-errors';
+import type { PublicationAction } from '@/lib/export/export-failure';
 import { t } from '@/lib/shared/i18n';
-import { isAbortError, throwIfAborted } from '@/lib/shared/abort';
+import { throwIfAborted } from '@/lib/shared/abort';
 import { useAutoHideScrollbar } from '@/lib/editor/use-auto-hide-scrollbar';
-import { useDeferredBusy } from '@/lib/shared/use-deferred-busy';
 
 type ProjectEntriesSnapshot = {
   entries: readonly StepEntry[];
@@ -41,7 +33,7 @@ export type ExportPopoverProps = {
   /** Runs the export as the editor's one data operation of the moment, so the
    * Project can't change under it. Rejects with EditingBlockedError when the
    * Project can't be touched at all. */
-  runExport: <T>(task: () => Promise<T>) => Promise<T>;
+  runExport: RunExport;
   /** Resolves the entries (and optionally fresher metadata) to publish. */
   getProjectEntries: ProjectEntriesProvider;
   metadata?: ProjectExportMetadata;
@@ -49,7 +41,6 @@ export type ExportPopoverProps = {
   onExportImages?: (signal: AbortSignal) => unknown | Promise<unknown>;
 };
 
-type PublicationAction = 'pdf' | 'html' | 'markdown' | 'images';
 type DownloadPublicationAction = Exclude<PublicationAction, 'images'>;
 
 const FORMATS: readonly PublicationAction[] = ['pdf', 'html', 'markdown', 'images'];
@@ -79,23 +70,6 @@ function useHeaderAnchor(trigger: { current: HTMLElement | null }) {
   });
 }
 
-/** Step numbers beyond this many are summarised so the message stays short. */
-const MAX_LISTED_STEPS = 6;
-
-/** The message for a failed export: what actually went wrong, not a blanket
- * "check the masks" for failures that have nothing to do with masks. */
-function failureMessage(action: PublicationAction, error: unknown): string {
-  const copy = t().editor.publish;
-  if (error instanceof StepImageError) return copy.stepImageFailed(error.ordinal);
-  if (error instanceof RedactionReviewRequiredError && error.ordinals.length > 0) {
-    const listed = error.ordinals.slice(0, MAX_LISTED_STEPS).join(', ');
-    return copy.reviewRequired(error.ordinals.length > MAX_LISTED_STEPS ? `${listed}…` : listed);
-  }
-  if (error instanceof DownloadFailedError) return copy.downloadFailed;
-  if (error instanceof EditingBlockedError) return t().editor.publishBusy;
-  return copy[action].failed;
-}
-
 function isProjectEntriesSnapshot(
   value: readonly StepEntry[] | ProjectEntriesSnapshot,
 ): value is ProjectEntriesSnapshot {
@@ -113,28 +87,11 @@ export default function ExportPopover(props: ExportPopoverProps) {
   const [open, setOpen] = useState(false);
   const [format, setFormat] = useState<PublicationAction>('pdf');
   const [pdfSettings, setPdfSettings] = useState<PdfExportSettings>(DEFAULT_PDF_EXPORT_SETTINGS);
-  const [pendingAction, setPendingAction] = useState<PublicationAction | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const activeController = useRef<AbortController | null>(null);
+  const exporter = useExportRunner(runExport, () => t().editor.publish.nothingExported);
+  const { busy, busyShown } = exporter;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const anchor = useHeaderAnchor(triggerRef);
   const scrollbar = useAutoHideScrollbar<HTMLDivElement>();
-  const busy = pendingAction !== null;
-  // `busy` guards the export; only how it looks waits until the export proves slow.
-  const busyShown = useDeferredBusy(busy);
-
-  useEffect(() => () => activeController.current?.abort(), []);
-  useEffect(() => {
-    if (open) {
-      setError(null);
-      setNotice(null);
-    }
-  }, [open]);
-
-  function cancelExport() {
-    activeController.current?.abort();
-  }
 
   async function resolveProjectEntries(signal: AbortSignal): Promise<ProjectEntriesSnapshot> {
     const result = await props.getProjectEntries(signal);
@@ -147,36 +104,8 @@ export default function ExportPopover(props: ExportPopoverProps) {
     return snapshot;
   }
 
-  async function runAction(
-    action: PublicationAction,
-    task: (signal: AbortSignal) => Promise<'nothing' | void>,
-  ) {
-    if (activeController.current) return;
-
-    const controller = new AbortController();
-    activeController.current = controller;
-    setPendingAction(action);
-    setError(null);
-    setNotice(null);
-
-    try {
-      const outcome = await runExport(() => task(controller.signal));
-      throwIfAborted(controller.signal);
-      // The browser shows the download itself; only an export that produced nothing needs saying.
-      setNotice(outcome === 'nothing' ? t().editor.publish.nothingExported : null);
-    } catch (actionError) {
-      if (!isAbortError(actionError) && !controller.signal.aborted) {
-        console.error(`[howbeam] project export failed: ${action}`, actionError);
-        setError(failureMessage(action, actionError));
-      }
-    } finally {
-      if (activeController.current === controller) activeController.current = null;
-      setPendingAction(null);
-    }
-  }
-
   function downloadProject(action: DownloadPublicationAction) {
-    void runAction(
+    void exporter.run(
       action,
       async (signal) => {
         const snapshot = await resolveProjectEntries(signal);
@@ -218,7 +147,7 @@ export default function ExportPopover(props: ExportPopoverProps) {
 
   function exportImages() {
     if (!onExportImages) return;
-    void runAction(
+    void exporter.run(
       'images',
       async (signal) => {
         // exportImagesAsZip resolves null when no image could be exported.
@@ -239,6 +168,8 @@ export default function ExportPopover(props: ExportPopoverProps) {
       open={open}
       onOpenChange={(next) => {
         if (!next && busy) return;
+        // Each opening starts without the last export's outcome.
+        if (next) exporter.reset();
         setOpen(next);
       }}
     >
@@ -254,58 +185,33 @@ export default function ExportPopover(props: ExportPopoverProps) {
         onEscapeKeyDown={(event) => {
           if (!busy) return;
           event.preventDefault();
-          cancelExport();
+          exporter.cancel();
         }}
         className="flex max-h-[calc(100vh-96px)] w-[360px] max-w-[calc(100vw-32px)] flex-col overflow-hidden p-0"
       >
         {/* The auto-hide scrollbar reserves a 10px gutter on both edges, so 6px of padding keeps the 16px inset the footer uses. */}
         <div {...scrollbar} className="app-scrollbar-autohide min-h-0 flex-1 overflow-y-auto px-1.5 py-4">
-          <RadioGroup
-            aria-label={t().editor.publish.format}
+          <ExportFormatTabs
+            formats={FORMATS}
             value={format}
-            onValueChange={(next) => setFormat(next as PublicationAction)}
+            onChange={setFormat}
             disabled={busyShown}
-            className="flex gap-0 overflow-hidden rounded-md border-2 border-border bg-surface-raised"
-          >
-            {FORMATS.map((action) => (
-              <RadioGroupItem
-                key={action}
-                value={action}
-                disabled={action === 'images' && !onExportImages}
-                className="min-w-0 flex-1 truncate rounded-none border-0 border-r-2 px-1.5 py-2 text-[13px] font-bold last:border-r-0"
-              >
-                {publicationCopy(action).tab}
-              </RadioGroupItem>
-            ))}
-          </RadioGroup>
+            isUnavailable={(action) => action === 'images' && !onExportImages}
+          />
 
           {format === 'pdf' && <PdfExportOptions settings={pdfSettings} onChange={setPdfSettings} disabled={busyShown} />}
         </div>
 
         <div className="shrink-0 border-t-2 border-border p-4">
-          <div aria-live="polite" aria-atomic="true" className="empty:hidden mb-3">
-            {error && <InlineAlert>{error}</InlineAlert>}
-            {!error && notice && (
-              <p role="status" className="rounded-md border-2 border-border bg-brand-bg-soft px-3.5 py-2.5 text-xs font-bold text-foreground">
-                {notice}
-              </p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              className="min-w-0 flex-1"
-              disabled={busyShown || (format === 'images' && !onExportImages)}
-              onClick={download}
-            >
-              {busyShown ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Download aria-hidden="true" />}
-              <span className="truncate">{busyShown ? t().editor.publish.exporting : copy.label}</span>
-            </Button>
-            {busyShown && (
-              <Button variant="outline" onClick={cancelExport}>
-                {t().common.cancel}
-              </Button>
-            )}
-          </div>
+          <ExportActions
+            error={exporter.error}
+            notice={exporter.notice}
+            busyShown={busyShown}
+            label={copy.label}
+            disabled={format === 'images' && !onExportImages}
+            onDownload={download}
+            onCancel={exporter.cancel}
+          />
         </div>
       </PopoverContent>
     </Popover>

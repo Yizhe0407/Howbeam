@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CircleMinus, Plus } from 'lucide-react';
+import { CircleMinus, Download, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DashedOutline } from '@/components/ui/dashed-outline';
 import EditableTitle from '@/components/shared/EditableTitle';
@@ -24,6 +24,7 @@ interface Props {
   addable: readonly ProjectSummary[];
   locked: boolean;
   onBack: () => void;
+  onExport: () => void;
   onRename: (title: string) => Promise<void>;
   onOpenProject: (projectId: string) => void;
   onRenameProject: (projectId: string, title: string) => Promise<void>;
@@ -40,6 +41,7 @@ export default function SeriesView({
   addable,
   locked,
   onBack,
+  onExport,
   onRename,
   onOpenProject,
   onRenameProject,
@@ -86,9 +88,12 @@ export default function SeriesView({
         )}
         description={copy.projectCount(projects.length)}
       />
-      <div className="mb-4 flex">
+      <div className="mb-4 flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => setAdding(true)} disabled={locked}>
           <Plus />{copy.addProjects}
+        </Button>
+        <Button onClick={onExport} disabled={locked || projects.length === 0}>
+          <Download />{copy.export}
         </Button>
       </div>
 

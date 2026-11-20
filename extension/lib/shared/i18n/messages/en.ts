@@ -196,6 +196,12 @@ export const en: Messages = {
       removeFromSeriesLabel: (title: string) => `Remove ${title} from the series`,
       empty: 'This series has no projects yet',
       missing: 'Series not found',
+      export: 'Export',
+      exportTitle: 'Export series',
+      exportLabel: 'Download ZIP',
+      exportHint: 'One file per project',
+      exportNothing: 'No project in this series has steps, so nothing was downloaded.',
+      exportProjectFailed: (title: string, reason: string) => `${title}: ${reason}`,
     },
   },
 

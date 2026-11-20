@@ -42,6 +42,9 @@ import ProjectCard from './ProjectCard';
 import SeriesCard from './SeriesCard';
 import SeriesView from './SeriesView';
 import AddToSeriesDialog from './AddToSeriesDialog';
+import SeriesExportDialog from './SeriesExportDialog';
+import type { RunExport } from '@/components/editor/use-export-runner';
+import { EditingBlockedError } from '@/lib/editor/editor-app-model';
 import { useSeriesRoute } from './use-series-route';
 
 /** Derives the .howbeam archive name from the same stem the publication
@@ -65,6 +68,7 @@ export default function App() {
   const [exportTarget, setExportTarget] = useState<ProjectSummary | null>(null);
   const [seriesTarget, setSeriesTarget] = useState<ProjectSummary | null>(null);
   const [dissolveTarget, setDissolveTarget] = useState<ProjectSeries | null>(null);
+  const [exportSeriesTarget, setExportSeriesTarget] = useState<ProjectSeries | null>(null);
   const importInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [operationLocked, setOperationLocked] = useState(false);
@@ -228,6 +232,14 @@ export default function App() {
     });
   }
 
+  /** A Series export holds the Library's one-action gate, so nothing changes the Projects mid-export. */
+  const runSeriesExport: RunExport = async (task) => {
+    if (loading || operationLocked) throw new EditingBlockedError();
+    const outcome = await runExclusive('series:export', async () => ({ value: await task() }));
+    if (!outcome) throw new EditingBlockedError();
+    return outcome.value;
+  };
+
   async function dissolveSeries(target: ProjectSeries) {
     await run(seriesKey(target.id), () => deleteSeries(target.id));
     // Mirrors delete: a failure reports through the page-level alert, so the modal closes.
@@ -312,6 +324,7 @@ export default function App() {
               addable={standaloneProjects}
               locked={actionsLocked}
               onBack={closeSeries}
+              onExport={() => setExportSeriesTarget(openEntry.series)}
               onRename={(title) => renameSeriesTo(openEntry.series.id, title)}
               onOpenProject={openProject}
               onRenameProject={renameProject}
@@ -371,6 +384,7 @@ export default function App() {
                 lockedTitle={lockedTitleFor(seriesKey(item.series.id))}
                 onOpen={() => openSeries(item.series.id)}
                 onRename={(title) => renameSeriesTo(item.series.id, title)}
+                onExport={() => setExportSeriesTarget(item.series)}
                 onDissolve={() => setDissolveTarget(item.series)}
               />
             ) : (
@@ -413,6 +427,12 @@ export default function App() {
         onClose={() => setSeriesTarget(null)}
         onAdd={(id) => { if (seriesTarget) placeInSeries(seriesTarget, { seriesId: id }); }}
         onCreate={(title) => { if (seriesTarget) placeInSeries(seriesTarget, { title }); }}
+      />
+
+      <SeriesExportDialog
+        series={exportSeriesTarget}
+        runExport={runSeriesExport}
+        onClose={() => setExportSeriesTarget(null)}
       />
 
       <ConfirmationDialog

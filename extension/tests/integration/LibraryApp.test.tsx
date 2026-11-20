@@ -60,6 +60,11 @@ vi.mock('@/lib/storage/project-repository', () => ({
 }));
 vi.mock('@/lib/storage/step-repository', () => ({ getSteps: database.getSteps }));
 vi.mock('@/lib/storage/series-repository', () => seriesStore);
+const seriesExport = vi.hoisted(() => ({ generateSeriesZip: vi.fn() }));
+vi.mock('@/lib/export/series-export', async (importActual) => ({
+  ...(await importActual<typeof import('@/lib/export/series-export')>()),
+  generateSeriesZip: seriesExport.generateSeriesZip,
+}));
 vi.mock('@/lib/project/project-actions', () => projectActions);
 vi.mock('@/lib/storage/storage', () => storage);
 vi.mock('@/lib/export/project-archive-serialize', () => ({ exportProjectArchive: archive.exportProjectArchive }));
@@ -301,6 +306,33 @@ describe('專案庫', () => {
 
       const dialog = screen.getByRole('dialog');
       await waitFor(() => expect(dialog.textContent).toContain('操作失敗，請再試一次。'));
+    });
+
+    it('系列匯出成 ZIP 並下載', async () => {
+      database.getProjectSummaries.mockResolvedValue([member]);
+      seriesStore.getAllSeries.mockResolvedValue([series]);
+      seriesExport.generateSeriesZip.mockResolvedValue(new Blob(['zip'], { type: 'application/zip' }));
+      render(<LibraryApp />);
+
+      fireEvent.click(await screen.findByRole('button', { name: '匯出系列' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'HTML' }));
+      fireEvent.click(screen.getByRole('button', { name: '下載 ZIP' }));
+
+      await waitFor(() => expect(downloads.download).toHaveBeenCalledWith(expect.objectContaining({ filename: 'm-role.zip' })));
+      expect(seriesExport.generateSeriesZip).toHaveBeenCalledWith(['project-2'], 'html', expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    });
+
+    it('系列沒有可匯出的步驟時說明未下載', async () => {
+      database.getProjectSummaries.mockResolvedValue([member]);
+      seriesStore.getAllSeries.mockResolvedValue([series]);
+      seriesExport.generateSeriesZip.mockResolvedValue(null);
+      render(<LibraryApp />);
+
+      fireEvent.click(await screen.findByRole('button', { name: '匯出系列' }));
+      fireEvent.click(screen.getByRole('button', { name: '下載 ZIP' }));
+
+      expect(await screen.findByText('系列裡的專案都沒有步驟，未下載任何檔案。')).toBeTruthy();
+      expect(downloads.download).not.toHaveBeenCalled();
     });
 
     it('解散系列要先確認', async () => {

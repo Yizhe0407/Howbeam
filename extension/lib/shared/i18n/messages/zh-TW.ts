@@ -202,6 +202,12 @@ export const zhTW = {
       removeFromSeriesLabel: (title: string) => `把「${title}」移出系列`,
       empty: '這個系列還沒有專案',
       missing: '找不到這個系列',
+      export: '匯出',
+      exportTitle: '匯出系列',
+      exportLabel: '下載 ZIP',
+      exportHint: '每個專案一個檔案',
+      exportNothing: '系列裡的專案都沒有步驟，未下載任何檔案。',
+      exportProjectFailed: (title: string, reason: string) => `「${title}」：${reason}`,
     },
   },
 
