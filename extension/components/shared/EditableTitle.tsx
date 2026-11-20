@@ -14,14 +14,16 @@ interface Props {
   label: string;
   maxLength: number;
   disabled?: boolean;
-  className?: string;
+  /** How many lines the title shows before it is cut off; the tooltip keeps the rest reachable. */
+  lines?: 1 | 2;
 }
 
 /**
- * Shows the title as wrapping text and turns into a field when clicked, so a
- * long title is never cut off the way a one-line input cuts it. Owns its draft
- * while editing; an empty, unchanged, or rejected commit reverts the field, so
- * what's displayed always matches what's stored.
+ * A title that reads as plain text, shows a soft frame and a pencil on hover,
+ * and becomes a real field when clicked. It owns all three looks, so every
+ * title edits the same way; the heading around it supplies the typography.
+ * Owns its draft while editing; an empty, unchanged, or rejected commit
+ * reverts the field, so what's displayed always matches what's stored.
  */
 export default function EditableTitle({
   value,
@@ -31,7 +33,7 @@ export default function EditableTitle({
   label,
   maxLength,
   disabled = false,
-  className,
+  lines = 1,
 }: Props) {
   const committed = value || fallback;
   const [draft, setDraft] = useState(committed);
@@ -77,55 +79,80 @@ export default function EditableTitle({
     }
   }
 
+  const frame = cn(
+    'group relative flex min-w-0 max-w-full items-center gap-1.5 rounded-md border-2 px-1 py-0.5 transition-colors focus-ring-within',
+    editing && 'border-border bg-background',
+    !editing && 'border-transparent',
+    !editing && !disabled && 'hover:bg-muted',
+    !editing && disabled && 'opacity-70',
+  );
+
   if (!editing) {
     return (
-      // The full title, for when the owner truncates it.
-      <OverflowTooltip content={committed}>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => {
-            cancelled.current = false;
-            setEditing(true);
-          }}
-          className={cn('cursor-text text-left break-words', className)}
-        >
-          <span className="sr-only">{label} </span>
-          <span>{committed}</span>
-          {!disabled && <Pencil className="ml-2 inline size-4 align-[-0.1em] text-muted-foreground" aria-hidden="true" />}
-        </button>
-      </OverflowTooltip>
+      <div className={frame}>
+        {/* The full title, for when the line limit cuts it off. */}
+        <OverflowTooltip content={committed}>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => {
+              cancelled.current = false;
+              setEditing(true);
+            }}
+            // The ::after stretches the click target over the whole frame, pencil included,
+            // while the button's own box stays the text so the tooltip can tell it's clipped.
+            className={cn(
+              'min-w-0 cursor-text text-left outline-none after:absolute after:inset-0 disabled:cursor-default',
+              lines === 1 ? 'truncate' : 'line-clamp-2 break-words',
+            )}
+          >
+            <span className="sr-only">{label} </span>
+            {committed}
+          </button>
+        </OverflowTooltip>
+        {!disabled && (
+          <Pencil
+            className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
+            aria-hidden="true"
+          />
+        )}
+      </div>
     );
   }
 
   return (
-    <textarea
-      ref={field}
-      aria-label={label}
-      value={draft}
-      rows={1}
-      maxLength={maxLength}
-      disabled={disabled}
-      // A title is one line; a pasted line break becomes a space.
-      onChange={(event) => setDraft(event.target.value.replace(/\s*[\r\n]+\s*/g, ' '))}
-      onBlur={() => {
-        setEditing(false);
-        void commit();
-      }}
-      onKeyDown={(event) => {
-        if (event.nativeEvent.isComposing) return;
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          event.currentTarget.blur();
-        } else if (event.key === 'Escape') {
-          event.preventDefault();
-          cancelled.current = true;
-          setDraft(committed);
+    <div className={frame}>
+      <textarea
+        ref={field}
+        aria-label={label}
+        value={draft}
+        rows={1}
+        maxLength={maxLength}
+        disabled={disabled}
+        // A title is one line; a pasted line break becomes a space.
+        onChange={(event) => setDraft(event.target.value.replace(/\s*[\r\n]+\s*/g, ' '))}
+        onBlur={() => {
           setEditing(false);
-          event.currentTarget.blur();
-        }
-      }}
-      className={cn('resize-none bg-transparent outline-none [field-sizing:content]', className)}
-    />
+          void commit();
+        }}
+        onKeyDown={(event) => {
+          if (event.nativeEvent.isComposing) return;
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            event.currentTarget.blur();
+          } else if (event.key === 'Escape') {
+            event.preventDefault();
+            cancelled.current = true;
+            setDraft(committed);
+            setEditing(false);
+            event.currentTarget.blur();
+          }
+        }}
+        className={cn(
+          'min-w-12 max-w-full resize-none bg-transparent outline-none [field-sizing:content]',
+          lines === 1 && 'truncate',
+        )}
+      />
+    </div>
   );
 }

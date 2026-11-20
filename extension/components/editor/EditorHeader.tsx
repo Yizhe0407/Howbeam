@@ -72,7 +72,6 @@ export default function EditorHeader({
           disabled={editingDisabled || operationActive}
           onCommit={onTitleChange}
           onCommitError={onTitleError}
-          className="block min-w-0 max-w-full truncate rounded-sm border-2 border-transparent px-1.5 py-0.5 text-base font-bold text-foreground outline-none transition-colors focus-ring hover:border-border-soft focus:border-border focus:bg-background [field-sizing:content]"
         />
       ) : (
         // Truncates on narrow windows; the tooltip keeps the full name reachable.

@@ -8,7 +8,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
-import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries } from '@/lib/storage/project-repository';
+import { createProjectFromSteps, deleteProjectPermanently, duplicateProject, getProjectSummaries, updateProject } from '@/lib/storage/project-repository';
 import { getSteps } from '@/lib/storage/step-repository';
 import { projectDisplayTitle, type ProjectSummary } from '@/lib/storage/models';
 import { clearSelectedProject, openSelectedProjectInEditor } from '@/lib/project/project-actions';
@@ -21,7 +21,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import AppToaster from '@/components/shared/AppToaster';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import AppHeader from '@/components/shared/AppHeader';
-import OverflowTooltip from '@/components/shared/OverflowTooltip';
+import EditableTitle from '@/components/shared/EditableTitle';
+import { PERSISTED_PROJECT_LIMITS } from '@/lib/storage/persistence-limits';
 import PageHeading from '@/components/shared/PageHeading';
 import Mascot from '@/components/shared/Mascot';
 import BackupPausedNotice from '@/components/shared/BackupPausedNotice';
@@ -283,16 +284,17 @@ export default function App() {
                     <ProjectCover projectId={project.id} revision={project.updatedAt} />
                   </button>
                   <div className="flex flex-1 flex-col gap-2.5 p-4">
-                    <button
-                      type="button"
-                      onClick={() => void run(project.id, () => openSelectedProjectInEditor(project.id, { inPlace: true }))}
-                      disabled={actionsLocked}
-                      className="-ml-1.5 w-full cursor-pointer rounded-md border-2 border-transparent px-1 py-0.5 text-left text-base leading-snug font-bold text-foreground focus-ring hover:underline disabled:cursor-default disabled:no-underline disabled:opacity-70"
-                    >
-                      <OverflowTooltip content={projectDisplayTitle(project.title)}>
-                        <span className="line-clamp-2">{projectDisplayTitle(project.title)}</span>
-                      </OverflowTooltip>
-                    </button>
+                    <h2 className="-ml-1.5 flex min-w-0 text-base leading-snug font-bold text-foreground">
+                      <EditableTitle
+                        value={project.title}
+                        maxLength={PERSISTED_PROJECT_LIMITS.maxTitleLength}
+                        fallback={t().common.untitledProject}
+                        label={t().editor.projectTitle.label}
+                        disabled={actionsLocked}
+                        lines={2}
+                        onCommit={async (title) => { await run(project.id, async () => { await updateProject(project.id, { title }); }); }}
+                      />
+                    </h2>
                     {project.description && (
                       <p className="line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">
                         {project.description}
