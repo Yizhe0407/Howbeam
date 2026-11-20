@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render as rtlRender, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { silenceIntentionalErrorLogs } from '../setup/silence-intentional-logs';
 
@@ -17,6 +17,13 @@ import { EditorSaveProvider, useEditorSaveRegistry } from '@/lib/editor/editor-a
 import { readTextDrafts, writeTextDraft } from '@/lib/editor/editor-draft-journal';
 import { StepTextConflictError, StepNotFoundError } from '@/lib/storage/step-repository';
 import { type Step } from '@/lib/storage/models';
+import { TooltipProvider } from '@/components/ui/tooltip';
+
+// A field's character count uses the shadcn Tooltip, which requires a
+// TooltipProvider ancestor — wrap every render() the same way the app roots do.
+function render(ui: Parameters<typeof rtlRender>[0], options?: Parameters<typeof rtlRender>[1]) {
+  return rtlRender(ui, { wrapper: TooltipProvider, ...options });
+}
 
 function makeStep(): Step {
   return {

@@ -10,7 +10,7 @@ import { useStepTextAutosave } from '@/lib/editor/editor-autosave';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import TextDraftRecoveries from './TextDraftRecoveries';
 import TextSaveIssue from './TextSaveIssue';
-import TextLengthHint from './TextLengthHint';
+import TextLimitFrame from './TextLimitFrame';
 import SortableItem, { SortableOverlay, StaticHandle } from './SortableItem';
 import { t } from '@/lib/shared/i18n';
 import { cn } from '@/lib/shared/utils';
@@ -31,6 +31,8 @@ interface RowProps {
 
 /** The label's box: the number sits in one line of the same box, so it stays level with the first line however the label wraps. */
 const LABEL_BOX = 'border-2 border-transparent py-0.5 text-sm leading-relaxed';
+/** The label's field: its count sits after the text, level with the last line. */
+const LABEL_FRAME = 'flex-1 items-end rounded-md px-1.5';
 
 function NumberBadge({ value }: { value: number }) {
   return (
@@ -69,14 +71,16 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
   }
 
   return (
-    <div className="group group/text flex flex-col rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
+    <div className="group flex flex-col rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
       {overlay && createPortal(
         <div className="flex size-full items-start rounded-md border-2 border-border bg-surface-raised px-3 py-2.5">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             <NumberBadge value={position} />
-            <span className={cn(LABEL_BOX, 'min-w-0 flex-1 break-words px-1.5', description ? 'text-foreground' : 'text-muted-foreground')}>
-              {description || t().editor.annotations.placeholder}
-            </span>
+            <TextLimitFrame length={description.length} limit={limit} visibility="focus" className={cn(LABEL_BOX, LABEL_FRAME)}>
+              <span className={cn('min-w-0 flex-1 break-words', description ? 'text-foreground' : 'text-muted-foreground')}>
+                {description || t().editor.annotations.placeholder}
+              </span>
+            </TextLimitFrame>
             <span className="flex size-7 shrink-0 items-center justify-center text-muted-foreground"><Trash2 className="size-3.5" /></span>
             <StaticHandle />
           </div>
@@ -86,24 +90,33 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
       <div className="flex items-start gap-3">
         <NumberBadge value={position} />
         {/* Grows with its text so a long marker label is read in full, not cut at the field's edge. */}
-        <textarea
-          aria-label={t().editor.annotations.descriptionLabel(index + 1)}
-          aria-describedby={lengthId}
-          value={description}
-          rows={1}
-          maxLength={limit}
-          // A marker label is one line, as it was when this was an input: Enter finishes, a pasted break becomes a space.
-          onChange={(e) => setDescription(e.target.value.replace(/\s*[\r\n]+\s*/g, ' '))}
-          onKeyDown={(e) => {
-            if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
-            e.preventDefault();
-            e.currentTarget.blur();
-          }}
-          onBlur={() => void flush().catch(() => undefined)}
-          disabled={deleteDisabled}
-          placeholder={t().editor.annotations.placeholder}
-          className={cn(LABEL_BOX, "min-w-0 flex-1 resize-none rounded-md bg-transparent px-1.5 text-foreground outline-none [field-sizing:content] focus-ring placeholder:text-muted-foreground hover:border-border-soft focus:border-border focus:bg-background")}
-        />
+        <TextLimitFrame
+          id={lengthId}
+          length={description.length}
+          limit={limit}
+          cutCount={cutCount}
+          visibility="focus"
+          className={cn(LABEL_BOX, LABEL_FRAME, 'transition-colors hover:border-border-soft focus-within:border-border focus-within:bg-background')}
+        >
+          <textarea
+            aria-label={t().editor.annotations.descriptionLabel(index + 1)}
+            aria-describedby={lengthId}
+            value={description}
+            rows={1}
+            maxLength={limit}
+            // A marker label is one line, as it was when this was an input: Enter finishes, a pasted break becomes a space.
+            onChange={(e) => setDescription(e.target.value.replace(/\s*[\r\n]+\s*/g, ' '))}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+              e.preventDefault();
+              e.currentTarget.blur();
+            }}
+            onBlur={() => void flush().catch(() => undefined)}
+            disabled={deleteDisabled}
+            placeholder={t().editor.annotations.placeholder}
+            className="min-w-0 flex-1 resize-none bg-transparent text-foreground outline-none [field-sizing:content] placeholder:text-muted-foreground"
+          />
+        </TextLimitFrame>
         <div className="flex shrink-0 items-center gap-0.5 opacity-80 transition-opacity group-hover:opacity-100">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -127,7 +140,6 @@ function AnnotationRow({ step, index, position, onDelete, deleteDisabled, dragHa
           {dragHandle}
         </div>
       </div>
-      <TextLengthHint id={lengthId} length={description.length} limit={limit} cutCount={cutCount} visibility="focus" className="mt-1" />
       <TextSaveIssue
         issue={saveIssue}
         savedValue={savedValue}

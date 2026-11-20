@@ -199,6 +199,14 @@
   }
 }
 
+/* The same ring on a box that holds the focused control, such as a field's frame. */
+@utility focus-ring-within {
+  &:has(:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
 /* Layered on purpose: unlayered rules outrank every `@layer utilities` rule
  * regardless of specificity, so declaring these outside a layer would silence
  * every `border-*` colour utility in the app. */
