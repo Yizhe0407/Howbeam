@@ -48,3 +48,11 @@ export class SeriesProjectExportError extends Error {
     this.projectTitle = projectTitle;
   }
 }
+
+/** A Series too large to merge into one document; each Project still exports on its own. */
+export class SeriesTooLargeError extends Error {
+  constructor() {
+    super('The series is too large to merge into one document.');
+    this.name = 'SeriesTooLargeError';
+  }
+}

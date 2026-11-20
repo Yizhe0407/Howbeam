@@ -90,6 +90,7 @@ export interface PdfTextStyle {
 export const PDF_TEXT = Object.freeze({
   title: { fontSize: 52, lineHeight: 68, color: PDF_COLORS.text, weight: 'bold', gapBefore: 0, gapAfter: 18 },
   description: { fontSize: 28, lineHeight: 48, color: PDF_COLORS.secondary, weight: 'regular', gapBefore: 0, gapAfter: 12 },
+  part: { fontSize: 44, lineHeight: 62, color: PDF_COLORS.text, weight: 'bold', gapBefore: 0, gapAfter: 14 },
   section: { fontSize: 36, lineHeight: 56, color: PDF_COLORS.text, weight: 'bold', gapBefore: 0, gapAfter: 10 },
   stepTitle: { fontSize: 30, lineHeight: 52, color: PDF_COLORS.text, weight: 'bold', gapBefore: 0, gapAfter: 22 },
   annotation: { fontSize: 28, lineHeight: 48, color: PDF_COLORS.secondary, weight: 'regular', gapBefore: 6, gapAfter: 6 },

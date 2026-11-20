@@ -60,10 +60,10 @@ vi.mock('@/lib/storage/project-repository', () => ({
 }));
 vi.mock('@/lib/storage/step-repository', () => ({ getSteps: database.getSteps }));
 vi.mock('@/lib/storage/series-repository', () => seriesStore);
-const seriesExport = vi.hoisted(() => ({ generateSeriesZip: vi.fn() }));
+const seriesExport = vi.hoisted(() => ({ generateSeriesExport: vi.fn() }));
 vi.mock('@/lib/export/series-export', async (importActual) => ({
   ...(await importActual<typeof import('@/lib/export/series-export')>()),
-  generateSeriesZip: seriesExport.generateSeriesZip,
+  generateSeriesExport: seriesExport.generateSeriesExport,
 }));
 vi.mock('@/lib/project/project-actions', () => projectActions);
 vi.mock('@/lib/storage/storage', () => storage);
@@ -308,28 +308,46 @@ describe('專案庫', () => {
       await waitFor(() => expect(dialog.textContent).toContain('操作失敗，請再試一次。'));
     });
 
-    it('系列匯出成 ZIP 並下載', async () => {
+    it('系列預設合併成一份並下載', async () => {
       database.getProjectSummaries.mockResolvedValue([member]);
       seriesStore.getAllSeries.mockResolvedValue([series]);
-      seriesExport.generateSeriesZip.mockResolvedValue(new Blob(['zip'], { type: 'application/zip' }));
+      seriesExport.generateSeriesExport.mockResolvedValue({ blob: new Blob(['pdf']), filename: 'm-role.pdf' });
       render(<LibraryApp />);
 
       fireEvent.click(await screen.findByRole('button', { name: '匯出系列' }));
+      fireEvent.click(screen.getByRole('button', { name: '下載 PDF' }));
+
+      await waitFor(() => expect(downloads.download).toHaveBeenCalledWith(expect.objectContaining({ filename: 'm-role.pdf' })));
+      expect(seriesExport.generateSeriesExport).toHaveBeenCalledWith(
+        { title: 'M-Role' }, ['project-2'], 'pdf', 'merged', expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    });
+
+    it('系列可改成各自一份 ZIP', async () => {
+      database.getProjectSummaries.mockResolvedValue([member]);
+      seriesStore.getAllSeries.mockResolvedValue([series]);
+      seriesExport.generateSeriesExport.mockResolvedValue({ blob: new Blob(['zip']), filename: 'm-role.zip' });
+      render(<LibraryApp />);
+
+      fireEvent.click(await screen.findByRole('button', { name: '匯出系列' }));
+      fireEvent.click(screen.getByRole('radio', { name: '各自一份' }));
       fireEvent.click(screen.getByRole('radio', { name: 'HTML' }));
       fireEvent.click(screen.getByRole('button', { name: '下載 ZIP' }));
 
       await waitFor(() => expect(downloads.download).toHaveBeenCalledWith(expect.objectContaining({ filename: 'm-role.zip' })));
-      expect(seriesExport.generateSeriesZip).toHaveBeenCalledWith(['project-2'], 'html', expect.objectContaining({ signal: expect.any(AbortSignal) }));
+      expect(seriesExport.generateSeriesExport).toHaveBeenCalledWith(
+        { title: 'M-Role' }, ['project-2'], 'html', 'separate', expect.anything(),
+      );
     });
 
     it('系列沒有可匯出的步驟時說明未下載', async () => {
       database.getProjectSummaries.mockResolvedValue([member]);
       seriesStore.getAllSeries.mockResolvedValue([series]);
-      seriesExport.generateSeriesZip.mockResolvedValue(null);
+      seriesExport.generateSeriesExport.mockResolvedValue(null);
       render(<LibraryApp />);
 
       fireEvent.click(await screen.findByRole('button', { name: '匯出系列' }));
-      fireEvent.click(screen.getByRole('button', { name: '下載 ZIP' }));
+      fireEvent.click(screen.getByRole('button', { name: '下載 PDF' }));
 
       expect(await screen.findByText('系列裡的專案都沒有步驟，未下載任何檔案。')).toBeTruthy();
       expect(downloads.download).not.toHaveBeenCalled();

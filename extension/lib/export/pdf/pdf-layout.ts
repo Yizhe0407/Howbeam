@@ -29,9 +29,9 @@ export interface PdfImage {
   height: number;
 }
 
-/** A bookmark for the viewer's outline pane; `level` 2 nests under the latest level 1. */
+/** A bookmark for the viewer's outline pane; each level nests under the latest bookmark one level up. */
 export interface PdfOutlineEntry {
-  level: 1 | 2;
+  level: 1 | 2 | 3;
   title: string;
 }
 
@@ -47,11 +47,13 @@ export interface PdfListItem {
  * order, while rules and the running footer are artifacts a reader skips.
  */
 export type PdfBlock =
-  | { kind: 'heading'; level: 1 | 2 | 3; lines: PdfText[]; outline?: PdfOutlineEntry }
+  | { kind: 'heading'; level: HeadingLevel; lines: PdfText[]; outline?: PdfOutlineEntry }
   | { kind: 'paragraph'; lines: PdfText[] }
   | { kind: 'list'; items: PdfListItem[] }
   | { kind: 'figure'; alt: string; image: PdfImage }
   | { kind: 'artifact'; role: 'layout' | 'pagination'; rules: PdfRule[]; texts: PdfText[] };
+
+type HeadingLevel = 1 | 2 | 3 | 4;
 
 export interface PdfPage {
   number: number;
@@ -76,6 +78,8 @@ export interface PdfLayouterOptions {
   /** Width of `text` in layout pixels when set in `style`. */
   measure: (text: string, style: PdfTextStyle) => number;
   footerTitle: string;
+  /** The document's parts have their own headings (addPartHeading), so sections and steps sit one level lower. */
+  partHeadings?: boolean;
   labels: {
     credit: string;
   };
@@ -107,6 +111,7 @@ export class PdfLayouter {
   private cursorY = PDF_SPEC.margin;
   private hasContent = false;
   private pageNumber = 0;
+  /** Steps laid out in the current part (the whole document when it has no parts). */
   private stepCount = 0;
   /** Once a section title has been printed, steps nest under it. */
   private inSection = false;
@@ -142,6 +147,38 @@ export class PdfLayouter {
   }
 
   /**
+   * Opens one part of the document (a Project in a merged Series) on a page of
+   * its own: its title as a top-level bookmark, its description, and a rule.
+   * The steps that follow are numbered and laid out as if the part were a
+   * document of its own.
+   */
+  addPartHeading(title: string, description: string): void {
+    this.startNewPage();
+    this.addTextBlock(
+      { kind: 'heading', level: 2, outline: { level: 1, title: shortenText(title, OUTLINE_TITLE_LENGTH) } },
+      title,
+      PDF_TEXT.part,
+    );
+    this.addTextBlock({ kind: 'paragraph' }, description, PDF_TEXT.description);
+    this.addRule(PDF_SPEC.headerRuleGapBefore, PDF_SPEC.headerRuleGapAfter, PDF_SPEC.sectionRuleThickness, PDF_COLORS.text);
+    this.stepCount = 0;
+    this.inSection = false;
+  }
+
+  /** How far a part heading pushes sections and steps down. */
+  private get depth(): 0 | 1 {
+    return this.options.partHeadings ? 1 : 0;
+  }
+
+  private stepHeadingLevel(): HeadingLevel {
+    return ((this.inSection ? 3 : 2) + this.depth) as HeadingLevel;
+  }
+
+  private stepOutlineLevel(): PdfOutlineEntry['level'] {
+    return ((this.inSection ? 2 : 1) + this.depth) as PdfOutlineEntry['level'];
+  }
+
+  /**
    * Lays out one step: optional section title, numbered heading, framed
    * screenshot, then its annotation list. In `page-per-step` mode every step
    * after the first starts a fresh page. In `continuous` mode it follows the
@@ -167,7 +204,11 @@ export class PdfLayouter {
     this.ensureSpace(sectionHeight + headingHeight + imageSpace);
     if (step.section) {
       this.addTextBlock(
-        { kind: 'heading', level: 2, outline: { level: 1, title: shortenText(step.section.title, OUTLINE_TITLE_LENGTH) } },
+        {
+          kind: 'heading',
+          level: (2 + this.depth) as HeadingLevel,
+          outline: { level: (1 + this.depth) as PdfOutlineEntry['level'], title: shortenText(step.section.title, OUTLINE_TITLE_LENGTH) },
+        },
         step.section.title,
         PDF_TEXT.section,
       );
@@ -208,7 +249,7 @@ export class PdfLayouter {
 
   /** A heading or paragraph of wrapped lines. If it runs onto another page, each page gets its own block. */
   private addTextBlock(
-    template: { kind: 'heading'; level: 1 | 2 | 3; outline?: PdfOutlineEntry } | { kind: 'paragraph' },
+    template: { kind: 'heading'; level: HeadingLevel; outline?: PdfOutlineEntry } | { kind: 'paragraph' },
     text: string,
     style: PdfTextStyle,
     indent = 0,
@@ -243,9 +284,9 @@ export class PdfLayouter {
   private addStepNumber(ordinal: number): void {
     this.pushBlock({
       kind: 'heading',
-      level: this.inSection ? 3 : 2,
+      level: this.stepHeadingLevel(),
       lines: [{ text: `${ordinal}.`, x: PDF_SPEC.margin, top: this.cursorY, style: PDF_TEXT.stepTitle }],
-      outline: { level: this.inSection ? 2 : 1, title: `${ordinal}.` },
+      outline: { level: this.stepOutlineLevel(), title: `${ordinal}.` },
     });
     this.hasContent = true;
   }
@@ -267,9 +308,9 @@ export class PdfLayouter {
       if (!block || blockPage !== this.pageNumber) {
         block = {
           kind: 'heading',
-          level: this.inSection ? 3 : 2,
+          level: this.stepHeadingLevel(),
           lines: [],
-          ...(block ? {} : { outline: { level: this.inSection ? 2 : 1, title: outlineTitle } }),
+          ...(block ? {} : { outline: { level: this.stepOutlineLevel(), title: outlineTitle } }),
         };
         blockPage = this.pageNumber;
         this.pushBlock(block);

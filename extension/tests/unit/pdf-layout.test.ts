@@ -7,11 +7,12 @@ import { firstItems, itemAt } from '../setup/item-at';
 /** 14 layout pixels per code point: a 1072px-wide A4 text column holds 76 characters. */
 const measure = (text: string) => Array.from(text).length * 14;
 
-function newLayouter(settings: Partial<PdfExportSettings> = {}, signal?: AbortSignal) {
+function newLayouter(settings: Partial<PdfExportSettings> = {}, signal?: AbortSignal, partHeadings = false) {
   return new PdfLayouter({
     settings: { ...DEFAULT_PDF_EXPORT_SETTINGS, ...settings },
     measure,
     footerTitle: 'My project',
+    partHeadings,
     labels: { credit: 'Made with Howbeam' },
     signal,
   });
@@ -36,8 +37,8 @@ function laidOut(layouter: PdfLayouter): PdfPage[] {
 
 type Kind = PdfBlock['kind'];
 const ofKind = <K extends Kind>(page: PdfPage, kind: K) => page.blocks.filter((block): block is Extract<PdfBlock, { kind: K }> => block.kind === kind);
-const headings = (page: PdfPage, level?: 1 | 2 | 3) => ofKind(page, 'heading').filter((block) => !level || block.level === level);
-const headingTexts = (page: PdfPage, level?: 1 | 2 | 3) => headings(page, level).flatMap((block) => block.lines.map((line) => line.text));
+const headings = (page: PdfPage, level?: 1 | 2 | 3 | 4) => ofKind(page, 'heading').filter((block) => !level || block.level === level);
+const headingTexts = (page: PdfPage, level?: 1 | 2 | 3 | 4) => headings(page, level).flatMap((block) => block.lines.map((line) => line.text));
 const paragraphTexts = (page: PdfPage) => ofKind(page, 'paragraph').flatMap((block) => block.lines.map((line) => line.text));
 const listTexts = (page: PdfPage) =>
   ofKind(page, 'list').flatMap((block) => block.items.flatMap((item) => [...(item.label ? [item.label.text] : []), ...item.lines.map((line) => line.text)]));
@@ -398,6 +399,63 @@ describe('PdfLayouter', () => {
         const lowest = Math.max(...listItems(page).map((item) => item.label!.top + PDF_TEXT.annotation.lineHeight));
         expect(lowest).toBeLessThanOrEqual(page.size.heightPixels - PDF_SPEC.footerZone);
       }
+    });
+  });
+
+  describe('parts (a merged series)', () => {
+    const outlineOf = (pages: PdfPage[]) => pages.flatMap((page) => headings(page).flatMap((block) => (block.outline ? [block.outline] : [])));
+
+    it('starts each part on a new page, leaving the title block as a cover', () => {
+      const layouter = newLayouter({ stepLayout: 'continuous' }, undefined, true);
+      layouter.addTitleBlock('Series', '');
+      layouter.addPartHeading('HR', 'For HR');
+      layouter.addStep(step(1));
+      layouter.addPartHeading('APEX', '');
+      layouter.addStep(step(1));
+      const pages = laidOut(layouter);
+
+      expect(pages.map((page) => headingTexts(page, 2))).toEqual([[], ['HR'], ['APEX']]);
+      expect(headingTexts(itemAt(pages, 0), 1)).toEqual(['Series']);
+      expect(paragraphTexts(itemAt(pages, 1))).toEqual(['For HR']);
+    });
+
+    it('keeps the first step of a part on the page of its heading, even one step per page', () => {
+      const layouter = newLayouter({ stepLayout: 'page-per-step' }, undefined, true);
+      layouter.addTitleBlock('Series', '');
+      layouter.addPartHeading('HR', '');
+      layouter.addStep(step(1));
+      layouter.addStep(step(2));
+      const pages = laidOut(layouter);
+
+      expect(pages.map((page) => images(page).length)).toEqual([0, 1, 1]);
+      expect(headingTexts(itemAt(pages, 1), 2)).toEqual(['HR']);
+    });
+
+    it('nests sections and steps one level under their part, in headings and bookmarks', () => {
+      const layouter = newLayouter({}, undefined, true);
+      layouter.addTitleBlock('Series', '');
+      layouter.addPartHeading('HR', '');
+      layouter.addStep(step(1, { title: 'Open' }));
+      layouter.addStep(step(2, { title: 'Sign in', section: { title: 'Chapter' } }));
+      const pages = laidOut(layouter);
+
+      expect(pages.flatMap((page) => headings(page).map((block) => block.level))).toEqual([1, 2, 3, 3, 4]);
+      expect(outlineOf(pages)).toEqual([
+        { level: 1, title: 'HR' },
+        { level: 2, title: '1. Open' },
+        { level: 2, title: 'Chapter' },
+        { level: 3, title: '2. Sign in' },
+      ]);
+    });
+
+    it('closes a section at the end of its part', () => {
+      const layouter = newLayouter({}, undefined, true);
+      layouter.addPartHeading('HR', '');
+      layouter.addStep(step(1, { section: { title: 'Chapter' } }));
+      layouter.addPartHeading('APEX', '');
+      layouter.addStep(step(1, { title: 'First' }));
+
+      expect(outlineOf(laidOut(layouter)).at(-1)).toEqual({ level: 2, title: '1. First' });
     });
   });
 

@@ -15,6 +15,38 @@ export interface ProjectExportOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * One Project inside a publication. A part with a `title` is introduced by its
+ * own heading (a Series merged into one document); a part without one is the
+ * whole document (a single Project), so its steps sit right under the title.
+ */
+export interface PublicationPart {
+  title?: string;
+  description?: string;
+  entries: readonly StepEntry[];
+  sections?: readonly ProjectSection[];
+}
+
+/** What a PDF, HTML or Markdown export renders: a titled document of one or more parts. */
+export interface Publication {
+  title?: string;
+  description?: string;
+  /** 副檔名由 projectExportFilename 加入。 */
+  filename?: string;
+  parts: readonly PublicationPart[];
+}
+
+/** A single Project as a publication: one untitled part. */
+export function projectPublication(entries: readonly StepEntry[], metadata: ProjectExportMetadata = {}): Publication {
+  const { title, description, filename, sections } = metadata;
+  return { title, description, filename, parts: [{ entries, sections }] };
+}
+
+/** Whether the parts get their own headings, which moves sections and steps one level down. */
+export function hasPartHeadings(publication: Publication): boolean {
+  return publication.parts.some((part) => part.title !== undefined);
+}
+
 export type ProjectExportFormat = 'markdown' | 'markdown-archive' | 'html' | 'pdf';
 
 export interface ProjectMarkdownArchive {

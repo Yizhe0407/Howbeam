@@ -13,9 +13,12 @@ import {
   sectionsByStartEntry,
   textOrDefault,
   textValue,
+  hasPartHeadings,
+  projectPublication,
   type ProjectExportMetadata,
+  type Publication,
 } from './project-export-contract';
-import { renderEntryImages } from './project-export-render';
+import { renderEntryImages, withPartErrors } from './project-export-render';
 import { type StepEntry } from '../storage/models';
 
 /**
@@ -25,20 +28,32 @@ import { type StepEntry } from '../storage/models';
  * the Howbeam credit and the page number. Paper, orientation, one-step-per-page
  * versus continuous flow, the footer text and the annotation list follow
  * `options.settings`.
- *
- * Steps are rendered, laid out and written one at a time, so only the page being
- * built holds screenshots in memory; each screenshot is embedded as the JPEG it
- * already is, never re-encoded.
  */
 export async function generateProjectPdf(
   entries: readonly StepEntry[],
   metadata: ProjectExportMetadata = {},
   options: ProjectPdfOptions = {},
 ): Promise<Blob> {
+  return generatePublicationPdf(projectPublication(entries, metadata), options);
+}
+
+/**
+ * The PDF of a whole publication. Titled parts (the Projects of a merged
+ * Series) each start on a new page under their own heading and bookmark, with
+ * sections and steps nested beneath; each part numbers its steps from 1.
+ *
+ * Steps are rendered, laid out and written one at a time, so only the page being
+ * built holds screenshots in memory; each screenshot is embedded as the JPEG it
+ * already is, never re-encoded.
+ */
+export async function generatePublicationPdf(
+  publication: Publication,
+  options: ProjectPdfOptions = {},
+): Promise<Blob> {
   const { signal } = options;
   throwIfAborted(signal);
   const settings = resolvePdfExportSettings(options.settings);
-  const title = textOrDefault(metadata.title, DEFAULT_TITLE);
+  const title = textOrDefault(publication.title, DEFAULT_TITLE);
   const copy = t().export;
 
   const writer = await PdfWriter.create({
@@ -53,6 +68,7 @@ export async function generateProjectPdf(
     settings,
     measure: (text, style) => writer.measure(text, style),
     footerTitle: title,
+    partHeadings: hasPartHeadings(publication),
     labels: { credit: MADE_WITH },
     signal,
   });
@@ -60,26 +76,31 @@ export async function generateProjectPdf(
     for (const page of layouter.takePages()) writer.writePage(page);
   };
 
-  layouter.addTitleBlock(title, textValue(metadata.description));
-  const sections = sectionsByStartEntry(metadata.sections, entries);
-  for await (const rendered of renderEntryImages(entries, signal)) {
-    let size;
-    try {
-      size = readJpegSize(rendered.imageBytes);
-    } catch (error) {
-      throw new StepImageError(rendered.content.ordinal, error);
-    }
-    const section = sections.get(rendered.content.entryId);
-    layouter.addStep({
-      section: section && { title: section.title },
-      ordinal: rendered.content.ordinal,
-      title: rendered.content.title,
-      image: { bytes: rendered.imageBytes, ...size },
-      alt: textOrDefault(rendered.content.title, copy.imageAlt),
-      annotations: rendered.content.annotations,
-      description: rendered.content.description,
+  layouter.addTitleBlock(title, textValue(publication.description));
+  for (const part of publication.parts) {
+    await withPartErrors(part, async () => {
+      if (part.title !== undefined) layouter.addPartHeading(part.title, textValue(part.description));
+      const sections = sectionsByStartEntry(part.sections, part.entries);
+      for await (const rendered of renderEntryImages(part.entries, signal)) {
+        let size;
+        try {
+          size = readJpegSize(rendered.imageBytes);
+        } catch (error) {
+          throw new StepImageError(rendered.content.ordinal, error);
+        }
+        const section = sections.get(rendered.content.entryId);
+        layouter.addStep({
+          section: section && { title: section.title },
+          ordinal: rendered.content.ordinal,
+          title: rendered.content.title,
+          image: { bytes: rendered.imageBytes, ...size },
+          alt: textOrDefault(rendered.content.title, copy.imageAlt),
+          annotations: rendered.content.annotations,
+          description: rendered.content.description,
+        });
+        writePages();
+      }
     });
-    writePages();
   }
   layouter.finish();
   writePages();

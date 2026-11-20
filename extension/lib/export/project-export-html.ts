@@ -10,13 +10,16 @@ import {
   sectionsByStartEntry,
   textOrDefault,
   textValue,
+  hasPartHeadings,
+  projectPublication,
   type ProjectExportMetadata,
   type ProjectExportOptions,
+  type Publication,
 } from './project-export-contract';
 import { chooseAnnotationColumns } from './annotation-columns';
 import { encodeBase64Parts } from './base64';
 import { segmentText, wrapText } from './text-wrap';
-import { hasAnnotationText, renderEntryImages, type RenderedEntryContent } from './project-export-render';
+import { hasAnnotationText, renderEntryImages, withPartErrors, type RenderedEntryContent } from './project-export-render';
 import { documentLang, t } from '@/lib/shared/i18n';
 
 /**
@@ -34,11 +37,24 @@ export async function generateProjectHtml(
   metadata: ProjectExportMetadata = {},
   options: ProjectExportOptions = {},
 ): Promise<Blob> {
+  return generatePublicationHtml(projectPublication(entries, metadata), options);
+}
+
+/**
+ * The HTML of a whole publication. Titled parts (the Projects of a merged
+ * Series) each get a heading of their own, with sections and steps one level
+ * below it; in print each part starts a new page.
+ */
+export async function generatePublicationHtml(
+  publication: Publication,
+  options: ProjectExportOptions = {},
+): Promise<Blob> {
   const { signal } = options;
   throwIfAborted(signal);
 
-  const title = textOrDefault(metadata.title, DEFAULT_TITLE);
-  const description = textValue(metadata.description);
+  const title = textOrDefault(publication.title, DEFAULT_TITLE);
+  const description = textValue(publication.description);
+  const depth = hasPartHeadings(publication) ? 1 : 0;
   const header = [
     `<h1>${escapeProjectHtml(title)}</h1>`,
     description ? `<p class="document-description">${htmlText(description)}</p>` : '',
@@ -66,19 +82,28 @@ ${header}
 </header>
 `;
 
-  const sections = sectionsByStartEntry(metadata.sections, entries);
   let separator = '';
-  for await (const rendered of renderEntryImages(entries, signal)) {
-    const section = sections.get(rendered.content.entryId);
-    if (section) {
-      pending += separator + renderHtmlSectionHeading(section);
-      separator = '\n';
-    }
-    const [before, after = ''] = renderHtmlEntry(rendered.content, IMAGE_SRC_TOKEN).split(IMAGE_SRC_TOKEN);
-    parts.push(`${pending}${separator}${before}data:${IMAGE_MIME_TYPE};base64,`);
-    parts.push(new Blob(encodeBase64Parts(rendered.imageBytes, signal)));
-    pending = after;
-    separator = '\n';
+  for (const part of publication.parts) {
+    await withPartErrors(part, async () => {
+      if (part.title !== undefined) {
+        pending += separator + renderHtmlPartHeading(part.title, textValue(part.description));
+        separator = '\n';
+      }
+      const sections = sectionsByStartEntry(part.sections, part.entries);
+      for await (const rendered of renderEntryImages(part.entries, signal)) {
+        const section = sections.get(rendered.content.entryId);
+        if (section) {
+          pending += separator + renderHtmlSectionHeading(section, depth);
+          separator = '\n';
+        }
+        const [before, after = ''] = renderHtmlEntry(rendered.content, IMAGE_SRC_TOKEN, depth).split(IMAGE_SRC_TOKEN);
+        parts.push(`${pending}${separator}${before}data:${IMAGE_MIME_TYPE};base64,`);
+        parts.push(new Blob(encodeBase64Parts(rendered.imageBytes, signal)));
+        pending = after;
+        separator = '\n';
+      }
+      if (part.title !== undefined) pending += '\n</section>';
+    });
   }
   throwIfAborted(signal);
 
@@ -95,17 +120,31 @@ ${header}
  * text can never produce, so it occurs exactly once per rendered entry. */
 const IMAGE_SRC_TOKEN = '<image-src>';
 
-function renderHtmlSectionHeading(section: ProjectSection): string {
-  return `<h2 class="section-heading">${htmlText(section.title)}</h2>`;
+/** Opens a part's `<section>`; the part's loop closes it after its last step. */
+function renderHtmlPartHeading(title: string, description: string): string {
+  return [
+    '<section class="part">',
+    `<h2 class="part-heading">${htmlText(title)}</h2>`,
+    description ? `<p class="part-description">${htmlText(description)}</p>` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
-function renderHtmlEntry(entry: RenderedEntryContent, imageSrc: string): string {
+/** `depth` is 1 inside a titled part, which takes the level a section would otherwise have. */
+function renderHtmlSectionHeading(section: ProjectSection, depth: number): string {
+  const tag = `h${2 + depth}`;
+  return `<${tag} class="section-heading">${htmlText(section.title)}</${tag}>`;
+}
+
+function renderHtmlEntry(entry: RenderedEntryContent, imageSrc: string, depth: number): string {
+  const tag = `h${3 + depth}`;
   const alt = escapeProjectHtml(textOrDefault(entry.title, t().export.imageAlt));
   const annotations = hasAnnotationText(entry.annotations) ? renderHtmlAnnotations(entry) : '';
 
   return [
     `<section class="step"${entry.title ? '' : ' data-untitled'}>`,
-    `<h3 class="step-title"><span class="step-number">${entry.ordinal}.</span>${entry.title ? `<span>${htmlText(entry.title)}</span>` : ''}</h3>`,
+    `<${tag} class="step-title"><span class="step-number">${entry.ordinal}.</span>${entry.title ? `<span>${htmlText(entry.title)}</span>` : ''}</${tag}>`,
     `<figure><img src="${imageSrc}" alt="${alt}"></figure>`,
     annotations,
     entry.description ? `<p class="step-description">${htmlText(entry.description)}</p>` : '',
@@ -235,11 +274,14 @@ body {
   line-height: ${PAGE.lineHeight};
   -webkit-font-smoothing: antialiased;
 }
-h1, h2, h3, p, li { margin: 0; overflow-wrap: anywhere; }
+h1, h2, h3, h4, p, li { margin: 0; overflow-wrap: anywhere; }
 .document { width: min(100% - 32px, ${PAGE.maxWidth}px); margin: 0 auto; padding: 56px 0 48px; }
 .document-header { padding-bottom: 20px; border-bottom: 2px solid var(--rule-strong); }
 h1 { font-size: 30px; line-height: 1.35; font-weight: 700; }
 .document-description { margin-top: 10px; color: var(--text-secondary); }
+.part { margin-top: 64px; }
+.part-heading { padding-bottom: 12px; border-bottom: 2px solid var(--rule-strong); font-size: 25px; line-height: 1.4; font-weight: 700; }
+.part-description { margin-top: 10px; color: var(--text-secondary); }
 .section-heading { margin-top: 44px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); font-size: 21px; line-height: 1.45; font-weight: 700; }
 .step { margin-top: 32px; display: grid; grid-template-columns: ${PAGE.stepIndent}em minmax(0, 1fr); }
 .step > * { grid-column: 2; }
@@ -275,6 +317,8 @@ img { display: block; max-width: 100%; height: auto; border: 1px solid var(--ima
   body { font-size: 10.5pt; line-height: 1.7; }
   .document { width: 100%; padding: 0; }
   h1 { font-size: 20pt; }
+  .part { margin-top: 0; break-before: page; page-break-before: always; }
+  .part-heading { font-size: 17pt; break-after: avoid; page-break-after: avoid; }
   .section-heading { font-size: 14pt; break-after: avoid; page-break-after: avoid; }
   .step { break-inside: avoid; page-break-inside: avoid; }
   .step-title { font-size: 11.5pt; }

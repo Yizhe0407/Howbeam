@@ -329,7 +329,7 @@ describe('project export', () => {
   it('lets long unbreakable strings wrap in the HTML export', async () => {
     const html = await generateProjectHtml([entry({ title: 'x'.repeat(5_000) })], { title: 'y'.repeat(5_000) });
 
-    expect(html).toMatch(/h1, h2, h3, p, li \{ margin: 0; overflow-wrap: anywhere; \}/);
+    expect(html).toMatch(/h1, h2, h3, h4, p, li \{ margin: 0; overflow-wrap: anywhere; \}/);
     expect(html).toMatch(/\.step \{ margin-top: 32px; display: grid; grid-template-columns: 2\.2em minmax\(0, 1fr\); \}/);
     expect(html).toMatch(/\.step-title \{ grid-column: 1 \/ -1; display: grid; grid-template-columns: 2\.2em minmax\(0, 1fr\); grid-template-columns: subgrid;/);
   });

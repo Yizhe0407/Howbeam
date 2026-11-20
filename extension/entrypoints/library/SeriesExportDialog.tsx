@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PdfExportOptions from '@/components/editor/PdfExportOptions';
-import { ExportActions, ExportFormatTabs } from '@/components/editor/ExportControls';
+import { ExportActions, ExportCardGroup, ExportFormatTabs, PagesGlyph } from '@/components/editor/ExportControls';
 import { useExportRunner, type RunExport } from '@/components/editor/use-export-runner';
 import { downloadBlobViaBrowser } from '@/lib/export/download-utils';
 import { DEFAULT_PDF_EXPORT_SETTINGS, type PdfExportSettings } from '@/lib/export/pdf-export-settings';
-import { generateSeriesZip, seriesExportFilename, type SeriesExportFormat } from '@/lib/export/series-export';
+import { generateSeriesExport, type SeriesExportFormat, type SeriesExportMode } from '@/lib/export/series-export';
 import { throwIfAborted } from '@/lib/shared/abort';
 import { seriesDisplayTitle, type ProjectSeries } from '@/lib/storage/series-model';
 import { t } from '@/lib/shared/i18n';
+import { useAutoHideScrollbar } from '@/lib/editor/use-auto-hide-scrollbar';
 
 const FORMATS: readonly SeriesExportFormat[] = ['pdf', 'html', 'markdown'];
 
@@ -19,7 +20,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** Exports every Project of a Series, each as its own file, in one ZIP. */
+/** Exports a Series as one document, or as one file per Project in a ZIP. */
 export default function SeriesExportDialog({ series, runExport, onClose }: Props) {
   return (
     <Dialog open={series !== null} onOpenChange={(open) => !open && onClose()}>
@@ -31,18 +32,20 @@ export default function SeriesExportDialog({ series, runExport, onClose }: Props
 
 function Panel({ series, runExport }: Omit<Props, 'onClose'> & { series: ProjectSeries }) {
   const copy = t().library.series;
+  const [mode, setMode] = useState<SeriesExportMode>('merged');
   const [format, setFormat] = useState<SeriesExportFormat>('pdf');
   const [pdfSettings, setPdfSettings] = useState<PdfExportSettings>(DEFAULT_PDF_EXPORT_SETTINGS);
   const exporter = useExportRunner(runExport, () => copy.exportNothing);
   const title = seriesDisplayTitle(series.title);
+  const scrollbar = useAutoHideScrollbar<HTMLDivElement>();
 
   function download() {
     void exporter.run(format, async (signal) => {
-      const zip = await generateSeriesZip(series.projectIds, format, { signal, pdfSettings });
-      if (!zip) return 'nothing';
+      const file = await generateSeriesExport({ title }, series.projectIds, format, mode, { signal, pdfSettings });
+      if (!file) return 'nothing';
       throwIfAborted(signal);
       // Resolves once the browser has queued the transfer, which survives this page closing.
-      await downloadBlobViaBrowser(zip, seriesExportFilename(title), { signal });
+      await downloadBlobViaBrowser(file.blob, file.filename, { signal });
       return undefined;
     });
   }
@@ -57,22 +60,36 @@ function Panel({ series, runExport }: Omit<Props, 'onClose'> & { series: Project
         exporter.cancel();
       }}
       onPointerDownOutside={(event) => exporter.busy && event.preventDefault()}
-      className="w-[min(420px,calc(100vw-32px))] p-6"
+      className="flex max-h-[calc(100vh-32px)] w-[min(420px,calc(100vw-32px))] flex-col p-6"
     >
       <DialogHeader>
         <DialogTitle>{copy.exportTitle}</DialogTitle>
-        <DialogDescription className="break-words">{title} · {copy.exportHint}</DialogDescription>
+        <DialogDescription className="break-words">{title}</DialogDescription>
       </DialogHeader>
-      <div className="mt-5">
-        <ExportFormatTabs formats={FORMATS} value={format} onChange={setFormat} disabled={exporter.busyShown} />
+      {/* The PDF options make the body tall, so it scrolls between the fixed title and buttons.
+          The auto-hide scrollbar reserves 10px on both edges; the negative margin keeps the content aligned. */}
+      <div {...scrollbar} className="app-scrollbar-autohide -mx-2.5 mt-5 min-h-0 flex-1 overflow-y-auto">
+        <ExportCardGroup
+          label={copy.exportMode}
+          value={mode}
+          onSelect={setMode}
+          disabled={exporter.busyShown}
+          cards={[
+            { value: 'merged', label: copy.exportMerged, glyph: <PagesGlyph pages={1} /> },
+            { value: 'separate', label: copy.exportSeparate, glyph: <PagesGlyph pages={2} /> },
+          ]}
+        />
+        <div className="mt-4">
+          <ExportFormatTabs formats={FORMATS} value={format} onChange={setFormat} disabled={exporter.busyShown} />
+        </div>
         {format === 'pdf' && <PdfExportOptions settings={pdfSettings} onChange={setPdfSettings} disabled={exporter.busyShown} />}
       </div>
-      <div className="mt-6">
+      <div className="mt-6 shrink-0">
         <ExportActions
           error={exporter.error}
           notice={exporter.notice}
           busyShown={exporter.busyShown}
-          label={copy.exportLabel}
+          label={mode === 'merged' ? t().editor.publish[format].label : copy.exportLabel}
           onDownload={download}
           onCancel={exporter.cancel}
         />

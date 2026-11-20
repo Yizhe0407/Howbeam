@@ -1,12 +1,13 @@
 import { isAbortError, throwIfAborted } from '../shared/abort';
 import { compositeStepEntry } from './entry-render';
-import { RedactionReviewRequiredError, StepImageError } from './export-errors';
+import { RedactionReviewRequiredError, SeriesProjectExportError, StepImageError } from './export-errors';
 import { getEntryPrivacyState, type Step, type StepEntry } from '../storage/models';
 import {
   PROJECT_EXPORT_LIMITS,
   ProjectExportLimitError,
   IMAGE_MIME_TYPE,
   textValue,
+  type PublicationPart,
 } from './project-export-contract';
 
 export type RenderedEntryContent = {
@@ -163,5 +164,19 @@ export async function* renderEntryImages(
     // composite in flight; observe it so a late rejection (e.g. a compositing
     // failure racing a cancellation) is never reported as unhandled.
     pending?.image.catch(() => {});
+  }
+}
+
+/**
+ * Runs the work of one part of a publication. A titled part (a Project in a
+ * merged Series) names itself in any failure, so a step number in the message
+ * can be found; an untitled part is the whole document and needs no name.
+ */
+export async function withPartErrors<T>(part: PublicationPart, work: () => Promise<T>): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (part.title === undefined || isAbortError(error)) throw error;
+    throw new SeriesProjectExportError(part.title, error);
   }
 }

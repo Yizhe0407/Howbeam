@@ -46,8 +46,8 @@ export class PdfWriter {
   /** The first font's metrics: every run on a line shares its baseline. */
   private readonly metrics: Record<PdfWeight, TypographicMetrics>;
   private readonly structure: StructureElement;
-  /** The latest top-level bookmark, which step bookmarks nest under. */
-  private bookmarkParent: OutlineItem | undefined;
+  /** The latest bookmark at each level (index 0 = level 1); deeper bookmarks nest under them. */
+  private readonly bookmarkPath: OutlineItem[] = [];
 
   private constructor(
     private readonly document: PdfKitDocument,
@@ -171,10 +171,12 @@ export class PdfWriter {
 
   /** A viewer's outline entry that jumps to the top of the heading it names. */
   private addBookmark({ level, title }: PdfOutlineEntry, top: number, pageWidth: number): void {
-    const parent = level === 2 && this.bookmarkParent ? this.bookmarkParent : (this.document.outline as unknown as OutlineItem);
+    // The nearest bookmark above this level; a level with none above it sits at the root.
+    const parent = this.bookmarkPath.slice(0, level - 1).findLast(Boolean) ?? (this.document.outline as unknown as OutlineItem);
     // pdfkit measures a destination from the page's right edge, so the page width puts it at the left.
     const item = parent.addItem(title, { expanded: true, top, left: pageWidth });
-    if (level === 1) this.bookmarkParent = item;
+    this.bookmarkPath.length = level - 1;
+    this.bookmarkPath[level - 1] = item;
   }
 
   private drawText({ text, x, top, style }: PdfText): void {
